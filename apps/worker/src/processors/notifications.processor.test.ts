@@ -1,10 +1,33 @@
 import type { Job } from "bullmq";
 import { beforeAll, beforeEach, describe, expect, it, vi } from "vitest";
 
+const {
+  debugLogMock,
+  errorLogMock,
+  infoLogMock,
+  warnLogMock
+} = vi.hoisted(() => ({
+  debugLogMock: vi.fn(),
+  errorLogMock: vi.fn(),
+  infoLogMock: vi.fn(),
+  warnLogMock: vi.fn()
+}));
+
 vi.mock("@fsm/config", () => ({
   env: {
-    APP_URL: "http://localhost:3000"
+    APP_URL: "http://localhost:3000",
+    SENDGRID_FROM_EMAIL: "noreply@example.com",
+    TWILIO_FROM_NUMBER: "+15555555555"
   }
+}));
+
+vi.mock("pino", () => ({
+  default: () => ({
+    debug: debugLogMock,
+    error: errorLogMock,
+    info: infoLogMock,
+    warn: warnLogMock
+  })
 }));
 
 type NotificationsProcessorModule = typeof import("./notifications.processor.js");
@@ -27,18 +50,25 @@ function createDependencies(): notificationsProcessor.NotificationsDependencies 
   return {
     email: {
       sendEstimateEmail: vi.fn(async () => undefined),
+      sendCampaignEmail: vi.fn(async () => undefined),
       sendInvoiceEmail: vi.fn(async () => undefined),
       sendInvoiceReminderEmail: vi.fn(async () => undefined),
       sendInvoiceReminderOwnerAlertEmail: vi.fn(async () => undefined),
       sendServiceAgreementRenewalReminderEmail: vi.fn(async () => undefined),
       sendServiceAgreementPaymentFailedEmail: vi.fn(async () => undefined)
     },
+    sms: {
+      sendSms: vi.fn(async () => "SM123")
+    },
     loadEstimateEmailContext: vi.fn(async () => null),
+    loadCampaignDeliveryContext: vi.fn(async () => null),
     loadInvoiceEmailContext: vi.fn(async () => null),
     loadServiceAgreementEmailContext: vi.fn(async () => null),
     loadCompanyOwner: vi.fn(async () => null),
     findAutomationRule: vi.fn(async () => null),
-    markInvoiceReminderSent: vi.fn(async () => undefined)
+    markInvoiceReminderSent: vi.fn(async () => undefined),
+    markCampaignRecipientDelivered: vi.fn(async () => undefined),
+    recordCampaignDeliveryFailure: vi.fn(async () => undefined)
   };
 }
 
@@ -47,6 +77,10 @@ describe("notifications.processor", () => {
 
   beforeEach(() => {
     dependencies = createDependencies();
+    debugLogMock.mockReset();
+    errorLogMock.mockReset();
+    infoLogMock.mockReset();
+    warnLogMock.mockReset();
   });
 
   it("send-estimate-email sends the estimate email when the customer can receive it", async () => {
@@ -236,6 +270,140 @@ describe("notifications.processor", () => {
     );
 
     expect(dependencies.email.sendInvoiceEmail).not.toHaveBeenCalled();
+  });
+
+  it("send-campaign-message sends SMS messages, marks the recipient delivered, and avoids logging PII", async () => {
+    vi.mocked(dependencies.loadCampaignDeliveryContext).mockResolvedValue({
+      companyId: "company-1",
+      campaignId: "campaign-1",
+      recipientId: "recipient-1",
+      customerId: "customer-1",
+      recipient: {
+        sentAt: null
+      },
+      customer: {
+        firstName: "Chris",
+        email: "customer@example.com",
+        phone: "555-0100"
+      },
+      company: {
+        name: "Acme HVAC"
+      }
+    });
+    vi.mocked(dependencies.sms.sendSms).mockResolvedValue("SM123");
+
+    await notificationsProcessor.handleSendCampaignMessage(
+      createJob("send-campaign-message", {
+        companyId: "company-1",
+        campaignId: "campaign-1",
+        recipientId: "recipient-1",
+        customerId: "customer-1",
+        channel: "sms",
+        body: "Hi Chris, Acme HVAC can help with your next service visit. Reply if you'd like to get scheduled.",
+        toAddress: "555-0100"
+      }),
+      dependencies
+    );
+
+    expect(dependencies.sms.sendSms).toHaveBeenCalledWith(
+      "555-0100",
+      "Hi Chris, Acme HVAC can help with your next service visit. Reply if you'd like to get scheduled."
+    );
+    expect(dependencies.markCampaignRecipientDelivered).toHaveBeenCalledWith(
+      expect.objectContaining({
+        campaignId: "campaign-1",
+        recipientId: "recipient-1",
+        channel: "sms",
+        providerMessageId: "SM123"
+      })
+    );
+    expect(JSON.stringify(infoLogMock.mock.calls)).not.toContain("555-0100");
+    expect(JSON.stringify(errorLogMock.mock.calls)).not.toContain("555-0100");
+  });
+
+  it("send-campaign-message sends email messages through the email adapter", async () => {
+    vi.mocked(dependencies.loadCampaignDeliveryContext).mockResolvedValue({
+      companyId: "company-1",
+      campaignId: "campaign-1",
+      recipientId: "recipient-1",
+      customerId: "customer-1",
+      recipient: {
+        sentAt: null
+      },
+      customer: {
+        firstName: "Chris",
+        email: "customer@example.com",
+        phone: "555-0100"
+      },
+      company: {
+        name: "Acme HVAC"
+      }
+    });
+
+    await notificationsProcessor.handleSendCampaignMessage(
+      createJob("send-campaign-message", {
+        companyId: "company-1",
+        campaignId: "campaign-1",
+        recipientId: "recipient-1",
+        customerId: "customer-1",
+        channel: "email",
+        subject: "A quick note from Acme HVAC",
+        body: "Hi Chris, we’d love to help with your next service visit. Reply if you'd like to get scheduled.",
+        toAddress: "customer@example.com"
+      }),
+      dependencies
+    );
+
+    expect(dependencies.email.sendCampaignEmail).toHaveBeenCalledWith("customer@example.com", {
+      firstName: "Chris",
+      subject: "A quick note from Acme HVAC",
+      body: "Hi Chris, we’d love to help with your next service visit. Reply if you'd like to get scheduled.",
+      companyName: "Acme HVAC"
+    });
+    expect(dependencies.markCampaignRecipientDelivered).toHaveBeenCalledWith(
+      expect.objectContaining({
+        campaignId: "campaign-1",
+        recipientId: "recipient-1",
+        channel: "email"
+      })
+    );
+  });
+
+  it("send-campaign-message skips idempotently when the recipient was already sent", async () => {
+    vi.mocked(dependencies.loadCampaignDeliveryContext).mockResolvedValue({
+      companyId: "company-1",
+      campaignId: "campaign-1",
+      recipientId: "recipient-1",
+      customerId: "customer-1",
+      recipient: {
+        sentAt: new Date("2026-04-28T12:00:00.000Z")
+      },
+      customer: {
+        firstName: "Chris",
+        email: "customer@example.com",
+        phone: "555-0100"
+      },
+      company: {
+        name: "Acme HVAC"
+      }
+    });
+
+    await notificationsProcessor.handleSendCampaignMessage(
+      createJob("send-campaign-message", {
+        companyId: "company-1",
+        campaignId: "campaign-1",
+        recipientId: "recipient-1",
+        customerId: "customer-1",
+        channel: "sms",
+        body: "Hello",
+        toAddress: "555-0100"
+      }),
+      dependencies
+    );
+
+    expect(dependencies.sms.sendSms).not.toHaveBeenCalled();
+    expect(dependencies.email.sendCampaignEmail).not.toHaveBeenCalled();
+    expect(dependencies.markCampaignRecipientDelivered).not.toHaveBeenCalled();
   });
 
   it("send-invoice-reminder sends the requested reminder level and updates the reminder timestamp", async () => {

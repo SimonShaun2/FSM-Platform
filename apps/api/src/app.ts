@@ -10,6 +10,7 @@ import requestLoggerPlugin from "./plugins/request-logger.js";
 import aiRoutes from "./routes/ai/index.js";
 import authRoutes from "./routes/auth/index.js";
 import companyRoutes from "./routes/company/index.js";
+import campaignRoutes from "./routes/campaigns/index.js";
 import customerRoutes from "./routes/customers/index.js";
 import estimateRoutes from "./routes/estimates/index.js";
 import invoiceRoutes from "./routes/invoices/index.js";
@@ -36,6 +37,7 @@ export async function buildApp() {
 
   await app.register(aiRoutes, { prefix: "/api/v1/ai" });
   await app.register(authRoutes, { prefix: "/api/v1/auth" });
+  await app.register(campaignRoutes, { prefix: "/api/v1" });
   await app.register(companyRoutes, { prefix: "/api/v1/company" });
   await app.register(customerRoutes, { prefix: "/api/v1/customers" });
   await app.register(jobRoutes, { prefix: "/api/v1/jobs" });

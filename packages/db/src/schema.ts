@@ -288,6 +288,8 @@ export const activityEventTypeEnum = pgEnum("activity_event_type", [
   "ai.recommendation_dismissed",
   "ai.recommendation_snoozed",
   // Campaign
+  "campaign.created",
+  "campaign.converted",
   "campaign.sent",
   "campaign.opened",
   "campaign.replied",

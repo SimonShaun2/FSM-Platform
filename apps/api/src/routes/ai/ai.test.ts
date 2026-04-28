@@ -1,3 +1,5 @@
+import { randomUUID } from "node:crypto";
+
 import request from "supertest";
 import { afterEach, beforeAll, beforeEach, describe, expect, it, vi } from "vitest";
 
@@ -169,7 +171,7 @@ function seedRevenueGraph(companyId: string) {
     status: "overdue"
   });
 
-  return { customer, asset, estimate, invoice };
+  return { customer, asset, job, estimate, invoice };
 }
 
 describe("ai routes", () => {
@@ -239,6 +241,108 @@ describe("ai routes", () => {
     expect(response.body.total).toBe(1);
     expect(response.body.data).toHaveLength(1);
     expect(response.body.data[0].type).toBe("reactivation");
+  });
+
+  it("GET /ai/recommendations/:id returns recommendation detail for an in-tenant record", async () => {
+    const auth = createAuthContext("owner");
+    const { customer, asset, job, estimate, invoice } = seedRevenueGraph(auth.company.id);
+    const recommendation = fakeDb.seedAiRecommendation({
+      companyId: auth.company.id,
+      type: "unpaid_invoice",
+      customerId: customer.id,
+      assetId: asset.id,
+      jobId: job.id,
+      estimateId: estimate.id,
+      invoiceId: invoice.id,
+      estimatedRevenue: "225.00",
+      urgencyScore: 88,
+      confidenceScore: 72,
+      headline: "Collect this overdue invoice",
+      body: "Payment is still outstanding",
+      suggestedAction: "Send reminder",
+      suggestedMessage: "Your invoice is overdue."
+    });
+
+    const response = await request(app.server)
+      .get(`/api/v1/ai/recommendations/${recommendation.id}`)
+      .set("Authorization", auth.authorization);
+
+    expect(response.status).toBe(200);
+    expect(response.body.recommendation).toMatchObject({
+      id: recommendation.id,
+      type: "unpaid_invoice",
+      status: "pending",
+      headline: "Collect this overdue invoice",
+      body: "Payment is still outstanding",
+      suggestedAction: "Send reminder",
+      suggestedMessage: "Your invoice is overdue.",
+      estimatedRevenue: "225.00",
+      urgencyScore: 88,
+      confidenceScore: 72,
+      customer: {
+        id: customer.id,
+        firstName: customer.firstName,
+        lastName: customer.lastName,
+        phone: customer.phone
+      },
+      asset: {
+        id: asset.id,
+        name: asset.name,
+        assetType: asset.assetType,
+        installDate: asset.installDate
+      },
+      job: {
+        id: job.id,
+        jobNumber: job.jobNumber
+      },
+      estimate: {
+        id: estimate.id,
+        estimateNumber: estimate.estimateNumber,
+        total: estimate.total
+      },
+      invoice: {
+        id: invoice.id,
+        invoiceNumber: invoice.invoiceNumber,
+        balanceDue: invoice.balanceDue
+      },
+      actionedAt: null,
+      dismissedAt: null,
+      snoozedUntil: null
+    });
+    expect(typeof response.body.recommendation.createdAt).toBe("string");
+  });
+
+  it("GET /ai/recommendations/:id returns 404 for an unknown recommendation id", async () => {
+    const auth = createAuthContext("owner");
+
+    const response = await request(app.server)
+      .get(`/api/v1/ai/recommendations/${randomUUID()}`)
+      .set("Authorization", auth.authorization);
+
+    expect(response.status).toBe(404);
+    expect(response.body.error).toBe("NOT_FOUND");
+  });
+
+  it("GET /ai/recommendations/:id returns 404 for a cross-tenant recommendation id", async () => {
+    const auth = createAuthContext("owner");
+    const otherTenant = createAuthContext("owner");
+    const { customer } = seedRevenueGraph(otherTenant.company.id);
+    const recommendation = fakeDb.seedAiRecommendation({
+      companyId: otherTenant.company.id,
+      type: "reactivation",
+      customerId: customer.id,
+      estimatedRevenue: "300.00",
+      urgencyScore: 80,
+      headline: "Other tenant recommendation",
+      body: "Should not be visible"
+    });
+
+    const response = await request(app.server)
+      .get(`/api/v1/ai/recommendations/${recommendation.id}`)
+      .set("Authorization", auth.authorization);
+
+    expect(response.status).toBe(404);
+    expect(response.body.error).toBe("NOT_FOUND");
   });
 
   it("POST /ai/recommendations/:id/action succeeds and returns 409 if already actioned", async () => {

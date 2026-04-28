@@ -24,6 +24,9 @@ type TableName =
   | "maintenanceVisits"
   | "automationRules"
   | "aiRecommendations"
+  | "campaigns"
+  | "campaignRecipients"
+  | "messageLogs"
   | "technicians"
   | "scheduleSlots"
   | "activityEvents";
@@ -85,6 +88,16 @@ type AiRecommendationType =
   | "seasonal_campaign"
   | "maintenance_plan_offer";
 type AiRecommendationStatus = "pending" | "actioned" | "dismissed" | "snoozed" | "expired";
+type CampaignStatus = "draft" | "scheduled" | "sending" | "sent" | "cancelled";
+type CampaignType =
+  | "reactivation"
+  | "estimate_follow_up"
+  | "invoice_reminder"
+  | "seasonal"
+  | "maintenance_reminder"
+  | "custom";
+type MessageChannel = "sms" | "email";
+type MessageDirection = "inbound" | "outbound";
 
 export interface TestCompanyRecord {
   id: string;
@@ -544,6 +557,73 @@ export interface TestAiRecommendationRecord {
   deletedAt: Date | null;
 }
 
+export interface TestCampaignRecord {
+  id: string;
+  companyId: string;
+  createdById: string | null;
+  type: CampaignType;
+  status: CampaignStatus;
+  name: string;
+  subject: string | null;
+  body: string;
+  channel: MessageChannel;
+  isAiGenerated: boolean | null;
+  aiRecommendationId: string | null;
+  scheduledAt: Date | null;
+  sentAt: Date | null;
+  recipientCount: number | null;
+  deliveredCount: number | null;
+  openedCount: number | null;
+  repliedCount: number | null;
+  convertedCount: number | null;
+  revenueAttributed: string | null;
+  createdAt: Date;
+  updatedAt: Date;
+  deletedAt: Date | null;
+}
+
+export interface TestCampaignRecipientRecord {
+  id: string;
+  campaignId: string;
+  customerId: string;
+  companyId: string;
+  sentAt: Date | null;
+  deliveredAt: Date | null;
+  openedAt: Date | null;
+  repliedAt: Date | null;
+  convertedAt: Date | null;
+  conversionJobId: string | null;
+  sentToPhone: string | null;
+  sentToEmail: string | null;
+  unsubscribedAt: Date | null;
+  createdAt: Date;
+  updatedAt: Date;
+  deletedAt: Date | null;
+}
+
+export interface TestMessageLogRecord {
+  id: string;
+  companyId: string;
+  customerId: string | null;
+  jobId: string | null;
+  campaignId: string | null;
+  channel: MessageChannel;
+  direction: MessageDirection;
+  toAddress: string;
+  fromAddress: string | null;
+  subject: string | null;
+  body: string;
+  providerMessageId: string | null;
+  providerStatus: string | null;
+  sentAt: Date | null;
+  deliveredAt: Date | null;
+  failedAt: Date | null;
+  failureReason: string | null;
+  createdAt: Date;
+  updatedAt: Date;
+  deletedAt: Date | null;
+}
+
 export interface TestTechnicianRecord {
   id: string;
   companyId: string;
@@ -624,6 +704,9 @@ type AnyTestRecord =
   | TestMaintenanceVisitRecord
   | TestAutomationRuleRecord
   | TestAiRecommendationRecord
+  | TestCampaignRecord
+  | TestCampaignRecipientRecord
+  | TestMessageLogRecord
   | TestTechnicianRecord
   | TestScheduleSlotRecord
   | TestActivityEventRecord;
@@ -649,6 +732,9 @@ type MockTable =
   | typeof maintenanceVisitsTable
   | typeof automationRulesTable
   | typeof aiRecommendationsTable
+  | typeof campaignsTable
+  | typeof campaignRecipientsTable
+  | typeof messageLogsTable
   | typeof techniciansTable
   | typeof scheduleSlotsTable
   | typeof activityEventsTable;
@@ -674,6 +760,9 @@ interface TestState {
   maintenanceVisits: TestMaintenanceVisitRecord[];
   automationRules: TestAutomationRuleRecord[];
   aiRecommendations: TestAiRecommendationRecord[];
+  campaigns: TestCampaignRecord[];
+  campaignRecipients: TestCampaignRecipientRecord[];
+  messageLogs: TestMessageLogRecord[];
   technicians: TestTechnicianRecord[];
   scheduleSlots: TestScheduleSlotRecord[];
   activityEvents: TestActivityEventRecord[];
@@ -1155,6 +1244,76 @@ const aiRecommendationsTable = {
   deletedAt: "deletedAt"
 } as const;
 
+const campaignsTable = {
+  __name: "campaigns",
+  id: "id",
+  companyId: "companyId",
+  createdById: "createdById",
+  type: "type",
+  status: "status",
+  name: "name",
+  subject: "subject",
+  body: "body",
+  channel: "channel",
+  isAiGenerated: "isAiGenerated",
+  aiRecommendationId: "aiRecommendationId",
+  scheduledAt: "scheduledAt",
+  sentAt: "sentAt",
+  recipientCount: "recipientCount",
+  deliveredCount: "deliveredCount",
+  openedCount: "openedCount",
+  repliedCount: "repliedCount",
+  convertedCount: "convertedCount",
+  revenueAttributed: "revenueAttributed",
+  createdAt: "createdAt",
+  updatedAt: "updatedAt",
+  deletedAt: "deletedAt"
+} as const;
+
+const campaignRecipientsTable = {
+  __name: "campaignRecipients",
+  id: "id",
+  campaignId: "campaignId",
+  customerId: "customerId",
+  companyId: "companyId",
+  sentAt: "sentAt",
+  deliveredAt: "deliveredAt",
+  openedAt: "openedAt",
+  repliedAt: "repliedAt",
+  convertedAt: "convertedAt",
+  conversionJobId: "conversionJobId",
+  sentToPhone: "sentToPhone",
+  sentToEmail: "sentToEmail",
+  unsubscribedAt: "unsubscribedAt",
+  createdAt: "createdAt",
+  updatedAt: "updatedAt",
+  deletedAt: "deletedAt"
+} as const;
+
+const messageLogsTable = {
+  __name: "messageLogs",
+  id: "id",
+  companyId: "companyId",
+  customerId: "customerId",
+  jobId: "jobId",
+  campaignId: "campaignId",
+  channel: "channel",
+  direction: "direction",
+  toAddress: "toAddress",
+  fromAddress: "fromAddress",
+  subject: "subject",
+  body: "body",
+  providerMessageId: "providerMessageId",
+  providerStatus: "providerStatus",
+  sentAt: "sentAt",
+  deliveredAt: "deliveredAt",
+  failedAt: "failedAt",
+  failureReason: "failureReason",
+  createdAt: "createdAt",
+  updatedAt: "updatedAt",
+  deletedAt: "deletedAt"
+} as const;
+
 const techniciansTable = {
   __name: "technicians",
   id: "id",
@@ -1238,6 +1397,9 @@ const state: TestState = {
   maintenanceVisits: [],
   automationRules: [],
   aiRecommendations: [],
+  campaigns: [],
+  campaignRecipients: [],
+  messageLogs: [],
   technicians: [],
   scheduleSlots: [],
   activityEvents: []
@@ -1271,6 +1433,10 @@ function restoreState(snapshot: TestState): void {
   state.maintenancePlans.splice(0, state.maintenancePlans.length, ...snapshot.maintenancePlans);
   state.maintenanceVisits.splice(0, state.maintenanceVisits.length, ...snapshot.maintenanceVisits);
   state.automationRules.splice(0, state.automationRules.length, ...snapshot.automationRules);
+  state.aiRecommendations.splice(0, state.aiRecommendations.length, ...snapshot.aiRecommendations);
+  state.campaigns.splice(0, state.campaigns.length, ...snapshot.campaigns);
+  state.campaignRecipients.splice(0, state.campaignRecipients.length, ...snapshot.campaignRecipients);
+  state.messageLogs.splice(0, state.messageLogs.length, ...snapshot.messageLogs);
   state.technicians.splice(0, state.technicians.length, ...snapshot.technicians);
   state.scheduleSlots.splice(0, state.scheduleSlots.length, ...snapshot.scheduleSlots);
   state.activityEvents.splice(0, state.activityEvents.length, ...snapshot.activityEvents);
@@ -1318,6 +1484,12 @@ function getRows(tableName: TableName): AnyTestRecord[] {
       return state.automationRules;
     case "aiRecommendations":
       return state.aiRecommendations;
+    case "campaigns":
+      return state.campaigns;
+    case "campaignRecipients":
+      return state.campaignRecipients;
+    case "messageLogs":
+      return state.messageLogs;
     case "technicians":
       return state.technicians;
     case "scheduleSlots":
@@ -1938,6 +2110,94 @@ function createAiRecommendationRecord(
   };
 }
 
+function createCampaignRecord(
+  values: Partial<TestCampaignRecord> &
+    Pick<TestCampaignRecord, "companyId" | "type" | "name">
+): TestCampaignRecord {
+  const now = new Date();
+
+  return {
+    id: values.id ?? nextId(),
+    companyId: values.companyId,
+    createdById: values.createdById ?? null,
+    type: values.type,
+    status: values.status ?? "draft",
+    name: values.name,
+    subject: values.subject ?? null,
+    body: values.body ?? "",
+    channel: values.channel ?? "sms",
+    isAiGenerated: values.isAiGenerated ?? false,
+    aiRecommendationId: values.aiRecommendationId ?? null,
+    scheduledAt: values.scheduledAt ?? null,
+    sentAt: values.sentAt ?? null,
+    recipientCount: values.recipientCount ?? 0,
+    deliveredCount: values.deliveredCount ?? 0,
+    openedCount: values.openedCount ?? 0,
+    repliedCount: values.repliedCount ?? 0,
+    convertedCount: values.convertedCount ?? 0,
+    revenueAttributed: values.revenueAttributed ?? "0.00",
+    createdAt: values.createdAt ?? now,
+    updatedAt: values.updatedAt ?? now,
+    deletedAt: values.deletedAt ?? null
+  };
+}
+
+function createCampaignRecipientRecord(
+  values: Partial<TestCampaignRecipientRecord> &
+    Pick<TestCampaignRecipientRecord, "campaignId" | "customerId" | "companyId">
+): TestCampaignRecipientRecord {
+  const now = new Date();
+
+  return {
+    id: values.id ?? nextId(),
+    campaignId: values.campaignId,
+    customerId: values.customerId,
+    companyId: values.companyId,
+    sentAt: values.sentAt ?? null,
+    deliveredAt: values.deliveredAt ?? null,
+    openedAt: values.openedAt ?? null,
+    repliedAt: values.repliedAt ?? null,
+    convertedAt: values.convertedAt ?? null,
+    conversionJobId: values.conversionJobId ?? null,
+    sentToPhone: values.sentToPhone ?? null,
+    sentToEmail: values.sentToEmail ?? null,
+    unsubscribedAt: values.unsubscribedAt ?? null,
+    createdAt: values.createdAt ?? now,
+    updatedAt: values.updatedAt ?? now,
+    deletedAt: values.deletedAt ?? null
+  };
+}
+
+function createMessageLogRecord(
+  values: Partial<TestMessageLogRecord> &
+    Pick<TestMessageLogRecord, "companyId" | "channel" | "direction" | "toAddress" | "body">
+): TestMessageLogRecord {
+  const now = new Date();
+
+  return {
+    id: values.id ?? nextId(),
+    companyId: values.companyId,
+    customerId: values.customerId ?? null,
+    jobId: values.jobId ?? null,
+    campaignId: values.campaignId ?? null,
+    channel: values.channel,
+    direction: values.direction,
+    toAddress: values.toAddress,
+    fromAddress: values.fromAddress ?? null,
+    subject: values.subject ?? null,
+    body: values.body,
+    providerMessageId: values.providerMessageId ?? null,
+    providerStatus: values.providerStatus ?? null,
+    sentAt: values.sentAt ?? null,
+    deliveredAt: values.deliveredAt ?? null,
+    failedAt: values.failedAt ?? null,
+    failureReason: values.failureReason ?? null,
+    createdAt: values.createdAt ?? now,
+    updatedAt: values.updatedAt ?? now,
+    deletedAt: values.deletedAt ?? null
+  };
+}
+
 function createTechnicianRecord(
   values: Partial<TestTechnicianRecord> &
     Pick<TestTechnicianRecord, "companyId" | "firstName" | "lastName" | "phone">
@@ -2104,6 +2364,21 @@ function createRow(tableName: TableName, values: Record<string, unknown>): AnyTe
       return createAiRecommendationRecord(
         values as Partial<TestAiRecommendationRecord> &
           Pick<TestAiRecommendationRecord, "companyId" | "type" | "headline" | "body">
+      );
+    case "campaigns":
+      return createCampaignRecord(
+        values as Partial<TestCampaignRecord> &
+          Pick<TestCampaignRecord, "companyId" | "type" | "name">
+      );
+    case "campaignRecipients":
+      return createCampaignRecipientRecord(
+        values as Partial<TestCampaignRecipientRecord> &
+          Pick<TestCampaignRecipientRecord, "campaignId" | "customerId" | "companyId">
+      );
+    case "messageLogs":
+      return createMessageLogRecord(
+        values as Partial<TestMessageLogRecord> &
+          Pick<TestMessageLogRecord, "companyId" | "channel" | "direction" | "toAddress" | "body">
       );
     case "technicians":
       return createTechnicianRecord(
@@ -2340,6 +2615,9 @@ export const maintenancePlans = maintenancePlansTable;
 export const maintenanceVisits = maintenanceVisitsTable;
 export const automationRules = automationRulesTable;
 export const aiRecommendations = aiRecommendationsTable;
+export const campaigns = campaignsTable;
+export const campaignRecipients = campaignRecipientsTable;
+export const messageLogs = messageLogsTable;
 export const technicians = techniciansTable;
 export const scheduleSlots = scheduleSlotsTable;
 export const activityEvents = activityEventsTable;
@@ -2619,6 +2897,9 @@ export function createDbModuleMock() {
     maintenanceVisits,
     automationRules,
     aiRecommendations,
+    campaigns,
+    campaignRecipients,
+    messageLogs,
     technicians,
     scheduleSlots,
     activityEvents,
@@ -2653,6 +2934,9 @@ export function resetTestState(): void {
   state.maintenanceVisits.length = 0;
   state.automationRules.length = 0;
   state.aiRecommendations.length = 0;
+  state.campaigns.length = 0;
+  state.campaignRecipients.length = 0;
+  state.messageLogs.length = 0;
   state.technicians.length = 0;
   state.scheduleSlots.length = 0;
   state.activityEvents.length = 0;
@@ -2833,6 +3117,33 @@ export function seedAiRecommendation(
 ): TestAiRecommendationRecord {
   const record = createAiRecommendationRecord(values);
   state.aiRecommendations.push(record);
+  return record;
+}
+
+export function seedCampaign(
+  values: Partial<TestCampaignRecord> &
+    Pick<TestCampaignRecord, "companyId" | "type" | "name">
+): TestCampaignRecord {
+  const record = createCampaignRecord(values);
+  state.campaigns.push(record);
+  return record;
+}
+
+export function seedCampaignRecipient(
+  values: Partial<TestCampaignRecipientRecord> &
+    Pick<TestCampaignRecipientRecord, "campaignId" | "customerId" | "companyId">
+): TestCampaignRecipientRecord {
+  const record = createCampaignRecipientRecord(values);
+  state.campaignRecipients.push(record);
+  return record;
+}
+
+export function seedMessageLog(
+  values: Partial<TestMessageLogRecord> &
+    Pick<TestMessageLogRecord, "companyId" | "channel" | "direction" | "toAddress" | "body">
+): TestMessageLogRecord {
+  const record = createMessageLogRecord(values);
+  state.messageLogs.push(record);
   return record;
 }
 

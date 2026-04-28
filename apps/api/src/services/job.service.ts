@@ -45,6 +45,7 @@ import {
   getAvailableTransitions,
   transition as applyTransition
 } from "../lib/job-state-machine.js";
+import { trackConversion } from "./campaign.service.js";
 
 const DEFAULT_LIST_PAGE = 1;
 const DEFAULT_LIST_LIMIT = 25;
@@ -797,7 +798,7 @@ export async function createJob(
 ): Promise<Job> {
   const normalizedInput = normalizeCreateJobInput(input);
 
-  return db.transaction(async (tx) => {
+  const createdJob = await db.transaction(async (tx) => {
     const actor = await getActor(companyId, actorId, tx);
     const customer = await getCustomerRecord(companyId, normalizedInput.customerId, tx);
     const property =
@@ -868,6 +869,20 @@ export async function createJob(
 
     return createdJob;
   });
+
+  void trackConversion(companyId, normalizedInput.customerId, createdJob.id).catch((error: unknown) => {
+    logger.warn(
+      {
+        err: error,
+        companyId,
+        customerId: normalizedInput.customerId,
+        jobId: createdJob.id
+      },
+      "Campaign conversion attribution failed after job creation"
+    );
+  });
+
+  return createdJob;
 }
 
 export async function updateJob(

@@ -1,0 +1,2 @@
+ALTER TYPE "public"."activity_event_type" ADD VALUE 'campaign.created' BEFORE 'campaign.sent';--> statement-breakpoint
+ALTER TYPE "public"."activity_event_type" ADD VALUE 'campaign.converted' BEFORE 'campaign.sent';

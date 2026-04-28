@@ -10,7 +10,7 @@ import {
   messageLogs
 } from "@fsm/db";
 
-type TransactionExecutor = Pick<typeof db, "insert">;
+type TransactionExecutor = Pick<typeof db, "insert" | "update">;
 
 function buildTwimlResponse(): string {
   return '<?xml version="1.0" encoding="UTF-8"?><Response></Response>';
@@ -131,6 +131,34 @@ export async function twilioHandler(request: FastifyRequest, reply: FastifyReply
       },
       summary: "Inbound SMS received"
     });
+
+    if (messageBody.trim().toUpperCase() === "STOP" && companyContext.customerId) {
+      const updatedCustomers = await tx
+        .update(customers)
+        .set({
+          doNotContact: true,
+          updatedAt: new Date()
+        })
+        .where(and(eq(customers.id, companyContext.customerId), isNull(customers.deletedAt)))
+        .returning();
+      const customer = updatedCustomers[0];
+
+      if (customer) {
+        await emitEventWithExecutor(tx, {
+          companyId: customer.companyId,
+          eventType: "customer.updated",
+          actorType: "customer",
+          entityType: "customer",
+          entityId: customer.id,
+          customerId: customer.id,
+          payload: {
+            doNotContact: true,
+            source: "twilio_stop"
+          },
+          summary: "Customer opted out via SMS STOP"
+        });
+      }
+    }
   });
 
   request.log.info(

@@ -54,6 +54,13 @@ interface ServiceAgreementRenewalReminderEmailParams {
   companyName: string;
 }
 
+interface CampaignEmailParams {
+  firstName: string;
+  subject: string;
+  body: string;
+  companyName: string;
+}
+
 function formatEmailDate(value: string | null): string | null {
   if (!value) {
     return null;
@@ -311,6 +318,32 @@ export async function sendServiceAgreementPaymentFailedEmail(to: string, params:
     logger.debug({ recipient: "[redacted]" }, "Service agreement payment failed email sent");
   } catch (error) {
     logger.debug({ err: error, recipient: "[redacted]" }, "Service agreement payment failed email failed");
+    throw error;
+  }
+}
+
+export async function sendCampaignEmail(to: string, params: CampaignEmailParams): Promise<void> {
+  sgMail.setApiKey(env.SENDGRID_API_KEY);
+
+  const greetingName = params.firstName.trim().length > 0 ? params.firstName.trim() : "there";
+
+  try {
+    await sgMail.send({
+      to,
+      from: env.SENDGRID_FROM_EMAIL,
+      subject: params.subject,
+      html: `
+        <div style="font-family: Arial, sans-serif; line-height: 1.6; color: #111827;">
+          <p>Hi ${greetingName},</p>
+          <p>${params.body}</p>
+          <p>Reply to this email if you'd like to connect with ${params.companyName}.</p>
+        </div>
+      `
+    });
+
+    logger.debug({ recipient: "[redacted]" }, "Campaign email sent");
+  } catch (error) {
+    logger.debug({ err: error, recipient: "[redacted]" }, "Campaign email failed");
     throw error;
   }
 }

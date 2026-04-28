@@ -1,5 +1,6 @@
 export * from "./errors.js";
 export * from "./ai-revenue.types.js";
+export * from "./campaign.types.js";
 export * from "./customer.types.js";
 export * from "./estimate.types.js";
 export * from "./import.types.js";

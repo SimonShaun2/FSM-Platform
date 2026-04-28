@@ -5,6 +5,8 @@ import pino from "pino";
 import { env } from "@fsm/config";
 import {
   automationRules,
+  campaignRecipients,
+  campaigns,
   companies,
   customers,
   db,
@@ -12,6 +14,7 @@ import {
   estimates,
   invoices,
   maintenancePlans,
+  messageLogs,
   serviceAgreementTemplates,
   users
 } from "@fsm/db";
@@ -93,6 +96,19 @@ interface EmailModule {
       companyName: string;
     }
   ): Promise<void>;
+  sendCampaignEmail(
+    to: string,
+    params: {
+      firstName: string;
+      subject: string;
+      body: string;
+      companyName: string;
+    }
+  ): Promise<void>;
+}
+
+interface SmsModule {
+  sendSms(to: string, body: string): Promise<string>;
 }
 
 interface EstimateEmailContext {
@@ -160,6 +176,24 @@ interface ServiceAgreementEmailContext {
   } | null;
 }
 
+interface CampaignDeliveryContext {
+  companyId: string;
+  campaignId: string;
+  recipientId: string;
+  customerId: string;
+  recipient: {
+    sentAt: Date | null;
+  };
+  customer: {
+    firstName: string;
+    email: string | null;
+    phone: string | null;
+  };
+  company: {
+    name: string;
+  };
+}
+
 interface CompanyOwnerContext {
   id: string;
   firstName: string;
@@ -173,18 +207,47 @@ interface AutomationRuleContext {
 
 export interface NotificationsDependencies {
   email: EmailModule;
+  sms: SmsModule;
   loadEstimateEmailContext(companyId: string, estimateId: string): Promise<EstimateEmailContext | null>;
   loadInvoiceEmailContext(companyId: string, invoiceId: string): Promise<InvoiceEmailContext | null>;
   loadServiceAgreementEmailContext(
     companyId: string,
     maintenancePlanId: string
   ): Promise<ServiceAgreementEmailContext | null>;
+  loadCampaignDeliveryContext(
+    companyId: string,
+    campaignId: string,
+    recipientId: string
+  ): Promise<CampaignDeliveryContext | null>;
   loadCompanyOwner(companyId: string): Promise<CompanyOwnerContext | null>;
   findAutomationRule(
     companyId: string,
     ruleType: AutomationRuleType
   ): Promise<AutomationRuleContext | null>;
   markInvoiceReminderSent(companyId: string, invoiceId: string, reminderLevel: ReminderLevel): Promise<void>;
+  markCampaignRecipientDelivered(input: {
+    companyId: string;
+    campaignId: string;
+    recipientId: string;
+    customerId: string;
+    channel: "sms" | "email";
+    toAddress: string;
+    body: string;
+    subject: string | null;
+    providerMessageId: string | null;
+    providerStatus: string | null;
+  }): Promise<void>;
+  recordCampaignDeliveryFailure(input: {
+    companyId: string;
+    campaignId: string;
+    recipientId: string;
+    customerId: string;
+    channel: "sms" | "email";
+    toAddress: string;
+    body: string;
+    subject: string | null;
+    failureReason: string;
+  }): Promise<void>;
 }
 
 function getJobString(data: Record<string, unknown>, key: string): string | null {
@@ -211,11 +274,20 @@ async function loadEmailModule(): Promise<EmailModule> {
   return import(moduleUrl.href) as Promise<EmailModule>;
 }
 
-const productionDependenciesPromise: Promise<NotificationsDependencies> = (async () => {
-  const email = await loadEmailModule();
+async function loadSmsModule(): Promise<SmsModule> {
+  const moduleUrl = new URL("../../../api/dist/lib/sms.js", import.meta.url);
+  return import(moduleUrl.href) as Promise<SmsModule>;
+}
 
-  return {
+let productionDependenciesPromise: Promise<NotificationsDependencies> | null = null;
+
+function createProductionDependencies(): Promise<NotificationsDependencies> {
+  return (async () => {
+    const [email, sms] = await Promise.all([loadEmailModule(), loadSmsModule()]);
+
+    return {
     email,
+    sms,
     async loadEstimateEmailContext(companyId, estimateId) {
       const [estimate] = await db
         .select()
@@ -406,6 +478,62 @@ const productionDependenciesPromise: Promise<NotificationsDependencies> = (async
           : null
       };
     },
+    async loadCampaignDeliveryContext(companyId, campaignId, recipientId) {
+      const [recipient] = await db
+        .select()
+        .from(campaignRecipients)
+        .where(
+          and(
+            eq(campaignRecipients.companyId, companyId),
+            eq(campaignRecipients.campaignId, campaignId),
+            eq(campaignRecipients.id, recipientId),
+            isNull(campaignRecipients.deletedAt)
+          )
+        )
+        .limit(1);
+
+      if (!recipient) {
+        return null;
+      }
+
+      const [customer, company] = await Promise.all([
+        db
+          .select()
+          .from(customers)
+          .where(and(eq(customers.companyId, companyId), eq(customers.id, recipient.customerId), isNull(customers.deletedAt)))
+          .limit(1),
+        db
+          .select()
+          .from(companies)
+          .where(and(eq(companies.id, companyId), isNull(companies.deletedAt)))
+          .limit(1)
+      ]);
+
+      const customerRecord = customer[0];
+      const companyRecord = company[0];
+
+      if (!customerRecord || !companyRecord) {
+        return null;
+      }
+
+      return {
+        companyId,
+        campaignId,
+        recipientId,
+        customerId: recipient.customerId,
+        recipient: {
+          sentAt: recipient.sentAt
+        },
+        customer: {
+          firstName: customerRecord.firstName,
+          email: customerRecord.email,
+          phone: customerRecord.phone
+        },
+        company: {
+          name: companyRecord.name
+        }
+      };
+    },
     async loadCompanyOwner(companyId) {
       const [owner] = await db
         .select({
@@ -456,11 +584,91 @@ const productionDependenciesPromise: Promise<NotificationsDependencies> = (async
           updatedAt: now
         })
         .where(and(eq(invoices.companyId, companyId), eq(invoices.id, invoiceId), isNull(invoices.deletedAt)));
+    },
+    async markCampaignRecipientDelivered(input) {
+      const now = new Date();
+      const [recipient] = await db
+        .update(campaignRecipients)
+        .set({
+          sentAt: now,
+          deliveredAt: now,
+          ...(input.channel === "sms" ? { sentToPhone: input.toAddress } : { sentToEmail: input.toAddress }),
+          updatedAt: now
+        })
+        .where(
+          and(
+            eq(campaignRecipients.companyId, input.companyId),
+            eq(campaignRecipients.campaignId, input.campaignId),
+            eq(campaignRecipients.id, input.recipientId),
+            isNull(campaignRecipients.deletedAt)
+          )
+        )
+        .returning();
+
+      if (!recipient) {
+        return;
+      }
+
+      await db.insert(messageLogs).values({
+        companyId: input.companyId,
+        customerId: input.customerId,
+        campaignId: input.campaignId,
+        channel: input.channel,
+        direction: "outbound",
+        toAddress: input.toAddress,
+        fromAddress: input.channel === "sms" ? env.TWILIO_FROM_NUMBER : env.SENDGRID_FROM_EMAIL,
+        subject: input.subject,
+        body: input.body,
+        providerMessageId: input.providerMessageId,
+        providerStatus: input.providerStatus,
+        sentAt: now,
+        deliveredAt: now
+      });
+
+      const [campaign] = await db
+        .select()
+        .from(campaigns)
+        .where(and(eq(campaigns.companyId, input.companyId), eq(campaigns.id, input.campaignId), isNull(campaigns.deletedAt)))
+        .limit(1);
+
+      if (!campaign) {
+        return;
+      }
+
+      await db
+        .update(campaigns)
+        .set({
+          deliveredCount: (campaign.deliveredCount ?? 0) + 1,
+          updatedAt: now
+        })
+        .where(and(eq(campaigns.companyId, input.companyId), eq(campaigns.id, input.campaignId), isNull(campaigns.deletedAt)));
+    },
+    async recordCampaignDeliveryFailure(input) {
+      const now = new Date();
+
+      await db.insert(messageLogs).values({
+        companyId: input.companyId,
+        customerId: input.customerId,
+        campaignId: input.campaignId,
+        channel: input.channel,
+        direction: "outbound",
+        toAddress: input.toAddress,
+        fromAddress: input.channel === "sms" ? env.TWILIO_FROM_NUMBER : env.SENDGRID_FROM_EMAIL,
+        subject: input.subject,
+        body: input.body,
+        failedAt: now,
+        failureReason: input.failureReason
+      });
     }
-  };
-})();
+    };
+  })();
+}
 
 async function getProductionDependencies(): Promise<NotificationsDependencies> {
+  if (!productionDependenciesPromise) {
+    productionDependenciesPromise = createProductionDependencies();
+  }
+
   return productionDependenciesPromise;
 }
 
@@ -557,6 +765,112 @@ export async function handleSendInvoiceEmail(
   });
 
   logger.info({ companyId, invoiceId, customerId }, "Invoice email sent");
+}
+
+export async function handleSendCampaignMessage(
+  job: Job<Record<string, unknown>>,
+  dependencies: NotificationsDependencies
+): Promise<void> {
+  const companyId = getJobString(job.data, "companyId");
+  const campaignId = getJobString(job.data, "campaignId");
+  const recipientId = getJobString(job.data, "recipientId");
+  const customerId = getJobString(job.data, "customerId");
+  const channel = getJobString(job.data, "channel");
+  const body = getJobString(job.data, "body");
+  const toAddress = getJobString(job.data, "toAddress");
+  const subject = getJobString(job.data, "subject");
+
+  if (!companyId || !campaignId || !recipientId || !customerId || !body || !toAddress) {
+    logger.warn({ jobId: job.id ?? null }, "Campaign message job missing required identifiers");
+    return;
+  }
+
+  if (channel !== "sms" && channel !== "email") {
+    logger.warn({ jobId: job.id ?? null, campaignId, recipientId }, "Campaign message job has an unsupported channel");
+    return;
+  }
+
+  const context = await dependencies.loadCampaignDeliveryContext(companyId, campaignId, recipientId);
+
+  if (!context || context.customerId !== customerId) {
+    logger.warn(
+      { companyId, campaignId, recipientId, customerId },
+      "Campaign message job skipped because recipient context was not found"
+    );
+    return;
+  }
+
+  if (context.recipient.sentAt) {
+    logger.info(
+      { companyId, campaignId, recipientId, customerId },
+      "Campaign message job skipped because recipient was already sent"
+    );
+    return;
+  }
+
+  try {
+    if (channel === "sms") {
+      const providerMessageId = await dependencies.sms.sendSms(toAddress, body);
+
+      await dependencies.markCampaignRecipientDelivered({
+        companyId,
+        campaignId,
+        recipientId,
+        customerId,
+        channel: "sms",
+        toAddress,
+        body,
+        subject,
+        providerMessageId,
+        providerStatus: "sent"
+      });
+
+      logger.info({ companyId, campaignId, recipientId, customerId }, "Campaign SMS sent");
+      return;
+    }
+
+    if (!subject) {
+      logger.warn({ companyId, campaignId, recipientId, customerId }, "Campaign email job skipped because subject is missing");
+      return;
+    }
+
+    await dependencies.email.sendCampaignEmail(toAddress, {
+      firstName: context.customer.firstName,
+      subject,
+      body,
+      companyName: context.company.name
+    });
+
+    await dependencies.markCampaignRecipientDelivered({
+      companyId,
+      campaignId,
+      recipientId,
+      customerId,
+      channel: "email",
+      toAddress,
+      body,
+      subject,
+      providerMessageId: null,
+      providerStatus: "sent"
+    });
+
+    logger.info({ companyId, campaignId, recipientId, customerId }, "Campaign email sent");
+  } catch (error) {
+    await dependencies.recordCampaignDeliveryFailure({
+      companyId,
+      campaignId,
+      recipientId,
+      customerId,
+      channel,
+      toAddress,
+      body,
+      subject,
+      failureReason: error instanceof Error ? error.message : "Unknown delivery failure"
+    });
+
+    logger.error({ err: error, companyId, campaignId, recipientId, customerId }, "Campaign delivery failed");
+    throw error;
+  }
 }
 
 export async function handleSendInvoiceReminder(
@@ -730,6 +1044,9 @@ export function createNotificationsProcessor(
     switch (job.name) {
       case "send-estimate-email":
         await handleSendEstimateEmail(job, dependencies);
+        return;
+      case "send-campaign-message":
+        await handleSendCampaignMessage(job, dependencies);
         return;
       case "send-invoice-email":
         await handleSendInvoiceEmail(job, dependencies);
