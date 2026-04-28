@@ -20,14 +20,12 @@ import {
   type UpdateCustomerInput
 } from "@fsm/types";
 
-import {
-  CreateCustomerSchema,
-  ListCustomersQuerySchema,
-  SearchCustomersQuerySchema,
-  UpdateCustomerSchema
-} from "../routes/customers/schemas.js";
-
 const MAX_RESULT_WINDOW = 10_000;
+const DEFAULT_LIST_PAGE = 1;
+const DEFAULT_LIST_LIMIT = 25;
+const MAX_LIST_LIMIT = 100;
+const DEFAULT_SORT_BY = "lastName";
+const DEFAULT_SORT_ORDER = "asc";
 
 type CustomerRow = typeof customers.$inferSelect;
 type PropertyRow = typeof properties.$inferSelect;
@@ -36,6 +34,15 @@ type MaintenancePlanRow = typeof maintenancePlans.$inferSelect;
 type UserRow = typeof users.$inferSelect;
 type SelectExecutor = Pick<typeof db, "select">;
 type TransactionExecutor = Pick<typeof db, "select" | "insert" | "update">;
+type NormalizedListCustomersQuery = {
+  search?: string | undefined;
+  tags?: string[] | undefined;
+  hasActiveMaintenancePlan?: boolean | undefined;
+  sortBy: NonNullable<ListCustomersQuery["sortBy"]>;
+  sortOrder: NonNullable<ListCustomersQuery["sortOrder"]>;
+  page: number;
+  limit: number;
+};
 
 function buildActorName(firstName: string, lastName: string): string {
   return `${firstName} ${lastName}`.trim();
@@ -72,6 +79,18 @@ function normalizeTags(tags: string[] | undefined): string[] | undefined {
 
 function normalizeSearchValue(value: string | null | undefined): string {
   return (value ?? "").trim().toLowerCase();
+}
+
+function normalizeListCustomersQuery(query: ListCustomersQuery): NormalizedListCustomersQuery {
+  return {
+    search: normalizeOptionalString(query.search) ?? undefined,
+    tags: normalizeTags(query.tags),
+    hasActiveMaintenancePlan: query.hasActiveMaintenancePlan,
+    sortBy: query.sortBy ?? DEFAULT_SORT_BY,
+    sortOrder: query.sortOrder ?? DEFAULT_SORT_ORDER,
+    page: Math.max(query.page ?? DEFAULT_LIST_PAGE, DEFAULT_LIST_PAGE),
+    limit: Math.min(Math.max(query.limit ?? DEFAULT_LIST_LIMIT, DEFAULT_LIST_PAGE), MAX_LIST_LIMIT)
+  };
 }
 
 function matchesCustomerSearch(customer: CustomerRow, search: string): boolean {
@@ -224,14 +243,14 @@ export async function listCustomers(
   companyId: string,
   query: ListCustomersQuery
 ): Promise<PaginatedResult<Customer>> {
-  const parsedQuery = ListCustomersQuerySchema.parse(query);
+  const normalizedQuery = normalizeListCustomersQuery(query);
   const companyCustomers = await db
     .select()
     .from(customers)
     .where(and(eq(customers.companyId, companyId), isNull(customers.deletedAt)))
     .limit(MAX_RESULT_WINDOW);
-  const normalizedSearch = parsedQuery.search ? normalizeSearchValue(parsedQuery.search) : null;
-  const normalizedTags = parsedQuery.tags ? normalizeTags(parsedQuery.tags) ?? [] : null;
+  const normalizedSearch = normalizedQuery.search ? normalizeSearchValue(normalizedQuery.search) : null;
+  const normalizedTags = normalizedQuery.tags ? normalizeTags(normalizedQuery.tags) ?? [] : null;
 
   let filteredCustomers = companyCustomers.filter((customer) => {
     if (normalizedSearch && !matchesCustomerSearch(customer, normalizedSearch)) {
@@ -245,7 +264,7 @@ export async function listCustomers(
     return true;
   });
 
-  if (parsedQuery.hasActiveMaintenancePlan !== undefined) {
+  if (normalizedQuery.hasActiveMaintenancePlan !== undefined) {
     const companyPlans = await db
       .select()
       .from(maintenancePlans)
@@ -256,27 +275,28 @@ export async function listCustomers(
     );
 
     filteredCustomers = filteredCustomers.filter((customer) =>
-      parsedQuery.hasActiveMaintenancePlan ? activePlanCustomerIds.has(customer.id) : !activePlanCustomerIds.has(customer.id)
+      normalizedQuery.hasActiveMaintenancePlan
+        ? activePlanCustomerIds.has(customer.id)
+        : !activePlanCustomerIds.has(customer.id)
     );
   }
 
-  const sortedCustomers = sortCustomersList(filteredCustomers, parsedQuery.sortBy, parsedQuery.sortOrder);
+  const sortedCustomers = sortCustomersList(filteredCustomers, normalizedQuery.sortBy, normalizedQuery.sortOrder);
   const total = sortedCustomers.length;
-  const offset = (parsedQuery.page - 1) * parsedQuery.limit;
-  const paginatedCustomers = sortedCustomers.slice(offset, offset + parsedQuery.limit);
+  const offset = (normalizedQuery.page - 1) * normalizedQuery.limit;
+  const paginatedCustomers = sortedCustomers.slice(offset, offset + normalizedQuery.limit);
 
   return {
     data: paginatedCustomers,
     total,
-    page: parsedQuery.page,
-    limit: parsedQuery.limit,
-    totalPages: Math.ceil(total / parsedQuery.limit)
+    page: normalizedQuery.page,
+    limit: normalizedQuery.limit,
+    totalPages: Math.ceil(total / normalizedQuery.limit)
   };
 }
 
 export async function searchCustomers(companyId: string, query: string): Promise<Customer[]> {
-  const parsedQuery = SearchCustomersQuerySchema.parse({ q: query });
-  const normalizedQuery = normalizeSearchValue(parsedQuery.q);
+  const normalizedQuery = normalizeSearchValue(query);
   const companyCustomers = await db
     .select()
     .from(customers)
@@ -301,8 +321,7 @@ export async function createCustomer(
   actorId: string,
   input: CreateCustomerInput
 ): Promise<Customer> {
-  const parsedInput = CreateCustomerSchema.parse(input);
-  const normalizedTags = normalizeTags(parsedInput.tags) ?? [];
+  const normalizedTags = normalizeTags(input.tags) ?? [];
 
   return db.transaction(async (tx) => {
     const actor = await getActor(companyId, actorId, tx);
@@ -310,18 +329,18 @@ export async function createCustomer(
       .insert(customers)
       .values({
         companyId,
-        firstName: parsedInput.firstName.trim(),
-        lastName: parsedInput.lastName.trim(),
-        displayName: normalizeOptionalString(parsedInput.displayName) ?? null,
-        email: normalizeOptionalEmail(parsedInput.email) ?? null,
-        phone: normalizeOptionalString(parsedInput.phone) ?? null,
-        altPhone: normalizeOptionalString(parsedInput.altPhone) ?? null,
-        leadSource: normalizeOptionalString(parsedInput.leadSource) ?? null,
+        firstName: input.firstName.trim(),
+        lastName: input.lastName.trim(),
+        displayName: normalizeOptionalString(input.displayName) ?? null,
+        email: normalizeOptionalEmail(input.email) ?? null,
+        phone: normalizeOptionalString(input.phone) ?? null,
+        altPhone: normalizeOptionalString(input.altPhone) ?? null,
+        leadSource: normalizeOptionalString(input.leadSource) ?? null,
         tags: normalizedTags,
-        internalNotes: normalizeOptionalString(parsedInput.internalNotes) ?? null,
-        prefersSms: parsedInput.prefersSms ?? true,
-        prefersEmail: parsedInput.prefersEmail ?? true,
-        doNotContact: parsedInput.doNotContact ?? false,
+        internalNotes: normalizeOptionalString(input.internalNotes) ?? null,
+        prefersSms: input.prefersSms ?? true,
+        prefersEmail: input.prefersEmail ?? true,
+        doNotContact: input.doNotContact ?? false,
         firstServiceDate: null
       })
       .returning();
@@ -356,22 +375,21 @@ export async function updateCustomer(
   customerId: string,
   input: UpdateCustomerInput
 ): Promise<Customer> {
-  const parsedInput = UpdateCustomerSchema.parse(input);
   const existingCustomer = await getCustomerRecord(companyId, customerId, db);
-  const normalizedTags = parsedInput.tags ? normalizeTags(parsedInput.tags) ?? [] : undefined;
+  const normalizedTags = input.tags ? normalizeTags(input.tags) ?? [] : undefined;
   const updateValues = {
-    ...(parsedInput.firstName !== undefined ? { firstName: parsedInput.firstName.trim() } : {}),
-    ...(parsedInput.lastName !== undefined ? { lastName: parsedInput.lastName.trim() } : {}),
-    ...(parsedInput.displayName !== undefined ? { displayName: normalizeOptionalString(parsedInput.displayName) ?? null } : {}),
-    ...(parsedInput.email !== undefined ? { email: normalizeOptionalEmail(parsedInput.email) ?? null } : {}),
-    ...(parsedInput.phone !== undefined ? { phone: normalizeOptionalString(parsedInput.phone) ?? null } : {}),
-    ...(parsedInput.altPhone !== undefined ? { altPhone: normalizeOptionalString(parsedInput.altPhone) ?? null } : {}),
-    ...(parsedInput.leadSource !== undefined ? { leadSource: normalizeOptionalString(parsedInput.leadSource) ?? null } : {}),
+    ...(input.firstName !== undefined ? { firstName: input.firstName.trim() } : {}),
+    ...(input.lastName !== undefined ? { lastName: input.lastName.trim() } : {}),
+    ...(input.displayName !== undefined ? { displayName: normalizeOptionalString(input.displayName) ?? null } : {}),
+    ...(input.email !== undefined ? { email: normalizeOptionalEmail(input.email) ?? null } : {}),
+    ...(input.phone !== undefined ? { phone: normalizeOptionalString(input.phone) ?? null } : {}),
+    ...(input.altPhone !== undefined ? { altPhone: normalizeOptionalString(input.altPhone) ?? null } : {}),
+    ...(input.leadSource !== undefined ? { leadSource: normalizeOptionalString(input.leadSource) ?? null } : {}),
     ...(normalizedTags !== undefined ? { tags: normalizedTags } : {}),
-    ...(parsedInput.internalNotes !== undefined ? { internalNotes: normalizeOptionalString(parsedInput.internalNotes) ?? null } : {}),
-    ...(parsedInput.prefersSms !== undefined ? { prefersSms: parsedInput.prefersSms } : {}),
-    ...(parsedInput.prefersEmail !== undefined ? { prefersEmail: parsedInput.prefersEmail } : {}),
-    ...(parsedInput.doNotContact !== undefined ? { doNotContact: parsedInput.doNotContact } : {})
+    ...(input.internalNotes !== undefined ? { internalNotes: normalizeOptionalString(input.internalNotes) ?? null } : {}),
+    ...(input.prefersSms !== undefined ? { prefersSms: input.prefersSms } : {}),
+    ...(input.prefersEmail !== undefined ? { prefersEmail: input.prefersEmail } : {}),
+    ...(input.doNotContact !== undefined ? { doNotContact: input.doNotContact } : {})
   };
 
   if (Object.keys(updateValues).length === 0) {

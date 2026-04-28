@@ -1,0 +1,82 @@
+const errorResponseSchema = {
+  type: "object",
+  additionalProperties: false,
+  required: ["error", "message", "requestId"],
+  properties: {
+    error: { type: "string" },
+    message: { type: "string" },
+    requestId: { type: "string" },
+    fields: {
+      anyOf: [
+        {
+          type: "object",
+          additionalProperties: { type: "string" }
+        },
+        { type: "null" }
+      ]
+    }
+  }
+} as const;
+
+const stripeConnectStatusSchema = {
+  type: "object",
+  additionalProperties: false,
+  required: ["connected"],
+  properties: {
+    connected: { type: "boolean" },
+    chargesEnabled: { type: "boolean" },
+    payoutsEnabled: { type: "boolean" },
+    detailsSubmitted: { type: "boolean" },
+    stripeAccountId: { type: "string" }
+  }
+} as const;
+
+const stripeUrlSchema = {
+  type: "object",
+  additionalProperties: false,
+  required: ["url"],
+  properties: {
+    url: { type: "string", format: "uri" }
+  }
+} as const;
+
+export const stripeConnectOnboardSchema = {
+  tags: ["stripe"],
+  response: {
+    200: stripeUrlSchema,
+    401: errorResponseSchema,
+    403: errorResponseSchema,
+    404: errorResponseSchema
+  }
+} as const;
+
+export const stripeConnectReturnSchema = {
+  tags: ["stripe"],
+  response: {
+    200: stripeConnectStatusSchema,
+    401: errorResponseSchema,
+    403: errorResponseSchema,
+    404: errorResponseSchema
+  }
+} as const;
+
+export const stripeConnectStatusRouteSchema = {
+  tags: ["stripe"],
+  response: {
+    200: stripeConnectStatusSchema,
+    401: errorResponseSchema,
+    403: errorResponseSchema,
+    404: errorResponseSchema
+  }
+} as const;
+
+export const stripeDashboardLinkSchema = {
+  tags: ["stripe"],
+  response: {
+    200: stripeUrlSchema,
+    401: errorResponseSchema,
+    403: errorResponseSchema,
+    404: errorResponseSchema,
+    409: errorResponseSchema
+  }
+} as const;

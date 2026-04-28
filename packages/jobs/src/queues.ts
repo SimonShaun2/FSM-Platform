@@ -2,35 +2,30 @@ import { Queue } from "bullmq";
 
 import { redisConnection } from "./connection.js";
 
+export const QUEUE_PREFIX = "fsm";
+
 export const QUEUE_NAMES = {
-  imports: "fsm:imports",
-  ai: "fsm:ai",
-  notifications: "fsm:notifications",
-  invoices: "fsm:invoices",
-  agreements: "fsm:agreements",
-  webhooks: "fsm:webhooks"
+  imports: "imports",
+  ai: "ai",
+  notifications: "notifications",
+  invoices: "invoices",
+  agreements: "agreements",
+  webhooks: "webhooks"
 } as const;
 
-export const importsQueue = new Queue(QUEUE_NAMES.imports, {
-  connection: redisConnection
-});
+export const queueBaseOptions = {
+  connection: redisConnection,
+  prefix: QUEUE_PREFIX
+} as const;
 
-export const aiQueue = new Queue(QUEUE_NAMES.ai, {
-  connection: redisConnection
-});
+export const importsQueue = new Queue(QUEUE_NAMES.imports, queueBaseOptions);
 
-export const notificationsQueue = new Queue(QUEUE_NAMES.notifications, {
-  connection: redisConnection
-});
+export const aiQueue = new Queue(QUEUE_NAMES.ai, queueBaseOptions);
 
-export const invoicesQueue = new Queue(QUEUE_NAMES.invoices, {
-  connection: redisConnection
-});
+export const notificationsQueue = new Queue(QUEUE_NAMES.notifications, queueBaseOptions);
 
-export const agreementsQueue = new Queue(QUEUE_NAMES.agreements, {
-  connection: redisConnection
-});
+export const invoicesQueue = new Queue(QUEUE_NAMES.invoices, queueBaseOptions);
 
-export const webhooksQueue = new Queue(QUEUE_NAMES.webhooks, {
-  connection: redisConnection
-});
+export const agreementsQueue = new Queue(QUEUE_NAMES.agreements, queueBaseOptions);
+
+export const webhooksQueue = new Queue(QUEUE_NAMES.webhooks, queueBaseOptions);

@@ -1,6 +1,5 @@
 import type { FastifyReply, FastifyRequest } from "fastify";
 
-import { verifyRefreshToken } from "../../lib/tokens.js";
 import { getCompany } from "../../services/company.service.js";
 import {
   forgotPassword,
@@ -86,8 +85,7 @@ export async function logoutHandler(
   reply: FastifyReply
 ): Promise<FastifyReply> {
   const body = request.body as LogoutInput;
-  const payload = verifyRefreshToken(body.refreshToken);
-  await logout(payload.userId, body.refreshToken);
+  await logout(body.refreshToken);
 
   return reply.status(204).send();
 }

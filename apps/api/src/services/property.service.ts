@@ -17,12 +17,9 @@ import {
   type UpdatePropertyInput
 } from "@fsm/types";
 
-import {
-  CreatePropertySchema,
-  UpdatePropertySchema
-} from "../routes/customers/schemas.js";
-
 const MAX_RESULT_WINDOW = 10_000;
+const DEFAULT_COUNTRY = "US";
+const DEFAULT_PROPERTY_TYPE = "residential";
 
 type CustomerRow = typeof customers.$inferSelect;
 type PropertyRow = typeof properties.$inferSelect;
@@ -149,13 +146,12 @@ export async function createProperty(
   customerId: string,
   input: CreatePropertyInput
 ): Promise<Property> {
-  const parsedInput = CreatePropertySchema.parse(input);
   await getCustomerRecord(companyId, customerId, db);
 
   return db.transaction(async (tx) => {
     const actor = await getActor(companyId, actorId, tx);
 
-    if (parsedInput.isPrimary === true) {
+    if (input.isPrimary === true) {
       await tx
         .update(properties)
         .set({
@@ -170,18 +166,18 @@ export async function createProperty(
       .values({
         companyId,
         customerId,
-        addressLine1: parsedInput.addressLine1.trim(),
-        addressLine2: normalizeOptionalString(parsedInput.addressLine2) ?? null,
-        city: parsedInput.city.trim(),
-        state: parsedInput.state.trim(),
-        zip: parsedInput.zip.trim(),
-        country: normalizeOptionalString(parsedInput.country) ?? "US",
-        type: parsedInput.type,
-        sqft: parsedInput.sqft ?? null,
-        yearBuilt: parsedInput.yearBuilt ?? null,
-        accessNotes: normalizeOptionalString(parsedInput.accessNotes) ?? null,
-        notes: normalizeOptionalString(parsedInput.notes) ?? null,
-        isPrimary: parsedInput.isPrimary ?? false
+        addressLine1: input.addressLine1.trim(),
+        addressLine2: normalizeOptionalString(input.addressLine2) ?? null,
+        city: input.city.trim(),
+        state: input.state.trim(),
+        zip: input.zip.trim(),
+        country: normalizeOptionalString(input.country) ?? DEFAULT_COUNTRY,
+        type: input.type ?? DEFAULT_PROPERTY_TYPE,
+        sqft: input.sqft ?? null,
+        yearBuilt: input.yearBuilt ?? null,
+        accessNotes: normalizeOptionalString(input.accessNotes) ?? null,
+        notes: normalizeOptionalString(input.notes) ?? null,
+        isPrimary: input.isPrimary ?? false
       })
       .returning();
     const property = insertedProperties[0];
@@ -216,21 +212,20 @@ export async function updateProperty(
   propertyId: string,
   input: UpdatePropertyInput
 ): Promise<Property> {
-  const parsedInput = UpdatePropertySchema.parse(input);
   const existingProperty = await getPropertyRecord(companyId, customerId, propertyId, db);
   const updateValues = {
-    ...(parsedInput.addressLine1 !== undefined ? { addressLine1: parsedInput.addressLine1.trim() } : {}),
-    ...(parsedInput.addressLine2 !== undefined ? { addressLine2: normalizeOptionalString(parsedInput.addressLine2) ?? null } : {}),
-    ...(parsedInput.city !== undefined ? { city: parsedInput.city.trim() } : {}),
-    ...(parsedInput.state !== undefined ? { state: parsedInput.state.trim() } : {}),
-    ...(parsedInput.zip !== undefined ? { zip: parsedInput.zip.trim() } : {}),
-    ...(parsedInput.country !== undefined ? { country: normalizeOptionalString(parsedInput.country) ?? "US" } : {}),
-    ...(parsedInput.type !== undefined ? { type: parsedInput.type } : {}),
-    ...(parsedInput.sqft !== undefined ? { sqft: parsedInput.sqft } : {}),
-    ...(parsedInput.yearBuilt !== undefined ? { yearBuilt: parsedInput.yearBuilt } : {}),
-    ...(parsedInput.accessNotes !== undefined ? { accessNotes: normalizeOptionalString(parsedInput.accessNotes) ?? null } : {}),
-    ...(parsedInput.notes !== undefined ? { notes: normalizeOptionalString(parsedInput.notes) ?? null } : {}),
-    ...(parsedInput.isPrimary !== undefined ? { isPrimary: parsedInput.isPrimary } : {})
+    ...(input.addressLine1 !== undefined ? { addressLine1: input.addressLine1.trim() } : {}),
+    ...(input.addressLine2 !== undefined ? { addressLine2: normalizeOptionalString(input.addressLine2) ?? null } : {}),
+    ...(input.city !== undefined ? { city: input.city.trim() } : {}),
+    ...(input.state !== undefined ? { state: input.state.trim() } : {}),
+    ...(input.zip !== undefined ? { zip: input.zip.trim() } : {}),
+    ...(input.country !== undefined ? { country: normalizeOptionalString(input.country) ?? DEFAULT_COUNTRY } : {}),
+    ...(input.type !== undefined ? { type: input.type } : {}),
+    ...(input.sqft !== undefined ? { sqft: input.sqft } : {}),
+    ...(input.yearBuilt !== undefined ? { yearBuilt: input.yearBuilt } : {}),
+    ...(input.accessNotes !== undefined ? { accessNotes: normalizeOptionalString(input.accessNotes) ?? null } : {}),
+    ...(input.notes !== undefined ? { notes: normalizeOptionalString(input.notes) ?? null } : {}),
+    ...(input.isPrimary !== undefined ? { isPrimary: input.isPrimary } : {})
   };
 
   if (Object.keys(updateValues).length === 0) {
@@ -240,7 +235,7 @@ export async function updateProperty(
   return db.transaction(async (tx) => {
     const actor = await getActor(companyId, actorId, tx);
 
-    if (parsedInput.isPrimary === true) {
+    if (input.isPrimary === true) {
       await tx
         .update(properties)
         .set({

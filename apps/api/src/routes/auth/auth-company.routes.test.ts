@@ -2,33 +2,13 @@ import jwt from "jsonwebtoken";
 import request from "supertest";
 import { afterEach, beforeAll, beforeEach, describe, expect, it, vi } from "vitest";
 
+import { setupTestEnv } from "../../test-support/env-setup.js";
+
+const JWT_SECRET = "jwt_secret";
+const JWT_REFRESH_SECRET = "jwt_refresh_secret";
 const sendPasswordResetEmailMock = vi.hoisted(() => vi.fn());
 
-process.env.NODE_ENV = "test";
-process.env.API_PORT = "3001";
-process.env.WEBHOOK_PORT = "3002";
-process.env.DATABASE_URL = "postgres://postgres:postgres@localhost:5432/fsm";
-process.env.REDIS_URL = "redis://localhost:6379";
-process.env.STRIPE_SECRET_KEY = "sk_test_dummy";
-process.env.STRIPE_WEBHOOK_SECRET = "whsec_dummy";
-process.env.STRIPE_PLATFORM_FEE_PERCENT = "3";
-process.env.OPENAI_API_KEY = "openai_dummy";
-process.env.TWILIO_ACCOUNT_SID = "twilio_sid";
-process.env.TWILIO_AUTH_TOKEN = "twilio_token";
-process.env.TWILIO_FROM_NUMBER = "+15555555555";
-process.env.SENDGRID_API_KEY = "sendgrid_dummy";
-process.env.SENDGRID_FROM_EMAIL = "noreply@example.com";
-process.env.R2_ACCOUNT_ID = "r2_account";
-process.env.R2_ACCESS_KEY_ID = "r2_access";
-process.env.R2_SECRET_ACCESS_KEY = "r2_secret";
-process.env.R2_BUCKET_NAME = "fsm-bucket";
-process.env.APP_URL = "http://localhost:3000";
-process.env.JWT_SECRET = "jwt_secret";
-process.env.JWT_REFRESH_SECRET = "jwt_refresh_secret";
-process.env.ACCESS_TOKEN_TTL_SECONDS = "900";
-process.env.REFRESH_TOKEN_TTL_SECONDS = "2592000";
-process.env.RESET_TOKEN_TTL_SECONDS = "3600";
-process.env.NEXT_PUBLIC_API_URL = "http://localhost:3001";
+setupTestEnv();
 
 vi.mock("drizzle-orm", async () => {
   const helper = await import("../../test-support/fake-db.js");
@@ -190,7 +170,7 @@ describe("auth and company routes", () => {
         companyId: registerResponse.company.id,
         tokenType: "refresh"
       },
-      process.env.JWT_REFRESH_SECRET ?? "",
+      JWT_REFRESH_SECRET,
       { expiresIn: -1 }
     );
 
@@ -254,7 +234,7 @@ describe("auth and company routes", () => {
         email: "owner@example.com",
         tokenType: "reset"
       },
-      process.env.JWT_SECRET ?? "",
+      JWT_SECRET,
       { expiresIn: -1 }
     );
 

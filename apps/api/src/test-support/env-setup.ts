@@ -8,7 +8,8 @@ const TEST_ENV_VALUES = {
   REDIS_URL: "redis://localhost:6379",
   STRIPE_SECRET_KEY: "sk_test_dummy",
   STRIPE_WEBHOOK_SECRET: "whsec_dummy",
-  STRIPE_PLATFORM_FEE_PERCENT: "3",
+  STRIPE_CONNECT_CLIENT_ID: "ca_test_dummy",
+  STRIPE_PLATFORM_FEE_PERCENT: "0.05",
   OPENAI_API_KEY: "openai_dummy",
   TWILIO_ACCOUNT_SID: "twilio_sid",
   TWILIO_AUTH_TOKEN: "twilio_token",
@@ -25,6 +26,8 @@ const TEST_ENV_VALUES = {
   ACCESS_TOKEN_TTL_SECONDS: "900",
   REFRESH_TOKEN_TTL_SECONDS: "2592000",
   RESET_TOKEN_TTL_SECONDS: "3600",
+  ESTIMATE_EXPIRY_DAYS: "30",
+  INVOICE_DUE_DAYS: "30",
   NEXT_PUBLIC_API_URL: "http://localhost:3001"
 } as const;
 

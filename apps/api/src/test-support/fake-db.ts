@@ -1,4 +1,5 @@
 import { randomUUID } from "node:crypto";
+import { Decimal } from "decimal.js";
 
 type Predicate<T> = (row: T) => boolean;
 
@@ -10,9 +11,19 @@ type TableName =
   | "properties"
   | "assets"
   | "jobs"
+  | "importSessions"
+  | "estimates"
+  | "estimateItems"
+  | "invoices"
+  | "invoiceItems"
+  | "payments"
   | "jobNotes"
   | "jobPhotos"
+  | "serviceAgreementTemplates"
   | "maintenancePlans"
+  | "maintenanceVisits"
+  | "automationRules"
+  | "aiRecommendations"
   | "technicians"
   | "scheduleSlots"
   | "activityEvents";
@@ -44,6 +55,36 @@ type JobType =
   | "emergency";
 type JobPriority = "low" | "normal" | "high" | "urgent";
 type JobPhotoType = "before" | "after" | "general";
+type EstimateStatus = "draft" | "sent" | "viewed" | "approved" | "declined" | "expired" | "converted" | "revised";
+type EstimateItemType = "service" | "labor" | "material" | "fee";
+type InvoiceStatus = "draft" | "sent" | "viewed" | "partially_paid" | "paid" | "overdue" | "void" | "written_off";
+type InvoiceItemType = "service" | "labor" | "material" | "fee";
+type PaymentMethod = "card" | "ach" | "cash" | "check" | "financing" | "other";
+type PaymentStatus = "pending" | "succeeded" | "failed" | "refunded" | "disputed";
+type MaintenancePlanStatus = "active" | "paused" | "expired" | "cancelled";
+type MaintenancePlanFrequency = "monthly" | "bi_monthly" | "quarterly" | "bi_annual" | "annual";
+type ServiceAgreementBillingCycle = "monthly" | "annual";
+type ImportSessionStatus = "uploaded" | "mapping" | "preview" | "importing" | "completed" | "failed" | "rolled_back";
+type ImportEntityType = "customers" | "properties" | "assets" | "jobs" | "estimates" | "invoices";
+type AutomationRuleType =
+  | "estimate_follow_up"
+  | "estimate_declined"
+  | "invoice_reminder"
+  | "invoice_overdue"
+  | "dormant_customer"
+  | "maintenance_due"
+  | "service_agreement_renewal"
+  | "job_follow_up";
+type AiRecommendationType =
+  | "reactivation"
+  | "aging_asset"
+  | "maintenance_due"
+  | "unsold_estimate"
+  | "unpaid_invoice"
+  | "upsell_opportunity"
+  | "seasonal_campaign"
+  | "maintenance_plan_offer";
+type AiRecommendationStatus = "pending" | "actioned" | "dismissed" | "snoozed" | "expired";
 
 export interface TestCompanyRecord {
   id: string;
@@ -118,6 +159,7 @@ export interface TestCustomerRecord {
   prefersEmail: boolean | null;
   doNotContact: boolean | null;
   stripeCustomerId: string | null;
+  importSessionId: string | null;
   createdAt: Date;
   updatedAt: Date;
   deletedAt: Date | null;
@@ -142,6 +184,7 @@ export interface TestPropertyRecord {
   notes: string | null;
   isPrimary: boolean;
   isActive: boolean;
+  importSessionId: string | null;
   createdAt: Date;
   updatedAt: Date;
   deletedAt: Date | null;
@@ -168,6 +211,7 @@ export interface TestAssetRecord {
   photoUrls: string[] | null;
   notes: string | null;
   isActive: boolean;
+  importSessionId: string | null;
   createdAt: Date;
   updatedAt: Date;
   deletedAt: Date | null;
@@ -204,6 +248,165 @@ export interface TestJobRecord {
   maintenancePlanId: string | null;
   parentJobId: string | null;
   tags: string[] | null;
+  importSessionId: string | null;
+  createdAt: Date;
+  updatedAt: Date;
+  deletedAt: Date | null;
+}
+
+export interface TestImportValidationError {
+  row: number;
+  field: string;
+  message: string;
+  value: string;
+}
+
+export interface TestImportSessionRecord {
+  id: string;
+  companyId: string;
+  createdById: string | null;
+  entityType: ImportEntityType;
+  status: ImportSessionStatus;
+  fileName: string;
+  fileUrl: string;
+  totalRows: number | null;
+  validRows: number | null;
+  errorRows: number | null;
+  importedRows: number | null;
+  skippedRows: number | null;
+  duplicateRows: number | null;
+  columnMappings: Record<string, string | null>;
+  validationErrors: TestImportValidationError[];
+  aiInferences: Record<string, unknown>;
+  rolledBackAt: Date | null;
+  rolledBackById: string | null;
+  completedAt: Date | null;
+  errorMessage: string | null;
+  createdAt: Date;
+  updatedAt: Date;
+  deletedAt: Date | null;
+}
+
+export interface TestEstimateRecord {
+  id: string;
+  companyId: string;
+  estimateNumber: string;
+  jobId: string | null;
+  customerId: string;
+  propertyId: string | null;
+  createdById: string | null;
+  status: EstimateStatus;
+  tierLabel: string | null;
+  tierGroupId: string | null;
+  isSelectedTier: boolean | null;
+  subtotal: string;
+  taxRate: string | null;
+  taxAmount: string | null;
+  discountAmount: string | null;
+  total: string;
+  title: string | null;
+  messageToCustomer: string | null;
+  internalNotes: string | null;
+  approvalToken: string | null;
+  approvedAt: Date | null;
+  approvedByName: string | null;
+  approvedSignatureUrl: string | null;
+  declinedAt: Date | null;
+  declineReason: string | null;
+  expiresAt: Date | null;
+  sentAt: Date | null;
+  viewedAt: Date | null;
+  followUpSentAt: Date | null;
+  financingOffered: boolean | null;
+  createdAt: Date;
+  updatedAt: Date;
+  deletedAt: Date | null;
+}
+
+export interface TestEstimateItemRecord {
+  id: string;
+  estimateId: string;
+  companyId: string;
+  name: string;
+  description: string | null;
+  itemType: EstimateItemType;
+  quantity: string;
+  unitPrice: string;
+  total: string;
+  isTaxable: boolean | null;
+  sortOrder: number | null;
+  createdAt: Date;
+  updatedAt: Date;
+  deletedAt: Date | null;
+}
+
+export interface TestInvoiceRecord {
+  id: string;
+  companyId: string;
+  invoiceNumber: string;
+  jobId: string | null;
+  estimateId: string | null;
+  customerId: string;
+  createdById: string | null;
+  status: InvoiceStatus;
+  subtotal: string;
+  taxRate: string | null;
+  taxAmount: string | null;
+  discountAmount: string | null;
+  total: string;
+  amountPaid: string | null;
+  balanceDue: string;
+  issuedAt: Date | null;
+  dueAt: Date | null;
+  sentAt: Date | null;
+  viewedAt: Date | null;
+  paidAt: Date | null;
+  stripePaymentLinkId: string | null;
+  stripePaymentLinkUrl: string | null;
+  paymentToken: string | null;
+  reminder1SentAt: Date | null;
+  reminder2SentAt: Date | null;
+  reminder3SentAt: Date | null;
+  title: string | null;
+  messageToCustomer: string | null;
+  internalNotes: string | null;
+  createdAt: Date;
+  updatedAt: Date;
+  deletedAt: Date | null;
+}
+
+export interface TestInvoiceItemRecord {
+  id: string;
+  invoiceId: string;
+  companyId: string;
+  name: string;
+  description: string | null;
+  itemType: InvoiceItemType;
+  quantity: string;
+  unitPrice: string;
+  total: string;
+  isTaxable: boolean | null;
+  sortOrder: number | null;
+  createdAt: Date;
+  updatedAt: Date;
+  deletedAt: Date | null;
+}
+
+export interface TestPaymentRecord {
+  id: string;
+  companyId: string;
+  invoiceId: string;
+  customerId: string;
+  collectedById: string | null;
+  amount: string;
+  method: PaymentMethod;
+  status: PaymentStatus;
+  stripePaymentIntentId: string | null;
+  stripeChargeId: string | null;
+  checkNumber: string | null;
+  referenceNumber: string | null;
+  notes: string | null;
+  paidAt: Date | null;
   createdAt: Date;
   updatedAt: Date;
   deletedAt: Date | null;
@@ -236,17 +439,109 @@ export interface TestJobPhotoRecord {
   deletedAt: Date | null;
 }
 
+export interface TestServiceAgreementTemplateRecord {
+  id: string;
+  companyId: string;
+  name: string;
+  description: string | null;
+  includedServices: string[] | null;
+  visitsPerYear: number;
+  frequency: MaintenancePlanFrequency;
+  monthlyPrice: string | null;
+  annualPrice: string | null;
+  stripeMthlyPriceId: string | null;
+  stripeAnnualPriceId: string | null;
+  sortOrder: number | null;
+  isActive: boolean;
+  applicableAssetTypes: string[] | null;
+  notes: string | null;
+  createdAt: Date;
+  updatedAt: Date;
+  deletedAt: Date | null;
+}
+
 export interface TestMaintenancePlanRecord {
   id: string;
   companyId: string;
   customerId: string;
   propertyId: string | null;
+  serviceAgreementTemplateId: string | null;
+  name: string;
+  description: string | null;
+  includedServices: string[] | null;
   assetIds: string[] | null;
-  status: "active" | "paused" | "expired" | "cancelled";
-  frequency: "monthly" | "bi_monthly" | "quarterly" | "bi_annual" | "annual";
+  status: MaintenancePlanStatus;
+  frequency: MaintenancePlanFrequency;
+  price: string | null;
+  billingCycle: ServiceAgreementBillingCycle | null;
+  stripeSubscriptionId: string | null;
+  stripePriceId: string | null;
+  stripeCurrentPeriodStart: Date | null;
+  stripeCurrentPeriodEnd: Date | null;
+  stripeCancelAtPeriodEnd: boolean | null;
+  startDate: string;
+  endDate: string | null;
+  nextServiceDate: string | null;
+  lastServiceDate: string | null;
+  notes: string | null;
   deletedAt: Date | null;
   createdAt: Date;
   updatedAt: Date;
+}
+
+export interface TestMaintenanceVisitRecord {
+  id: string;
+  companyId: string;
+  maintenancePlanId: string;
+  jobId: string | null;
+  scheduledDate: string | null;
+  completedDate: string | null;
+  notes: string | null;
+  createdAt: Date;
+  updatedAt: Date;
+  deletedAt: Date | null;
+}
+
+export interface TestAutomationRuleRecord {
+  id: string;
+  companyId: string;
+  ruleType: AutomationRuleType;
+  isEnabled: boolean;
+  delayHours: number | null;
+  thresholdDays: number | null;
+  config: Record<string, unknown>;
+  createdAt: Date;
+  updatedAt: Date;
+  deletedAt: Date | null;
+}
+
+export interface TestAiRecommendationRecord {
+  id: string;
+  companyId: string;
+  type: AiRecommendationType;
+  status: AiRecommendationStatus;
+  customerId: string | null;
+  propertyId: string | null;
+  assetId: string | null;
+  jobId: string | null;
+  estimateId: string | null;
+  invoiceId: string | null;
+  estimatedRevenue: string | null;
+  headline: string;
+  body: string;
+  suggestedAction: string | null;
+  suggestedMessage: string | null;
+  urgencyScore: number | null;
+  confidenceScore: number | null;
+  actionedAt: Date | null;
+  actionedById: string | null;
+  dismissedAt: Date | null;
+  snoozedUntil: Date | null;
+  expiresAt: Date | null;
+  sourceEventIds: string[] | null;
+  createdAt: Date;
+  updatedAt: Date;
+  deletedAt: Date | null;
 }
 
 export interface TestTechnicianRecord {
@@ -316,9 +611,19 @@ type AnyTestRecord =
   | TestPropertyRecord
   | TestAssetRecord
   | TestJobRecord
+  | TestImportSessionRecord
+  | TestEstimateRecord
+  | TestEstimateItemRecord
+  | TestInvoiceRecord
+  | TestInvoiceItemRecord
+  | TestPaymentRecord
   | TestJobNoteRecord
   | TestJobPhotoRecord
+  | TestServiceAgreementTemplateRecord
   | TestMaintenancePlanRecord
+  | TestMaintenanceVisitRecord
+  | TestAutomationRuleRecord
+  | TestAiRecommendationRecord
   | TestTechnicianRecord
   | TestScheduleSlotRecord
   | TestActivityEventRecord;
@@ -331,9 +636,19 @@ type MockTable =
   | typeof propertiesTable
   | typeof assetsTable
   | typeof jobsTable
+  | typeof importSessionsTable
+  | typeof estimatesTable
+  | typeof estimateItemsTable
+  | typeof invoicesTable
+  | typeof invoiceItemsTable
+  | typeof paymentsTable
   | typeof jobNotesTable
   | typeof jobPhotosTable
+  | typeof serviceAgreementTemplatesTable
   | typeof maintenancePlansTable
+  | typeof maintenanceVisitsTable
+  | typeof automationRulesTable
+  | typeof aiRecommendationsTable
   | typeof techniciansTable
   | typeof scheduleSlotsTable
   | typeof activityEventsTable;
@@ -346,9 +661,19 @@ interface TestState {
   properties: TestPropertyRecord[];
   assets: TestAssetRecord[];
   jobs: TestJobRecord[];
+  importSessions: TestImportSessionRecord[];
+  estimates: TestEstimateRecord[];
+  estimateItems: TestEstimateItemRecord[];
+  invoices: TestInvoiceRecord[];
+  invoiceItems: TestInvoiceItemRecord[];
+  payments: TestPaymentRecord[];
   jobNotes: TestJobNoteRecord[];
   jobPhotos: TestJobPhotoRecord[];
+  serviceAgreementTemplates: TestServiceAgreementTemplateRecord[];
   maintenancePlans: TestMaintenancePlanRecord[];
+  maintenanceVisits: TestMaintenanceVisitRecord[];
+  automationRules: TestAutomationRuleRecord[];
+  aiRecommendations: TestAiRecommendationRecord[];
   technicians: TestTechnicianRecord[];
   scheduleSlots: TestScheduleSlotRecord[];
   activityEvents: TestActivityEventRecord[];
@@ -436,6 +761,7 @@ const customersTable = {
   prefersEmail: "prefersEmail",
   doNotContact: "doNotContact",
   stripeCustomerId: "stripeCustomerId",
+  importSessionId: "importSessionId",
   createdAt: "createdAt",
   updatedAt: "updatedAt",
   deletedAt: "deletedAt"
@@ -461,6 +787,7 @@ const propertiesTable = {
   notes: "notes",
   isPrimary: "isPrimary",
   isActive: "isActive",
+  importSessionId: "importSessionId",
   createdAt: "createdAt",
   updatedAt: "updatedAt",
   deletedAt: "deletedAt"
@@ -488,6 +815,7 @@ const assetsTable = {
   photoUrls: "photoUrls",
   notes: "notes",
   isActive: "isActive",
+  importSessionId: "importSessionId",
   createdAt: "createdAt",
   updatedAt: "updatedAt",
   deletedAt: "deletedAt"
@@ -525,6 +853,164 @@ const jobsTable = {
   maintenancePlanId: "maintenancePlanId",
   parentJobId: "parentJobId",
   tags: "tags",
+  importSessionId: "importSessionId",
+  createdAt: "createdAt",
+  updatedAt: "updatedAt",
+  deletedAt: "deletedAt"
+} as const;
+
+const importSessionsTable = {
+  __name: "importSessions",
+  id: "id",
+  companyId: "companyId",
+  createdById: "createdById",
+  entityType: "entityType",
+  status: "status",
+  fileName: "fileName",
+  fileUrl: "fileUrl",
+  totalRows: "totalRows",
+  validRows: "validRows",
+  errorRows: "errorRows",
+  importedRows: "importedRows",
+  skippedRows: "skippedRows",
+  duplicateRows: "duplicateRows",
+  columnMappings: "columnMappings",
+  validationErrors: "validationErrors",
+  aiInferences: "aiInferences",
+  rolledBackAt: "rolledBackAt",
+  rolledBackById: "rolledBackById",
+  completedAt: "completedAt",
+  errorMessage: "errorMessage",
+  createdAt: "createdAt",
+  updatedAt: "updatedAt",
+  deletedAt: "deletedAt"
+} as const;
+
+const estimatesTable = {
+  __name: "estimates",
+  id: "id",
+  companyId: "companyId",
+  estimateNumber: "estimateNumber",
+  jobId: "jobId",
+  customerId: "customerId",
+  propertyId: "propertyId",
+  createdById: "createdById",
+  status: "status",
+  tierLabel: "tierLabel",
+  tierGroupId: "tierGroupId",
+  isSelectedTier: "isSelectedTier",
+  subtotal: "subtotal",
+  taxRate: "taxRate",
+  taxAmount: "taxAmount",
+  discountAmount: "discountAmount",
+  total: "total",
+  title: "title",
+  messageToCustomer: "messageToCustomer",
+  internalNotes: "internalNotes",
+  approvalToken: "approvalToken",
+  approvedAt: "approvedAt",
+  approvedByName: "approvedByName",
+  approvedSignatureUrl: "approvedSignatureUrl",
+  declinedAt: "declinedAt",
+  declineReason: "declineReason",
+  expiresAt: "expiresAt",
+  sentAt: "sentAt",
+  viewedAt: "viewedAt",
+  followUpSentAt: "followUpSentAt",
+  financingOffered: "financingOffered",
+  createdAt: "createdAt",
+  updatedAt: "updatedAt",
+  deletedAt: "deletedAt"
+} as const;
+
+const estimateItemsTable = {
+  __name: "estimateItems",
+  id: "id",
+  estimateId: "estimateId",
+  companyId: "companyId",
+  name: "name",
+  description: "description",
+  itemType: "itemType",
+  quantity: "quantity",
+  unitPrice: "unitPrice",
+  total: "total",
+  isTaxable: "isTaxable",
+  sortOrder: "sortOrder",
+  createdAt: "createdAt",
+  updatedAt: "updatedAt",
+  deletedAt: "deletedAt"
+} as const;
+
+const invoicesTable = {
+  __name: "invoices",
+  id: "id",
+  companyId: "companyId",
+  invoiceNumber: "invoiceNumber",
+  jobId: "jobId",
+  estimateId: "estimateId",
+  customerId: "customerId",
+  createdById: "createdById",
+  status: "status",
+  subtotal: "subtotal",
+  taxRate: "taxRate",
+  taxAmount: "taxAmount",
+  discountAmount: "discountAmount",
+  total: "total",
+  amountPaid: "amountPaid",
+  balanceDue: "balanceDue",
+  issuedAt: "issuedAt",
+  dueAt: "dueAt",
+  sentAt: "sentAt",
+  viewedAt: "viewedAt",
+  paidAt: "paidAt",
+  stripePaymentLinkId: "stripePaymentLinkId",
+  stripePaymentLinkUrl: "stripePaymentLinkUrl",
+  paymentToken: "paymentToken",
+  reminder1SentAt: "reminder1SentAt",
+  reminder2SentAt: "reminder2SentAt",
+  reminder3SentAt: "reminder3SentAt",
+  title: "title",
+  messageToCustomer: "messageToCustomer",
+  internalNotes: "internalNotes",
+  createdAt: "createdAt",
+  updatedAt: "updatedAt",
+  deletedAt: "deletedAt"
+} as const;
+
+const invoiceItemsTable = {
+  __name: "invoiceItems",
+  id: "id",
+  invoiceId: "invoiceId",
+  companyId: "companyId",
+  name: "name",
+  description: "description",
+  itemType: "itemType",
+  quantity: "quantity",
+  unitPrice: "unitPrice",
+  total: "total",
+  isTaxable: "isTaxable",
+  sortOrder: "sortOrder",
+  createdAt: "createdAt",
+  updatedAt: "updatedAt",
+  deletedAt: "deletedAt"
+} as const;
+
+const paymentsTable = {
+  __name: "payments",
+  id: "id",
+  companyId: "companyId",
+  invoiceId: "invoiceId",
+  customerId: "customerId",
+  collectedById: "collectedById",
+  amount: "amount",
+  method: "method",
+  status: "status",
+  stripePaymentIntentId: "stripePaymentIntentId",
+  stripeChargeId: "stripeChargeId",
+  checkNumber: "checkNumber",
+  referenceNumber: "referenceNumber",
+  notes: "notes",
+  paidAt: "paidAt",
   createdAt: "createdAt",
   updatedAt: "updatedAt",
   deletedAt: "deletedAt"
@@ -559,18 +1045,114 @@ const jobPhotosTable = {
   deletedAt: "deletedAt"
 } as const;
 
+const serviceAgreementTemplatesTable = {
+  __name: "serviceAgreementTemplates",
+  id: "id",
+  companyId: "companyId",
+  name: "name",
+  description: "description",
+  includedServices: "includedServices",
+  visitsPerYear: "visitsPerYear",
+  frequency: "frequency",
+  monthlyPrice: "monthlyPrice",
+  annualPrice: "annualPrice",
+  stripeMthlyPriceId: "stripeMthlyPriceId",
+  stripeAnnualPriceId: "stripeAnnualPriceId",
+  sortOrder: "sortOrder",
+  isActive: "isActive",
+  applicableAssetTypes: "applicableAssetTypes",
+  notes: "notes",
+  createdAt: "createdAt",
+  updatedAt: "updatedAt",
+  deletedAt: "deletedAt"
+} as const;
+
 const maintenancePlansTable = {
   __name: "maintenancePlans",
   id: "id",
   companyId: "companyId",
   customerId: "customerId",
   propertyId: "propertyId",
+  serviceAgreementTemplateId: "serviceAgreementTemplateId",
+  name: "name",
+  description: "description",
+  includedServices: "includedServices",
   assetIds: "assetIds",
   status: "status",
   frequency: "frequency",
+  price: "price",
+  billingCycle: "billingCycle",
+  stripeSubscriptionId: "stripeSubscriptionId",
+  stripePriceId: "stripePriceId",
+  stripeCurrentPeriodStart: "stripeCurrentPeriodStart",
+  stripeCurrentPeriodEnd: "stripeCurrentPeriodEnd",
+  stripeCancelAtPeriodEnd: "stripeCancelAtPeriodEnd",
+  startDate: "startDate",
+  endDate: "endDate",
+  nextServiceDate: "nextServiceDate",
+  lastServiceDate: "lastServiceDate",
+  notes: "notes",
   deletedAt: "deletedAt",
   createdAt: "createdAt",
   updatedAt: "updatedAt"
+} as const;
+
+const maintenanceVisitsTable = {
+  __name: "maintenanceVisits",
+  id: "id",
+  companyId: "companyId",
+  maintenancePlanId: "maintenancePlanId",
+  jobId: "jobId",
+  scheduledDate: "scheduledDate",
+  completedDate: "completedDate",
+  notes: "notes",
+  createdAt: "createdAt",
+  updatedAt: "updatedAt",
+  deletedAt: "deletedAt"
+} as const;
+
+const automationRulesTable = {
+  __name: "automationRules",
+  id: "id",
+  companyId: "companyId",
+  ruleType: "ruleType",
+  isEnabled: "isEnabled",
+  delayHours: "delayHours",
+  thresholdDays: "thresholdDays",
+  config: "config",
+  createdAt: "createdAt",
+  updatedAt: "updatedAt",
+  deletedAt: "deletedAt"
+} as const;
+
+const aiRecommendationsTable = {
+  __name: "aiRecommendations",
+  id: "id",
+  companyId: "companyId",
+  type: "type",
+  status: "status",
+  customerId: "customerId",
+  propertyId: "propertyId",
+  assetId: "assetId",
+  jobId: "jobId",
+  estimateId: "estimateId",
+  invoiceId: "invoiceId",
+  estimatedRevenue: "estimatedRevenue",
+  headline: "headline",
+  body: "body",
+  suggestedAction: "suggestedAction",
+  suggestedMessage: "suggestedMessage",
+  urgencyScore: "urgencyScore",
+  confidenceScore: "confidenceScore",
+  actionedAt: "actionedAt",
+  actionedById: "actionedById",
+  dismissedAt: "dismissedAt",
+  snoozedUntil: "snoozedUntil",
+  expiresAt: "expiresAt",
+  sourceEventIds: "sourceEventIds",
+  createdAt: "createdAt",
+  updatedAt: "updatedAt",
+  deletedAt: "deletedAt"
 } as const;
 
 const techniciansTable = {
@@ -643,9 +1225,19 @@ const state: TestState = {
   properties: [],
   assets: [],
   jobs: [],
+  importSessions: [],
+  estimates: [],
+  estimateItems: [],
+  invoices: [],
+  invoiceItems: [],
+  payments: [],
   jobNotes: [],
   jobPhotos: [],
+  serviceAgreementTemplates: [],
   maintenancePlans: [],
+  maintenanceVisits: [],
+  automationRules: [],
+  aiRecommendations: [],
   technicians: [],
   scheduleSlots: [],
   activityEvents: []
@@ -667,9 +1259,18 @@ function restoreState(snapshot: TestState): void {
   state.properties.splice(0, state.properties.length, ...snapshot.properties);
   state.assets.splice(0, state.assets.length, ...snapshot.assets);
   state.jobs.splice(0, state.jobs.length, ...snapshot.jobs);
+  state.importSessions.splice(0, state.importSessions.length, ...snapshot.importSessions);
+  state.estimates.splice(0, state.estimates.length, ...snapshot.estimates);
+  state.estimateItems.splice(0, state.estimateItems.length, ...snapshot.estimateItems);
+  state.invoices.splice(0, state.invoices.length, ...snapshot.invoices);
+  state.invoiceItems.splice(0, state.invoiceItems.length, ...snapshot.invoiceItems);
+  state.payments.splice(0, state.payments.length, ...snapshot.payments);
   state.jobNotes.splice(0, state.jobNotes.length, ...snapshot.jobNotes);
   state.jobPhotos.splice(0, state.jobPhotos.length, ...snapshot.jobPhotos);
+  state.serviceAgreementTemplates.splice(0, state.serviceAgreementTemplates.length, ...snapshot.serviceAgreementTemplates);
   state.maintenancePlans.splice(0, state.maintenancePlans.length, ...snapshot.maintenancePlans);
+  state.maintenanceVisits.splice(0, state.maintenanceVisits.length, ...snapshot.maintenanceVisits);
+  state.automationRules.splice(0, state.automationRules.length, ...snapshot.automationRules);
   state.technicians.splice(0, state.technicians.length, ...snapshot.technicians);
   state.scheduleSlots.splice(0, state.scheduleSlots.length, ...snapshot.scheduleSlots);
   state.activityEvents.splice(0, state.activityEvents.length, ...snapshot.activityEvents);
@@ -691,12 +1292,32 @@ function getRows(tableName: TableName): AnyTestRecord[] {
       return state.assets;
     case "jobs":
       return state.jobs;
+    case "importSessions":
+      return state.importSessions;
+    case "estimates":
+      return state.estimates;
+    case "estimateItems":
+      return state.estimateItems;
+    case "invoices":
+      return state.invoices;
+    case "invoiceItems":
+      return state.invoiceItems;
+    case "payments":
+      return state.payments;
     case "jobNotes":
       return state.jobNotes;
     case "jobPhotos":
       return state.jobPhotos;
+    case "serviceAgreementTemplates":
+      return state.serviceAgreementTemplates;
     case "maintenancePlans":
       return state.maintenancePlans;
+    case "maintenanceVisits":
+      return state.maintenanceVisits;
+    case "automationRules":
+      return state.automationRules;
+    case "aiRecommendations":
+      return state.aiRecommendations;
     case "technicians":
       return state.technicians;
     case "scheduleSlots":
@@ -826,6 +1447,7 @@ function createCustomerRecord(
     prefersEmail: values.prefersEmail ?? true,
     doNotContact: values.doNotContact ?? false,
     stripeCustomerId: values.stripeCustomerId ?? null,
+    importSessionId: values.importSessionId ?? null,
     createdAt: values.createdAt ?? now,
     updatedAt: values.updatedAt ?? now,
     deletedAt: values.deletedAt ?? null
@@ -857,6 +1479,7 @@ function createPropertyRecord(
     notes: values.notes ?? null,
     isPrimary: values.isPrimary ?? false,
     isActive: values.isActive ?? true,
+    importSessionId: values.importSessionId ?? null,
     createdAt: values.createdAt ?? now,
     updatedAt: values.updatedAt ?? now,
     deletedAt: values.deletedAt ?? null
@@ -890,6 +1513,7 @@ function createAssetRecord(
     photoUrls: values.photoUrls ?? [],
     notes: values.notes ?? null,
     isActive: values.isActive ?? true,
+    importSessionId: values.importSessionId ?? null,
     createdAt: values.createdAt ?? now,
     updatedAt: values.updatedAt ?? now,
     deletedAt: values.deletedAt ?? null
@@ -933,6 +1557,200 @@ function createJobRecord(
     maintenancePlanId: values.maintenancePlanId ?? null,
     parentJobId: values.parentJobId ?? null,
     tags: values.tags ?? [],
+    importSessionId: values.importSessionId ?? null,
+    createdAt: values.createdAt ?? now,
+    updatedAt: values.updatedAt ?? now,
+    deletedAt: values.deletedAt ?? null
+  };
+}
+
+function createImportSessionRecord(
+  values: Partial<TestImportSessionRecord> &
+    Pick<TestImportSessionRecord, "companyId" | "fileName" | "fileUrl">
+): TestImportSessionRecord {
+  const now = new Date();
+
+  return {
+    id: values.id ?? nextId(),
+    companyId: values.companyId,
+    createdById: values.createdById ?? null,
+    entityType: values.entityType ?? "customers",
+    status: values.status ?? "uploaded",
+    fileName: values.fileName,
+    fileUrl: values.fileUrl,
+    totalRows: values.totalRows ?? 0,
+    validRows: values.validRows ?? 0,
+    errorRows: values.errorRows ?? 0,
+    importedRows: values.importedRows ?? 0,
+    skippedRows: values.skippedRows ?? 0,
+    duplicateRows: values.duplicateRows ?? 0,
+    columnMappings: values.columnMappings ?? {},
+    validationErrors: values.validationErrors ?? [],
+    aiInferences: values.aiInferences ?? {},
+    rolledBackAt: values.rolledBackAt ?? null,
+    rolledBackById: values.rolledBackById ?? null,
+    completedAt: values.completedAt ?? null,
+    errorMessage: values.errorMessage ?? null,
+    createdAt: values.createdAt ?? now,
+    updatedAt: values.updatedAt ?? now,
+    deletedAt: values.deletedAt ?? null
+  };
+}
+
+function createEstimateRecord(
+  values: Partial<TestEstimateRecord> &
+    Pick<TestEstimateRecord, "companyId" | "customerId">
+): TestEstimateRecord {
+  const now = new Date();
+
+  return {
+    id: values.id ?? nextId(),
+    companyId: values.companyId,
+    estimateNumber: values.estimateNumber ?? `EST-${String(state.estimates.length + 1).padStart(4, "0")}`,
+    jobId: values.jobId ?? null,
+    customerId: values.customerId,
+    propertyId: values.propertyId ?? null,
+    createdById: values.createdById ?? null,
+    status: values.status ?? "draft",
+    tierLabel: values.tierLabel ?? null,
+    tierGroupId: values.tierGroupId ?? null,
+    isSelectedTier: values.isSelectedTier ?? false,
+    subtotal: values.subtotal ?? "0.00",
+    taxRate: values.taxRate ?? "0.0000",
+    taxAmount: values.taxAmount ?? "0.00",
+    discountAmount: values.discountAmount ?? "0.00",
+    total: values.total ?? "0.00",
+    title: values.title ?? null,
+    messageToCustomer: values.messageToCustomer ?? null,
+    internalNotes: values.internalNotes ?? null,
+    approvalToken: values.approvalToken ?? null,
+    approvedAt: values.approvedAt ?? null,
+    approvedByName: values.approvedByName ?? null,
+    approvedSignatureUrl: values.approvedSignatureUrl ?? null,
+    declinedAt: values.declinedAt ?? null,
+    declineReason: values.declineReason ?? null,
+    expiresAt: values.expiresAt ?? null,
+    sentAt: values.sentAt ?? null,
+    viewedAt: values.viewedAt ?? null,
+    followUpSentAt: values.followUpSentAt ?? null,
+    financingOffered: values.financingOffered ?? false,
+    createdAt: values.createdAt ?? now,
+    updatedAt: values.updatedAt ?? now,
+    deletedAt: values.deletedAt ?? null
+  };
+}
+
+function createEstimateItemRecord(
+  values: Partial<TestEstimateItemRecord> &
+    Pick<TestEstimateItemRecord, "companyId" | "estimateId" | "name">
+): TestEstimateItemRecord {
+  const now = new Date();
+
+  return {
+    id: values.id ?? nextId(),
+    estimateId: values.estimateId,
+    companyId: values.companyId,
+    name: values.name,
+    description: values.description ?? null,
+    itemType: values.itemType ?? "service",
+    quantity: values.quantity ?? "1.000",
+    unitPrice: values.unitPrice ?? "0.00",
+    total: values.total ?? "0.00",
+    isTaxable: values.isTaxable ?? true,
+    sortOrder: values.sortOrder ?? 0,
+    createdAt: values.createdAt ?? now,
+    updatedAt: values.updatedAt ?? now,
+    deletedAt: values.deletedAt ?? null
+  };
+}
+
+function createInvoiceRecord(
+  values: Partial<TestInvoiceRecord> &
+    Pick<TestInvoiceRecord, "companyId" | "customerId">
+): TestInvoiceRecord {
+  const now = new Date();
+
+  return {
+    id: values.id ?? nextId(),
+    companyId: values.companyId,
+    invoiceNumber: values.invoiceNumber ?? `INV-${String(state.invoices.length + 1).padStart(4, "0")}`,
+    jobId: values.jobId ?? null,
+    estimateId: values.estimateId ?? null,
+    customerId: values.customerId,
+    createdById: values.createdById ?? null,
+    status: values.status ?? "draft",
+    subtotal: values.subtotal ?? "0.00",
+    taxRate: values.taxRate ?? "0.0000",
+    taxAmount: values.taxAmount ?? "0.00",
+    discountAmount: values.discountAmount ?? "0.00",
+    total: values.total ?? "0.00",
+    amountPaid: values.amountPaid ?? "0.00",
+    balanceDue: values.balanceDue ?? values.total ?? "0.00",
+    issuedAt: values.issuedAt ?? null,
+    dueAt: values.dueAt ?? null,
+    sentAt: values.sentAt ?? null,
+    viewedAt: values.viewedAt ?? null,
+    paidAt: values.paidAt ?? null,
+    stripePaymentLinkId: values.stripePaymentLinkId ?? null,
+    stripePaymentLinkUrl: values.stripePaymentLinkUrl ?? null,
+    paymentToken: values.paymentToken ?? null,
+    reminder1SentAt: values.reminder1SentAt ?? null,
+    reminder2SentAt: values.reminder2SentAt ?? null,
+    reminder3SentAt: values.reminder3SentAt ?? null,
+    title: values.title ?? null,
+    messageToCustomer: values.messageToCustomer ?? null,
+    internalNotes: values.internalNotes ?? null,
+    createdAt: values.createdAt ?? now,
+    updatedAt: values.updatedAt ?? now,
+    deletedAt: values.deletedAt ?? null
+  };
+}
+
+function createInvoiceItemRecord(
+  values: Partial<TestInvoiceItemRecord> &
+    Pick<TestInvoiceItemRecord, "companyId" | "invoiceId" | "name">
+): TestInvoiceItemRecord {
+  const now = new Date();
+
+  return {
+    id: values.id ?? nextId(),
+    invoiceId: values.invoiceId,
+    companyId: values.companyId,
+    name: values.name,
+    description: values.description ?? null,
+    itemType: values.itemType ?? "service",
+    quantity: values.quantity ?? "1.000",
+    unitPrice: values.unitPrice ?? "0.00",
+    total: values.total ?? "0.00",
+    isTaxable: values.isTaxable ?? true,
+    sortOrder: values.sortOrder ?? 0,
+    createdAt: values.createdAt ?? now,
+    updatedAt: values.updatedAt ?? now,
+    deletedAt: values.deletedAt ?? null
+  };
+}
+
+function createPaymentRecord(
+  values: Partial<TestPaymentRecord> &
+    Pick<TestPaymentRecord, "companyId" | "invoiceId" | "customerId" | "amount">
+): TestPaymentRecord {
+  const now = new Date();
+
+  return {
+    id: values.id ?? nextId(),
+    companyId: values.companyId,
+    invoiceId: values.invoiceId,
+    customerId: values.customerId,
+    collectedById: values.collectedById ?? null,
+    amount: values.amount,
+    method: values.method ?? "card",
+    status: values.status ?? "pending",
+    stripePaymentIntentId: values.stripePaymentIntentId ?? null,
+    stripeChargeId: values.stripeChargeId ?? null,
+    checkNumber: values.checkNumber ?? null,
+    referenceNumber: values.referenceNumber ?? null,
+    notes: values.notes ?? null,
+    paidAt: values.paidAt ?? null,
     createdAt: values.createdAt ?? now,
     updatedAt: values.updatedAt ?? now,
     deletedAt: values.deletedAt ?? null
@@ -980,6 +1798,34 @@ function createJobPhotoRecord(
   };
 }
 
+function createServiceAgreementTemplateRecord(
+  values: Partial<TestServiceAgreementTemplateRecord> &
+    Pick<TestServiceAgreementTemplateRecord, "companyId" | "name" | "visitsPerYear" | "frequency">
+): TestServiceAgreementTemplateRecord {
+  const now = new Date();
+
+  return {
+    id: values.id ?? nextId(),
+    companyId: values.companyId,
+    name: values.name,
+    description: values.description ?? null,
+    includedServices: values.includedServices ?? [],
+    visitsPerYear: values.visitsPerYear,
+    frequency: values.frequency,
+    monthlyPrice: values.monthlyPrice ?? null,
+    annualPrice: values.annualPrice ?? null,
+    stripeMthlyPriceId: values.stripeMthlyPriceId ?? null,
+    stripeAnnualPriceId: values.stripeAnnualPriceId ?? null,
+    sortOrder: values.sortOrder ?? 0,
+    isActive: values.isActive ?? true,
+    applicableAssetTypes: values.applicableAssetTypes ?? [],
+    notes: values.notes ?? null,
+    createdAt: values.createdAt ?? now,
+    updatedAt: values.updatedAt ?? now,
+    deletedAt: values.deletedAt ?? null
+  };
+}
+
 function createMaintenancePlanRecord(
   values: Partial<TestMaintenancePlanRecord> &
     Pick<TestMaintenancePlanRecord, "companyId" | "customerId">
@@ -991,12 +1837,104 @@ function createMaintenancePlanRecord(
     companyId: values.companyId,
     customerId: values.customerId,
     propertyId: values.propertyId ?? null,
+    serviceAgreementTemplateId: values.serviceAgreementTemplateId ?? null,
+    name: values.name ?? "Maintenance Plan",
+    description: values.description ?? null,
+    includedServices: values.includedServices ?? [],
     assetIds: values.assetIds ?? [],
     status: values.status ?? "active",
     frequency: values.frequency ?? "quarterly",
+    price: values.price ?? null,
+    billingCycle: values.billingCycle ?? "annual",
+    stripeSubscriptionId: values.stripeSubscriptionId ?? null,
+    stripePriceId: values.stripePriceId ?? null,
+    stripeCurrentPeriodStart: values.stripeCurrentPeriodStart ?? null,
+    stripeCurrentPeriodEnd: values.stripeCurrentPeriodEnd ?? null,
+    stripeCancelAtPeriodEnd: values.stripeCancelAtPeriodEnd ?? false,
+    startDate: values.startDate ?? now.toISOString().slice(0, 10),
+    endDate: values.endDate ?? null,
+    nextServiceDate: values.nextServiceDate ?? null,
+    lastServiceDate: values.lastServiceDate ?? null,
+    notes: values.notes ?? null,
     deletedAt: values.deletedAt ?? null,
     createdAt: values.createdAt ?? now,
     updatedAt: values.updatedAt ?? now
+  };
+}
+
+function createMaintenanceVisitRecord(
+  values: Partial<TestMaintenanceVisitRecord> &
+    Pick<TestMaintenanceVisitRecord, "companyId" | "maintenancePlanId">
+): TestMaintenanceVisitRecord {
+  const now = new Date();
+
+  return {
+    id: values.id ?? nextId(),
+    companyId: values.companyId,
+    maintenancePlanId: values.maintenancePlanId,
+    jobId: values.jobId ?? null,
+    scheduledDate: values.scheduledDate ?? null,
+    completedDate: values.completedDate ?? null,
+    notes: values.notes ?? null,
+    createdAt: values.createdAt ?? now,
+    updatedAt: values.updatedAt ?? now,
+    deletedAt: values.deletedAt ?? null
+  };
+}
+
+function createAutomationRuleRecord(
+  values: Partial<TestAutomationRuleRecord> &
+    Pick<TestAutomationRuleRecord, "companyId" | "ruleType">
+): TestAutomationRuleRecord {
+  const now = new Date();
+
+  return {
+    id: values.id ?? nextId(),
+    companyId: values.companyId,
+    ruleType: values.ruleType,
+    isEnabled: values.isEnabled ?? false,
+    delayHours: values.delayHours ?? null,
+    thresholdDays: values.thresholdDays ?? null,
+    config: values.config ?? {},
+    createdAt: values.createdAt ?? now,
+    updatedAt: values.updatedAt ?? now,
+    deletedAt: values.deletedAt ?? null
+  };
+}
+
+function createAiRecommendationRecord(
+  values: Partial<TestAiRecommendationRecord> &
+    Pick<TestAiRecommendationRecord, "companyId" | "type" | "headline" | "body">
+): TestAiRecommendationRecord {
+  const now = new Date();
+
+  return {
+    id: values.id ?? nextId(),
+    companyId: values.companyId,
+    type: values.type,
+    status: values.status ?? "pending",
+    customerId: values.customerId ?? null,
+    propertyId: values.propertyId ?? null,
+    assetId: values.assetId ?? null,
+    jobId: values.jobId ?? null,
+    estimateId: values.estimateId ?? null,
+    invoiceId: values.invoiceId ?? null,
+    estimatedRevenue: values.estimatedRevenue ?? null,
+    headline: values.headline,
+    body: values.body,
+    suggestedAction: values.suggestedAction ?? null,
+    suggestedMessage: values.suggestedMessage ?? null,
+    urgencyScore: values.urgencyScore ?? null,
+    confidenceScore: values.confidenceScore ?? null,
+    actionedAt: values.actionedAt ?? null,
+    actionedById: values.actionedById ?? null,
+    dismissedAt: values.dismissedAt ?? null,
+    snoozedUntil: values.snoozedUntil ?? null,
+    expiresAt: values.expiresAt ?? null,
+    sourceEventIds: values.sourceEventIds ?? [],
+    createdAt: values.createdAt ?? now,
+    updatedAt: values.updatedAt ?? now,
+    deletedAt: values.deletedAt ?? null
   };
 }
 
@@ -1107,6 +2045,34 @@ function createRow(tableName: TableName, values: Record<string, unknown>): AnyTe
       );
     case "jobs":
       return createJobRecord(values as Partial<TestJobRecord> & Pick<TestJobRecord, "companyId" | "customerId">);
+    case "importSessions":
+      return createImportSessionRecord(
+        values as Partial<TestImportSessionRecord> &
+          Pick<TestImportSessionRecord, "companyId" | "fileName" | "fileUrl">
+      );
+    case "estimates":
+      return createEstimateRecord(
+        values as Partial<TestEstimateRecord> & Pick<TestEstimateRecord, "companyId" | "customerId">
+      );
+    case "estimateItems":
+      return createEstimateItemRecord(
+        values as Partial<TestEstimateItemRecord> &
+          Pick<TestEstimateItemRecord, "companyId" | "estimateId" | "name">
+      );
+    case "invoices":
+      return createInvoiceRecord(
+        values as Partial<TestInvoiceRecord> & Pick<TestInvoiceRecord, "companyId" | "customerId">
+      );
+    case "invoiceItems":
+      return createInvoiceItemRecord(
+        values as Partial<TestInvoiceItemRecord> &
+          Pick<TestInvoiceItemRecord, "companyId" | "invoiceId" | "name">
+      );
+    case "payments":
+      return createPaymentRecord(
+        values as Partial<TestPaymentRecord> &
+          Pick<TestPaymentRecord, "companyId" | "invoiceId" | "customerId" | "amount">
+      );
     case "jobNotes":
       return createJobNoteRecord(
         values as Partial<TestJobNoteRecord> & Pick<TestJobNoteRecord, "companyId" | "jobId" | "content">
@@ -1115,9 +2081,29 @@ function createRow(tableName: TableName, values: Record<string, unknown>): AnyTe
       return createJobPhotoRecord(
         values as Partial<TestJobPhotoRecord> & Pick<TestJobPhotoRecord, "companyId" | "jobId" | "url">
       );
+    case "serviceAgreementTemplates":
+      return createServiceAgreementTemplateRecord(
+        values as Partial<TestServiceAgreementTemplateRecord> &
+          Pick<TestServiceAgreementTemplateRecord, "companyId" | "name" | "visitsPerYear" | "frequency">
+      );
     case "maintenancePlans":
       return createMaintenancePlanRecord(
         values as Partial<TestMaintenancePlanRecord> & Pick<TestMaintenancePlanRecord, "companyId" | "customerId">
+      );
+    case "maintenanceVisits":
+      return createMaintenanceVisitRecord(
+        values as Partial<TestMaintenanceVisitRecord> &
+          Pick<TestMaintenanceVisitRecord, "companyId" | "maintenancePlanId">
+      );
+    case "automationRules":
+      return createAutomationRuleRecord(
+        values as Partial<TestAutomationRuleRecord> &
+          Pick<TestAutomationRuleRecord, "companyId" | "ruleType">
+      );
+    case "aiRecommendations":
+      return createAiRecommendationRecord(
+        values as Partial<TestAiRecommendationRecord> &
+          Pick<TestAiRecommendationRecord, "companyId" | "type" | "headline" | "body">
       );
     case "technicians":
       return createTechnicianRecord(
@@ -1153,6 +2139,12 @@ function createSelectChain<T extends Record<string, unknown>>(rows: T[]) {
     },
     for(_lockStrength: string) {
       return chain;
+    },
+    then<TResult1 = T[], TResult2 = never>(
+      onfulfilled?: ((value: T[]) => TResult1 | PromiseLike<TResult1>) | null,
+      onrejected?: ((reason: unknown) => TResult2 | PromiseLike<TResult2>) | null
+    ) {
+      return Promise.resolve(filteredRows).then(onfulfilled, onrejected);
     }
   };
 
@@ -1229,6 +2221,22 @@ interface TestDb {
         ) => Predicate<TestCompanyRecord>;
       }): Promise<TestCompanyRecord | null>;
     };
+    importSessions: {
+      findFirst(args: {
+        where: (
+          table: typeof importSessionsTable,
+          queryOperators: typeof operators
+        ) => Predicate<TestImportSessionRecord>;
+      }): Promise<TestImportSessionRecord | null>;
+    };
+    automationRules: {
+      findFirst(args: {
+        where: (
+          table: typeof automationRulesTable,
+          queryOperators: typeof operators
+        ) => Predicate<TestAutomationRuleRecord>;
+      }): Promise<TestAutomationRuleRecord | null>;
+    };
   };
 }
 
@@ -1282,6 +2290,32 @@ export const db: TestDb = {
         const predicate = where(companiesTable, operators);
         return state.companies.find((row) => predicate(row)) ?? null;
       }
+    },
+    importSessions: {
+      async findFirst({
+        where
+      }: {
+        where: (
+          table: typeof importSessionsTable,
+          queryOperators: typeof operators
+        ) => Predicate<TestImportSessionRecord>;
+      }): Promise<TestImportSessionRecord | null> {
+        const predicate = where(importSessionsTable, operators);
+        return state.importSessions.find((row) => predicate(row)) ?? null;
+      }
+    },
+    automationRules: {
+      async findFirst({
+        where
+      }: {
+        where: (
+          table: typeof automationRulesTable,
+          queryOperators: typeof operators
+        ) => Predicate<TestAutomationRuleRecord>;
+      }): Promise<TestAutomationRuleRecord | null> {
+        const predicate = where(automationRulesTable, operators);
+        return state.automationRules.find((row) => predicate(row)) ?? null;
+      }
     }
   }
 };
@@ -1293,9 +2327,19 @@ export const customers = customersTable;
 export const properties = propertiesTable;
 export const assets = assetsTable;
 export const jobs = jobsTable;
+export const importSessions = importSessionsTable;
+export const estimates = estimatesTable;
+export const estimateItems = estimateItemsTable;
+export const invoices = invoicesTable;
+export const invoiceItems = invoiceItemsTable;
+export const payments = paymentsTable;
 export const jobNotes = jobNotesTable;
 export const jobPhotos = jobPhotosTable;
+export const serviceAgreementTemplates = serviceAgreementTemplatesTable;
 export const maintenancePlans = maintenancePlansTable;
+export const maintenanceVisits = maintenanceVisitsTable;
+export const automationRules = automationRulesTable;
+export const aiRecommendations = aiRecommendationsTable;
 export const technicians = techniciansTable;
 export const scheduleSlots = scheduleSlotsTable;
 export const activityEvents = activityEventsTable;
@@ -1313,6 +2357,218 @@ export async function emitEventWithExecutor(
   }
 ): Promise<void> {
   state.activityEvents.push(createActivityEventRecord(event));
+}
+
+export async function markInvoiceOverdueIfNeeded(
+  companyId: string,
+  invoiceId: string
+): Promise<TestInvoiceRecord | null> {
+  const invoice =
+    state.invoices.find(
+      (row) => row.companyId === companyId && row.id === invoiceId && row.deletedAt === null
+    ) ?? null;
+
+  if (!invoice) {
+    return null;
+  }
+
+  if (invoice.status !== "sent" || !invoice.dueAt || invoice.dueAt.getTime() > Date.now()) {
+    return invoice;
+  }
+
+  invoice.status = "overdue";
+  invoice.updatedAt = new Date();
+
+  state.activityEvents.push(
+    createActivityEventRecord({
+      companyId: invoice.companyId,
+      eventType: "invoice.overdue",
+      actorType: "system",
+      entityType: "invoice",
+      entityId: invoice.id,
+      customerId: invoice.customerId,
+      invoiceId: invoice.id,
+      ...(invoice.jobId ? { jobId: invoice.jobId } : {}),
+      ...(invoice.estimateId ? { estimateId: invoice.estimateId } : {}),
+      payload: {},
+      summary: `Invoice ${invoice.invoiceNumber} overdue`
+    })
+  );
+
+  return invoice;
+}
+
+export const REVENUE_SUMMARY_CACHE_TTL_SECONDS = 300;
+
+export interface RevenueSummaryTopRecommendationRecord {
+  id: string;
+  headline: string;
+  urgencyScore: number | null;
+}
+
+export interface RevenueSummaryCountBucketRecord {
+  count: number;
+  estimatedRevenue: string;
+  topRecommendations: RevenueSummaryTopRecommendationRecord[];
+}
+
+export interface RevenueSummaryValueBucketRecord {
+  count: number;
+  totalValue: string;
+  topRecommendations: RevenueSummaryTopRecommendationRecord[];
+}
+
+export interface RevenueSummaryCacheEntry {
+  dormantCustomers: RevenueSummaryCountBucketRecord;
+  unsoldEstimates: RevenueSummaryValueBucketRecord;
+  unpaidInvoices: RevenueSummaryValueBucketRecord;
+  agingAssets: RevenueSummaryCountBucketRecord;
+  maintenancePlanOpportunities: RevenueSummaryCountBucketRecord;
+  totalOpportunityValue: string;
+  generatedAt: string;
+}
+
+export function buildRevenueSummaryCacheKey(companyId: string): string {
+  return `revenue-summary:${companyId}`;
+}
+
+function toMoney(value: Decimal): string {
+  return value.toFixed(2);
+}
+
+function isVisibleInRevenueDashboard(row: TestAiRecommendationRecord, now: Date): boolean {
+  if (row.deletedAt !== null || row.status !== "pending") {
+    return false;
+  }
+
+  return row.snoozedUntil === null || row.snoozedUntil.getTime() <= now.getTime();
+}
+
+function buildTopRecommendations(rows: TestAiRecommendationRecord[]): RevenueSummaryTopRecommendationRecord[] {
+  return [...rows]
+    .sort((left, right) => {
+      const leftUrgency = left.urgencyScore ?? -1;
+      const rightUrgency = right.urgencyScore ?? -1;
+
+      if (rightUrgency !== leftUrgency) {
+        return rightUrgency - leftUrgency;
+      }
+
+      return right.createdAt.getTime() - left.createdAt.getTime();
+    })
+    .slice(0, 5)
+    .map((row) => ({
+      id: row.id,
+      headline: row.headline,
+      urgencyScore: row.urgencyScore
+    }));
+}
+
+function sumEstimatedRevenue(rows: TestAiRecommendationRecord[]): string {
+  return toMoney(
+    rows.reduce((sum, row) => sum.add(new Decimal(row.estimatedRevenue ?? "0")), new Decimal(0))
+  );
+}
+
+function sumEstimateTotals(rows: TestAiRecommendationRecord[]): string {
+  return toMoney(
+    rows.reduce((sum, row) => {
+      const estimateTotal =
+        row.estimateId !== null
+          ? state.estimates.find((estimate) => estimate.id === row.estimateId)?.total ?? null
+          : null;
+
+      return sum.add(new Decimal(estimateTotal ?? row.estimatedRevenue ?? "0"));
+    }, new Decimal(0))
+  );
+}
+
+function sumInvoiceBalances(rows: TestAiRecommendationRecord[]): string {
+  return toMoney(
+    rows.reduce((sum, row) => {
+      const invoiceBalance =
+        row.invoiceId !== null
+          ? state.invoices.find((invoice) => invoice.id === row.invoiceId)?.balanceDue ?? null
+          : null;
+
+      return sum.add(new Decimal(invoiceBalance ?? row.estimatedRevenue ?? "0"));
+    }, new Decimal(0))
+  );
+}
+
+export async function computeRevenueSummarySnapshot(
+  companyId: string,
+  now: Date = new Date()
+): Promise<RevenueSummaryCacheEntry> {
+  const visibleRecommendations = state.aiRecommendations.filter(
+    (row) => row.companyId === companyId && isVisibleInRevenueDashboard(row, now)
+  );
+
+  const dormantCustomers = visibleRecommendations.filter((row) => row.type === "reactivation");
+  const unsoldEstimates = visibleRecommendations.filter((row) => row.type === "unsold_estimate");
+  const unpaidInvoices = visibleRecommendations.filter((row) => row.type === "unpaid_invoice");
+  const agingAssets = visibleRecommendations.filter((row) => row.type === "aging_asset");
+  const maintenancePlanOpportunities = visibleRecommendations.filter(
+    (row) => row.type === "maintenance_plan_offer"
+  );
+
+  const summary: RevenueSummaryCacheEntry = {
+    dormantCustomers: {
+      count: dormantCustomers.length,
+      estimatedRevenue: sumEstimatedRevenue(dormantCustomers),
+      topRecommendations: buildTopRecommendations(dormantCustomers)
+    },
+    unsoldEstimates: {
+      count: unsoldEstimates.length,
+      totalValue: sumEstimateTotals(unsoldEstimates),
+      topRecommendations: buildTopRecommendations(unsoldEstimates)
+    },
+    unpaidInvoices: {
+      count: unpaidInvoices.length,
+      totalValue: sumInvoiceBalances(unpaidInvoices),
+      topRecommendations: buildTopRecommendations(unpaidInvoices)
+    },
+    agingAssets: {
+      count: agingAssets.length,
+      estimatedRevenue: sumEstimatedRevenue(agingAssets),
+      topRecommendations: buildTopRecommendations(agingAssets)
+    },
+    maintenancePlanOpportunities: {
+      count: maintenancePlanOpportunities.length,
+      estimatedRevenue: sumEstimatedRevenue(maintenancePlanOpportunities),
+      topRecommendations: buildTopRecommendations(maintenancePlanOpportunities)
+    },
+    totalOpportunityValue: "0.00",
+    generatedAt: now.toISOString()
+  };
+
+  summary.totalOpportunityValue = toMoney(
+    new Decimal(summary.dormantCustomers.estimatedRevenue)
+      .add(summary.unsoldEstimates.totalValue)
+      .add(summary.unpaidInvoices.totalValue)
+      .add(summary.agingAssets.estimatedRevenue)
+      .add(summary.maintenancePlanOpportunities.estimatedRevenue)
+  );
+
+  return summary;
+}
+
+export async function listActiveCompanyIdsForRevenueSummary(
+  since: Date,
+  offset: number,
+  limit: number
+): Promise<string[]> {
+  const activeCompanyIds = new Set(
+    state.activityEvents
+      .filter((row) => row.occurredAt.getTime() >= since.getTime())
+      .map((row) => row.companyId)
+  );
+
+  const orderedCompanyIds = state.companies
+    .filter((row) => row.deletedAt === null && activeCompanyIds.has(row.id))
+    .map((row) => row.id);
+
+  return orderedCompanyIds.slice(offset, offset + limit);
 }
 
 export function createDrizzleModuleMock() {
@@ -1350,14 +2606,29 @@ export function createDbModuleMock() {
     properties,
     assets,
     jobs,
+    importSessions,
+    estimates,
+    estimateItems,
+    invoices,
+    invoiceItems,
+    payments,
     jobNotes,
     jobPhotos,
+    serviceAgreementTemplates,
     maintenancePlans,
+    maintenanceVisits,
+    automationRules,
+    aiRecommendations,
     technicians,
     scheduleSlots,
     activityEvents,
     emitEvent,
-    emitEventWithExecutor
+    emitEventWithExecutor,
+    markInvoiceOverdueIfNeeded,
+    REVENUE_SUMMARY_CACHE_TTL_SECONDS,
+    buildRevenueSummaryCacheKey,
+    computeRevenueSummarySnapshot,
+    listActiveCompanyIdsForRevenueSummary
   };
 }
 
@@ -1369,9 +2640,19 @@ export function resetTestState(): void {
   state.properties.length = 0;
   state.assets.length = 0;
   state.jobs.length = 0;
+  state.importSessions.length = 0;
+  state.estimates.length = 0;
+  state.estimateItems.length = 0;
+  state.invoices.length = 0;
+  state.invoiceItems.length = 0;
+  state.payments.length = 0;
   state.jobNotes.length = 0;
   state.jobPhotos.length = 0;
+  state.serviceAgreementTemplates.length = 0;
   state.maintenancePlans.length = 0;
+  state.maintenanceVisits.length = 0;
+  state.automationRules.length = 0;
+  state.aiRecommendations.length = 0;
   state.technicians.length = 0;
   state.scheduleSlots.length = 0;
   state.activityEvents.length = 0;
@@ -1438,6 +2719,60 @@ export function seedJob(
   return record;
 }
 
+export function seedImportSession(
+  values: Partial<TestImportSessionRecord> &
+    Pick<TestImportSessionRecord, "companyId" | "fileName" | "fileUrl">
+): TestImportSessionRecord {
+  const record = createImportSessionRecord(values);
+  state.importSessions.push(record);
+  return record;
+}
+
+export function seedEstimate(
+  values: Partial<TestEstimateRecord> &
+    Pick<TestEstimateRecord, "companyId" | "customerId">
+): TestEstimateRecord {
+  const record = createEstimateRecord(values);
+  state.estimates.push(record);
+  return record;
+}
+
+export function seedEstimateItem(
+  values: Partial<TestEstimateItemRecord> &
+    Pick<TestEstimateItemRecord, "companyId" | "estimateId" | "name">
+): TestEstimateItemRecord {
+  const record = createEstimateItemRecord(values);
+  state.estimateItems.push(record);
+  return record;
+}
+
+export function seedInvoice(
+  values: Partial<TestInvoiceRecord> &
+    Pick<TestInvoiceRecord, "companyId" | "customerId">
+): TestInvoiceRecord {
+  const record = createInvoiceRecord(values);
+  state.invoices.push(record);
+  return record;
+}
+
+export function seedInvoiceItem(
+  values: Partial<TestInvoiceItemRecord> &
+    Pick<TestInvoiceItemRecord, "companyId" | "invoiceId" | "name">
+): TestInvoiceItemRecord {
+  const record = createInvoiceItemRecord(values);
+  state.invoiceItems.push(record);
+  return record;
+}
+
+export function seedPayment(
+  values: Partial<TestPaymentRecord> &
+    Pick<TestPaymentRecord, "companyId" | "invoiceId" | "customerId" | "amount">
+): TestPaymentRecord {
+  const record = createPaymentRecord(values);
+  state.payments.push(record);
+  return record;
+}
+
 export function seedJobNote(
   values: Partial<TestJobNoteRecord> &
     Pick<TestJobNoteRecord, "companyId" | "jobId" | "content">
@@ -1456,12 +2791,48 @@ export function seedJobPhoto(
   return record;
 }
 
+export function seedServiceAgreementTemplate(
+  values: Partial<TestServiceAgreementTemplateRecord> &
+    Pick<TestServiceAgreementTemplateRecord, "companyId" | "name" | "visitsPerYear" | "frequency">
+): TestServiceAgreementTemplateRecord {
+  const record = createServiceAgreementTemplateRecord(values);
+  state.serviceAgreementTemplates.push(record);
+  return record;
+}
+
 export function seedMaintenancePlan(
   values: Partial<TestMaintenancePlanRecord> &
     Pick<TestMaintenancePlanRecord, "companyId" | "customerId">
 ): TestMaintenancePlanRecord {
   const record = createMaintenancePlanRecord(values);
   state.maintenancePlans.push(record);
+  return record;
+}
+
+export function seedMaintenanceVisit(
+  values: Partial<TestMaintenanceVisitRecord> &
+    Pick<TestMaintenanceVisitRecord, "companyId" | "maintenancePlanId">
+): TestMaintenanceVisitRecord {
+  const record = createMaintenanceVisitRecord(values);
+  state.maintenanceVisits.push(record);
+  return record;
+}
+
+export function seedAutomationRule(
+  values: Partial<TestAutomationRuleRecord> &
+    Pick<TestAutomationRuleRecord, "companyId" | "ruleType">
+): TestAutomationRuleRecord {
+  const record = createAutomationRuleRecord(values);
+  state.automationRules.push(record);
+  return record;
+}
+
+export function seedAiRecommendation(
+  values: Partial<TestAiRecommendationRecord> &
+    Pick<TestAiRecommendationRecord, "companyId" | "type" | "headline" | "body">
+): TestAiRecommendationRecord {
+  const record = createAiRecommendationRecord(values);
+  state.aiRecommendations.push(record);
   return record;
 }
 

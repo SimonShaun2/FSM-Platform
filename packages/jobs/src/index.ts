@@ -1,6 +1,8 @@
 export { redisConnection } from "./connection.js";
 export {
+  QUEUE_PREFIX,
   QUEUE_NAMES,
+  queueBaseOptions,
   agreementsQueue,
   aiQueue,
   importsQueue,

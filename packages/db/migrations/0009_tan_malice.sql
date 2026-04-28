@@ -1,0 +1,1 @@
+ALTER TYPE "public"."activity_event_type" ADD VALUE 'service_agreement_template.deleted' BEFORE 'maintenance_plan.created';

@@ -13,6 +13,9 @@
     "start": "node dist/server.js"
   },
   "dependencies": {
+    "@aws-sdk/client-s3": "^3.931.0",
+    "@fastify/multipart": "^9.2.1",
+    "@fastify/rate-limit": "^10.3.0",
     "@sendgrid/mail": "^8.1.5",
     "@fastify/jwt": "^9.0.0",
     "@fsm/config": "workspace:*",
@@ -20,11 +23,15 @@
     "@fsm/jobs": "workspace:*",
     "@fsm/types": "workspace:*",
     "bcryptjs": "^3.0.2",
+    "date-fns": "^4.1.0",
+    "decimal.js": "^10.5.0",
     "drizzle-orm": "0.44.2",
     "fastify": "^5.5.0",
     "fastify-plugin": "^5.0.1",
     "jsonwebtoken": "^9.0.2",
+    "papaparse": "^5.5.3",
     "pino": "^9.4.0",
+    "stripe": "^17.0.0",
     "zod": "^3.25.76"
   },
   "devDependencies": {

@@ -1,3 +1,5 @@
+import { randomUUID } from "node:crypto";
+
 import { beforeAll, beforeEach, describe, expect, it, vi } from "vitest";
 
 import { ErrorCode } from "@fsm/types";
@@ -105,8 +107,12 @@ describe("job state machine", () => {
 
   it("transition returns the next status or throws CONFLICT with the current status", () => {
     expect(stateMachine.transition("scheduled", "dispatched")).toBe("dispatched");
+    expect(stateMachine.transition("cancelled", "lead")).toBe("lead");
 
     expect(() => stateMachine.transition("lead", "paid")).toThrowError(/lead to paid/i);
+    expect(() => stateMachine.transition("cancelled", "scheduled")).toThrowError(
+      /cancelled to scheduled/i
+    );
   });
 
   it("getAvailableTransitions excludes the rescheduled event pseudo-status", () => {
@@ -119,6 +125,101 @@ describe("job state machine", () => {
 });
 
 describe("job.service", () => {
+  it("listJobs returns paginated results and filters by status and technician", async () => {
+    const { company } = createAdminContext();
+    const { customer, technician } = seedJobGraph(company.id);
+    const otherTechnician = fakeDb.seedTechnician({
+      companyId: company.id,
+      firstName: "Robin",
+      lastName: "Route",
+      phone: "555-0101"
+    });
+
+    fakeDb.seedJob({
+      companyId: company.id,
+      customerId: customer.id,
+      technicianId: technician.id,
+      title: "Scheduled First",
+      status: "scheduled",
+      scheduledStart: new Date("2026-04-28T09:00:00.000Z")
+    });
+    fakeDb.seedJob({
+      companyId: company.id,
+      customerId: customer.id,
+      technicianId: otherTechnician.id,
+      title: "Lead Second",
+      status: "lead",
+      scheduledStart: new Date("2026-04-28T10:00:00.000Z")
+    });
+
+    const paginated = await jobService.listJobs(company.id, {
+      page: 2,
+      limit: 1
+    });
+    const statusFiltered = await jobService.listJobs(company.id, {
+      status: "scheduled"
+    });
+    const technicianFiltered = await jobService.listJobs(company.id, {
+      technicianId: technician.id
+    });
+
+    expect(paginated.total).toBe(2);
+    expect(paginated.page).toBe(2);
+    expect(paginated.limit).toBe(1);
+    expect(paginated.data).toHaveLength(1);
+    expect(paginated.data[0]?.title).toBe("Lead Second");
+    expect(statusFiltered.data).toHaveLength(1);
+    expect(statusFiltered.data[0]?.status).toBe("scheduled");
+    expect(technicianFiltered.data).toHaveLength(1);
+    expect(technicianFiltered.data[0]?.technician?.id).toBe(technician.id);
+  });
+
+  it("getJob returns detail with transitions and throws NOT_FOUND for unknown or cross-tenant jobs", async () => {
+    const { company } = createAdminContext();
+    const { customer, property, asset, technician } = seedJobGraph(company.id);
+    const otherCompany = fakeDb.seedCompany({
+      name: "Other HVAC",
+      slug: "other-hvac"
+    });
+    const otherCustomer = fakeDb.seedCustomer({
+      companyId: otherCompany.id,
+      firstName: "Other",
+      lastName: "Customer"
+    });
+    const job = fakeDb.seedJob({
+      companyId: company.id,
+      customerId: customer.id,
+      propertyId: property.id,
+      assetId: asset.id,
+      technicianId: technician.id,
+      title: "Detail Job",
+      status: "lead"
+    });
+    const crossTenantJob = fakeDb.seedJob({
+      companyId: otherCompany.id,
+      customerId: otherCustomer.id,
+      title: "Other Job",
+      status: "lead"
+    });
+
+    const detail = await jobService.getJob(company.id, job.id);
+
+    expect(detail.id).toBe(job.id);
+    expect(detail.availableTransitions).toEqual([
+      "estimate_requested",
+      "scheduled",
+      "cancelled"
+    ]);
+    expect(detail.technician?.id).toBe(technician.id);
+
+    await expect(jobService.getJob(company.id, randomUUID())).rejects.toMatchObject({
+      code: ErrorCode.NOT_FOUND
+    });
+    await expect(jobService.getJob(company.id, crossTenantJob.id)).rejects.toMatchObject({
+      code: ErrorCode.NOT_FOUND
+    });
+  });
+
   it("createJob succeeds and emits job.created", async () => {
     const { company, actor } = createAdminContext();
     const { customer, property, asset, technician } = seedJobGraph(company.id);
@@ -205,6 +306,38 @@ describe("job.service", () => {
       fields: {
         currentStatus: "scheduled",
         nextStatus: "paid"
+      }
+    });
+  });
+
+  it("transitionStatus reopens cancelled jobs to lead, emits job.reopened, and rejects cancelled to scheduled", async () => {
+    const { company, actor } = createAdminContext();
+    const { customer } = seedJobGraph(company.id);
+    const cancelledJob = fakeDb.seedJob({
+      companyId: company.id,
+      customerId: customer.id,
+      status: "cancelled",
+      title: "Reopen Me"
+    });
+    const otherCancelledJob = fakeDb.seedJob({
+      companyId: company.id,
+      customerId: customer.id,
+      status: "cancelled",
+      title: "Stay Cancelled"
+    });
+
+    const reopened = await jobService.transitionStatus(company.id, actor.id, cancelledJob.id, "lead");
+
+    expect(reopened.status).toBe("lead");
+    expect(fakeDb.getTestState().activityEvents.at(-1)?.eventType).toBe("job.reopened");
+
+    await expect(
+      jobService.transitionStatus(company.id, actor.id, otherCancelledJob.id, "scheduled")
+    ).rejects.toMatchObject({
+      code: ErrorCode.CONFLICT,
+      fields: {
+        currentStatus: "cancelled",
+        nextStatus: "scheduled"
       }
     });
   });
@@ -389,5 +522,152 @@ describe("job.service", () => {
     expect(note.content).toBe("Customer requested afternoon arrival");
     expect(fakeDb.getTestState().jobNotes).toHaveLength(1);
     expect(fakeDb.getTestState().activityEvents.at(-1)?.eventType).toBe("job.updated");
+  });
+
+  it("updateJob succeeds and ignores unexpected status input", async () => {
+    const { company, actor } = createAdminContext();
+    const { customer } = seedJobGraph(company.id);
+    const job = fakeDb.seedJob({
+      companyId: company.id,
+      customerId: customer.id,
+      title: "Old Title",
+      description: "Old description",
+      status: "lead",
+      tags: ["old"]
+    });
+
+    const updated = await jobService.updateJob(
+      company.id,
+      actor.id,
+      job.id,
+      {
+        title: "Updated Title",
+        description: "Updated description",
+        techNotes: "Wear boot covers",
+        tags: ["updated"],
+        status: "paid"
+      } as unknown as Parameters<JobServiceModule["updateJob"]>[3]
+    );
+
+    expect(updated.title).toBe("Updated Title");
+    expect(updated.description).toBe("Updated description");
+    expect(updated.techNotes).toBe("Wear boot covers");
+    expect(updated.tags).toEqual(["updated"]);
+    expect(updated.status).toBe("lead");
+  });
+
+  it("getJobNotes returns newest-first notes for a job", async () => {
+    const { company } = createAdminContext();
+    const { customer } = seedJobGraph(company.id);
+    const job = fakeDb.seedJob({
+      companyId: company.id,
+      customerId: customer.id,
+      title: "Notes Job"
+    });
+
+    fakeDb.seedJobNote({
+      companyId: company.id,
+      jobId: job.id,
+      content: "Older note",
+      createdAt: new Date("2026-04-28T09:00:00.000Z")
+    });
+    fakeDb.seedJobNote({
+      companyId: company.id,
+      jobId: job.id,
+      content: "Newer note",
+      createdAt: new Date("2026-04-28T10:00:00.000Z")
+    });
+
+    const notes = await jobService.getJobNotes(company.id, job.id);
+
+    expect(notes).toHaveLength(2);
+    expect(notes[0]?.content).toBe("Newer note");
+    expect(notes[1]?.content).toBe("Older note");
+  });
+
+  it("addPhoto creates a photo record for the job", async () => {
+    const { company, actor } = createAdminContext();
+    const { customer } = seedJobGraph(company.id);
+    const job = fakeDb.seedJob({
+      companyId: company.id,
+      customerId: customer.id,
+      title: "Photo Job"
+    });
+
+    const photo = await jobService.addPhoto(company.id, actor.id, job.id, {
+      url: "https://cdn.example.com/job-after.jpg",
+      photoType: "after"
+    });
+
+    expect(photo.url).toBe("https://cdn.example.com/job-after.jpg");
+    expect(photo.photoType).toBe("after");
+    expect(fakeDb.getTestState().jobPhotos).toHaveLength(1);
+  });
+
+  it("getJobPhotos returns saved photos for the job", async () => {
+    const { company } = createAdminContext();
+    const { customer } = seedJobGraph(company.id);
+    const job = fakeDb.seedJob({
+      companyId: company.id,
+      customerId: customer.id,
+      title: "Photos Job"
+    });
+
+    fakeDb.seedJobPhoto({
+      companyId: company.id,
+      jobId: job.id,
+      url: "https://cdn.example.com/older.jpg",
+      createdAt: new Date("2026-04-28T09:00:00.000Z")
+    });
+    fakeDb.seedJobPhoto({
+      companyId: company.id,
+      jobId: job.id,
+      url: "https://cdn.example.com/newer.jpg",
+      createdAt: new Date("2026-04-28T10:00:00.000Z"),
+      photoType: "after"
+    });
+
+    const photos = await jobService.getJobPhotos(company.id, job.id);
+
+    expect(photos).toHaveLength(2);
+    expect(photos[0]?.url).toBe("https://cdn.example.com/newer.jpg");
+    expect(photos[1]?.url).toBe("https://cdn.example.com/older.jpg");
+  });
+
+  it("getJobTimeline returns newest-first activity events", async () => {
+    const { company } = createAdminContext();
+    const { customer } = seedJobGraph(company.id);
+    const job = fakeDb.seedJob({
+      companyId: company.id,
+      customerId: customer.id,
+      title: "Timeline Job"
+    });
+
+    fakeDb.seedActivityEvent({
+      companyId: company.id,
+      eventType: "job.created",
+      entityType: "job",
+      entityId: job.id,
+      jobId: job.id,
+      customerId: customer.id,
+      summary: "Job created",
+      occurredAt: new Date("2026-04-28T09:00:00.000Z")
+    });
+    fakeDb.seedActivityEvent({
+      companyId: company.id,
+      eventType: "job.updated",
+      entityType: "job",
+      entityId: job.id,
+      jobId: job.id,
+      customerId: customer.id,
+      summary: "Job updated",
+      occurredAt: new Date("2026-04-28T10:00:00.000Z")
+    });
+
+    const timeline = await jobService.getJobTimeline(company.id, job.id);
+
+    expect(timeline).toHaveLength(2);
+    expect(timeline[0]?.summary).toBe("Job updated");
+    expect(timeline[1]?.summary).toBe("Job created");
   });
 });

@@ -1,0 +1,166 @@
+import { beforeAll, beforeEach, describe, expect, it, vi } from "vitest";
+
+import { ErrorCode } from "@fsm/types";
+
+import { setupTestEnv } from "../test-support/env-setup.js";
+
+setupTestEnv();
+
+const { addImportsQueueJob, uploadCsvToR2Mock } = vi.hoisted(() => ({
+  addImportsQueueJob: vi.fn(),
+  uploadCsvToR2Mock: vi.fn()
+}));
+
+vi.mock("drizzle-orm", async () => {
+  const helper = await import("../test-support/fake-db.js");
+  return helper.createDrizzleModuleMock();
+});
+
+vi.mock("@fsm/db", async () => {
+  const helper = await import("../test-support/fake-db.js");
+  return helper.createDbModuleMock();
+});
+
+vi.mock("@fsm/jobs", () => ({
+  importsQueue: {
+    add: addImportsQueueJob
+  }
+}));
+
+vi.mock("./file-upload.service.js", () => ({
+  uploadCsvToR2: uploadCsvToR2Mock
+}));
+
+type ImportServiceModule = typeof import("./import.service.js");
+type FakeDbModule = typeof import("../test-support/fake-db.js");
+
+let importService: ImportServiceModule;
+let fakeDb: FakeDbModule;
+
+beforeAll(async () => {
+  importService = await import("./import.service.js");
+  fakeDb = await import("../test-support/fake-db.js");
+});
+
+beforeEach(() => {
+  fakeDb.resetTestState();
+  addImportsQueueJob.mockReset();
+  uploadCsvToR2Mock.mockReset();
+  uploadCsvToR2Mock.mockResolvedValue({
+    fileUrl: "https://r2.test/fsm-bucket/imports/company-1/customers.csv",
+    fileKey: "imports/company-1/customers.csv"
+  });
+});
+
+function createAuthContext() {
+  const company = fakeDb.seedCompany({
+    name: "Acme HVAC",
+    slug: "acme-hvac"
+  });
+  const actor = fakeDb.seedUser({
+    companyId: company.id,
+    email: "owner@example.com",
+    firstName: "Ava",
+    lastName: "Stone",
+    role: "owner"
+  });
+
+  return { company, actor };
+}
+
+describe("import.service", () => {
+  it("createImportSession uploads the file, creates a session, and enqueues AI mapping", async () => {
+    const { company, actor } = createAuthContext();
+
+    const importSession = await importService.createImportSession(
+      company.id,
+      actor.id,
+      "customers.csv",
+      Buffer.from("First Name,Email\nChris,chris@example.com"),
+      {
+        mimeType: "text/csv"
+      }
+    );
+
+    expect(uploadCsvToR2Mock).toHaveBeenCalled();
+    expect(addImportsQueueJob).toHaveBeenCalledWith(
+      "map-csv-columns",
+      {
+        companyId: company.id,
+        importSessionId: importSession.id
+      },
+      expect.objectContaining({
+        jobId: `map-csv-columns-${importSession.id}`
+      })
+    );
+    expect(importSession.status).toBe("uploaded");
+    expect(fakeDb.getTestState().activityEvents.at(-1)?.eventType).toBe("import.started");
+  });
+
+  it("rollbackImport soft-deletes tagged records in a transaction", async () => {
+    const { company, actor } = createAuthContext();
+    const importSession = fakeDb.seedImportSession({
+      companyId: company.id,
+      createdById: actor.id,
+      fileName: "customers.csv",
+      fileUrl: "https://r2.test/fsm-bucket/imports/company-1/customers.csv",
+      status: "completed"
+    });
+    const customer = fakeDb.seedCustomer({
+      companyId: company.id,
+      firstName: "Chris",
+      lastName: "Pine",
+      importSessionId: importSession.id
+    });
+    const property = fakeDb.seedProperty({
+      companyId: company.id,
+      customerId: customer.id,
+      addressLine1: "101 Main St",
+      city: "Tulsa",
+      state: "OK",
+      zip: "74103",
+      importSessionId: importSession.id
+    });
+    const asset = fakeDb.seedAsset({
+      companyId: company.id,
+      customerId: customer.id,
+      propertyId: property.id,
+      name: "Main HVAC",
+      assetType: "hvac",
+      importSessionId: importSession.id
+    });
+    const job = fakeDb.seedJob({
+      companyId: company.id,
+      customerId: customer.id,
+      propertyId: property.id,
+      assetId: asset.id,
+      importSessionId: importSession.id
+    });
+
+    const rolledBackSession = await importService.rollbackImport(company.id, actor.id, importSession.id);
+
+    expect(rolledBackSession.status).toBe("rolled_back");
+    expect(fakeDb.getTestState().customers.find((row) => row.id === customer.id)?.deletedAt).not.toBeNull();
+    expect(fakeDb.getTestState().properties.find((row) => row.id === property.id)?.deletedAt).not.toBeNull();
+    expect(fakeDb.getTestState().assets.find((row) => row.id === asset.id)?.deletedAt).not.toBeNull();
+    expect(fakeDb.getTestState().jobs.find((row) => row.id === job.id)?.deletedAt).not.toBeNull();
+    expect(fakeDb.getTestState().activityEvents.at(-1)?.eventType).toBe("import.rolled_back");
+  });
+
+  it("rollbackImport throws CONFLICT when the session is not completed", async () => {
+    const { company, actor } = createAuthContext();
+    const importSession = fakeDb.seedImportSession({
+      companyId: company.id,
+      createdById: actor.id,
+      fileName: "customers.csv",
+      fileUrl: "https://r2.test/fsm-bucket/imports/company-1/customers.csv",
+      status: "preview"
+    });
+
+    await expect(
+      importService.rollbackImport(company.id, actor.id, importSession.id)
+    ).rejects.toMatchObject({
+      code: ErrorCode.CONFLICT
+    });
+  });
+});

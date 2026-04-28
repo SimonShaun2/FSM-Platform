@@ -1,0 +1,2 @@
+ALTER TYPE "public"."activity_event_type" ADD VALUE 'company.stripe_onboarding_started' BEFORE 'user.registered';--> statement-breakpoint
+ALTER TYPE "public"."activity_event_type" ADD VALUE 'company.stripe_onboarding_completed' BEFORE 'user.registered';

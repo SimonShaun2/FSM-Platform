@@ -2,7 +2,7 @@ import type { Processor } from "bullmq";
 import { Worker } from "bullmq";
 import pino from "pino";
 
-import { redisConnection } from "@fsm/jobs";
+import { queueBaseOptions } from "@fsm/jobs";
 
 const workerLogger = pino({
   name: "fsm-worker"
@@ -46,7 +46,7 @@ export function createWorker<TData extends Record<string, unknown>>(
       }
     },
     {
-      connection: redisConnection
+      ...queueBaseOptions
     }
   );
 

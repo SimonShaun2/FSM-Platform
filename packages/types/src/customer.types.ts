@@ -19,6 +19,7 @@ export interface Customer {
   prefersEmail: boolean | null;
   doNotContact: boolean | null;
   stripeCustomerId: string | null;
+  importSessionId: string | null;
   createdAt: Date;
   updatedAt: Date;
   deletedAt: Date | null;
@@ -43,6 +44,7 @@ export interface Property {
   notes: string | null;
   isPrimary: boolean;
   isActive: boolean;
+  importSessionId: string | null;
   createdAt: Date;
   updatedAt: Date;
   deletedAt: Date | null;
@@ -69,6 +71,7 @@ export interface Asset {
   photoUrls: string[] | null;
   notes: string | null;
   isActive: boolean;
+  importSessionId: string | null;
   createdAt: Date;
   updatedAt: Date;
   deletedAt: Date | null;

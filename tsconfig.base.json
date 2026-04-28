@@ -16,9 +16,11 @@
     "moduleDetection": "force",
     "paths": {
       "@fsm/config": ["packages/config"],
+      "@fsm/config/*": ["packages/config/src/*"],
       "@fsm/types": ["packages/types"],
       "@fsm/db": ["packages/db"],
-      "@fsm/jobs": ["packages/jobs/dist/index.d.ts"]
+      "@fsm/jobs": ["packages/jobs/dist/index.d.ts"],
+      "@fsm/ai": ["packages/ai"]
     }
   }
 }

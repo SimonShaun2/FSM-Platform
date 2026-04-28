@@ -12,18 +12,6 @@ declare module "fastify" {
   }
 }
 
-function getRawBody(body: unknown): Buffer {
-  if (Buffer.isBuffer(body)) {
-    return body;
-  }
-
-  if (typeof body === "string") {
-    return Buffer.from(body);
-  }
-
-  return Buffer.from("");
-}
-
 export async function stripeVerify(request: FastifyRequest, reply: FastifyReply): Promise<void> {
   const signature = request.headers["stripe-signature"];
 
@@ -36,9 +24,16 @@ export async function stripeVerify(request: FastifyRequest, reply: FastifyReply)
   }
 
   try {
-    request.stripeEvent = stripe.webhooks.constructEvent(getRawBody(request.body), signature, env.STRIPE_WEBHOOK_SECRET);
+    const rawBody = Buffer.isBuffer(request.body) ? request.body : Buffer.from("");
+    request.stripeEvent = stripe.webhooks.constructEvent(rawBody, signature, env.STRIPE_WEBHOOK_SECRET);
   } catch (error) {
-    request.log.warn({ err: error }, "Stripe signature verification failed");
+    request.log.warn(
+      {
+        err: error,
+        stripeSignature: signature
+      },
+      "Stripe signature verification failed"
+    );
     reply.code(400).send({
       error: "INVALID_STRIPE_SIGNATURE",
       message: "Invalid Stripe signature"

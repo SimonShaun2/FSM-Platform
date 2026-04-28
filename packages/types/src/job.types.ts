@@ -58,6 +58,7 @@ export interface Job {
   maintenancePlanId: string | null;
   parentJobId: string | null;
   tags: string[] | null;
+  importSessionId: string | null;
   createdAt: Date;
   updatedAt: Date;
   deletedAt: Date | null;

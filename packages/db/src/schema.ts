@@ -108,6 +108,7 @@ export const estimateStatusEnum = pgEnum("estimate_status", [
   "declined",
   "expired",
   "converted",
+  "revised",
 ]);
 
 export const invoiceStatusEnum = pgEnum("invoice_status", [
@@ -209,6 +210,8 @@ export const activityEventTypeEnum = pgEnum("activity_event_type", [
   // Authentication & company
   "company.created",
   "company.updated",
+  "company.stripe_onboarding_started",
+  "company.stripe_onboarding_completed",
   "user.registered",
   "user.login",
   "user.logout",
@@ -241,17 +244,22 @@ export const activityEventTypeEnum = pgEnum("activity_event_type", [
   "job.closed",
   // Estimate
   "estimate.created",
+  "estimate.updated",
+  "estimate.deleted",
   "estimate.sent",
   "estimate.viewed",
   "estimate.approved",
   "estimate.declined",
   "estimate.expired",
+  "estimate.converted",
   "estimate.revised",
   // Invoice
   "invoice.created",
+  "invoice.updated",
   "invoice.sent",
   "invoice.viewed",
   "invoice.overdue",
+  "invoice.paid",
   "invoice.void",
   // Payment
   "payment.received",
@@ -264,8 +272,13 @@ export const activityEventTypeEnum = pgEnum("activity_event_type", [
   "technician.deleted",
   "technician.assigned",
   "technician.unassigned",
+  // Service agreement template
+  "service_agreement_template.created",
+  "service_agreement_template.updated",
+  "service_agreement_template.deleted",
   // Maintenance plan
   "maintenance_plan.created",
+  "maintenance_plan.updated",
   "maintenance_plan.renewed",
   "maintenance_plan.cancelled",
   "maintenance_visit.completed",
@@ -273,6 +286,7 @@ export const activityEventTypeEnum = pgEnum("activity_event_type", [
   "ai.recommendation_created",
   "ai.recommendation_actioned",
   "ai.recommendation_dismissed",
+  "ai.recommendation_snoozed",
   // Campaign
   "campaign.sent",
   "campaign.opened",
@@ -280,6 +294,11 @@ export const activityEventTypeEnum = pgEnum("activity_event_type", [
   // Message
   "message.sent",
   "message.received",
+  // Import
+  "import.started",
+  "import.completed",
+  "import.rolled_back",
+  "import.failed",
 ]);
 
 export const aiRecommendationTypeEnum = pgEnum("ai_recommendation_type", [
@@ -435,6 +454,7 @@ export const customers = pgTable("customers", {
   doNotContact: boolean("do_not_contact").default(false),
   // Stripe
   stripeCustomerId: varchar("stripe_customer_id", { length: 100 }),
+  importSessionId: uuid("import_session_id").references(() => importSessions.id),
   ...timestamps,
 }, (t) => ({
   companyIdx: index("customers_company_idx").on(t.companyId),
@@ -464,6 +484,7 @@ export const properties = pgTable("properties", {
   notes: text("notes"),
   isPrimary: boolean("is_primary").notNull().default(false),
   isActive: boolean("is_active").notNull().default(true),
+  importSessionId: uuid("import_session_id").references(() => importSessions.id),
   ...timestamps,
 }, (t) => ({
   customerIdx: index("properties_customer_idx").on(t.customerId),
@@ -497,6 +518,7 @@ export const assets = pgTable("assets", {
   photoUrls: text("photo_urls").array().default([]),
   notes: text("notes"),
   isActive: boolean("is_active").notNull().default(true),
+  importSessionId: uuid("import_session_id").references(() => importSessions.id),
   ...timestamps,
 }, (t) => ({
   propertyIdx: index("assets_property_idx").on(t.propertyId),
@@ -585,6 +607,7 @@ export const jobs = pgTable("jobs", {
   parentJobId: uuid("parent_job_id"), // for return visits / follow-up jobs
   // Tags
   tags: text("tags").array().default([]),
+  importSessionId: uuid("import_session_id").references(() => importSessions.id),
   ...timestamps,
 }, (t) => ({
   companyIdx: index("jobs_company_idx").on(t.companyId),
@@ -723,6 +746,7 @@ export const invoices = pgTable("invoices", {
   reminder2SentAt: timestamp("reminder_2_sent_at"),
   reminder3SentAt: timestamp("reminder_3_sent_at"),
   // Notes
+  title: varchar("title", { length: 255 }),
   messageToCustomer: text("message_to_customer"),
   internalNotes: text("internal_notes"),
   ...timestamps,
@@ -1142,6 +1166,32 @@ export const importSessions = pgTable("import_sessions", {
   entityTypeIdx: index("import_sessions_entity_type_idx").on(t.entityType),
 }));
 
+export const automationRuleTypeEnum = pgEnum("automation_rule_type", [
+  "estimate_follow_up",
+  "estimate_declined",
+  "invoice_reminder",
+  "invoice_overdue",
+  "dormant_customer",
+  "maintenance_due",
+  "service_agreement_renewal",
+  "job_follow_up",
+]);
+
+export const automationRules = pgTable("automation_rules", {
+  id: id(),
+  companyId: companyId(),
+  ruleType: automationRuleTypeEnum("rule_type").notNull(),
+  isEnabled: boolean("is_enabled").notNull().default(false),
+  delayHours: integer("delay_hours"),
+  thresholdDays: integer("threshold_days"),
+  config: jsonb("config").default({}),
+  ...timestamps,
+}, (t) => ({
+  companyIdx: index("automation_rules_company_idx").on(t.companyId),
+  ruleTypeIdx: index("automation_rules_rule_type_idx").on(t.ruleType),
+  companyRuleTypeIdx: uniqueIndex("automation_rules_company_rule_type_idx").on(t.companyId, t.ruleType),
+}));
+
 // ─────────────────────────────────────────────
 // RELATIONS
 // ─────────────────────────────────────────────
@@ -1151,6 +1201,7 @@ export const companiesRelations = relations(companies, ({ many }) => ({
   customers: many(customers),
   technicians: many(technicians),
   jobs: many(jobs),
+  automationRules: many(automationRules),
   serviceAreas: many(serviceAreas),
   serviceAgreementTemplates: many(serviceAgreementTemplates),
   formTemplates: many(formTemplates),
@@ -1208,6 +1259,7 @@ export const techniciansRelations = relations(technicians, ({ one, many }) => ({
 export const estimatesRelations = relations(estimates, ({ one, many }) => ({
   company: one(companies, { fields: [estimates.companyId], references: [companies.id] }),
   customer: one(customers, { fields: [estimates.customerId], references: [customers.id] }),
+  property: one(properties, { fields: [estimates.propertyId], references: [properties.id] }),
   job: one(jobs, { fields: [estimates.jobId], references: [jobs.id] }),
   items: many(estimateItems),
 }));
@@ -1264,4 +1316,8 @@ export const formSubmissionsRelations = relations(formSubmissions, ({ one }) => 
 export const importSessionsRelations = relations(importSessions, ({ one }) => ({
   company: one(companies, { fields: [importSessions.companyId], references: [companies.id] }),
   createdBy: one(users, { fields: [importSessions.createdById], references: [users.id] }),
+}));
+
+export const automationRulesRelations = relations(automationRules, ({ one }) => ({
+  company: one(companies, { fields: [automationRules.companyId], references: [companies.id] }),
 }));

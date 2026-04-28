@@ -3,9 +3,21 @@ import { and, eq, isNull } from "drizzle-orm";
 import { companies, db, emitEventWithExecutor } from "@fsm/db";
 import { AppError, ErrorCode } from "@fsm/types";
 
-import { type UpdateCompanyInput, UpdateCompanySchema } from "../routes/company/schemas.js";
-
 type CompanyRecord = typeof companies.$inferSelect;
+
+interface UpdateCompanyInput {
+  name?: string | undefined;
+  phone?: string | undefined;
+  email?: string | undefined;
+  website?: string | undefined;
+  addressLine1?: string | undefined;
+  addressLine2?: string | undefined;
+  city?: string | undefined;
+  state?: string | undefined;
+  zip?: string | undefined;
+  timezone?: string | undefined;
+  logoUrl?: string | undefined;
+}
 
 function requireResult<T>(value: T | undefined, message: string): T {
   if (!value) {
@@ -42,7 +54,6 @@ export async function updateCompany(
   actorId: string,
   input: UpdateCompanyInput
 ): Promise<CompanyRecord> {
-  const parsedInput = UpdateCompanySchema.parse(input);
   const existingCompany = await getCompany(companyId);
   const actor = await db.query.users.findFirst({
     where: (userTable, { and: andOperator, eq: eqOperator, isNull: isNullOperator }) =>
@@ -50,17 +61,17 @@ export async function updateCompany(
   });
 
   const updateValues = {
-    ...(parsedInput.name !== undefined ? { name: parsedInput.name } : {}),
-    ...(parsedInput.phone !== undefined ? { phone: parsedInput.phone } : {}),
-    ...(parsedInput.email !== undefined ? { email: normalizeEmail(parsedInput.email) } : {}),
-    ...(parsedInput.website !== undefined ? { website: parsedInput.website } : {}),
-    ...(parsedInput.addressLine1 !== undefined ? { addressLine1: parsedInput.addressLine1 } : {}),
-    ...(parsedInput.addressLine2 !== undefined ? { addressLine2: parsedInput.addressLine2 } : {}),
-    ...(parsedInput.city !== undefined ? { city: parsedInput.city } : {}),
-    ...(parsedInput.state !== undefined ? { state: parsedInput.state } : {}),
-    ...(parsedInput.zip !== undefined ? { zip: parsedInput.zip } : {}),
-    ...(parsedInput.timezone !== undefined ? { timezone: parsedInput.timezone } : {}),
-    ...(parsedInput.logoUrl !== undefined ? { logoUrl: parsedInput.logoUrl } : {})
+    ...(input.name !== undefined ? { name: input.name } : {}),
+    ...(input.phone !== undefined ? { phone: input.phone } : {}),
+    ...(input.email !== undefined ? { email: normalizeEmail(input.email) } : {}),
+    ...(input.website !== undefined ? { website: input.website } : {}),
+    ...(input.addressLine1 !== undefined ? { addressLine1: input.addressLine1 } : {}),
+    ...(input.addressLine2 !== undefined ? { addressLine2: input.addressLine2 } : {}),
+    ...(input.city !== undefined ? { city: input.city } : {}),
+    ...(input.state !== undefined ? { state: input.state } : {}),
+    ...(input.zip !== undefined ? { zip: input.zip } : {}),
+    ...(input.timezone !== undefined ? { timezone: input.timezone } : {}),
+    ...(input.logoUrl !== undefined ? { logoUrl: input.logoUrl } : {})
   };
 
   if (Object.keys(updateValues).length === 0) {

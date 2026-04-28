@@ -19,11 +19,6 @@ import {
   type UpdateAssetInput
 } from "@fsm/types";
 
-import {
-  CreateAssetSchema,
-  UpdateAssetSchema
-} from "../routes/customers/schemas.js";
-
 const MAX_RESULT_WINDOW = 10_000;
 
 type CustomerRow = typeof customers.$inferSelect;
@@ -230,7 +225,6 @@ export async function createAsset(
   propertyId: string,
   input: CreateAssetInput
 ): Promise<Asset> {
-  const parsedInput = CreateAssetSchema.parse(input);
   await getCustomerRecord(companyId, customerId, db);
   await getPropertyRecord(companyId, customerId, propertyId, db);
 
@@ -242,16 +236,16 @@ export async function createAsset(
         companyId,
         customerId,
         propertyId,
-        name: parsedInput.name.trim(),
-        assetType: parsedInput.assetType.trim(),
-        brand: normalizeOptionalString(parsedInput.brand) ?? null,
-        model: normalizeOptionalString(parsedInput.model) ?? null,
-        serialNumber: normalizeOptionalString(parsedInput.serialNumber) ?? null,
-        installDate: parsedInput.installDate ?? null,
-        warrantyExpiration: parsedInput.warrantyExpiration ?? null,
-        condition: parsedInput.condition ?? null,
-        conditionNotes: normalizeOptionalString(parsedInput.conditionNotes) ?? null,
-        notes: normalizeOptionalString(parsedInput.notes) ?? null
+        name: input.name.trim(),
+        assetType: input.assetType.trim(),
+        brand: normalizeOptionalString(input.brand) ?? null,
+        model: normalizeOptionalString(input.model) ?? null,
+        serialNumber: normalizeOptionalString(input.serialNumber) ?? null,
+        installDate: input.installDate ?? null,
+        warrantyExpiration: input.warrantyExpiration ?? null,
+        condition: input.condition ?? null,
+        conditionNotes: normalizeOptionalString(input.conditionNotes) ?? null,
+        notes: normalizeOptionalString(input.notes) ?? null
       })
       .returning();
     const asset = insertedAssets[0];
@@ -287,7 +281,6 @@ export async function updateAsset(
   assetId: string,
   input: UpdateAssetInput
 ): Promise<Asset> {
-  const parsedInput = UpdateAssetSchema.parse(input);
   await getCustomerRecord(companyId, customerId, db);
   await getPropertyRecord(companyId, customerId, propertyId, db);
   const existingAsset = await getAssetRecord(companyId, customerId, propertyId, assetId, db);
@@ -295,30 +288,30 @@ export async function updateAsset(
   return db.transaction(async (tx) => {
     const actor = await getActor(companyId, actorId, tx);
     const maintenancePlan =
-      parsedInput.lastServiceDate !== undefined
+      input.lastServiceDate !== undefined
         ? await findActiveMaintenancePlanForAsset(companyId, customerId, propertyId, assetId, tx)
         : null;
     const computedNextServiceDate =
-      parsedInput.lastServiceDate !== undefined &&
+      input.lastServiceDate !== undefined &&
       maintenancePlan &&
-      parsedInput.nextServiceDate === undefined
-        ? calculateNextServiceDate(parsedInput.lastServiceDate, maintenancePlan.frequency)
+      input.nextServiceDate === undefined
+        ? calculateNextServiceDate(input.lastServiceDate, maintenancePlan.frequency)
         : undefined;
     const updateValues = {
-      ...(parsedInput.name !== undefined ? { name: parsedInput.name.trim() } : {}),
-      ...(parsedInput.assetType !== undefined ? { assetType: parsedInput.assetType.trim() } : {}),
-      ...(parsedInput.brand !== undefined ? { brand: normalizeOptionalString(parsedInput.brand) ?? null } : {}),
-      ...(parsedInput.model !== undefined ? { model: normalizeOptionalString(parsedInput.model) ?? null } : {}),
-      ...(parsedInput.serialNumber !== undefined ? { serialNumber: normalizeOptionalString(parsedInput.serialNumber) ?? null } : {}),
-      ...(parsedInput.installDate !== undefined ? { installDate: parsedInput.installDate } : {}),
-      ...(parsedInput.warrantyExpiration !== undefined ? { warrantyExpiration: parsedInput.warrantyExpiration } : {}),
-      ...(parsedInput.condition !== undefined ? { condition: parsedInput.condition } : {}),
-      ...(parsedInput.conditionNotes !== undefined ? { conditionNotes: normalizeOptionalString(parsedInput.conditionNotes) ?? null } : {}),
-      ...(parsedInput.notes !== undefined ? { notes: normalizeOptionalString(parsedInput.notes) ?? null } : {}),
-      ...(parsedInput.lastServiceDate !== undefined ? { lastServiceDate: parsedInput.lastServiceDate } : {}),
-      ...(parsedInput.nextServiceDate !== undefined ? { nextServiceDate: parsedInput.nextServiceDate } : {}),
+      ...(input.name !== undefined ? { name: input.name.trim() } : {}),
+      ...(input.assetType !== undefined ? { assetType: input.assetType.trim() } : {}),
+      ...(input.brand !== undefined ? { brand: normalizeOptionalString(input.brand) ?? null } : {}),
+      ...(input.model !== undefined ? { model: normalizeOptionalString(input.model) ?? null } : {}),
+      ...(input.serialNumber !== undefined ? { serialNumber: normalizeOptionalString(input.serialNumber) ?? null } : {}),
+      ...(input.installDate !== undefined ? { installDate: input.installDate } : {}),
+      ...(input.warrantyExpiration !== undefined ? { warrantyExpiration: input.warrantyExpiration } : {}),
+      ...(input.condition !== undefined ? { condition: input.condition } : {}),
+      ...(input.conditionNotes !== undefined ? { conditionNotes: normalizeOptionalString(input.conditionNotes) ?? null } : {}),
+      ...(input.notes !== undefined ? { notes: normalizeOptionalString(input.notes) ?? null } : {}),
+      ...(input.lastServiceDate !== undefined ? { lastServiceDate: input.lastServiceDate } : {}),
+      ...(input.nextServiceDate !== undefined ? { nextServiceDate: input.nextServiceDate } : {}),
       ...(computedNextServiceDate !== undefined ? { nextServiceDate: computedNextServiceDate } : {}),
-      ...(parsedInput.photoUrls !== undefined ? { photoUrls: parsedInput.photoUrls } : {})
+      ...(input.photoUrls !== undefined ? { photoUrls: input.photoUrls } : {})
     };
 
     if (Object.keys(updateValues).length === 0) {
@@ -359,7 +352,7 @@ export async function updateAsset(
       summary: `Asset ${updatedAsset.name} updated`
     });
 
-    if (parsedInput.lastServiceDate !== undefined) {
+    if (input.lastServiceDate !== undefined) {
       await emitEventWithExecutor(tx, {
         companyId,
         eventType: "asset.serviced",

@@ -1,7 +1,7 @@
 import type { Worker } from "bullmq";
 import pino from "pino";
 
-import { QUEUE_NAMES } from "@fsm/jobs";
+import { QUEUE_NAMES, aiQueue } from "@fsm/jobs";
 
 import { createWorker } from "./lib/worker-factory.js";
 import { processAgreements } from "./processors/agreements.processor.js";
@@ -14,17 +14,43 @@ const logger = pino({
   name: "fsm-worker-bootstrap"
 });
 
+const dormantCustomerCronPattern = "0 2 * * *";
+const revenueSummaryPrewarmEveryMs = 30 * 60 * 1000;
+
+await aiQueue.add(
+  "dormant-customer-scan",
+  {},
+  {
+    repeat: {
+      pattern: dormantCustomerCronPattern
+    },
+    jobId: "dormant-customer-scan-cron"
+  }
+);
+
+await aiQueue.add(
+  "compute-revenue-summary-batch",
+  {},
+  {
+    repeat: {
+      every: revenueSummaryPrewarmEveryMs
+    },
+    jobId: "compute-revenue-summary-batch-cron"
+  }
+);
+
 const workers: Array<Worker<Record<string, unknown>, void, string>> = [
   createWorker(QUEUE_NAMES.imports, processCsvImport),
   createWorker(QUEUE_NAMES.ai, processAiRevenue),
   createWorker(QUEUE_NAMES.notifications, processNotifications),
   createWorker(QUEUE_NAMES.invoices, processInvoiceReminder),
-  createWorker(QUEUE_NAMES.agreements, processAgreements),
-  createWorker(QUEUE_NAMES.webhooks, async () => {})
+  createWorker(QUEUE_NAMES.agreements, processAgreements)
 ];
 
 logger.info(
   {
+    batchCronJobId: "compute-revenue-summary-batch-cron",
+    cronJobId: "dormant-customer-scan-cron",
     queues: workers.length
   },
   "Workers started"

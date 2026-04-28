@@ -24,25 +24,32 @@ import {
   verifyRefreshToken,
   verifyResetToken
 } from "../lib/tokens.js";
-import {
-  ForgotPasswordSchema,
-  LoginSchema,
-  type LoginInput,
-  LogoutSchema,
-  RefreshSchema,
-  type RegisterInput,
-  RegisterSchema,
-  ResetPasswordSchema
-} from "../routes/auth/schemas.js";
 
 type CompanyRecord = typeof companies.$inferSelect;
 type UserRecord = typeof users.$inferSelect;
 type RefreshTokenRecord = typeof refreshTokens.$inferSelect;
 type InsertExecutor = Pick<typeof db, "insert">;
 
+interface RegisterInput {
+  companyName: string;
+  firstName: string;
+  lastName: string;
+  email: string;
+  password: string;
+  phone?: string | undefined;
+  timezone?: string | undefined;
+}
+
+interface LoginInput {
+  email: string;
+  password: string;
+}
+
 const logger = pino({
   name: "auth-service"
 });
+
+const DEFAULT_COMPANY_TIMEZONE = "America/Chicago";
 
 export interface TokenPair {
   accessToken: string;
@@ -60,6 +67,15 @@ function requireResult<T>(value: T | undefined, message: string): T {
 
 function normalizeEmail(email: string): string {
   return email.trim().toLowerCase();
+}
+
+function normalizeOptionalString(value: string | undefined): string | undefined {
+  if (value === undefined) {
+    return undefined;
+  }
+
+  const normalizedValue = value.trim();
+  return normalizedValue.length > 0 ? normalizedValue : undefined;
 }
 
 function buildActorName(firstName: string, lastName: string): string {
@@ -187,8 +203,12 @@ async function issueTokenPair(executor: InsertExecutor, user: UserRecord): Promi
 export async function register(
   input: RegisterInput
 ): Promise<{ company: CompanyRecord; user: UserRecord; tokens: TokenPair }> {
-  const data = RegisterSchema.parse(input);
-  const normalizedEmail = normalizeEmail(data.email);
+  const normalizedEmail = normalizeEmail(input.email);
+  const normalizedCompanyName = input.companyName.trim();
+  const normalizedFirstName = input.firstName.trim();
+  const normalizedLastName = input.lastName.trim();
+  const normalizedPhone = normalizeOptionalString(input.phone);
+  const normalizedTimezone = normalizeOptionalString(input.timezone) ?? DEFAULT_COMPANY_TIMEZONE;
   const existingUser = await findUserByEmail(normalizedEmail);
 
   if (existingUser) {
@@ -197,19 +217,19 @@ export async function register(
     });
   }
 
-  const companySlug = await generateUniqueCompanySlug(data.companyName);
-  const passwordHashValue = await hashPassword(data.password, 12);
+  const companySlug = await generateUniqueCompanySlug(normalizedCompanyName);
+  const passwordHashValue = await hashPassword(input.password, 12);
   const now = new Date();
 
   return db.transaction(async (tx) => {
     const insertedCompanies = await tx
       .insert(companies)
       .values({
-        name: data.companyName,
+        name: normalizedCompanyName,
         slug: companySlug,
-        phone: data.phone ?? null,
+        phone: normalizedPhone ?? null,
         email: normalizedEmail,
-        timezone: data.timezone
+        timezone: normalizedTimezone
       })
       .returning();
     const company = requireResult(insertedCompanies[0], "Failed to create company during registration");
@@ -221,9 +241,9 @@ export async function register(
         email: normalizedEmail,
         passwordHash: passwordHashValue,
         passwordChangedAt: null,
-        firstName: data.firstName,
-        lastName: data.lastName,
-        phone: data.phone ?? null,
+        firstName: normalizedFirstName,
+        lastName: normalizedLastName,
+        phone: normalizedPhone ?? null,
         role: "owner",
         lastLoginAt: now
       })
@@ -258,8 +278,7 @@ export async function register(
 }
 
 export async function login(input: LoginInput): Promise<{ user: UserRecord; tokens: TokenPair }> {
-  const data = LoginSchema.parse(input);
-  const normalizedEmail = normalizeEmail(data.email);
+  const normalizedEmail = normalizeEmail(input.email);
   const invalidCredentialsError = new AppError(ErrorCode.UNAUTHORIZED, "Invalid email or password");
   const user = await findUserByEmail(normalizedEmail);
 
@@ -267,7 +286,7 @@ export async function login(input: LoginInput): Promise<{ user: UserRecord; toke
     throw invalidCredentialsError;
   }
 
-  const passwordMatches = await comparePassword(data.password, user.passwordHash);
+  const passwordMatches = await comparePassword(input.password, user.passwordHash);
 
   if (!passwordMatches) {
     throw invalidCredentialsError;
@@ -304,10 +323,7 @@ export async function login(input: LoginInput): Promise<{ user: UserRecord; toke
 }
 
 export async function refresh(refreshTokenValue: string): Promise<{ tokens: TokenPair }> {
-  const parsedInput = RefreshSchema.parse({
-    refreshToken: refreshTokenValue
-  });
-  const verified = verifyRefreshToken(parsedInput.refreshToken);
+  const verified = verifyRefreshToken(refreshTokenValue);
   const user = await findUserById(verified.userId);
 
   if (!user || !user.isActive || user.companyId !== verified.companyId) {
@@ -317,7 +333,7 @@ export async function refresh(refreshTokenValue: string): Promise<{ tokens: Toke
   const existingRefreshToken = await findActiveRefreshTokenMatch(
     verified.userId,
     verified.companyId,
-    parsedInput.refreshToken
+    refreshTokenValue
   );
 
   if (!existingRefreshToken) {
@@ -332,23 +348,19 @@ export async function refresh(refreshTokenValue: string): Promise<{ tokens: Toke
   });
 }
 
-export async function logout(userId: string, refreshTokenValue: string): Promise<void> {
-  const parsedInput = LogoutSchema.parse({
-    refreshToken: refreshTokenValue
-  });
-  const verified = verifyRefreshToken(parsedInput.refreshToken);
-
-  if (verified.userId !== userId) {
-    throw new AppError(ErrorCode.UNAUTHORIZED, "Invalid or expired refresh token");
-  }
-
-  const user = await findUserById(userId);
+export async function logout(refreshTokenValue: string): Promise<void> {
+  const verified = verifyRefreshToken(refreshTokenValue);
+  const user = await findUserById(verified.userId);
 
   if (!user || user.companyId !== verified.companyId) {
     throw new AppError(ErrorCode.UNAUTHORIZED, "Invalid or expired refresh token");
   }
 
-  const existingRefreshToken = await findActiveRefreshTokenMatch(userId, verified.companyId, parsedInput.refreshToken);
+  const existingRefreshToken = await findActiveRefreshTokenMatch(
+    verified.userId,
+    verified.companyId,
+    refreshTokenValue
+  );
 
   if (!existingRefreshToken) {
     return;
@@ -370,8 +382,7 @@ export async function logout(userId: string, refreshTokenValue: string): Promise
 }
 
 export async function forgotPassword(email: string): Promise<void> {
-  const data = ForgotPasswordSchema.parse({ email });
-  const normalizedEmail = normalizeEmail(data.email);
+  const normalizedEmail = normalizeEmail(email);
   const user = await findUserByEmail(normalizedEmail);
 
   if (!user || !user.isActive) {
@@ -400,11 +411,7 @@ export async function forgotPassword(email: string): Promise<void> {
 }
 
 export async function resetPassword(resetTokenValue: string, newPassword: string): Promise<void> {
-  const data = ResetPasswordSchema.parse({
-    resetToken: resetTokenValue,
-    newPassword
-  });
-  const verified = verifyResetToken(data.resetToken);
+  const verified = verifyResetToken(resetTokenValue);
   const user = await findUserById(verified.userId);
 
   if (!user || !user.isActive || normalizeEmail(user.email) !== normalizeEmail(verified.email)) {
@@ -418,7 +425,7 @@ export async function resetPassword(resetTokenValue: string, newPassword: string
     throw new AppError(ErrorCode.UNAUTHORIZED, "Invalid or expired reset token");
   }
 
-  const passwordHashValue = await hashPassword(data.newPassword, 12);
+  const passwordHashValue = await hashPassword(newPassword, 12);
   const now = new Date();
 
   await db.transaction(async (tx) => {

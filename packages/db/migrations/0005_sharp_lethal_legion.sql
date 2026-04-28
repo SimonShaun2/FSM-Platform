@@ -1,0 +1,2 @@
+ALTER TYPE "public"."activity_event_type" ADD VALUE 'invoice.updated' BEFORE 'invoice.sent';--> statement-breakpoint
+ALTER TYPE "public"."activity_event_type" ADD VALUE 'invoice.paid' BEFORE 'invoice.void';

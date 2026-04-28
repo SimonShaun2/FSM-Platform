@@ -1,37 +1,16 @@
 import { hash as hashPassword } from "bcryptjs";
 import jwt from "jsonwebtoken";
-import { ZodError } from "zod";
 import { beforeAll, beforeEach, describe, expect, it, vi } from "vitest";
 
 import { AppError, ErrorCode } from "@fsm/types";
 
-const sendPasswordResetEmailMock = vi.hoisted(() => vi.fn());
+import { setupTestEnv } from "../test-support/env-setup.js";
 
-process.env.NODE_ENV = "test";
-process.env.API_PORT = "3001";
-process.env.WEBHOOK_PORT = "3002";
-process.env.DATABASE_URL = "postgres://postgres:postgres@localhost:5432/fsm";
-process.env.REDIS_URL = "redis://localhost:6379";
-process.env.STRIPE_SECRET_KEY = "sk_test_dummy";
-process.env.STRIPE_WEBHOOK_SECRET = "whsec_dummy";
-process.env.STRIPE_PLATFORM_FEE_PERCENT = "3";
-process.env.OPENAI_API_KEY = "openai_dummy";
-process.env.TWILIO_ACCOUNT_SID = "twilio_sid";
-process.env.TWILIO_AUTH_TOKEN = "twilio_token";
-process.env.TWILIO_FROM_NUMBER = "+15555555555";
-process.env.SENDGRID_API_KEY = "sendgrid_dummy";
-process.env.SENDGRID_FROM_EMAIL = "noreply@example.com";
-process.env.R2_ACCOUNT_ID = "r2_account";
-process.env.R2_ACCESS_KEY_ID = "r2_access";
-process.env.R2_SECRET_ACCESS_KEY = "r2_secret";
-process.env.R2_BUCKET_NAME = "fsm-bucket";
-process.env.APP_URL = "http://localhost:3000";
-process.env.JWT_SECRET = "jwt_secret";
-process.env.JWT_REFRESH_SECRET = "jwt_refresh_secret";
-process.env.ACCESS_TOKEN_TTL_SECONDS = "900";
-process.env.REFRESH_TOKEN_TTL_SECONDS = "2592000";
-process.env.RESET_TOKEN_TTL_SECONDS = "3600";
-process.env.NEXT_PUBLIC_API_URL = "http://localhost:3001";
+const sendPasswordResetEmailMock = vi.hoisted(() => vi.fn());
+const TEST_JWT_SECRET = "jwt_secret";
+const TEST_JWT_REFRESH_SECRET = "jwt_refresh_secret";
+
+setupTestEnv();
 
 vi.mock("drizzle-orm", async () => {
   const helper = await import("../test-support/fake-db.js");
@@ -129,17 +108,17 @@ describe("auth.service", () => {
     });
   });
 
-  it("rejects weak register password", async () => {
-    await expect(
-      authService.register({
-        companyName: "Weak Pass Co",
-        firstName: "Sam",
-        lastName: "Hill",
-        email: "sam@example.com",
-        password: "short",
-        timezone: "America/Chicago"
-      })
-    ).rejects.toBeInstanceOf(ZodError);
+  it("register normalizes email casing", async () => {
+    const result = await authService.register({
+      companyName: "Case Check Co",
+      firstName: "Sam",
+      lastName: "Hill",
+      email: "SAM@EXAMPLE.COM",
+      password: "password123",
+      timezone: "America/Chicago"
+    });
+
+    expect(result.user.email).toBe("sam@example.com");
   });
 
   it("logs in with correct credentials", async () => {
@@ -233,7 +212,7 @@ describe("auth.service", () => {
         companyId: "company-1",
         tokenType: "refresh"
       },
-      process.env.JWT_REFRESH_SECRET ?? "",
+      TEST_JWT_REFRESH_SECRET,
       { expiresIn: -1 }
     );
 
@@ -290,7 +269,7 @@ describe("auth.service", () => {
       expiresAt: new Date(Date.now() + 60_000)
     });
 
-    await authService.logout(user.id, refreshToken);
+    await authService.logout(refreshToken);
 
     const state = fakeDb.getTestState();
     const storedRefreshToken = requireValue(state.refreshTokens[0], "Expected a stored refresh token");
@@ -404,7 +383,7 @@ describe("auth.service", () => {
         email: user.email,
         tokenType: "reset"
       },
-      process.env.JWT_SECRET ?? "",
+      TEST_JWT_SECRET,
       { expiresIn: -1 }
     );
 
@@ -447,7 +426,7 @@ describe("company.service", () => {
     expect(result.website).toBe("https://example.com");
   });
 
-  it("rejects unauthorized company field updates", async () => {
+  it("returns the existing company when no supported fields are provided", async () => {
     const company = fakeDb.seedCompany({ name: "Acme", slug: "acme" });
     const user = fakeDb.seedUser({
       companyId: company.id,
@@ -456,12 +435,9 @@ describe("company.service", () => {
       lastName: "Lee"
     });
 
-    await expect(
-      companyService.updateCompany(
-        company.id,
-        user.id,
-        { stripeAccountId: "acct_123" } as unknown as CompanyUpdateInput
-      )
-    ).rejects.toBeInstanceOf(ZodError);
+    const result = await companyService.updateCompany(company.id, user.id, {} as CompanyUpdateInput);
+
+    expect(result.id).toBe(company.id);
+    expect(result.name).toBe(company.name);
   });
 });

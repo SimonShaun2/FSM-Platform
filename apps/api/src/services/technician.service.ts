@@ -1,4 +1,5 @@
 import { and, eq, isNull } from "drizzle-orm";
+import { Decimal } from "decimal.js";
 
 import {
   companies,
@@ -231,7 +232,7 @@ function sortTechniciansList(
   });
 }
 
-function toCurrencyString(value: number): string {
+function toCurrencyString(value: Decimal): string {
   return value.toFixed(2);
 }
 
@@ -688,9 +689,12 @@ export async function getTechnicianPerformance(
     return completionDate.getTime() >= last30DayThreshold.getTime();
   });
   const revenueLast30Days = completedJobsLast30Days.reduce(
-    (sum, job) => sum + Number(job.invoiceTotal ?? "0"),
-    0
+    (sum, job) => sum.add(new Decimal(job.invoiceTotal ?? "0")),
+    new Decimal(0)
   );
+  const averageTicket = completedJobsLast30Days.length === 0
+    ? new Decimal(0)
+    : revenueLast30Days.div(completedJobsLast30Days.length);
 
   return {
     technicianId: technician.id,
@@ -701,9 +705,7 @@ export async function getTechnicianPerformance(
     last30Days: {
       jobsCompleted: completedJobsLast30Days.length,
       revenue: toCurrencyString(revenueLast30Days),
-      avgTicket: toCurrencyString(
-        completedJobsLast30Days.length === 0 ? 0 : revenueLast30Days / completedJobsLast30Days.length
-      )
+      avgTicket: toCurrencyString(averageTicket)
     }
   };
 }

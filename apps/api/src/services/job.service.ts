@@ -1,4 +1,5 @@
 import { and, desc, eq, isNull } from "drizzle-orm";
+import pino from "pino";
 
 import {
   activityEvents,
@@ -109,6 +110,8 @@ type TransitionEventType =
   | "job.cancelled"
   | "job.closed"
   | "job.reopened";
+
+const logger = pino({ name: "job-service" });
 
 function buildActorName(firstName: string, lastName: string): string {
   return `${firstName} ${lastName}`.trim();
@@ -1232,11 +1235,14 @@ export async function completeJob(
       }
     );
   } catch (error: unknown) {
-    console.error("Failed to enqueue revenue opportunity evaluation", {
-      companyId,
-      jobId: completedJob.id,
-      error
-    });
+    logger.error(
+      {
+        err: error,
+        companyId,
+        jobId: completedJob.id
+      },
+      "Failed to enqueue AI job"
+    );
   }
 
   return completedJob;

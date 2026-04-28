@@ -1,0 +1,72 @@
+import type { FastifyPluginAsync } from "fastify";
+
+import { requireRole } from "../../lib/authorize.js";
+import {
+  confirmMappingHandler,
+  createImportHandler,
+  getImportErrorsHandler,
+  getImportHandler,
+  listImportsHandler,
+  rollbackImportHandler,
+  startImportHandler
+} from "./handlers.js";
+import {
+  confirmMappingRouteSchema,
+  confirmMappingValidation,
+  createImportRouteSchema,
+  getImportRouteSchema,
+  importErrorsRouteSchema,
+  importSessionIdValidation,
+  listImportsRouteSchema,
+  listImportsValidation,
+  rollbackImportRouteSchema,
+  startImportRouteSchema
+} from "./schemas.js";
+
+const importRoutes: FastifyPluginAsync = async (fastify) => {
+  const authenticate = fastify.authenticate;
+  const requireOwnerOrAdmin = requireRole(["owner", "admin"]);
+
+  fastify.post("/imports", {
+    preHandler: [authenticate, requireOwnerOrAdmin],
+    schema: createImportRouteSchema
+  }, createImportHandler);
+
+  fastify.get("/imports", {
+    preHandler: [authenticate, requireOwnerOrAdmin],
+    preValidation: listImportsValidation,
+    schema: listImportsRouteSchema
+  }, listImportsHandler);
+
+  fastify.get("/imports/:id", {
+    preHandler: [authenticate, requireOwnerOrAdmin],
+    preValidation: importSessionIdValidation,
+    schema: getImportRouteSchema
+  }, getImportHandler);
+
+  fastify.post("/imports/:id/confirm-mapping", {
+    preHandler: [authenticate, requireOwnerOrAdmin],
+    preValidation: confirmMappingValidation,
+    schema: confirmMappingRouteSchema
+  }, confirmMappingHandler);
+
+  fastify.post("/imports/:id/start", {
+    preHandler: [authenticate, requireOwnerOrAdmin],
+    preValidation: importSessionIdValidation,
+    schema: startImportRouteSchema
+  }, startImportHandler);
+
+  fastify.post("/imports/:id/rollback", {
+    preHandler: [authenticate, requireOwnerOrAdmin],
+    preValidation: importSessionIdValidation,
+    schema: rollbackImportRouteSchema
+  }, rollbackImportHandler);
+
+  fastify.get("/imports/:id/errors", {
+    preHandler: [authenticate, requireOwnerOrAdmin],
+    preValidation: importSessionIdValidation,
+    schema: importErrorsRouteSchema
+  }, getImportErrorsHandler);
+};
+
+export default importRoutes;

@@ -14,7 +14,7 @@ export const ALLOWED_TRANSITIONS: Record<JobStatus, readonly JobTransitionTarget
   completed: ["invoiced", "closed"],
   invoiced: ["paid", "completed"],
   paid: ["closed"],
-  cancelled: [],
+  cancelled: ["lead"],
   closed: []
 };
 
