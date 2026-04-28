@@ -1,0 +1,13 @@
+node_modules/
+dist/
+.next/
+.turbo/
+.corepack/
+.pnpm-store/
+coverage/
+.env
+.env.local
+.env.development.local
+.env.test.local
+.env.production.local
+!.env.example

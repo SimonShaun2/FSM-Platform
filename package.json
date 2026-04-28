@@ -1,0 +1,22 @@
+{
+  "name": "fsm-platform",
+  "private": true,
+  "packageManager": "pnpm@10.0.0",
+  "engines": {
+    "node": ">=20"
+  },
+  "scripts": {
+    "dev": "corepack pnpm -r --filter @fsm/config --filter @fsm/types --filter @fsm/db --filter @fsm/jobs build && corepack pnpm -r --parallel --filter @fsm/api --filter @fsm/worker --filter @fsm/webhook --filter @fsm/web dev",
+    "build": "corepack pnpm -r --filter @fsm/config --filter @fsm/types --filter @fsm/db --filter @fsm/jobs --filter @fsm/api --filter @fsm/worker --filter @fsm/webhook --filter @fsm/web build",
+    "lint": "corepack pnpm -r lint",
+    "test": "corepack pnpm -r test"
+  },
+  "devDependencies": {
+    "@types/node": "^24.3.0",
+    "@typescript-eslint/eslint-plugin": "^7.0.0",
+    "@typescript-eslint/parser": "^7.0.0",
+    "eslint": "^8.57.0",
+    "turbo": "^2.0.0",
+    "typescript": "^5.9.2"
+  }
+}

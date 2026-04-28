@@ -1,0 +1,24 @@
+{
+  "compilerOptions": {
+    "target": "ES2022",
+    "lib": ["ES2022"],
+    "baseUrl": ".",
+    "strict": true,
+    "noImplicitOverride": true,
+    "noUncheckedIndexedAccess": true,
+    "exactOptionalPropertyTypes": true,
+    "useUnknownInCatchVariables": true,
+    "verbatimModuleSyntax": true,
+    "isolatedModules": true,
+    "resolveJsonModule": true,
+    "esModuleInterop": true,
+    "skipLibCheck": true,
+    "moduleDetection": "force",
+    "paths": {
+      "@fsm/config": ["packages/config"],
+      "@fsm/types": ["packages/types"],
+      "@fsm/db": ["packages/db"],
+      "@fsm/jobs": ["packages/jobs/dist/index.d.ts"]
+    }
+  }
+}

@@ -1,3 +1,60 @@
-# test-platform
+# FSM Platform
 
-Minimal repository used to verify GitHub connectivity for the SimonShaun2 account.
+AI-native field service management monorepo for HVAC, plumbing, and home service operators.
+
+## Prerequisites
+
+- Node.js 20+
+- pnpm
+- Postgres
+- Redis
+
+## Setup
+
+1. `cp .env.example .env`
+2. Fill in the required environment variable values
+3. `pnpm install`
+4. `pnpm dev`
+
+## Required environment variables
+
+- `DATABASE_URL`: Postgres connection string for the main application database
+- `REDIS_URL`: Redis connection string for queues, caching, and workers
+- `JWT_SECRET`: Secret used to sign access and reset tokens
+- `JWT_REFRESH_SECRET`: Secret used to sign refresh tokens
+- `ACCESS_TOKEN_TTL_SECONDS`: Access token lifetime in seconds
+- `REFRESH_TOKEN_TTL_SECONDS`: Refresh token lifetime in seconds
+- `RESET_TOKEN_TTL_SECONDS`: Password reset token lifetime in seconds
+- `APP_URL`: Base application URL used in password reset links
+- `NEXT_PUBLIC_API_URL`: Browser-safe API base URL for the web app
+
+### Provider keys
+
+- Stripe
+  - `STRIPE_SECRET_KEY`
+  - `STRIPE_WEBHOOK_SECRET`
+  - `STRIPE_PLATFORM_FEE_PERCENT`
+  - Get these from your Stripe dashboard
+- Twilio
+  - `TWILIO_ACCOUNT_SID`
+  - `TWILIO_AUTH_TOKEN`
+  - `TWILIO_FROM_NUMBER`
+  - Get these from your Twilio console
+- SendGrid
+  - `SENDGRID_API_KEY`
+  - `SENDGRID_FROM_EMAIL`
+  - Get these from your SendGrid account and verified sender settings
+- OpenAI
+  - `OPENAI_API_KEY`
+  - Get this from your OpenAI API project
+- Cloudflare R2
+  - `R2_ACCOUNT_ID`
+  - `R2_ACCESS_KEY_ID`
+  - `R2_SECRET_ACCESS_KEY`
+  - `R2_BUCKET_NAME`
+  - Get these from your Cloudflare account and R2 bucket settings
+
+## Database migrations
+
+- Generate a migration: `pnpm --filter @fsm/db db:generate`
+- Apply migrations: `pnpm --filter @fsm/db db:migrate`

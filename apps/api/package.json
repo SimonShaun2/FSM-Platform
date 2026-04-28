@@ -1,0 +1,39 @@
+{
+  "name": "@fsm/api",
+  "version": "0.0.0",
+  "private": true,
+  "type": "module",
+  "main": "./dist/server.js",
+  "types": "./dist/server.d.ts",
+  "scripts": {
+    "dev": "tsx watch src/server.ts",
+    "build": "tsc -p tsconfig.json",
+    "lint": "tsc --noEmit",
+    "test": "vitest run",
+    "start": "node dist/server.js"
+  },
+  "dependencies": {
+    "@sendgrid/mail": "^8.1.5",
+    "@fastify/jwt": "^9.0.0",
+    "@fsm/config": "workspace:*",
+    "@fsm/db": "workspace:*",
+    "@fsm/jobs": "workspace:*",
+    "@fsm/types": "workspace:*",
+    "bcryptjs": "^3.0.2",
+    "drizzle-orm": "0.44.2",
+    "fastify": "^5.5.0",
+    "fastify-plugin": "^5.0.1",
+    "jsonwebtoken": "^9.0.2",
+    "pino": "^9.4.0",
+    "zod": "^3.25.76"
+  },
+  "devDependencies": {
+    "@types/jsonwebtoken": "^9.0.10",
+    "@types/node": "^24.3.0",
+    "@types/supertest": "^6.0.3",
+    "supertest": "^7.1.1",
+    "tsx": "^4.19.1",
+    "typescript": "^5.9.2",
+    "vitest": "^3.2.4"
+  }
+}

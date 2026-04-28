@@ -1,0 +1,32 @@
+import Fastify from "fastify";
+import pino from "pino";
+
+import { env } from "@fsm/config";
+
+import { stripeHandler } from "./handlers/stripe.handler.js";
+import { twilioHandler } from "./handlers/twilio.handler.js";
+import { stripeVerify } from "./middleware/stripe-verify.js";
+import { twilioVerify } from "./middleware/twilio-verify.js";
+
+async function bufferParser(_request: unknown, body: Buffer): Promise<Buffer> {
+  return body;
+}
+
+export async function buildWebhookApp() {
+  const logger = pino({
+    level: env.NODE_ENV === "production" ? "info" : "debug"
+  });
+
+  const app = Fastify({
+    loggerInstance: logger
+  });
+
+  app.addContentTypeParser("application/json", { parseAs: "buffer" }, bufferParser);
+  app.addContentTypeParser("application/x-www-form-urlencoded", { parseAs: "buffer" }, bufferParser);
+  app.addContentTypeParser("text/plain", { parseAs: "buffer" }, bufferParser);
+
+  app.post("/stripe", { preHandler: stripeVerify }, stripeHandler);
+  app.post("/twilio", { preHandler: twilioVerify }, twilioHandler);
+
+  return app;
+}

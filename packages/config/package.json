@@ -1,0 +1,25 @@
+{
+  "name": "@fsm/config",
+  "version": "0.0.0",
+  "private": true,
+  "type": "module",
+  "main": "./dist/env.js",
+  "types": "./dist/env.d.ts",
+  "exports": {
+    ".": {
+      "types": "./dist/env.d.ts",
+      "import": "./dist/env.js"
+    }
+  },
+  "scripts": {
+    "build": "tsc -p tsconfig.json",
+    "lint": "tsc --noEmit"
+  },
+  "dependencies": {
+    "zod": "^3.25.76"
+  },
+  "devDependencies": {
+    "@types/node": "^24.3.0",
+    "typescript": "^5.9.2"
+  }
+}
