@@ -242,6 +242,10 @@ export const activityEventTypeEnum = pgEnum("activity_event_type", [
   "job.rescheduled",
   "job.cancelled",
   "job.closed",
+  "job.task_completed",
+  "job.product_added",
+  "job.product_removed",
+  "job.upsell_approved",
   // Estimate
   "estimate.created",
   "estimate.updated",
@@ -266,6 +270,9 @@ export const activityEventTypeEnum = pgEnum("activity_event_type", [
   "payment.partial",
   "payment.failed",
   "payment.refunded",
+  // Product catalog
+  "product.created",
+  "product.updated",
   // Technician
   "technician.created",
   "technician.updated",
@@ -337,6 +344,22 @@ export const campaignTypeEnum = pgEnum("campaign_type", [
   "seasonal",
   "maintenance_reminder",
   "custom",
+]);
+
+export const productCategoryEnum = pgEnum("product_category", [
+  "service",
+  "labor",
+  "material",
+  "equipment",
+  "fee",
+  "bundle",
+]);
+
+export const jobTaskStatusEnum = pgEnum("job_task_status", [
+  "pending",
+  "in_progress",
+  "completed",
+  "skipped",
 ]);
 
 export const messageChannelEnum = pgEnum("message_channel", [
@@ -547,6 +570,7 @@ export const technicians = pgTable("technicians", {
   // Skills + capacity
   skills: text("skills").array().default([]), // hvac, plumbing, electrical
   serviceAreaIds: uuid("service_area_ids").array().default([]),
+  serviceZipCodes: text("service_zip_codes").array().default([]),
   hoursPerDay: decimal("hours_per_day", { precision: 4, scale: 2 }).default("8"),
   // Performance (updated on job completion)
   totalJobsCompleted: integer("total_jobs_completed").default(0),
@@ -1194,6 +1218,70 @@ export const automationRules = pgTable("automation_rules", {
   companyRuleTypeIdx: uniqueIndex("automation_rules_company_rule_type_idx").on(t.companyId, t.ruleType),
 }));
 
+export const productCatalog = pgTable("product_catalog", {
+  id: id(),
+  companyId: companyId(),
+  name: varchar("name", { length: 255 }).notNull(),
+  description: text("description"),
+  category: productCategoryEnum("category").notNull().default("service"),
+  sku: varchar("sku", { length: 100 }),
+  unitPrice: decimal("unit_price", { precision: 10, scale: 2 }).notNull().default("0"),
+  cost: decimal("cost", { precision: 10, scale: 2 }),
+  unit: varchar("unit", { length: 50 }).default("each"),
+  isTaxable: boolean("is_taxable").default(true),
+  isActive: boolean("is_active").notNull().default(true),
+  applicableAssetTypes: text("applicable_asset_types").array().default([]),
+  sortOrder: integer("sort_order").default(0),
+  ...timestamps,
+}, (t) => ({
+  companyIdx: index("product_catalog_company_idx").on(t.companyId),
+  activeIdx: index("product_catalog_active_idx").on(t.isActive),
+}));
+
+export const jobTasks = pgTable("job_tasks", {
+  id: id(),
+  companyId: companyId(),
+  jobId: uuid("job_id").notNull().references(() => jobs.id, { onDelete: "cascade" }),
+  assignedToId: uuid("assigned_to_id").references(() => technicians.id),
+  title: varchar("title", { length: 255 }).notNull(),
+  description: text("description"),
+  status: jobTaskStatusEnum("status").notNull().default("pending"),
+  isRequired: boolean("is_required").default(false),
+  completedAt: timestamp("completed_at"),
+  completedById: uuid("completed_by_id").references(() => users.id),
+  estimatedMinutes: integer("estimated_minutes"),
+  actualMinutes: integer("actual_minutes"),
+  sortOrder: integer("sort_order").default(0),
+  notes: text("notes"),
+  ...timestamps,
+}, (t) => ({
+  companyIdx: index("job_tasks_company_idx").on(t.companyId),
+  jobIdx: index("job_tasks_job_idx").on(t.jobId),
+  statusIdx: index("job_tasks_status_idx").on(t.status),
+}));
+
+export const jobProducts = pgTable("job_products", {
+  id: id(),
+  companyId: companyId(),
+  jobId: uuid("job_id").notNull().references(() => jobs.id, { onDelete: "cascade" }),
+  productCatalogId: uuid("product_catalog_id").references(() => productCatalog.id),
+  name: varchar("name", { length: 255 }).notNull(),
+  description: text("description"),
+  category: productCategoryEnum("category").notNull().default("service"),
+  quantity: decimal("quantity", { precision: 10, scale: 3 }).notNull().default("1"),
+  unitPrice: decimal("unit_price", { precision: 10, scale: 2 }).notNull(),
+  total: decimal("total", { precision: 10, scale: 2 }).notNull(),
+  isTaxable: boolean("is_taxable").default(true),
+  addedById: uuid("added_by_id").references(() => users.id),
+  isUpsell: boolean("is_upsell").default(false),
+  upsellApproved: boolean("upsell_approved").default(false),
+  upsellApprovedAt: timestamp("upsell_approved_at"),
+  ...timestamps,
+}, (t) => ({
+  companyIdx: index("job_products_company_idx").on(t.companyId),
+  jobIdx: index("job_products_job_idx").on(t.jobId),
+}));
+
 // ─────────────────────────────────────────────
 // RELATIONS
 // ─────────────────────────────────────────────
@@ -1203,6 +1291,7 @@ export const companiesRelations = relations(companies, ({ many }) => ({
   customers: many(customers),
   technicians: many(technicians),
   jobs: many(jobs),
+  productCatalog: many(productCatalog),
   automationRules: many(automationRules),
   serviceAreas: many(serviceAreas),
   serviceAgreementTemplates: many(serviceAgreementTemplates),
@@ -1247,6 +1336,8 @@ export const jobsRelations = relations(jobs, ({ one, many }) => ({
   estimates: many(estimates),
   invoices: many(invoices),
   scheduleSlots: many(scheduleSlots),
+  tasks: many(jobTasks),
+  products: many(jobProducts),
   activityEvents: many(activityEvents),
   formSubmissions: many(formSubmissions),
 }));
@@ -1255,6 +1346,7 @@ export const techniciansRelations = relations(technicians, ({ one, many }) => ({
   company: one(companies, { fields: [technicians.companyId], references: [companies.id] }),
   user: one(users, { fields: [technicians.userId], references: [users.id] }),
   jobs: many(jobs),
+  assignedTasks: many(jobTasks),
   scheduleSlots: many(scheduleSlots),
 }));
 
@@ -1322,4 +1414,26 @@ export const importSessionsRelations = relations(importSessions, ({ one }) => ({
 
 export const automationRulesRelations = relations(automationRules, ({ one }) => ({
   company: one(companies, { fields: [automationRules.companyId], references: [companies.id] }),
+}));
+
+export const productCatalogRelations = relations(productCatalog, ({ one, many }) => ({
+  company: one(companies, { fields: [productCatalog.companyId], references: [companies.id] }),
+  jobProducts: many(jobProducts),
+}));
+
+export const jobTasksRelations = relations(jobTasks, ({ one }) => ({
+  company: one(companies, { fields: [jobTasks.companyId], references: [companies.id] }),
+  job: one(jobs, { fields: [jobTasks.jobId], references: [jobs.id] }),
+  assignedTo: one(technicians, { fields: [jobTasks.assignedToId], references: [technicians.id] }),
+  completedBy: one(users, { fields: [jobTasks.completedById], references: [users.id] }),
+}));
+
+export const jobProductsRelations = relations(jobProducts, ({ one }) => ({
+  company: one(companies, { fields: [jobProducts.companyId], references: [companies.id] }),
+  job: one(jobs, { fields: [jobProducts.jobId], references: [jobs.id] }),
+  product: one(productCatalog, {
+    fields: [jobProducts.productCatalogId],
+    references: [productCatalog.id],
+  }),
+  addedBy: one(users, { fields: [jobProducts.addedById], references: [users.id] }),
 }));

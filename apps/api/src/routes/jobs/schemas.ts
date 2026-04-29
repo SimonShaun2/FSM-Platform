@@ -31,6 +31,8 @@ const jobTypeSchema = z.enum([
 ]);
 const jobPrioritySchema = z.enum(["low", "normal", "high", "urgent"]);
 const photoTypeSchema = z.enum(["before", "after", "general"]);
+const taskStatusSchema = z.enum(["pending", "in_progress", "completed", "skipped"]);
+const productCategorySchema = z.enum(["service", "labor", "material", "equipment", "fee", "bundle"]);
 
 const nullableStringSchema = {
   anyOf: [{ type: "string" }, { type: "null" }]
@@ -305,6 +307,100 @@ const photoSchema = {
   }
 } as const;
 
+const taskSchema = {
+  type: "object",
+  additionalProperties: false,
+  required: [
+    "id",
+    "companyId",
+    "jobId",
+    "assignedToId",
+    "title",
+    "description",
+    "status",
+    "isRequired",
+    "completedAt",
+    "completedById",
+    "estimatedMinutes",
+    "actualMinutes",
+    "sortOrder",
+    "notes",
+    "createdAt",
+    "updatedAt",
+    "deletedAt"
+  ],
+  properties: {
+    id: { type: "string" },
+    companyId: { type: "string" },
+    jobId: { type: "string" },
+    assignedToId: nullableStringSchema,
+    title: { type: "string" },
+    description: nullableStringSchema,
+    status: { type: "string", enum: ["pending", "in_progress", "completed", "skipped"] },
+    isRequired: { type: "boolean" },
+    completedAt: nullableDateTimeSchema,
+    completedById: nullableStringSchema,
+    estimatedMinutes: {
+      anyOf: [{ type: "integer" }, { type: "null" }]
+    },
+    actualMinutes: {
+      anyOf: [{ type: "integer" }, { type: "null" }]
+    },
+    sortOrder: { type: "integer" },
+    notes: nullableStringSchema,
+    createdAt: { type: "string", format: "date-time" },
+    updatedAt: { type: "string", format: "date-time" },
+    deletedAt: nullableDateTimeSchema
+  }
+} as const;
+
+const jobProductSchema = {
+  type: "object",
+  additionalProperties: false,
+  required: [
+    "id",
+    "companyId",
+    "jobId",
+    "productCatalogId",
+    "name",
+    "description",
+    "category",
+    "quantity",
+    "unitPrice",
+    "total",
+    "isTaxable",
+    "addedById",
+    "isUpsell",
+    "upsellApproved",
+    "upsellApprovedAt",
+    "createdAt",
+    "updatedAt",
+    "deletedAt"
+  ],
+  properties: {
+    id: { type: "string" },
+    companyId: { type: "string" },
+    jobId: { type: "string" },
+    productCatalogId: nullableStringSchema,
+    name: { type: "string" },
+    description: nullableStringSchema,
+    category: { type: "string", enum: ["service", "labor", "material", "equipment", "fee", "bundle"] },
+    quantity: { type: "string" },
+    unitPrice: { type: "string" },
+    total: { type: "string" },
+    isTaxable: {
+      anyOf: [{ type: "boolean" }, { type: "null" }]
+    },
+    addedById: nullableStringSchema,
+    isUpsell: { type: "boolean" },
+    upsellApproved: { type: "boolean" },
+    upsellApprovedAt: nullableDateTimeSchema,
+    createdAt: { type: "string", format: "date-time" },
+    updatedAt: { type: "string", format: "date-time" },
+    deletedAt: nullableDateTimeSchema
+  }
+} as const;
+
 const activityEventSchema = {
   type: "object",
   additionalProperties: false,
@@ -488,6 +584,78 @@ export const AddPhotoSchema = z
   })
   .strict();
 
+export const TaskIdParamsSchema = z
+  .object({
+    id: uuidSchema,
+    taskId: uuidSchema
+  })
+  .strict();
+
+export const JobProductIdParamsSchema = z
+  .object({
+    id: uuidSchema,
+    productId: uuidSchema
+  })
+  .strict();
+
+export const CreateTaskSchema = z
+  .object({
+    assignedToId: uuidSchema.optional(),
+    title: z.string().trim().min(1).max(255),
+    description: z.string().trim().optional(),
+    isRequired: z.boolean().optional().default(false),
+    estimatedMinutes: z.coerce.number().int().min(1).optional(),
+    actualMinutes: z.coerce.number().int().min(0).optional(),
+    sortOrder: z.coerce.number().int().min(0).optional(),
+    notes: z.string().trim().optional()
+  })
+  .strict();
+
+export const UpdateTaskSchema = buildUpdateSchema({
+  assignedToId: z.union([uuidSchema, z.null()]).optional(),
+  title: z.string().trim().min(1).max(255).optional(),
+  description: z.string().trim().optional(),
+  status: taskStatusSchema.optional(),
+  isRequired: z.boolean().optional(),
+  estimatedMinutes: z.coerce.number().int().min(1).optional(),
+  actualMinutes: z.coerce.number().int().min(0).optional(),
+  sortOrder: z.coerce.number().int().min(0).optional(),
+  notes: z.string().trim().optional()
+});
+
+export const ReorderTasksSchema = z
+  .object({
+    orderedIds: z.array(uuidSchema).min(1)
+  })
+  .strict();
+
+export const AddJobProductSchema = z
+  .object({
+    productCatalogId: uuidSchema.optional(),
+    name: z.string().trim().min(1).max(255).optional(),
+    description: z.string().trim().optional(),
+    category: productCategorySchema.optional().default("service"),
+    quantity: z.coerce.number().positive().optional().default(1),
+    unitPrice: z.coerce.number().positive().optional(),
+    isTaxable: z.boolean().optional().default(true),
+    isUpsell: z.boolean().optional().default(false)
+  })
+  .strict()
+  .refine((input) => input.productCatalogId !== undefined || (input.name !== undefined && input.unitPrice !== undefined), {
+    message: "name and unitPrice are required when productCatalogId is not provided",
+    path: ["name"]
+  });
+
+export const UpdateJobProductSchema = buildUpdateSchema({
+  name: z.string().trim().min(1).max(255).optional(),
+  description: z.string().trim().optional(),
+  category: productCategorySchema.optional(),
+  quantity: z.coerce.number().positive().optional(),
+  unitPrice: z.coerce.number().positive().optional(),
+  isTaxable: z.boolean().optional(),
+  isUpsell: z.boolean().optional()
+});
+
 export const ListJobsQuerySchema = z
   .object({
     status: z.preprocess(
@@ -511,6 +679,9 @@ export const ListJobsQuerySchema = z
 export type JobIdParams = z.infer<typeof JobIdParamsSchema>;
 export type TransitionStatusBody = z.infer<typeof TransitionStatusSchema>;
 export type AssignTechnicianBody = z.infer<typeof AssignTechnicianSchema>;
+export type TaskIdParams = z.infer<typeof TaskIdParamsSchema>;
+export type JobProductIdParams = z.infer<typeof JobProductIdParamsSchema>;
+export type ReorderTasksBody = z.infer<typeof ReorderTasksSchema>;
 
 export const listJobsValidation = withZodValidation({ query: ListJobsQuerySchema });
 export const createJobValidation = withZodValidation({ body: CreateJobSchema });
@@ -543,6 +714,32 @@ export const addPhotoValidation = withZodValidation({
   params: JobIdParamsSchema,
   body: AddPhotoSchema
 });
+export const listTasksValidation = withZodValidation({ params: JobIdParamsSchema });
+export const createTaskValidation = withZodValidation({
+  params: JobIdParamsSchema,
+  body: CreateTaskSchema
+});
+export const updateTaskValidation = withZodValidation({
+  params: TaskIdParamsSchema,
+  body: UpdateTaskSchema
+});
+export const completeTaskValidation = withZodValidation({ params: TaskIdParamsSchema });
+export const deleteTaskValidation = withZodValidation({ params: TaskIdParamsSchema });
+export const reorderTasksValidation = withZodValidation({
+  params: JobIdParamsSchema,
+  body: ReorderTasksSchema
+});
+export const listJobProductsValidation = withZodValidation({ params: JobIdParamsSchema });
+export const addJobProductValidation = withZodValidation({
+  params: JobIdParamsSchema,
+  body: AddJobProductSchema
+});
+export const updateJobProductValidation = withZodValidation({
+  params: JobProductIdParamsSchema,
+  body: UpdateJobProductSchema
+});
+export const removeJobProductValidation = withZodValidation({ params: JobProductIdParamsSchema });
+export const approveUpsellValidation = withZodValidation({ params: JobProductIdParamsSchema });
 export const notesQueryValidation = withZodValidation({ params: JobIdParamsSchema });
 export const photosQueryValidation = withZodValidation({ params: JobIdParamsSchema });
 export const activityQueryValidation = withZodValidation({ params: JobIdParamsSchema });
@@ -698,6 +895,137 @@ export const addPhotoRouteSchema = {
     404: errorResponseSchema
   }
 } as const;
+
+export const listTasksSchema = {
+  tags: ["jobs"],
+  response: {
+    200: {
+      type: "object",
+      additionalProperties: false,
+      required: ["tasks"],
+      properties: {
+        tasks: {
+          type: "array",
+          items: taskSchema
+        }
+      }
+    },
+    400: errorResponseSchema,
+    401: errorResponseSchema,
+    404: errorResponseSchema
+  }
+} as const;
+
+export const createTaskRouteSchema = {
+  tags: ["jobs"],
+  response: {
+    201: {
+      type: "object",
+      additionalProperties: false,
+      required: ["task"],
+      properties: {
+        task: taskSchema
+      }
+    },
+    400: errorResponseSchema,
+    401: errorResponseSchema,
+    404: errorResponseSchema
+  }
+} as const;
+
+export const updateTaskRouteSchema = {
+  tags: ["jobs"],
+  response: {
+    200: {
+      type: "object",
+      additionalProperties: false,
+      required: ["task"],
+      properties: {
+        task: taskSchema
+      }
+    },
+    400: errorResponseSchema,
+    401: errorResponseSchema,
+    404: errorResponseSchema
+  }
+} as const;
+
+export const deleteTaskRouteSchema = {
+  tags: ["jobs"],
+  response: {
+    200: {
+      type: "object",
+      additionalProperties: false,
+      required: ["success"],
+      properties: {
+        success: { type: "boolean" }
+      }
+    },
+    400: errorResponseSchema,
+    401: errorResponseSchema,
+    404: errorResponseSchema
+  }
+} as const;
+
+export const reorderTasksRouteSchema = deleteTaskRouteSchema;
+
+export const listJobProductsSchema = {
+  tags: ["jobs"],
+  response: {
+    200: {
+      type: "object",
+      additionalProperties: false,
+      required: ["products"],
+      properties: {
+        products: {
+          type: "array",
+          items: jobProductSchema
+        }
+      }
+    },
+    400: errorResponseSchema,
+    401: errorResponseSchema,
+    404: errorResponseSchema
+  }
+} as const;
+
+export const addJobProductRouteSchema = {
+  tags: ["jobs"],
+  response: {
+    201: {
+      type: "object",
+      additionalProperties: false,
+      required: ["product"],
+      properties: {
+        product: jobProductSchema
+      }
+    },
+    400: errorResponseSchema,
+    401: errorResponseSchema,
+    404: errorResponseSchema,
+    409: errorResponseSchema
+  }
+} as const;
+
+export const updateJobProductRouteSchema = {
+  tags: ["jobs"],
+  response: {
+    200: {
+      type: "object",
+      additionalProperties: false,
+      required: ["product"],
+      properties: {
+        product: jobProductSchema
+      }
+    },
+    400: errorResponseSchema,
+    401: errorResponseSchema,
+    404: errorResponseSchema
+  }
+} as const;
+
+export const removeJobProductRouteSchema = deleteTaskRouteSchema;
+export const approveUpsellRouteSchema = updateJobProductRouteSchema;
 
 export const getPhotosSchema = {
   tags: ["jobs"],

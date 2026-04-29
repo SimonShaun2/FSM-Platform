@@ -27,7 +27,10 @@ type TableName =
   | "campaigns"
   | "campaignRecipients"
   | "messageLogs"
+  | "productCatalog"
   | "technicians"
+  | "jobTasks"
+  | "jobProducts"
   | "scheduleSlots"
   | "activityEvents";
 
@@ -98,6 +101,8 @@ type CampaignType =
   | "custom";
 type MessageChannel = "sms" | "email";
 type MessageDirection = "inbound" | "outbound";
+type ProductCategory = "service" | "labor" | "material" | "equipment" | "fee" | "bundle";
+type JobTaskStatus = "pending" | "in_progress" | "completed" | "skipped";
 
 export interface TestCompanyRecord {
   id: string;
@@ -624,6 +629,25 @@ export interface TestMessageLogRecord {
   deletedAt: Date | null;
 }
 
+export interface TestProductCatalogRecord {
+  id: string;
+  companyId: string;
+  name: string;
+  description: string | null;
+  category: ProductCategory;
+  sku: string | null;
+  unitPrice: string;
+  cost: string | null;
+  unit: string | null;
+  isTaxable: boolean | null;
+  isActive: boolean;
+  applicableAssetTypes: string[] | null;
+  sortOrder: number | null;
+  createdAt: Date;
+  updatedAt: Date;
+  deletedAt: Date | null;
+}
+
 export interface TestTechnicianRecord {
   id: string;
   companyId: string;
@@ -635,6 +659,7 @@ export interface TestTechnicianRecord {
   avatarUrl: string | null;
   skills: string[] | null;
   serviceAreaIds: string[] | null;
+  serviceZipCodes: string[] | null;
   hoursPerDay: string | null;
   totalJobsCompleted: number | null;
   avgJobDurationMinutes: number | null;
@@ -643,6 +668,47 @@ export interface TestTechnicianRecord {
   status: TechnicianStatus;
   calendarColor: string | null;
   notes: string | null;
+  createdAt: Date;
+  updatedAt: Date;
+  deletedAt: Date | null;
+}
+
+export interface TestJobTaskRecord {
+  id: string;
+  companyId: string;
+  jobId: string;
+  assignedToId: string | null;
+  title: string;
+  description: string | null;
+  status: JobTaskStatus;
+  isRequired: boolean | null;
+  completedAt: Date | null;
+  completedById: string | null;
+  estimatedMinutes: number | null;
+  actualMinutes: number | null;
+  sortOrder: number | null;
+  notes: string | null;
+  createdAt: Date;
+  updatedAt: Date;
+  deletedAt: Date | null;
+}
+
+export interface TestJobProductRecord {
+  id: string;
+  companyId: string;
+  jobId: string;
+  productCatalogId: string | null;
+  name: string;
+  description: string | null;
+  category: ProductCategory;
+  quantity: string;
+  unitPrice: string;
+  total: string;
+  isTaxable: boolean | null;
+  addedById: string | null;
+  isUpsell: boolean | null;
+  upsellApproved: boolean | null;
+  upsellApprovedAt: Date | null;
   createdAt: Date;
   updatedAt: Date;
   deletedAt: Date | null;
@@ -707,7 +773,10 @@ type AnyTestRecord =
   | TestCampaignRecord
   | TestCampaignRecipientRecord
   | TestMessageLogRecord
+  | TestProductCatalogRecord
   | TestTechnicianRecord
+  | TestJobTaskRecord
+  | TestJobProductRecord
   | TestScheduleSlotRecord
   | TestActivityEventRecord;
 
@@ -735,7 +804,10 @@ type MockTable =
   | typeof campaignsTable
   | typeof campaignRecipientsTable
   | typeof messageLogsTable
+  | typeof productCatalogTable
   | typeof techniciansTable
+  | typeof jobTasksTable
+  | typeof jobProductsTable
   | typeof scheduleSlotsTable
   | typeof activityEventsTable;
 
@@ -763,7 +835,10 @@ interface TestState {
   campaigns: TestCampaignRecord[];
   campaignRecipients: TestCampaignRecipientRecord[];
   messageLogs: TestMessageLogRecord[];
+  productCatalog: TestProductCatalogRecord[];
   technicians: TestTechnicianRecord[];
+  jobTasks: TestJobTaskRecord[];
+  jobProducts: TestJobProductRecord[];
   scheduleSlots: TestScheduleSlotRecord[];
   activityEvents: TestActivityEventRecord[];
 }
@@ -1314,6 +1389,26 @@ const messageLogsTable = {
   deletedAt: "deletedAt"
 } as const;
 
+const productCatalogTable = {
+  __name: "productCatalog",
+  id: "id",
+  companyId: "companyId",
+  name: "name",
+  description: "description",
+  category: "category",
+  sku: "sku",
+  unitPrice: "unitPrice",
+  cost: "cost",
+  unit: "unit",
+  isTaxable: "isTaxable",
+  isActive: "isActive",
+  applicableAssetTypes: "applicableAssetTypes",
+  sortOrder: "sortOrder",
+  createdAt: "createdAt",
+  updatedAt: "updatedAt",
+  deletedAt: "deletedAt"
+} as const;
+
 const techniciansTable = {
   __name: "technicians",
   id: "id",
@@ -1326,6 +1421,7 @@ const techniciansTable = {
   avatarUrl: "avatarUrl",
   skills: "skills",
   serviceAreaIds: "serviceAreaIds",
+  serviceZipCodes: "serviceZipCodes",
   hoursPerDay: "hoursPerDay",
   totalJobsCompleted: "totalJobsCompleted",
   avgJobDurationMinutes: "avgJobDurationMinutes",
@@ -1334,6 +1430,49 @@ const techniciansTable = {
   status: "status",
   calendarColor: "calendarColor",
   notes: "notes",
+  createdAt: "createdAt",
+  updatedAt: "updatedAt",
+  deletedAt: "deletedAt"
+} as const;
+
+const jobTasksTable = {
+  __name: "jobTasks",
+  id: "id",
+  companyId: "companyId",
+  jobId: "jobId",
+  assignedToId: "assignedToId",
+  title: "title",
+  description: "description",
+  status: "status",
+  isRequired: "isRequired",
+  completedAt: "completedAt",
+  completedById: "completedById",
+  estimatedMinutes: "estimatedMinutes",
+  actualMinutes: "actualMinutes",
+  sortOrder: "sortOrder",
+  notes: "notes",
+  createdAt: "createdAt",
+  updatedAt: "updatedAt",
+  deletedAt: "deletedAt"
+} as const;
+
+const jobProductsTable = {
+  __name: "jobProducts",
+  id: "id",
+  companyId: "companyId",
+  jobId: "jobId",
+  productCatalogId: "productCatalogId",
+  name: "name",
+  description: "description",
+  category: "category",
+  quantity: "quantity",
+  unitPrice: "unitPrice",
+  total: "total",
+  isTaxable: "isTaxable",
+  addedById: "addedById",
+  isUpsell: "isUpsell",
+  upsellApproved: "upsellApproved",
+  upsellApprovedAt: "upsellApprovedAt",
   createdAt: "createdAt",
   updatedAt: "updatedAt",
   deletedAt: "deletedAt"
@@ -1400,7 +1539,10 @@ const state: TestState = {
   campaigns: [],
   campaignRecipients: [],
   messageLogs: [],
+  productCatalog: [],
   technicians: [],
+  jobTasks: [],
+  jobProducts: [],
   scheduleSlots: [],
   activityEvents: []
 };
@@ -1437,7 +1579,10 @@ function restoreState(snapshot: TestState): void {
   state.campaigns.splice(0, state.campaigns.length, ...snapshot.campaigns);
   state.campaignRecipients.splice(0, state.campaignRecipients.length, ...snapshot.campaignRecipients);
   state.messageLogs.splice(0, state.messageLogs.length, ...snapshot.messageLogs);
+  state.productCatalog.splice(0, state.productCatalog.length, ...snapshot.productCatalog);
   state.technicians.splice(0, state.technicians.length, ...snapshot.technicians);
+  state.jobTasks.splice(0, state.jobTasks.length, ...snapshot.jobTasks);
+  state.jobProducts.splice(0, state.jobProducts.length, ...snapshot.jobProducts);
   state.scheduleSlots.splice(0, state.scheduleSlots.length, ...snapshot.scheduleSlots);
   state.activityEvents.splice(0, state.activityEvents.length, ...snapshot.activityEvents);
 }
@@ -1490,8 +1635,14 @@ function getRows(tableName: TableName): AnyTestRecord[] {
       return state.campaignRecipients;
     case "messageLogs":
       return state.messageLogs;
+    case "productCatalog":
+      return state.productCatalog;
     case "technicians":
       return state.technicians;
+    case "jobTasks":
+      return state.jobTasks;
+    case "jobProducts":
+      return state.jobProducts;
     case "scheduleSlots":
       return state.scheduleSlots;
     case "activityEvents":
@@ -2198,6 +2349,32 @@ function createMessageLogRecord(
   };
 }
 
+function createProductCatalogRecord(
+  values: Partial<TestProductCatalogRecord> &
+    Pick<TestProductCatalogRecord, "companyId" | "name">
+): TestProductCatalogRecord {
+  const now = new Date();
+
+  return {
+    id: values.id ?? nextId(),
+    companyId: values.companyId,
+    name: values.name,
+    description: values.description ?? null,
+    category: values.category ?? "service",
+    sku: values.sku ?? null,
+    unitPrice: values.unitPrice ?? "0.00",
+    cost: values.cost ?? null,
+    unit: values.unit ?? "each",
+    isTaxable: values.isTaxable ?? true,
+    isActive: values.isActive ?? true,
+    applicableAssetTypes: values.applicableAssetTypes ?? [],
+    sortOrder: values.sortOrder ?? 0,
+    createdAt: values.createdAt ?? now,
+    updatedAt: values.updatedAt ?? now,
+    deletedAt: values.deletedAt ?? null
+  };
+}
+
 function createTechnicianRecord(
   values: Partial<TestTechnicianRecord> &
     Pick<TestTechnicianRecord, "companyId" | "firstName" | "lastName" | "phone">
@@ -2215,6 +2392,7 @@ function createTechnicianRecord(
     avatarUrl: values.avatarUrl ?? null,
     skills: values.skills ?? [],
     serviceAreaIds: values.serviceAreaIds ?? [],
+    serviceZipCodes: values.serviceZipCodes ?? [],
     hoursPerDay: values.hoursPerDay ?? "8",
     totalJobsCompleted: values.totalJobsCompleted ?? 0,
     avgJobDurationMinutes: values.avgJobDurationMinutes ?? null,
@@ -2223,6 +2401,61 @@ function createTechnicianRecord(
     status: values.status ?? "active",
     calendarColor: values.calendarColor ?? "#6366f1",
     notes: values.notes ?? null,
+    createdAt: values.createdAt ?? now,
+    updatedAt: values.updatedAt ?? now,
+    deletedAt: values.deletedAt ?? null
+  };
+}
+
+function createJobTaskRecord(
+  values: Partial<TestJobTaskRecord> &
+    Pick<TestJobTaskRecord, "companyId" | "jobId" | "title">
+): TestJobTaskRecord {
+  const now = new Date();
+
+  return {
+    id: values.id ?? nextId(),
+    companyId: values.companyId,
+    jobId: values.jobId,
+    assignedToId: values.assignedToId ?? null,
+    title: values.title,
+    description: values.description ?? null,
+    status: values.status ?? "pending",
+    isRequired: values.isRequired ?? false,
+    completedAt: values.completedAt ?? null,
+    completedById: values.completedById ?? null,
+    estimatedMinutes: values.estimatedMinutes ?? null,
+    actualMinutes: values.actualMinutes ?? null,
+    sortOrder: values.sortOrder ?? 0,
+    notes: values.notes ?? null,
+    createdAt: values.createdAt ?? now,
+    updatedAt: values.updatedAt ?? now,
+    deletedAt: values.deletedAt ?? null
+  };
+}
+
+function createJobProductRecord(
+  values: Partial<TestJobProductRecord> &
+    Pick<TestJobProductRecord, "companyId" | "jobId" | "name" | "unitPrice" | "total">
+): TestJobProductRecord {
+  const now = new Date();
+
+  return {
+    id: values.id ?? nextId(),
+    companyId: values.companyId,
+    jobId: values.jobId,
+    productCatalogId: values.productCatalogId ?? null,
+    name: values.name,
+    description: values.description ?? null,
+    category: values.category ?? "service",
+    quantity: values.quantity ?? "1.000",
+    unitPrice: values.unitPrice,
+    total: values.total,
+    isTaxable: values.isTaxable ?? true,
+    addedById: values.addedById ?? null,
+    isUpsell: values.isUpsell ?? false,
+    upsellApproved: values.upsellApproved ?? false,
+    upsellApprovedAt: values.upsellApprovedAt ?? null,
     createdAt: values.createdAt ?? now,
     updatedAt: values.updatedAt ?? now,
     deletedAt: values.deletedAt ?? null
@@ -2380,10 +2613,25 @@ function createRow(tableName: TableName, values: Record<string, unknown>): AnyTe
         values as Partial<TestMessageLogRecord> &
           Pick<TestMessageLogRecord, "companyId" | "channel" | "direction" | "toAddress" | "body">
       );
+    case "productCatalog":
+      return createProductCatalogRecord(
+        values as Partial<TestProductCatalogRecord> &
+          Pick<TestProductCatalogRecord, "companyId" | "name">
+      );
     case "technicians":
       return createTechnicianRecord(
         values as Partial<TestTechnicianRecord> &
           Pick<TestTechnicianRecord, "companyId" | "firstName" | "lastName" | "phone">
+      );
+    case "jobTasks":
+      return createJobTaskRecord(
+        values as Partial<TestJobTaskRecord> &
+          Pick<TestJobTaskRecord, "companyId" | "jobId" | "title">
+      );
+    case "jobProducts":
+      return createJobProductRecord(
+        values as Partial<TestJobProductRecord> &
+          Pick<TestJobProductRecord, "companyId" | "jobId" | "name" | "unitPrice" | "total">
       );
     case "scheduleSlots":
       return createScheduleSlotRecord(
@@ -2618,7 +2866,10 @@ export const aiRecommendations = aiRecommendationsTable;
 export const campaigns = campaignsTable;
 export const campaignRecipients = campaignRecipientsTable;
 export const messageLogs = messageLogsTable;
+export const productCatalog = productCatalogTable;
 export const technicians = techniciansTable;
+export const jobTasks = jobTasksTable;
+export const jobProducts = jobProductsTable;
 export const scheduleSlots = scheduleSlotsTable;
 export const activityEvents = activityEventsTable;
 
@@ -2900,7 +3151,10 @@ export function createDbModuleMock() {
     campaigns,
     campaignRecipients,
     messageLogs,
+    productCatalog,
     technicians,
+    jobTasks,
+    jobProducts,
     scheduleSlots,
     activityEvents,
     emitEvent,
@@ -2937,7 +3191,10 @@ export function resetTestState(): void {
   state.campaigns.length = 0;
   state.campaignRecipients.length = 0;
   state.messageLogs.length = 0;
+  state.productCatalog.length = 0;
   state.technicians.length = 0;
+  state.jobTasks.length = 0;
+  state.jobProducts.length = 0;
   state.scheduleSlots.length = 0;
   state.activityEvents.length = 0;
 }
@@ -3147,12 +3404,39 @@ export function seedMessageLog(
   return record;
 }
 
+export function seedProductCatalog(
+  values: Partial<TestProductCatalogRecord> &
+    Pick<TestProductCatalogRecord, "companyId" | "name">
+): TestProductCatalogRecord {
+  const record = createProductCatalogRecord(values);
+  state.productCatalog.push(record);
+  return record;
+}
+
 export function seedTechnician(
   values: Partial<TestTechnicianRecord> &
     Pick<TestTechnicianRecord, "companyId" | "firstName" | "lastName" | "phone">
 ): TestTechnicianRecord {
   const record = createTechnicianRecord(values);
   state.technicians.push(record);
+  return record;
+}
+
+export function seedJobTask(
+  values: Partial<TestJobTaskRecord> &
+    Pick<TestJobTaskRecord, "companyId" | "jobId" | "title">
+): TestJobTaskRecord {
+  const record = createJobTaskRecord(values);
+  state.jobTasks.push(record);
+  return record;
+}
+
+export function seedJobProduct(
+  values: Partial<TestJobProductRecord> &
+    Pick<TestJobProductRecord, "companyId" | "jobId" | "name" | "unitPrice" | "total">
+): TestJobProductRecord {
+  const record = createJobProductRecord(values);
+  state.jobProducts.push(record);
   return record;
 }
 

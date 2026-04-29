@@ -411,6 +411,126 @@ describe("job routes", () => {
     expect(photosListResponse.body.photos[0].url).toBe("https://cdn.example.com/job-before.jpg");
   });
 
+  it("task endpoints support list, create, update, complete, reorder, delete, and unknown-task 404s", async () => {
+    const auth = createAuthContext();
+    const { customer, technician } = seedJobGraph(auth.company.id);
+    const job = fakeDb.seedJob({
+      companyId: auth.company.id,
+      customerId: customer.id,
+      title: "Tasks Job"
+    });
+    const existingTask = fakeDb.seedJobTask({
+      companyId: auth.company.id,
+      jobId: job.id,
+      title: "Existing Task",
+      sortOrder: 0
+    });
+
+    const listResponse = await request(app.server)
+      .get(`/api/v1/jobs/${job.id}/tasks`)
+      .set("Authorization", auth.authorization);
+    const createResponse = await request(app.server)
+      .post(`/api/v1/jobs/${job.id}/tasks`)
+      .set("Authorization", auth.authorization)
+      .send({
+        assignedToId: technician.id,
+        title: "New Task"
+      });
+
+    const createdTaskId = createResponse.body.task.id as string;
+
+    const updateResponse = await request(app.server)
+      .patch(`/api/v1/jobs/${job.id}/tasks/${createdTaskId}`)
+      .set("Authorization", auth.authorization)
+      .send({
+        title: "Updated Task",
+        status: "in_progress"
+      });
+    const completeResponse = await request(app.server)
+      .post(`/api/v1/jobs/${job.id}/tasks/${createdTaskId}/complete`)
+      .set("Authorization", auth.authorization);
+    const reorderResponse = await request(app.server)
+      .post(`/api/v1/jobs/${job.id}/tasks/reorder`)
+      .set("Authorization", auth.authorization)
+      .send({
+        orderedIds: [createdTaskId, existingTask.id]
+      });
+    const deleteResponse = await request(app.server)
+      .delete(`/api/v1/jobs/${job.id}/tasks/${existingTask.id}`)
+      .set("Authorization", auth.authorization);
+    const missingResponse = await request(app.server)
+      .patch(`/api/v1/jobs/${job.id}/tasks/${randomUUID()}`)
+      .set("Authorization", auth.authorization)
+      .send({
+        title: "Missing Task"
+      });
+
+    expect(listResponse.status).toBe(200);
+    expect(listResponse.body.tasks).toHaveLength(1);
+    expect(createResponse.status).toBe(201);
+    expect(updateResponse.status).toBe(200);
+    expect(updateResponse.body.task.title).toBe("Updated Task");
+    expect(completeResponse.status).toBe(200);
+    expect(completeResponse.body.task.status).toBe("completed");
+    expect(reorderResponse.status).toBe(200);
+    expect(deleteResponse.status).toBe(200);
+    expect(deleteResponse.body.success).toBe(true);
+    expect(missingResponse.status).toBe(404);
+  });
+
+  it("job product endpoints support list, add, update, approve upsell, and delete", async () => {
+    const auth = createAuthContext();
+    const { customer } = seedJobGraph(auth.company.id);
+    const job = fakeDb.seedJob({
+      companyId: auth.company.id,
+      customerId: customer.id,
+      title: "Products Job"
+    });
+    const catalogProduct = fakeDb.seedProductCatalog({
+      companyId: auth.company.id,
+      name: "Capacitor",
+      unitPrice: "89.00"
+    });
+
+    const listResponse = await request(app.server)
+      .get(`/api/v1/jobs/${job.id}/products`)
+      .set("Authorization", auth.authorization);
+    const addResponse = await request(app.server)
+      .post(`/api/v1/jobs/${job.id}/products`)
+      .set("Authorization", auth.authorization)
+      .send({
+        productCatalogId: catalogProduct.id,
+        quantity: 2,
+        isUpsell: true
+      });
+
+    const createdProductId = addResponse.body.product.id as string;
+
+    const updateResponse = await request(app.server)
+      .patch(`/api/v1/jobs/${job.id}/products/${createdProductId}`)
+      .set("Authorization", auth.authorization)
+      .send({
+        quantity: 3
+      });
+    const approveResponse = await request(app.server)
+      .post(`/api/v1/jobs/${job.id}/products/${createdProductId}/approve-upsell`)
+      .set("Authorization", auth.authorization);
+    const deleteResponse = await request(app.server)
+      .delete(`/api/v1/jobs/${job.id}/products/${createdProductId}`)
+      .set("Authorization", auth.authorization);
+
+    expect(listResponse.status).toBe(200);
+    expect(listResponse.body.products).toHaveLength(0);
+    expect(addResponse.status).toBe(201);
+    expect(addResponse.body.product.unitPrice).toBe("89.00");
+    expect(updateResponse.status).toBe(200);
+    expect(updateResponse.body.product.total).toBe("267.00");
+    expect(approveResponse.status).toBe(200);
+    expect(approveResponse.body.product.upsellApproved).toBe(true);
+    expect(deleteResponse.status).toBe(200);
+    expect(deleteResponse.body.success).toBe(true);
+  });
+
   it("GET /jobs/:id/activity returns newest-first timeline events", async () => {
     const auth = createAuthContext();
     const { customer } = seedJobGraph(auth.company.id);

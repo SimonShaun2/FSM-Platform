@@ -4,17 +4,38 @@ import type {
   ActivityEvent,
   AddNoteInput,
   AddPhotoInput,
+  AddJobProductInput,
   CompleteJobInput,
+  CreateTaskInput,
   CreateJobInput,
   JobDetail,
   JobListItem,
   JobNote,
   JobPhoto,
+  JobProduct,
+  JobTask,
   ListJobsQuery,
   ScheduleJobInput,
+  UpdateJobProductInput,
+  UpdateTaskInput,
   UpdateJobInput
 } from "@fsm/types";
 
+import {
+  addProduct,
+  approveUpsell,
+  listJobProducts,
+  removeJobProduct,
+  updateJobProduct
+} from "../../services/job-products.service.js";
+import {
+  completeTask,
+  createTask,
+  deleteTask,
+  listTasks,
+  reorderTasks,
+  updateTask
+} from "../../services/job-tasks.service.js";
 import {
   addNote,
   addPhoto,
@@ -32,7 +53,10 @@ import {
 } from "../../services/job.service.js";
 import type {
   AssignTechnicianBody,
+  JobProductIdParams,
   JobIdParams,
+  ReorderTasksBody,
+  TaskIdParams,
   TransitionStatusBody
 } from "./schemas.js";
 
@@ -184,6 +208,51 @@ function toJobPhotoResponse(photo: JobPhoto) {
   };
 }
 
+function toJobTaskResponse(task: JobTask) {
+  return {
+    id: task.id,
+    companyId: task.companyId,
+    jobId: task.jobId,
+    assignedToId: task.assignedToId,
+    title: task.title,
+    description: task.description,
+    status: task.status,
+    isRequired: task.isRequired ?? false,
+    completedAt: toIsoString(task.completedAt),
+    completedById: task.completedById,
+    estimatedMinutes: task.estimatedMinutes,
+    actualMinutes: task.actualMinutes,
+    sortOrder: task.sortOrder ?? 0,
+    notes: task.notes,
+    createdAt: task.createdAt.toISOString(),
+    updatedAt: task.updatedAt.toISOString(),
+    deletedAt: toIsoString(task.deletedAt)
+  };
+}
+
+function toJobProductResponse(product: JobProduct) {
+  return {
+    id: product.id,
+    companyId: product.companyId,
+    jobId: product.jobId,
+    productCatalogId: product.productCatalogId,
+    name: product.name,
+    description: product.description,
+    category: product.category,
+    quantity: product.quantity,
+    unitPrice: product.unitPrice,
+    total: product.total,
+    isTaxable: product.isTaxable,
+    addedById: product.addedById,
+    isUpsell: product.isUpsell ?? false,
+    upsellApproved: product.upsellApproved ?? false,
+    upsellApprovedAt: toIsoString(product.upsellApprovedAt),
+    createdAt: product.createdAt.toISOString(),
+    updatedAt: product.updatedAt.toISOString(),
+    deletedAt: toIsoString(product.deletedAt)
+  };
+}
+
 function toActivityEventResponse(event: ActivityEvent) {
   return {
     id: event.id,
@@ -325,6 +394,136 @@ export async function getPhotosHandler(request: FastifyRequest, reply: FastifyRe
 
   return reply.send({
     photos: photos.map((photo) => toJobPhotoResponse(photo))
+  });
+}
+
+export async function listTasksHandler(request: FastifyRequest, reply: FastifyReply): Promise<FastifyReply> {
+  const params = request.params as JobIdParams;
+  const tasks = await listTasks(request.company.id, params.id);
+
+  return reply.send({
+    tasks: tasks.map((task) => toJobTaskResponse(task))
+  });
+}
+
+export async function createTaskHandler(request: FastifyRequest, reply: FastifyReply): Promise<FastifyReply> {
+  const params = request.params as JobIdParams;
+  const task = await createTask(request.company.id, params.id, request.body as CreateTaskInput);
+
+  return reply.status(201).send({
+    task: toJobTaskResponse(task)
+  });
+}
+
+export async function updateTaskHandler(request: FastifyRequest, reply: FastifyReply): Promise<FastifyReply> {
+  const params = request.params as TaskIdParams;
+  const task = await updateTask(
+    request.company.id,
+    params.id,
+    params.taskId,
+    request.body as UpdateTaskInput
+  );
+
+  return reply.send({
+    task: toJobTaskResponse(task)
+  });
+}
+
+export async function completeTaskHandler(request: FastifyRequest, reply: FastifyReply): Promise<FastifyReply> {
+  const params = request.params as TaskIdParams;
+  const task = await completeTask(request.company.id, params.id, params.taskId, request.user.id);
+
+  return reply.send({
+    task: toJobTaskResponse(task)
+  });
+}
+
+export async function deleteTaskHandler(request: FastifyRequest, reply: FastifyReply): Promise<FastifyReply> {
+  const params = request.params as TaskIdParams;
+  await deleteTask(request.company.id, params.id, params.taskId);
+
+  return reply.send({
+    success: true
+  });
+}
+
+export async function reorderTasksHandler(request: FastifyRequest, reply: FastifyReply): Promise<FastifyReply> {
+  const params = request.params as JobIdParams;
+  const body = request.body as ReorderTasksBody;
+  await reorderTasks(request.company.id, params.id, body.orderedIds);
+
+  return reply.send({
+    success: true
+  });
+}
+
+export async function listJobProductsHandler(
+  request: FastifyRequest,
+  reply: FastifyReply
+): Promise<FastifyReply> {
+  const params = request.params as JobIdParams;
+  const products = await listJobProducts(request.company.id, params.id);
+
+  return reply.send({
+    products: products.map((product) => toJobProductResponse(product))
+  });
+}
+
+export async function addJobProductHandler(
+  request: FastifyRequest,
+  reply: FastifyReply
+): Promise<FastifyReply> {
+  const params = request.params as JobIdParams;
+  const product = await addProduct(
+    request.company.id,
+    params.id,
+    request.user.id,
+    request.body as AddJobProductInput
+  );
+
+  return reply.status(201).send({
+    product: toJobProductResponse(product)
+  });
+}
+
+export async function updateJobProductHandler(
+  request: FastifyRequest,
+  reply: FastifyReply
+): Promise<FastifyReply> {
+  const params = request.params as JobProductIdParams;
+  const product = await updateJobProduct(
+    request.company.id,
+    params.id,
+    params.productId,
+    request.body as UpdateJobProductInput
+  );
+
+  return reply.send({
+    product: toJobProductResponse(product)
+  });
+}
+
+export async function removeJobProductHandler(
+  request: FastifyRequest,
+  reply: FastifyReply
+): Promise<FastifyReply> {
+  const params = request.params as JobProductIdParams;
+  await removeJobProduct(request.company.id, params.id, params.productId);
+
+  return reply.send({
+    success: true
+  });
+}
+
+export async function approveUpsellHandler(
+  request: FastifyRequest,
+  reply: FastifyReply
+): Promise<FastifyReply> {
+  const params = request.params as JobProductIdParams;
+  const product = await approveUpsell(request.company.id, params.id, params.productId, request.user.id);
+
+  return reply.send({
+    product: toJobProductResponse(product)
   });
 }
 

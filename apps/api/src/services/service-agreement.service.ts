@@ -107,6 +107,14 @@ function formatDateOnly(value: Date): string {
   return value.toISOString().slice(0, 10);
 }
 
+function formatCurrentLocalDateOnly(value: Date): string {
+  const year = value.getFullYear();
+  const month = String(value.getMonth() + 1).padStart(2, "0");
+  const day = String(value.getDate()).padStart(2, "0");
+
+  return `${year}-${month}-${day}`;
+}
+
 function compareNullableDateStrings(
   left: string | null,
   right: string | null,
@@ -927,13 +935,15 @@ export async function cancelAgreement(
   const cancelledAgreement = await db.transaction(async (tx) => {
     const actor = await getActor(companyId, actorId, tx);
     const updatedPlans = await tx
-      .update(maintenancePlans)
-      .set({
-        ...(shouldCancelImmediately ? { status: "cancelled", endDate: formatDateOnly(new Date()) } : {}),
-        ...(existingAgreement.stripeSubscriptionId ? { stripeCancelAtPeriodEnd } : { stripeCancelAtPeriodEnd: false }),
-        ...(stripeCurrentPeriodEnd ? { stripeCurrentPeriodEnd } : {}),
-        updatedAt: new Date()
-      })
+        .update(maintenancePlans)
+        .set({
+          ...(shouldCancelImmediately
+            ? { status: "cancelled", endDate: formatCurrentLocalDateOnly(new Date()) }
+            : {}),
+          ...(existingAgreement.stripeSubscriptionId ? { stripeCancelAtPeriodEnd } : { stripeCancelAtPeriodEnd: false }),
+          ...(stripeCurrentPeriodEnd ? { stripeCurrentPeriodEnd } : {}),
+          updatedAt: new Date()
+        })
       .where(
         and(
           eq(maintenancePlans.companyId, companyId),

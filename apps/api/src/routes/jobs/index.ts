@@ -1,43 +1,75 @@
 import type { FastifyPluginAsync } from "fastify";
 
 import {
+  addJobProductHandler,
   addNoteHandler,
   addPhotoHandler,
   assignTechnicianHandler,
+  approveUpsellHandler,
   completeJobHandler,
+  completeTaskHandler,
+  createTaskHandler,
   createJobHandler,
+  deleteTaskHandler,
   getJobHandler,
+  listJobProductsHandler,
   getJobTimelineHandler,
   getNotesHandler,
   getPhotosHandler,
+  listTasksHandler,
+  removeJobProductHandler,
+  reorderTasksHandler,
   listJobsHandler,
   scheduleJobHandler,
   transitionStatusHandler,
+  updateJobProductHandler,
+  updateTaskHandler,
   updateJobHandler
 } from "./handlers.js";
 import {
   activityQueryValidation,
+  addJobProductRouteSchema,
+  addJobProductValidation,
   addNoteRouteSchema,
   addNoteValidation,
   addPhotoRouteSchema,
   addPhotoValidation,
   assignTechnicianRouteSchema,
   assignTechnicianValidation,
+  approveUpsellRouteSchema,
+  approveUpsellValidation,
   completeJobRouteSchema,
   completeJobValidation,
+  completeTaskValidation,
   createJobSchema,
   createJobValidation,
+  createTaskRouteSchema,
+  createTaskValidation,
+  deleteTaskRouteSchema,
+  deleteTaskValidation,
   getActivitySchema,
   getJobSchema,
+  listJobProductsSchema,
+  listJobProductsValidation,
   getNotesSchema,
   getPhotosSchema,
   jobIdValidation,
+  listTasksSchema,
+  listTasksValidation,
   listJobsSchema,
   listJobsValidation,
   notesQueryValidation,
   photosQueryValidation,
+  removeJobProductRouteSchema,
+  removeJobProductValidation,
+  reorderTasksRouteSchema,
+  reorderTasksValidation,
   scheduleJobRouteSchema,
   scheduleJobValidation,
+  updateJobProductRouteSchema,
+  updateJobProductValidation,
+  updateTaskRouteSchema,
+  updateTaskValidation,
   transitionStatusRouteSchema,
   transitionStatusValidation,
   updateJobSchema,
@@ -106,6 +138,72 @@ const jobRoutes: FastifyPluginAsync = async (fastify) => {
     preValidation: photosQueryValidation,
     schema: getPhotosSchema
   }, getPhotosHandler);
+
+  fastify.get("/:id/tasks", {
+    preHandler: authenticate,
+    preValidation: listTasksValidation,
+    schema: listTasksSchema
+  }, listTasksHandler);
+
+  fastify.post("/:id/tasks", {
+    preHandler: authenticate,
+    preValidation: createTaskValidation,
+    schema: createTaskRouteSchema
+  }, createTaskHandler);
+
+  fastify.post("/:id/tasks/reorder", {
+    preHandler: authenticate,
+    preValidation: reorderTasksValidation,
+    schema: reorderTasksRouteSchema
+  }, reorderTasksHandler);
+
+  fastify.patch("/:id/tasks/:taskId", {
+    preHandler: authenticate,
+    preValidation: updateTaskValidation,
+    schema: updateTaskRouteSchema
+  }, updateTaskHandler);
+
+  fastify.post("/:id/tasks/:taskId/complete", {
+    preHandler: authenticate,
+    preValidation: completeTaskValidation,
+    schema: updateTaskRouteSchema
+  }, completeTaskHandler);
+
+  fastify.delete("/:id/tasks/:taskId", {
+    preHandler: authenticate,
+    preValidation: deleteTaskValidation,
+    schema: deleteTaskRouteSchema
+  }, deleteTaskHandler);
+
+  fastify.get("/:id/products", {
+    preHandler: authenticate,
+    preValidation: listJobProductsValidation,
+    schema: listJobProductsSchema
+  }, listJobProductsHandler);
+
+  fastify.post("/:id/products", {
+    preHandler: authenticate,
+    preValidation: addJobProductValidation,
+    schema: addJobProductRouteSchema
+  }, addJobProductHandler);
+
+  fastify.patch("/:id/products/:productId", {
+    preHandler: authenticate,
+    preValidation: updateJobProductValidation,
+    schema: updateJobProductRouteSchema
+  }, updateJobProductHandler);
+
+  fastify.post("/:id/products/:productId/approve-upsell", {
+    preHandler: authenticate,
+    preValidation: approveUpsellValidation,
+    schema: approveUpsellRouteSchema
+  }, approveUpsellHandler);
+
+  fastify.delete("/:id/products/:productId", {
+    preHandler: authenticate,
+    preValidation: removeJobProductValidation,
+    schema: removeJobProductRouteSchema
+  }, removeJobProductHandler);
 
   fastify.get("/:id/activity", {
     preHandler: authenticate,

@@ -17,6 +17,7 @@ import invoiceRoutes from "./routes/invoices/index.js";
 import importRoutes from "./routes/imports/index.js";
 import jobRoutes from "./routes/jobs/index.js";
 import publicRoutes from "./routes/public/index.js";
+import productRoutes from "./routes/products/index.js";
 import serviceAgreementRoutes from "./routes/service-agreements/index.js";
 import stripeRoutes from "./routes/stripe/index.js";
 import technicianRoutes from "./routes/technicians/index.js";
@@ -41,6 +42,7 @@ export async function buildApp() {
   await app.register(companyRoutes, { prefix: "/api/v1/company" });
   await app.register(customerRoutes, { prefix: "/api/v1/customers" });
   await app.register(jobRoutes, { prefix: "/api/v1/jobs" });
+  await app.register(productRoutes, { prefix: "/api/v1" });
   await app.register(technicianRoutes, { prefix: "/api/v1/technicians" });
   await app.register(stripeRoutes, { prefix: "/api/v1/stripe" });
   await app.register(estimateRoutes, { prefix: "/api/v1/estimates" });
