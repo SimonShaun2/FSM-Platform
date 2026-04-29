@@ -1,11 +1,11 @@
-import { ScaffoldPage } from "@/src/components/layout/ScaffoldPage";
+import { redirect } from "next/navigation";
 
-export default function MobileJobTasksPage() {
-  return (
-    <ScaffoldPage
-      title="Mobile Job Tasks"
-      subtitle="Checklist execution for technicians will plug into this route next."
-      ticket="028"
-    />
-  );
+export default async function MobileJobTasksPage({
+  params
+}: {
+  params: Promise<{ id: string }>;
+}) {
+  const { id } = await params;
+
+  redirect(`/mobile/jobs/${id}`);
 }

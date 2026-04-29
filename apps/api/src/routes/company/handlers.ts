@@ -17,6 +17,7 @@ function toCompanyResponse(company: {
   zip: string | null;
   timezone: string;
   logoUrl: string | null;
+  settings: unknown;
   createdAt: Date;
 }) {
   return {
@@ -33,6 +34,10 @@ function toCompanyResponse(company: {
     zip: company.zip,
     timezone: company.timezone,
     logoUrl: company.logoUrl,
+    settings:
+      company.settings && typeof company.settings === "object" && !Array.isArray(company.settings)
+        ? company.settings
+        : {},
     createdAt: company.createdAt.toISOString()
   };
 }

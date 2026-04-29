@@ -1,11 +1,11 @@
-import { ScaffoldPage } from "@/src/components/layout/ScaffoldPage";
+import { redirect } from "next/navigation";
 
-export default function MobileJobPhotosPage() {
-  return (
-    <ScaffoldPage
-      title="Mobile Job Photos"
-      subtitle="Photo capture and file attachments for technicians plug into this route next."
-      ticket="028"
-    />
-  );
+export default async function MobileJobPhotosPage({
+  params
+}: {
+  params: Promise<{ id: string }>;
+}) {
+  const { id } = await params;
+
+  redirect(`/mobile/jobs/${id}`);
 }

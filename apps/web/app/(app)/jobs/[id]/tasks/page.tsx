@@ -1,11 +1,11 @@
-import { ScaffoldPage } from "@/src/components/layout/ScaffoldPage";
+import { redirect } from "next/navigation";
 
-export default function JobTasksPage() {
-  return (
-    <ScaffoldPage
-      title="Job Tasks"
-      subtitle="Checklist execution and task completion UI are queued for the next job ticket."
-      ticket="018"
-    />
-  );
+export default async function JobTasksPage({
+  params
+}: {
+  params: Promise<{ id: string }>;
+}) {
+  const { id } = await params;
+
+  redirect(`/jobs/${id}`);
 }

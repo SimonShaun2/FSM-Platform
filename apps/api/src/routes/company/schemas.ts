@@ -23,6 +23,7 @@ const companyResponseSchema = {
     "zip",
     "timezone",
     "logoUrl",
+    "settings",
     "createdAt"
   ],
   properties: {
@@ -39,6 +40,10 @@ const companyResponseSchema = {
     zip: nullableStringSchema,
     timezone: { type: "string" },
     logoUrl: nullableStringSchema,
+    settings: {
+      type: "object",
+      additionalProperties: true
+    },
     createdAt: { type: "string", format: "date-time" }
   }
 } as const;

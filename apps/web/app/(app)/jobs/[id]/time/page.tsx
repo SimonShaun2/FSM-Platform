@@ -1,11 +1,11 @@
-import { ScaffoldPage } from "@/src/components/layout/ScaffoldPage";
+import { redirect } from "next/navigation";
 
-export default function JobTimePage() {
-  return (
-    <ScaffoldPage
-      title="Job Time"
-      subtitle="Technician time tracking and labor visibility will land here next."
-      ticket="018"
-    />
-  );
+export default async function JobTimePage({
+  params
+}: {
+  params: Promise<{ id: string }>;
+}) {
+  const { id } = await params;
+
+  redirect(`/jobs/${id}`);
 }

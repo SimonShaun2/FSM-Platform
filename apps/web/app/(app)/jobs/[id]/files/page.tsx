@@ -1,11 +1,11 @@
-import { ScaffoldPage } from "@/src/components/layout/ScaffoldPage";
+import { redirect } from "next/navigation";
 
-export default function JobFilesPage() {
-  return (
-    <ScaffoldPage
-      title="Job Files"
-      subtitle="Photos, attachments, and field documentation plug into this route next."
-      ticket="018"
-    />
-  );
+export default async function JobFilesPage({
+  params
+}: {
+  params: Promise<{ id: string }>;
+}) {
+  const { id } = await params;
+
+  redirect(`/jobs/${id}`);
 }
