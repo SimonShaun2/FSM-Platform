@@ -1,11 +1,5 @@
-import { ScaffoldPage } from "@/src/components/layout/ScaffoldPage";
+import { redirect } from "next/navigation";
 
 export default function DispatchBookingsPage() {
-  return (
-    <ScaffoldPage
-      title="Dispatch Bookings"
-      subtitle="Public booking intake and scheduling review will land here in a follow-up ticket."
-      ticket="020"
-    />
-  );
+  redirect("/dispatch");
 }
