@@ -664,6 +664,8 @@ export const ListJobsQuerySchema = z
     ),
     technicianId: uuidSchema.optional(),
     customerId: uuidSchema.optional(),
+    propertyId: uuidSchema.optional(),
+    assetId: uuidSchema.optional(),
     type: jobTypeSchema.optional(),
     priority: jobPrioritySchema.optional(),
     scheduledAfter: dateTimeSchema.optional(),

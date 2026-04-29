@@ -1,11 +1,11 @@
-import { ScaffoldPage } from "@/src/components/layout/ScaffoldPage";
+"use client";
+
+import { useParams } from "next/navigation";
+
+import { CustomerProfile } from "@/src/components/customers/CustomerProfile";
 
 export default function CustomerDetailPage() {
-  return (
-    <ScaffoldPage
-      title="Customer Detail"
-      subtitle="Property history, assets, and relationship context land here next."
-      ticket="016"
-    />
-  );
+  const params = useParams<{ id: string }>();
+
+  return <CustomerProfile customerId={params.id} />;
 }

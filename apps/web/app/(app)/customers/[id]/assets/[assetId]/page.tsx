@@ -1,11 +1,11 @@
-import { ScaffoldPage } from "@/src/components/layout/ScaffoldPage";
+"use client";
+
+import { useParams } from "next/navigation";
+
+import { AssetDetail } from "@/src/components/customers/AssetDetail";
 
 export default function AssetDetailPage() {
-  return (
-    <ScaffoldPage
-      title="Asset Detail"
-      subtitle="Age, service history, and revenue recommendations appear here next."
-      ticket="016"
-    />
-  );
+  const params = useParams<{ id: string; assetId: string }>();
+
+  return <AssetDetail customerId={params.id} assetId={params.assetId} />;
 }

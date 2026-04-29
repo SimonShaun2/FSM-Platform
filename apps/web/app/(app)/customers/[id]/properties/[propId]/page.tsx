@@ -1,11 +1,11 @@
-import { ScaffoldPage } from "@/src/components/layout/ScaffoldPage";
+"use client";
+
+import { useParams } from "next/navigation";
+
+import { PropertyDetail } from "@/src/components/customers/PropertyDetail";
 
 export default function PropertyDetailPage() {
-  return (
-    <ScaffoldPage
-      title="Property Detail"
-      subtitle="Service history, asset inventory, and booking context attach here next."
-      ticket="016"
-    />
-  );
+  const params = useParams<{ id: string; propId: string }>();
+
+  return <PropertyDetail customerId={params.id} propertyId={params.propId} />;
 }

@@ -189,7 +189,9 @@ export interface UpdateAssetInput {
 export interface ListCustomersQuery {
   search?: string;
   tags?: string[];
+  status?: "active" | "dormant";
   hasActiveMaintenancePlan?: boolean;
+  hasOverdueInvoice?: boolean;
   sortBy?: "lastName" | "lastServiceDate" | "lifetimeValue" | "createdAt";
   sortOrder?: "asc" | "desc";
   page?: number;

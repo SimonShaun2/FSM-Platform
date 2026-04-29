@@ -315,6 +315,7 @@ function Overlay({
 export function AiRevenueCenterClient() {
   const searchParams = useSearchParams();
   const summaryQuery = useRevenueSummary();
+  const customerIdFilter = searchParams.get("customerId");
   const [selectedType, setSelectedType] = useState<RevenueFilter>("all");
   const [sortBy, setSortBy] = useState<SortOption>("urgencyScore");
   const [page, setPage] = useState(1);
@@ -354,6 +355,7 @@ export function AiRevenueCenterClient() {
     page,
     sortBy,
     sortOrder: "desc",
+    ...(customerIdFilter ? { customerId: customerIdFilter } : {}),
     ...(selectedType !== "all" ? { type: selectedType } : {})
   });
 
@@ -526,6 +528,11 @@ export function AiRevenueCenterClient() {
                     <option value="createdAt">Date</option>
                   </select>
                 </label>
+                {customerIdFilter ? (
+                  <div className="rounded-full bg-brand-accent-light px-4 py-2 text-sm font-semibold text-brand-accent">
+                    Filtered to one customer
+                  </div>
+                ) : null}
               </div>
             </section>
 

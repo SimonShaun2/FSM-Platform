@@ -5,6 +5,7 @@ import {
   customers,
   db,
   emitEventWithExecutor,
+  invoices,
   maintenancePlans,
   properties,
   users
@@ -31,18 +32,23 @@ type CustomerRow = typeof customers.$inferSelect;
 type PropertyRow = typeof properties.$inferSelect;
 type AssetRow = typeof assets.$inferSelect;
 type MaintenancePlanRow = typeof maintenancePlans.$inferSelect;
+type InvoiceRow = typeof invoices.$inferSelect;
 type UserRow = typeof users.$inferSelect;
 type SelectExecutor = Pick<typeof db, "select">;
 type TransactionExecutor = Pick<typeof db, "select" | "insert" | "update">;
 type NormalizedListCustomersQuery = {
   search?: string | undefined;
   tags?: string[] | undefined;
+  status?: "active" | "dormant" | undefined;
   hasActiveMaintenancePlan?: boolean | undefined;
+  hasOverdueInvoice?: boolean | undefined;
   sortBy: NonNullable<ListCustomersQuery["sortBy"]>;
   sortOrder: NonNullable<ListCustomersQuery["sortOrder"]>;
   page: number;
   limit: number;
 };
+
+const DORMANT_DAYS_THRESHOLD = 180;
 
 function buildActorName(firstName: string, lastName: string): string {
   return `${firstName} ${lastName}`.trim();
@@ -85,12 +91,43 @@ function normalizeListCustomersQuery(query: ListCustomersQuery): NormalizedListC
   return {
     search: normalizeOptionalString(query.search) ?? undefined,
     tags: normalizeTags(query.tags),
+    ...(query.status ? { status: query.status } : {}),
     hasActiveMaintenancePlan: query.hasActiveMaintenancePlan,
+    hasOverdueInvoice: query.hasOverdueInvoice,
     sortBy: query.sortBy ?? DEFAULT_SORT_BY,
     sortOrder: query.sortOrder ?? DEFAULT_SORT_ORDER,
     page: Math.max(query.page ?? DEFAULT_LIST_PAGE, DEFAULT_LIST_PAGE),
     limit: Math.min(Math.max(query.limit ?? DEFAULT_LIST_LIMIT, DEFAULT_LIST_PAGE), MAX_LIST_LIMIT)
   };
+}
+
+function isCustomerDormant(customer: CustomerRow, currentDate: Date = new Date()): boolean {
+  if (!customer.lastServiceDate) {
+    return true;
+  }
+
+  const lastServiceDate = new Date(`${customer.lastServiceDate}T00:00:00.000Z`);
+
+  if (Number.isNaN(lastServiceDate.getTime())) {
+    return true;
+  }
+
+  const diffMs = currentDate.getTime() - lastServiceDate.getTime();
+  return diffMs > DORMANT_DAYS_THRESHOLD * 24 * 60 * 60 * 1000;
+}
+
+function hasOverdueInvoice(invoice: InvoiceRow, currentDate: Date = new Date()): boolean {
+  if (invoice.status === "overdue") {
+    return true;
+  }
+
+  const balanceDue = Number(invoice.balanceDue ?? "0");
+
+  if (!(balanceDue > 0) || !invoice.dueAt) {
+    return false;
+  }
+
+  return invoice.dueAt.getTime() < currentDate.getTime();
 }
 
 function matchesCustomerSearch(customer: CustomerRow, search: string): boolean {
@@ -264,6 +301,12 @@ export async function listCustomers(
     return true;
   });
 
+  if (normalizedQuery.status !== undefined) {
+    filteredCustomers = filteredCustomers.filter((customer) =>
+      normalizedQuery.status === "active" ? !isCustomerDormant(customer) : isCustomerDormant(customer)
+    );
+  }
+
   if (normalizedQuery.hasActiveMaintenancePlan !== undefined) {
     const companyPlans = await db
       .select()
@@ -278,6 +321,23 @@ export async function listCustomers(
       normalizedQuery.hasActiveMaintenancePlan
         ? activePlanCustomerIds.has(customer.id)
         : !activePlanCustomerIds.has(customer.id)
+    );
+  }
+
+  if (normalizedQuery.hasOverdueInvoice !== undefined) {
+    const companyInvoices = await db
+      .select()
+      .from(invoices)
+      .where(and(eq(invoices.companyId, companyId), isNull(invoices.deletedAt)))
+      .limit(MAX_RESULT_WINDOW);
+    const overdueInvoiceCustomerIds = new Set(
+      companyInvoices.filter((invoice) => hasOverdueInvoice(invoice)).map((invoice) => invoice.customerId)
+    );
+
+    filteredCustomers = filteredCustomers.filter((customer) =>
+      normalizedQuery.hasOverdueInvoice
+        ? overdueInvoiceCustomerIds.has(customer.id)
+        : !overdueInvoiceCustomerIds.has(customer.id)
     );
   }
 

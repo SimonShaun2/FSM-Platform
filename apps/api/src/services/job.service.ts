@@ -46,6 +46,7 @@ import {
   transition as applyTransition
 } from "../lib/job-state-machine.js";
 import { trackConversion } from "./campaign.service.js";
+import { invalidateDispatchCache } from "./dispatch.service.js";
 
 const DEFAULT_LIST_PAGE = 1;
 const DEFAULT_LIST_LIMIT = 25;
@@ -91,6 +92,8 @@ type NormalizedListJobsQuery = {
   status: JobStatus[];
   technicianId?: string;
   customerId?: string;
+  propertyId?: string;
+  assetId?: string;
   type?: CreateJobInput["type"];
   priority?: CreateJobInput["priority"];
   scheduledAfter?: Date;
@@ -207,6 +210,17 @@ function formatDateOnly(dateValue: Date): string {
   return dateValue.toISOString().slice(0, 10);
 }
 
+async function invalidateDispatchDates(
+  companyId: string,
+  ...dates: Array<Date | null | undefined>
+): Promise<void> {
+  const uniqueDates = [...new Set(dates.flatMap((dateValue) => (dateValue ? [formatDateOnly(dateValue)] : [])))];
+
+  for (const date of uniqueDates) {
+    await invalidateDispatchCache(companyId, date);
+  }
+}
+
 function addMoneyStrings(leftValue: string | null, rightValue: string | null): string {
   const leftCents = toCents(leftValue);
   const rightCents = toCents(rightValue);
@@ -254,6 +268,8 @@ function normalizeListJobsQuery(query: ListJobsQuery): NormalizedListJobsQuery {
     status: normalizedStatus,
     ...(query.technicianId ? { technicianId: query.technicianId } : {}),
     ...(query.customerId ? { customerId: query.customerId } : {}),
+    ...(query.propertyId ? { propertyId: query.propertyId } : {}),
+    ...(query.assetId ? { assetId: query.assetId } : {}),
     ...(query.type ? { type: query.type } : {}),
     ...(query.priority ? { priority: query.priority } : {}),
     ...(scheduledAfter ? { scheduledAfter } : {}),
@@ -675,6 +691,14 @@ export async function listJobs(
       return false;
     }
 
+    if (normalizedQuery.propertyId && job.propertyId !== normalizedQuery.propertyId) {
+      return false;
+    }
+
+    if (normalizedQuery.assetId && job.assetId !== normalizedQuery.assetId) {
+      return false;
+    }
+
     if (normalizedQuery.type && job.type !== normalizedQuery.type) {
       return false;
     }
@@ -882,6 +906,8 @@ export async function createJob(
     );
   });
 
+  await invalidateDispatchDates(companyId, createdJob.scheduledStart);
+
   return createdJob;
 }
 
@@ -906,7 +932,7 @@ export async function updateJob(
     return existingJob;
   }
 
-  return db.transaction(async (tx) => {
+  const updatedJob = await db.transaction(async (tx) => {
     const actor = await getActor(companyId, actorId, tx);
     const updatedJobs = await tx
       .update(jobs)
@@ -934,6 +960,9 @@ export async function updateJob(
 
     return updatedJob;
   });
+
+  await invalidateDispatchDates(companyId, existingJob.scheduledStart, updatedJob.scheduledStart);
+  return updatedJob;
 }
 
 export async function transitionStatus(
@@ -951,7 +980,7 @@ export async function transitionStatus(
   const nextStatus = applyTransition(existingJob.status, toStatus);
   const eventType = resolveTransitionEventType(existingJob.status, nextStatus);
 
-  return db.transaction(async (tx) => {
+  const updatedJob = await db.transaction(async (tx) => {
     const actor = await getActor(companyId, actorId, tx);
     const updateValues: Partial<JobRow> = {
       status: nextStatus,
@@ -989,6 +1018,9 @@ export async function transitionStatus(
 
     return updatedJob;
   });
+
+  await invalidateDispatchDates(companyId, existingJob.scheduledStart, updatedJob.scheduledStart);
+  return updatedJob;
 }
 
 export async function assignTechnician(
@@ -999,7 +1031,7 @@ export async function assignTechnician(
 ): Promise<Job> {
   const existingJob = await getJobRecord(companyId, jobId, db);
 
-  return db.transaction(async (tx) => {
+  const updatedJob = await db.transaction(async (tx) => {
     const actor = await getActor(companyId, actorId, tx);
     const technician = await getTechnicianRecord(companyId, technicianId, tx);
     const updatedJobs = await tx
@@ -1045,6 +1077,9 @@ export async function assignTechnician(
 
     return updatedJob;
   });
+
+  await invalidateDispatchDates(companyId, existingJob.scheduledStart, updatedJob.scheduledStart);
+  return updatedJob;
 }
 
 export async function scheduleJob(
@@ -1069,7 +1104,7 @@ export async function scheduleJob(
     );
   }
 
-  return db.transaction(async (tx) => {
+  const updatedJob = await db.transaction(async (tx) => {
     const actor = await getActor(companyId, actorId, tx);
     const updatedJobs = await tx
       .update(jobs)
@@ -1136,6 +1171,9 @@ export async function scheduleJob(
 
     return updatedJob;
   });
+
+  await invalidateDispatchDates(companyId, existingJob.scheduledStart, updatedJob.scheduledStart);
+  return updatedJob;
 }
 
 export async function completeJob(
@@ -1259,6 +1297,8 @@ export async function completeJob(
       "Failed to enqueue AI job"
     );
   }
+
+  await invalidateDispatchDates(companyId, existingJob.scheduledStart, completedJob.scheduledStart);
 
   return completedJob;
 }

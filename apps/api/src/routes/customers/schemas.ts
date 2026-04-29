@@ -381,7 +381,9 @@ export const ListCustomersQuerySchema = z
   .object({
     search: z.string().trim().min(1).optional(),
     tags: z.preprocess(parseTags, z.array(z.string().trim().min(1)).optional()),
+    status: z.enum(["active", "dormant"]).optional(),
     hasActiveMaintenancePlan: z.preprocess(parseBoolean, z.boolean().optional()),
+    hasOverdueInvoice: z.preprocess(parseBoolean, z.boolean().optional()),
     sortBy: z.enum(["lastName", "lastServiceDate", "lifetimeValue", "createdAt"]).default("lastName"),
     sortOrder: z.enum(["asc", "desc"]).default("asc"),
     page: z.coerce.number().int().min(1).default(1),

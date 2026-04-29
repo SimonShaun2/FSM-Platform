@@ -220,6 +220,8 @@ export interface ListJobsQuery {
   status?: JobStatus | JobStatus[];
   technicianId?: string;
   customerId?: string;
+  propertyId?: string;
+  assetId?: string;
   type?: JobType;
   priority?: JobPriority;
   scheduledAfter?: string;

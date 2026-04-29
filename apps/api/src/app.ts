@@ -7,20 +7,29 @@ import { env } from "@fsm/config";
 import authenticatePlugin from "./plugins/authenticate.js";
 import errorHandlerPlugin from "./plugins/error-handler.js";
 import requestLoggerPlugin from "./plugins/request-logger.js";
+import activityEventRoutes from "./routes/activity-events/index.js";
 import aiRoutes from "./routes/ai/index.js";
+import attachmentRoutes from "./routes/attachments/index.js";
 import authRoutes from "./routes/auth/index.js";
+import bookingRoutes from "./routes/booking/index.js";
 import companyRoutes from "./routes/company/index.js";
 import campaignRoutes from "./routes/campaigns/index.js";
 import customerRoutes from "./routes/customers/index.js";
+import dispatchRoutes from "./routes/dispatch/index.js";
 import estimateRoutes from "./routes/estimates/index.js";
 import invoiceRoutes from "./routes/invoices/index.js";
 import importRoutes from "./routes/imports/index.js";
+import jobEngagementRoutes from "./routes/job-engagement/index.js";
 import jobRoutes from "./routes/jobs/index.js";
+import messageLogRoutes from "./routes/message-logs/index.js";
 import publicRoutes from "./routes/public/index.js";
 import productRoutes from "./routes/products/index.js";
+import reviewRequestRoutes from "./routes/review-requests/index.js";
 import serviceAgreementRoutes from "./routes/service-agreements/index.js";
 import stripeRoutes from "./routes/stripe/index.js";
+import technicianExtensionRoutes from "./routes/technician-extensions/index.js";
 import technicianRoutes from "./routes/technicians/index.js";
+import timeRoutes from "./routes/time/index.js";
 
 export async function buildApp() {
   const logger = pino({
@@ -36,14 +45,23 @@ export async function buildApp() {
   await app.register(authenticatePlugin);
   await app.register(fastifyMultipart);
 
+  await app.register(activityEventRoutes, { prefix: "/api/v1" });
   await app.register(aiRoutes, { prefix: "/api/v1/ai" });
   await app.register(authRoutes, { prefix: "/api/v1/auth" });
   await app.register(campaignRoutes, { prefix: "/api/v1" });
   await app.register(companyRoutes, { prefix: "/api/v1/company" });
   await app.register(customerRoutes, { prefix: "/api/v1/customers" });
+  await app.register(dispatchRoutes, { prefix: "/api/v1" });
+  await app.register(attachmentRoutes, { prefix: "/api/v1" });
+  await app.register(bookingRoutes, { prefix: "/api/v1" });
+  await app.register(reviewRequestRoutes, { prefix: "/api/v1" });
   await app.register(jobRoutes, { prefix: "/api/v1/jobs" });
+  await app.register(jobEngagementRoutes, { prefix: "/api/v1/jobs" });
+  await app.register(messageLogRoutes, { prefix: "/api/v1" });
   await app.register(productRoutes, { prefix: "/api/v1" });
   await app.register(technicianRoutes, { prefix: "/api/v1/technicians" });
+  await app.register(technicianExtensionRoutes, { prefix: "/api/v1/technicians" });
+  await app.register(timeRoutes, { prefix: "/api/v1/time" });
   await app.register(stripeRoutes, { prefix: "/api/v1/stripe" });
   await app.register(estimateRoutes, { prefix: "/api/v1/estimates" });
   await app.register(invoiceRoutes, { prefix: "/api/v1" });
