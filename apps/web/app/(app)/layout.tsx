@@ -3,6 +3,7 @@ import { cookies } from "next/headers";
 import { redirect } from "next/navigation";
 
 import { AppShell } from "@/src/components/layout/AppShell";
+import { AuthRouteBridge } from "@/src/components/layout/AuthRouteBridge";
 import { readServerAuthSession } from "@/src/lib/auth";
 
 export default async function AuthenticatedAppLayout({ children }: { children: ReactNode }) {
@@ -19,7 +20,7 @@ export default async function AuthenticatedAppLayout({ children }: { children: R
       role={session.role}
       userName={`${session.user.firstName} ${session.user.lastName}`.trim()}
     >
-      {children}
+      <AuthRouteBridge session={session}>{children}</AuthRouteBridge>
     </AppShell>
   );
 }

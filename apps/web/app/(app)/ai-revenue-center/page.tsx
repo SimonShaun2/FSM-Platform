@@ -1,11 +1,5 @@
-import { ScaffoldPage } from "@/src/components/layout/ScaffoldPage";
+import { AiRevenueCenterClient } from "@/src/components/ai/AiRevenueCenterClient";
 
 export default function AiRevenueCenterPage() {
-  return (
-    <ScaffoldPage
-      title="AI Revenue Center"
-      subtitle="Recommendation review, actions, and detail drawers plug into this shell next."
-      ticket="024"
-    />
-  );
+  return <AiRevenueCenterClient />;
 }

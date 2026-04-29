@@ -30,6 +30,12 @@
 }
 
 @layer utilities {
+  @keyframes shimmer {
+    100% {
+      transform: translateX(100%);
+    }
+  }
+
   .surface-card {
     @apply rounded-3xl border border-neutral-200 bg-white shadow-[0_24px_80px_rgba(16,33,99,0.08)];
   }
