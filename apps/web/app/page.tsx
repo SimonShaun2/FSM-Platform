@@ -1,14 +1,15 @@
 import { cookies } from "next/headers";
 import { redirect } from "next/navigation";
 
-import { AUTH_COOKIE_NAME } from "../lib/auth";
+import { getDefaultRouteForRole } from "@/src/lib/route-access";
+import { readServerAuthSession } from "@/src/lib/auth";
 
 export default async function HomePage() {
   const cookieStore = await cookies();
-  const authCookie = cookieStore.get(AUTH_COOKIE_NAME);
+  const session = readServerAuthSession(cookieStore);
 
-  if (authCookie?.value) {
-    redirect("/dashboard");
+  if (session?.role) {
+    redirect(getDefaultRouteForRole(session.role));
   }
 
   redirect("/login");

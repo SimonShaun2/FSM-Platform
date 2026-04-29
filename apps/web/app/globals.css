@@ -1,6 +1,44 @@
-html,
-body {
-  margin: 0;
-  padding: 0;
-  font-family: sans-serif;
+@import "../src/styles/tokens.css";
+
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  * {
+    @apply border-neutral-200;
+  }
+
+  html {
+    @apply bg-neutral-100 text-neutral-900;
+  }
+
+  body {
+    @apply min-h-screen bg-neutral-100 text-neutral-900 antialiased;
+  }
+
+  a {
+    @apply text-inherit no-underline;
+  }
+
+  button,
+  input,
+  textarea,
+  select {
+    font: inherit;
+  }
+}
+
+@layer utilities {
+  .surface-card {
+    @apply rounded-3xl border border-neutral-200 bg-white shadow-[0_24px_80px_rgba(16,33,99,0.08)];
+  }
+
+  .grid-background {
+    background-image:
+      linear-gradient(rgba(255, 255, 255, 0.05) 1px, transparent 1px),
+      linear-gradient(90deg, rgba(255, 255, 255, 0.05) 1px, transparent 1px);
+    background-position: center;
+    background-size: 40px 40px;
+  }
 }

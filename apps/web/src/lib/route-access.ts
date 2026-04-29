@@ -1,0 +1,111 @@
+export const USER_ROLES = ["owner", "admin", "dispatcher", "office", "technician"] as const;
+
+export type UserRole = (typeof USER_ROLES)[number];
+
+type DefaultRouteMap = Record<UserRole, string>;
+
+const EXACT_PUBLIC_ROUTES = new Set(["/login", "/signup"]);
+
+const ROLE_ALLOWED_PREFIXES: Record<UserRole, string[]> = {
+  owner: [
+    "/dashboard",
+    "/dispatch",
+    "/customers",
+    "/jobs",
+    "/estimates",
+    "/invoices",
+    "/service-agreements",
+    "/ai-revenue-center",
+    "/products",
+    "/review-requests",
+    "/reporting",
+    "/settings",
+    "/mobile"
+  ],
+  admin: [
+    "/dashboard",
+    "/dispatch",
+    "/customers",
+    "/jobs",
+    "/estimates",
+    "/invoices",
+    "/service-agreements",
+    "/ai-revenue-center",
+    "/products",
+    "/review-requests",
+    "/reporting",
+    "/settings",
+    "/mobile"
+  ],
+  dispatcher: [
+    "/dispatch",
+    "/customers",
+    "/jobs",
+    "/estimates",
+    "/invoices",
+    "/service-agreements",
+    "/settings"
+  ],
+  office: [
+    "/dispatch",
+    "/customers",
+    "/jobs",
+    "/estimates",
+    "/invoices",
+    "/service-agreements",
+    "/settings"
+  ],
+  technician: ["/mobile"]
+};
+
+export const ROLE_DEFAULT_ROUTES: DefaultRouteMap = {
+  owner: "/dashboard",
+  admin: "/dashboard",
+  dispatcher: "/dispatch",
+  office: "/dispatch",
+  technician: "/mobile/jobs"
+};
+
+export function normalizeUserRole(role: unknown): UserRole | null {
+  if (typeof role !== "string") {
+    return null;
+  }
+
+  return USER_ROLES.includes(role as UserRole) ? (role as UserRole) : null;
+}
+
+export function getDefaultRouteForRole(role: UserRole): string {
+  return ROLE_DEFAULT_ROUTES[role];
+}
+
+export function isPublicRoute(pathname: string): boolean {
+  if (EXACT_PUBLIC_ROUTES.has(pathname)) {
+    return true;
+  }
+
+  const segments = pathname.split("/").filter(Boolean);
+
+  if (segments[0] === "book" && segments.length >= 2) {
+    return true;
+  }
+
+  if (segments[0] === "estimates" && segments.length === 2) {
+    return true;
+  }
+
+  if (segments[0] === "pay" && segments.length === 2) {
+    return true;
+  }
+
+  if (segments[0] === "review" && segments.length === 2) {
+    return true;
+  }
+
+  return false;
+}
+
+export function canRoleAccessPath(role: UserRole, pathname: string): boolean {
+  const allowedPrefixes = ROLE_ALLOWED_PREFIXES[role];
+
+  return allowedPrefixes.some((prefix) => pathname === prefix || pathname.startsWith(`${prefix}/`));
+}
