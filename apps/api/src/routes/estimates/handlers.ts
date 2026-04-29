@@ -66,6 +66,8 @@ function toEstimateListItemResponse(estimate: EstimateListItem) {
     estimateNumber: estimate.estimateNumber,
     title: estimate.title,
     status: estimate.status,
+    tierLabel: estimate.tierLabel,
+    tierGroupId: estimate.tierGroupId,
     total: estimate.total,
     subtotal: estimate.subtotal,
     customer: estimate.customer,

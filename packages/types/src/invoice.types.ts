@@ -143,6 +143,7 @@ export interface InvoiceDetail {
   dueAt: Date | null;
   paidAt: Date | null;
   stripePaymentLinkUrl: string | null;
+  paymentToken: string | null;
   messageToCustomer: string | null;
   customer: {
     id: string;

@@ -1,11 +1,11 @@
-import { ScaffoldPage } from "@/src/components/layout/ScaffoldPage";
+"use client";
+
+import { useParams } from "next/navigation";
+
+import { InvoiceDetailClient } from "@/src/components/invoices/InvoiceDetailClient";
 
 export default function InvoiceDetailPage() {
-  return (
-    <ScaffoldPage
-      title="Invoice Detail"
-      subtitle="Line items, payment status, and collection actions will land here next."
-      ticket="021"
-    />
-  );
+  const params = useParams<{ id: string }>();
+
+  return <InvoiceDetailClient invoiceId={params.id} />;
 }

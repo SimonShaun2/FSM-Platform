@@ -36,6 +36,36 @@ const publicEstimateItemSchema = {
   }
 } as const;
 
+const publicEstimateTierSchema = {
+  type: "object",
+  additionalProperties: false,
+  required: [
+    "estimateNumber",
+    "title",
+    "tierLabel",
+    "subtotal",
+    "taxRate",
+    "taxAmount",
+    "discountAmount",
+    "total",
+    "items"
+  ],
+  properties: {
+    estimateNumber: { type: "string" },
+    title: nullableStringSchema,
+    tierLabel: nullableStringSchema,
+    subtotal: { type: "string" },
+    taxRate: nullableStringSchema,
+    taxAmount: nullableStringSchema,
+    discountAmount: nullableStringSchema,
+    total: { type: "string" },
+    items: {
+      type: "array",
+      items: publicEstimateItemSchema
+    }
+  }
+} as const;
+
 const publicEstimateSchema = {
   type: "object",
   additionalProperties: false,
@@ -52,6 +82,7 @@ const publicEstimateSchema = {
     "financingOffered",
     "tierLabel",
     "expiresAt",
+    "tiers",
     "items"
   ],
   properties: {
@@ -69,6 +100,15 @@ const publicEstimateSchema = {
     },
     tierLabel: nullableStringSchema,
     expiresAt: nullableDateTimeSchema,
+    tiers: {
+      anyOf: [
+        {
+          type: "array",
+          items: publicEstimateTierSchema
+        },
+        { type: "null" }
+      ]
+    },
     items: {
       type: "array",
       items: publicEstimateItemSchema
@@ -85,7 +125,8 @@ export const TokenParamsSchema = z
 export const CustomerApproveSchema = z
   .object({
     approvedByName: z.string().trim().min(1).max(255),
-    signatureUrl: z.string().trim().url().optional()
+    signatureUrl: z.string().trim().url().optional(),
+    selectedEstimateNumber: z.string().trim().min(1).max(64).optional()
   })
   .strict();
 

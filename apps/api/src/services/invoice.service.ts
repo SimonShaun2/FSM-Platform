@@ -1,3 +1,5 @@
+import { randomBytes } from "node:crypto";
+
 import { and, eq, isNull } from "drizzle-orm";
 import { Decimal } from "decimal.js";
 import pino from "pino";
@@ -194,6 +196,7 @@ function toInvoiceDetail(
     dueAt: row.dueAt,
     paidAt: row.paidAt,
     stripePaymentLinkUrl: row.stripePaymentLinkUrl,
+    paymentToken: row.paymentToken,
     messageToCustomer: row.messageToCustomer,
     customer: {
       id: customer.id,
@@ -221,6 +224,10 @@ function buildActorName(firstName: string, lastName: string): string {
 
 function buildInvoiceSummary(invoiceNumber: string, eventLabel: string): string {
   return `Invoice ${invoiceNumber} ${eventLabel}`;
+}
+
+function generatePaymentToken(): string {
+  return randomBytes(24).toString("base64url");
 }
 
 function compareNullableDates(left: Date | null, right: Date | null, sortOrder: "asc" | "desc"): number {
@@ -406,6 +413,20 @@ async function getInvoiceById(invoiceId: string, executor: SelectExecutor): Prom
     .select()
     .from(invoices)
     .where(and(eq(invoices.id, invoiceId), isNull(invoices.deletedAt)))
+    .limit(1);
+
+  if (!invoice) {
+    throw new AppError(ErrorCode.NOT_FOUND, "Invoice not found");
+  }
+
+  return invoice;
+}
+
+async function getInvoiceByPaymentToken(token: string, executor: SelectExecutor): Promise<InvoiceRow> {
+  const [invoice] = await executor
+    .select()
+    .from(invoices)
+    .where(and(eq(invoices.paymentToken, token), isNull(invoices.deletedAt)))
     .limit(1);
 
   if (!invoice) {
@@ -701,6 +722,22 @@ export async function getInvoice(companyId: string, invoiceId: string): Promise<
   return buildInvoiceDetail(companyId, invoice, db);
 }
 
+export async function getPublicInvoicePaymentLink(token: string): Promise<{
+  invoiceNumber: string;
+  paymentLinkUrl: string;
+}> {
+  const invoice = await getInvoiceByPaymentToken(token, db);
+
+  if (!invoice.stripePaymentLinkUrl) {
+    throw new AppError(ErrorCode.CONFLICT, "Invoice payment link is unavailable");
+  }
+
+  return {
+    invoiceNumber: invoice.invoiceNumber,
+    paymentLinkUrl: invoice.stripePaymentLinkUrl
+  };
+}
+
 export async function createInvoice(
   companyId: string,
   actorId: string,
@@ -940,6 +977,7 @@ export async function sendInvoice(
         .set({
           stripePaymentLinkId: checkoutSession.id,
           stripePaymentLinkUrl: checkoutSession.url,
+          paymentToken: existingInvoice.paymentToken ?? generatePaymentToken(),
           issuedAt: sentAt,
           sentAt,
           dueAt,
@@ -1136,6 +1174,61 @@ export async function recordPayment(
 
     return toPayment(payment);
   });
+}
+
+export async function resendInvoiceReminder(
+  companyId: string,
+  actorId: string,
+  invoiceId: string
+): Promise<Invoice> {
+  const existingInvoice = await getInvoiceRecord(companyId, invoiceId, db);
+
+  if (!["sent", "viewed", "partially_paid", "overdue"].includes(existingInvoice.status)) {
+    throw new AppError(ErrorCode.CONFLICT, "Invoice is not eligible for reminders");
+  }
+
+  if (new Decimal(existingInvoice.balanceDue).lte(0)) {
+    throw new AppError(ErrorCode.CONFLICT, "Invoice has no outstanding balance");
+  }
+
+  if (!existingInvoice.stripePaymentLinkUrl) {
+    throw new AppError(ErrorCode.CONFLICT, "Invoice must be sent before a reminder can be queued");
+  }
+
+  const reminderLevel =
+    existingInvoice.reminder1SentAt === null
+      ? 1
+      : existingInvoice.reminder2SentAt === null
+        ? 2
+        : existingInvoice.reminder3SentAt === null
+          ? 3
+          : null;
+
+  if (!reminderLevel) {
+    throw new AppError(ErrorCode.CONFLICT, "All reminder levels have already been sent");
+  }
+
+  await getUserRecord(companyId, actorId, db);
+
+  await notificationsQueue.add(
+    "send-invoice-reminder",
+    {
+      companyId,
+      invoiceId: existingInvoice.id,
+      customerId: existingInvoice.customerId,
+      reminderLevel
+    },
+    {
+      attempts: 3,
+      backoff: {
+        type: "exponential",
+        delay: 5000
+      },
+      jobId: `manual-send-invoice-reminder-${existingInvoice.id}-${reminderLevel}-${Date.now()}`
+    }
+  );
+
+  return toInvoice(existingInvoice);
 }
 
 export async function voidInvoice(

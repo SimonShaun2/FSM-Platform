@@ -89,6 +89,8 @@ export interface EstimateListItem {
   estimateNumber: string;
   title: string | null;
   status: EstimateStatus;
+  tierLabel: string | null;
+  tierGroupId: string | null;
   total: string;
   subtotal: string;
   customer: {
@@ -123,6 +125,23 @@ export interface PublicEstimateView {
   financingOffered: boolean | null;
   tierLabel: string | null;
   expiresAt: Date | null;
+  tiers?: Array<{
+    estimateNumber: string;
+    title: string | null;
+    tierLabel: string | null;
+    subtotal: string;
+    taxRate: string | null;
+    taxAmount: string | null;
+    discountAmount: string | null;
+    total: string;
+    items: Array<{
+      name: string;
+      description: string | null;
+      quantity: string;
+      unitPrice: string;
+      total: string;
+    }>;
+  }>;
   items: Array<{
     name: string;
     description: string | null;
@@ -185,6 +204,7 @@ export interface ListEstimatesQuery {
   status?: EstimateStatus;
   customerId?: string;
   jobId?: string;
+  tierGroupId?: string;
   search?: string;
   createdAfter?: string;
   createdBefore?: string;

@@ -25,6 +25,7 @@ function toPublicEstimateResponse(estimate: Awaited<ReturnType<typeof getPublicE
     financingOffered: estimate.financingOffered,
     tierLabel: estimate.tierLabel,
     expiresAt: estimate.expiresAt?.toISOString() ?? null,
+    tiers: estimate.tiers ?? null,
     items: estimate.items
   };
 }
@@ -47,7 +48,7 @@ export async function customerApproveEstimateHandler(
 ): Promise<FastifyReply> {
   const params = request.params as TokenParams;
   const body = request.body as CustomerApproveBody;
-  await customerApproveEstimate(params.token, body.approvedByName, body.signatureUrl);
+  await customerApproveEstimate(params.token, body.approvedByName, body.signatureUrl, body.selectedEstimateNumber);
 
   return reply.send({
     success: true

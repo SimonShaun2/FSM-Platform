@@ -104,6 +104,12 @@ const estimateRoutes: FastifyPluginAsync = async (fastify) => {
     schema: convertEstimateSchema
   }, convertEstimateHandler);
 
+  fastify.post("/:id/convert-to-job", {
+    preHandler: authenticate,
+    preValidation: estimateIdValidation,
+    schema: convertEstimateSchema
+  }, convertEstimateHandler);
+
   fastify.get("/:id/items", {
     preHandler: authenticate,
     preValidation: estimateIdValidation,

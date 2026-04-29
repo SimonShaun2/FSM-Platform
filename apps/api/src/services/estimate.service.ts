@@ -112,6 +112,8 @@ function toEstimateListItem(row: EstimateRow, customer: CustomerRow): EstimateLi
     status: normalizeEstimateStatus(row.status),
     total: row.total,
     subtotal: row.subtotal,
+    tierLabel: row.tierLabel,
+    tierGroupId: row.tierGroupId,
     customer: {
       id: customer.id,
       firstName: customer.firstName,
@@ -185,6 +187,19 @@ function toPublicEstimateView(
       total: item.total
     }))
   };
+}
+
+function getTierSortRank(tierLabel: string | null): number {
+  switch ((tierLabel ?? "").trim().toLowerCase()) {
+    case "good":
+      return 0;
+    case "better":
+      return 1;
+    case "best":
+      return 2;
+    default:
+      return 99;
+  }
 }
 
 function buildActorName(firstName: string, lastName: string): string {
@@ -306,6 +321,32 @@ async function getEstimateByToken(
   return estimate;
 }
 
+async function getEstimateByNumberAndTierGroup(
+  companyId: string,
+  tierGroupId: string,
+  estimateNumber: string,
+  executor: SelectExecutor
+): Promise<EstimateRow> {
+  const [estimate] = await executor
+    .select()
+    .from(estimates)
+    .where(
+      and(
+        eq(estimates.companyId, companyId),
+        eq(estimates.tierGroupId, tierGroupId),
+        eq(estimates.estimateNumber, estimateNumber),
+        isNull(estimates.deletedAt)
+      )
+    )
+    .limit(1);
+
+  if (!estimate) {
+    throw new AppError(ErrorCode.NOT_FOUND, "Estimate not found");
+  }
+
+  return estimate;
+}
+
 async function getEstimateItems(
   companyId: string,
   estimateId: string,
@@ -318,6 +359,27 @@ async function getEstimateItems(
     .orderBy(asc(estimateItems.sortOrder));
 
   return rows.map((row) => toEstimateItem(row));
+}
+
+async function getTierGroupEstimateRows(
+  companyId: string,
+  tierGroupId: string,
+  executor: SelectExecutor
+): Promise<EstimateRow[]> {
+  const rows = await executor
+    .select()
+    .from(estimates)
+    .where(and(eq(estimates.companyId, companyId), eq(estimates.tierGroupId, tierGroupId), isNull(estimates.deletedAt)))
+    .limit(MAX_RESULT_WINDOW);
+
+  return rows.sort((left, right) => {
+    const tierComparison = getTierSortRank(left.tierLabel) - getTierSortRank(right.tierLabel);
+    if (tierComparison !== 0) {
+      return tierComparison;
+    }
+
+    return left.createdAt.getTime() - right.createdAt.getTime();
+  });
 }
 
 async function findAutomationRule(
@@ -418,7 +480,40 @@ async function buildPublicEstimateView(
   executor: SelectExecutor
 ): Promise<PublicEstimateView> {
   const items = await getEstimateItems(estimate.companyId, estimate.id, executor);
-  return toPublicEstimateView(estimate, items);
+  const publicEstimate = toPublicEstimateView(estimate, items);
+
+  if (!estimate.tierGroupId) {
+    return publicEstimate;
+  }
+
+  const tierRows = await getTierGroupEstimateRows(estimate.companyId, estimate.tierGroupId, executor);
+  const tierItems = await Promise.all(
+    tierRows.map(async (tierRow) => ({
+      tierRow,
+      items: await getEstimateItems(estimate.companyId, tierRow.id, executor)
+    }))
+  );
+
+  return {
+    ...publicEstimate,
+    tiers: tierItems.map(({ tierRow, items: tierEstimateItems }) => ({
+      estimateNumber: tierRow.estimateNumber,
+      title: tierRow.title,
+      tierLabel: tierRow.tierLabel,
+      subtotal: tierRow.subtotal,
+      taxRate: tierRow.taxRate,
+      taxAmount: tierRow.taxAmount,
+      discountAmount: tierRow.discountAmount,
+      total: tierRow.total,
+      items: tierEstimateItems.map((item) => ({
+        name: item.name,
+        description: item.description,
+        quantity: item.quantity,
+        unitPrice: item.unitPrice,
+        total: item.total
+      }))
+    }))
+  };
 }
 
 async function emitEstimateEvent(
@@ -479,7 +574,15 @@ export async function listEstimates(
       return false;
     }
 
-    if (search && !(row.title ?? "").toLowerCase().includes(search)) {
+    if (query.tierGroupId && row.tierGroupId !== query.tierGroupId) {
+      return false;
+    }
+
+    if (
+      search &&
+      !(row.title ?? "").toLowerCase().includes(search) &&
+      !row.estimateNumber.toLowerCase().includes(search)
+    ) {
       return false;
     }
 
@@ -873,10 +976,29 @@ export async function approveEstimate(
     const actor = await getUserRecord(companyId, actorId, tx);
     const now = new Date();
     const actorName = buildActorName(actor.firstName, actor.lastName);
+
+    if (existingEstimate.tierGroupId) {
+      await tx
+        .update(estimates)
+        .set({
+          isSelectedTier: false,
+          updatedAt: now
+        })
+        .where(
+          and(
+            eq(estimates.companyId, companyId),
+            eq(estimates.tierGroupId, existingEstimate.tierGroupId),
+            isNull(estimates.deletedAt)
+          )
+        )
+        .returning();
+    }
+
     const updatedEstimates = await tx
       .update(estimates)
       .set({
         status: "approved",
+        ...(existingEstimate.tierGroupId ? { isSelectedTier: true } : {}),
         approvedAt: now,
         approvedByName: actorName,
         updatedAt: now
@@ -894,7 +1016,15 @@ export async function approveEstimate(
       eventType: "estimate.approved",
       actorId: actor.id,
       actorName,
-      summary: buildEstimateSummary(updatedEstimate.estimateNumber, "approved")
+      summary: buildEstimateSummary(updatedEstimate.estimateNumber, "approved"),
+      ...(existingEstimate.tierGroupId
+        ? {
+            payload: {
+              selectedEstimateNumber: updatedEstimate.estimateNumber,
+              selectedTierLabel: updatedEstimate.tierLabel
+            }
+          }
+        : {})
     });
 
     return toEstimate(updatedEstimate);
@@ -1206,7 +1336,8 @@ export async function getPublicEstimate(token: string): Promise<PublicEstimateVi
 export async function customerApproveEstimate(
   token: string,
   approvedByName: string,
-  signatureUrl?: string
+  signatureUrl?: string,
+  selectedEstimateNumber?: string
 ): Promise<void> {
   const existingEstimate = await getEstimateByToken(token, db);
   assertEstimateNotExpired(existingEstimate);
@@ -1216,18 +1347,48 @@ export async function customerApproveEstimate(
   }
 
   await db.transaction(async (tx) => {
+    const selectedEstimate =
+      selectedEstimateNumber && existingEstimate.tierGroupId
+        ? await getEstimateByNumberAndTierGroup(
+            existingEstimate.companyId,
+            existingEstimate.tierGroupId,
+            selectedEstimateNumber,
+            tx
+          )
+        : existingEstimate;
+    assertEstimateNotExpired(selectedEstimate);
+    assertEstimateIsAwaitingDecision(selectedEstimate);
     const approvedAt = new Date();
+
+    if (existingEstimate.tierGroupId) {
+      await tx
+        .update(estimates)
+        .set({
+          isSelectedTier: false,
+          updatedAt: approvedAt
+        })
+        .where(
+          and(
+            eq(estimates.companyId, existingEstimate.companyId),
+            eq(estimates.tierGroupId, existingEstimate.tierGroupId),
+            isNull(estimates.deletedAt)
+          )
+        )
+        .returning();
+    }
+
     const updatedEstimates = await tx
       .update(estimates)
       .set({
         status: "approved",
+        isSelectedTier: existingEstimate.tierGroupId ? true : selectedEstimate.isSelectedTier,
         approvedAt,
         approvedByName: approvedByName.trim(),
         approvedSignatureUrl: signatureUrl ?? null,
-        viewedAt: existingEstimate.viewedAt ?? approvedAt,
+        viewedAt: selectedEstimate.viewedAt ?? existingEstimate.viewedAt ?? approvedAt,
         updatedAt: approvedAt
       })
-      .where(and(eq(estimates.id, existingEstimate.id), isNull(estimates.deletedAt)))
+      .where(and(eq(estimates.id, selectedEstimate.id), isNull(estimates.deletedAt)))
       .returning();
     const updatedEstimate = updatedEstimates[0];
 
@@ -1240,7 +1401,15 @@ export async function customerApproveEstimate(
       eventType: "estimate.approved",
       actorType: "customer",
       actorName: approvedByName.trim(),
-      summary: buildEstimateSummary(updatedEstimate.estimateNumber, "approved")
+      summary: buildEstimateSummary(updatedEstimate.estimateNumber, "approved"),
+      ...(existingEstimate.tierGroupId
+        ? {
+            payload: {
+              selectedEstimateNumber: updatedEstimate.estimateNumber,
+              selectedTierLabel: updatedEstimate.tierLabel
+            }
+          }
+        : {})
     });
   });
 }

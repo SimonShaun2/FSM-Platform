@@ -234,6 +234,7 @@ const invoiceDetailSchema = {
     "dueAt",
     "paidAt",
     "stripePaymentLinkUrl",
+    "paymentToken",
     "messageToCustomer",
     "customer",
     "job",
@@ -258,6 +259,7 @@ const invoiceDetailSchema = {
     dueAt: nullableDateTimeSchema,
     paidAt: nullableDateTimeSchema,
     stripePaymentLinkUrl: nullableStringSchema,
+    paymentToken: nullableStringSchema,
     messageToCustomer: nullableStringSchema,
     customer: customerSummarySchema,
     job: jobSummarySchema,
@@ -472,6 +474,7 @@ export const createInvoiceSchema = buildInvoiceSuccessSchema("invoice", 201, inv
 export const getInvoiceSchema = buildInvoiceSuccessSchema("invoice", 200, invoiceDetailSchema);
 export const updateInvoiceSchema = buildInvoiceSuccessSchema("invoice", 200, invoiceDetailSchema);
 export const sendInvoiceSchema = buildInvoiceSuccessSchema("invoice", 200, invoiceDetailSchema);
+export const resendInvoiceReminderSchema = buildInvoiceSuccessSchema("invoice", 200, invoiceDetailSchema);
 export const voidInvoiceRouteSchema = buildInvoiceSuccessSchema("invoice", 200, invoiceDetailSchema);
 
 export const recordPaymentSchema = {

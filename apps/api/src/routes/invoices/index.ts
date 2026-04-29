@@ -9,6 +9,7 @@ import {
   listInvoicesHandler,
   listPaymentsHandler,
   recordPaymentHandler,
+  resendInvoiceReminderHandler,
   sendInvoiceHandler,
   updateInvoiceHandler,
   updateInvoiceItemHandler,
@@ -30,6 +31,7 @@ import {
   listPaymentsValidation,
   recordPaymentSchema,
   recordPaymentValidation,
+  resendInvoiceReminderSchema,
   sendInvoiceSchema,
   updateInvoiceItemRouteSchema,
   updateInvoiceItemValidation,
@@ -78,11 +80,23 @@ const invoiceRoutes: FastifyPluginAsync = async (fastify) => {
     schema: recordPaymentSchema
   }, recordPaymentHandler);
 
+  fastify.post("/invoices/:id/payments", {
+    preHandler: authenticate,
+    preValidation: recordPaymentValidation,
+    schema: recordPaymentSchema
+  }, recordPaymentHandler);
+
   fastify.post("/invoices/:id/void", {
     preHandler: authenticate,
     preValidation: voidInvoiceValidation,
     schema: voidInvoiceRouteSchema
   }, voidInvoiceHandler);
+
+  fastify.post("/invoices/:id/remind", {
+    preHandler: authenticate,
+    preValidation: invoiceIdValidation,
+    schema: resendInvoiceReminderSchema
+  }, resendInvoiceReminderHandler);
 
   fastify.post("/invoices/:id/items", {
     preHandler: authenticate,

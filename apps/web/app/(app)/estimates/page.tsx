@@ -1,11 +1,5 @@
-import { ScaffoldPage } from "@/src/components/layout/ScaffoldPage";
+import { EstimateListClient } from "@/src/components/estimates/EstimateListClient";
 
 export default function EstimatesPage() {
-  return (
-    <ScaffoldPage
-      title="Estimates"
-      subtitle="Quote management, tiers, and send-state visibility live here next."
-      ticket="019"
-    />
-  );
+  return <EstimateListClient />;
 }

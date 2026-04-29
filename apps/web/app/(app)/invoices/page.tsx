@@ -1,11 +1,5 @@
-import { ScaffoldPage } from "@/src/components/layout/ScaffoldPage";
+import { InvoiceListClient } from "@/src/components/invoices/InvoiceListClient";
 
 export default function InvoicesPage() {
-  return (
-    <ScaffoldPage
-      title="Invoices"
-      subtitle="Billing, reminders, and payment state will plug into this surface next."
-      ticket="021"
-    />
-  );
+  return <InvoiceListClient />;
 }

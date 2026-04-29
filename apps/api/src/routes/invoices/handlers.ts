@@ -19,6 +19,7 @@ import {
   getInvoice,
   listInvoices,
   recordPayment,
+  resendInvoiceReminder,
   sendInvoice,
   updateInvoice,
   voidInvoice
@@ -119,6 +120,7 @@ function toInvoiceDetailResponse(invoice: InvoiceDetail) {
     dueAt: toIsoString(invoice.dueAt),
     paidAt: toIsoString(invoice.paidAt),
     stripePaymentLinkUrl: invoice.stripePaymentLinkUrl,
+    paymentToken: invoice.paymentToken,
     messageToCustomer: invoice.messageToCustomer,
     customer: invoice.customer,
     job: invoice.job,
@@ -193,6 +195,19 @@ export async function recordPaymentHandler(request: FastifyRequest, reply: Fasti
 
   return reply.send({
     payment: toPaymentResponse(payment),
+    invoice: toInvoiceDetailResponse(detail)
+  });
+}
+
+export async function resendInvoiceReminderHandler(
+  request: FastifyRequest,
+  reply: FastifyReply
+): Promise<FastifyReply> {
+  const params = request.params as InvoiceIdParams;
+  await resendInvoiceReminder(request.company.id, request.user.id, params.id);
+  const detail = await getInvoice(request.company.id, params.id);
+
+  return reply.send({
     invoice: toInvoiceDetailResponse(detail)
   });
 }
