@@ -589,4 +589,58 @@ describe("notifications.processor", () => {
       }
     );
   });
+
+  it("send-otw-notification sends the queued OTW SMS", async () => {
+    await notificationsProcessor.handleSendOnTheWayNotification(
+      createJob("send-otw-notification", {
+        companyId: "company-1",
+        jobId: "job-1",
+        notificationId: "otw-1",
+        customerPhone: "555-0100",
+        message: "Taylor is on the way and should arrive in about 20 minutes."
+      }),
+      dependencies
+    );
+
+    expect(dependencies.sms.sendSms).toHaveBeenCalledWith(
+      "555-0100",
+      "Taylor is on the way and should arrive in about 20 minutes."
+    );
+  });
+
+  it("send-review-request builds and sends the public review SMS", async () => {
+    await notificationsProcessor.handleSendReviewRequest(
+      createJob("send-review-request", {
+        companyId: "company-1",
+        reviewRequestId: "review-1",
+        customerPhone: "555-0100",
+        referenceId: "c22927f5-988e-4bb6-bf33-f64e71e72a58",
+        companyName: "Acme HVAC",
+        technicianName: "Taylor Stone"
+      }),
+      dependencies
+    );
+
+    expect(dependencies.sms.sendSms).toHaveBeenCalledWith(
+      "555-0100",
+      "Acme HVAC: thanks for your recent visit from Taylor Stone. Please leave a quick review: http://localhost:3000/review/c22927f5-988e-4bb6-bf33-f64e71e72a58"
+    );
+  });
+
+  it("send-booking-confirmation sends queued booking SMS messages", async () => {
+    await notificationsProcessor.handleSendBookingNotification(
+      createJob("send-booking-confirmation", {
+        companyId: "company-1",
+        bookingRequestId: "booking-1",
+        toPhone: "555-0100",
+        body: "Acme HVAC: your booking BK-20260428-0001 is confirmed for Apr 30 at 8:00 AM."
+      }),
+      dependencies
+    );
+
+    expect(dependencies.sms.sendSms).toHaveBeenCalledWith(
+      "555-0100",
+      "Acme HVAC: your booking BK-20260428-0001 is confirmed for Apr 30 at 8:00 AM."
+    );
+  });
 });

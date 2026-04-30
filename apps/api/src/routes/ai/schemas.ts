@@ -253,11 +253,21 @@ export const SnoozeRecommendationSchema = z
   })
   .strict();
 
+export const LabelPhotoSchema = z
+  .object({
+    fileName: z.string().trim().min(1).max(255),
+    assetName: z.string().trim().max(255).optional(),
+    jobTitle: z.string().trim().max(255).optional(),
+    photoType: z.enum(["before", "after", "general", "document"]).optional()
+  })
+  .strict();
+
 export type RecommendationIdParams = z.infer<typeof RecommendationIdParamsSchema>;
 export type ListRecommendationsQueryInput = z.infer<typeof ListRecommendationsQuerySchema>;
 export type ActionRecommendationBody = z.infer<typeof ActionRecommendationSchema>;
 export type DismissRecommendationBody = z.infer<typeof DismissRecommendationSchema>;
 export type SnoozeRecommendationBody = z.infer<typeof SnoozeRecommendationSchema>;
+export type LabelPhotoBody = z.infer<typeof LabelPhotoSchema>;
 
 export const recommendationIdValidation = withZodValidation({
   params: RecommendationIdParamsSchema
@@ -280,6 +290,10 @@ export const dismissRecommendationValidation = withZodValidation({
 export const snoozeRecommendationValidation = withZodValidation({
   params: RecommendationIdParamsSchema,
   body: SnoozeRecommendationSchema
+});
+
+export const labelPhotoValidation = withZodValidation({
+  body: LabelPhotoSchema
 });
 
 export const revenueSummaryRouteSchema = {
@@ -357,3 +371,20 @@ export const getRecommendationRouteSchema = {
 } as const;
 
 export const mutateRecommendationRouteSchema = getRecommendationRouteSchema;
+
+export const labelPhotoRouteSchema = {
+  tags: ["ai"],
+  response: {
+    200: {
+      type: "object",
+      additionalProperties: false,
+      required: ["label", "caption"],
+      properties: {
+        label: { type: "string" },
+        caption: { type: "string" }
+      }
+    },
+    400: errorResponseSchema,
+    401: errorResponseSchema
+  }
+} as const;

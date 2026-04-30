@@ -119,6 +119,7 @@ function normalizeCreateTechnicianInput(input: CreateTechnicianInput) {
     phone: input.phone.trim(),
     skills: normalizeStringArray(input.skills) ?? [],
     serviceAreaIds: normalizeStringArray(input.serviceAreaIds) ?? [],
+    serviceZipCodes: normalizeStringArray(input.serviceZipCodes) ?? [],
     hoursPerDay: input.hoursPerDay ?? Number(DEFAULT_HOURS_PER_DAY),
     status: input.status ?? DEFAULT_TECHNICIAN_STATUS,
     calendarColor: input.calendarColor ?? DEFAULT_CALENDAR_COLOR,
@@ -136,6 +137,8 @@ function normalizeUpdateTechnicianInput(input: UpdateTechnicianInput) {
     skills: input.skills !== undefined ? normalizeStringArray(input.skills) ?? [] : undefined,
     serviceAreaIds:
       input.serviceAreaIds !== undefined ? normalizeStringArray(input.serviceAreaIds) ?? [] : undefined,
+    serviceZipCodes:
+      input.serviceZipCodes !== undefined ? normalizeStringArray(input.serviceZipCodes) ?? [] : undefined,
     hoursPerDay: input.hoursPerDay,
     status: input.status,
     calendarColor: input.calendarColor,
@@ -448,6 +451,7 @@ export async function createTechnician(
         phone: normalizedInput.phone,
         skills: normalizedInput.skills,
         serviceAreaIds: normalizedInput.serviceAreaIds,
+        serviceZipCodes: normalizedInput.serviceZipCodes,
         hoursPerDay: String(normalizedInput.hoursPerDay),
         status: normalizedInput.status,
         calendarColor: normalizedInput.calendarColor,
@@ -504,6 +508,7 @@ export async function updateTechnician(
     ...(normalizedInput.phone !== undefined ? { phone: normalizedInput.phone } : {}),
     ...(normalizedInput.skills !== undefined ? { skills: normalizedInput.skills } : {}),
     ...(normalizedInput.serviceAreaIds !== undefined ? { serviceAreaIds: normalizedInput.serviceAreaIds } : {}),
+    ...(normalizedInput.serviceZipCodes !== undefined ? { serviceZipCodes: normalizedInput.serviceZipCodes } : {}),
     ...(normalizedInput.hoursPerDay !== undefined ? { hoursPerDay: String(normalizedInput.hoursPerDay) } : {}),
     ...(normalizedInput.status !== undefined ? { status: normalizedInput.status } : {}),
     ...(normalizedInput.calendarColor !== undefined ? { calendarColor: normalizedInput.calendarColor } : {}),

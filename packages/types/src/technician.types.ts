@@ -13,6 +13,7 @@ export interface Technician {
   avatarUrl: string | null;
   skills: string[] | null;
   serviceAreaIds: string[] | null;
+  serviceZipCodes: string[] | null;
   hoursPerDay: string | null;
   totalJobsCompleted: number | null;
   avgJobDurationMinutes: number | null;
@@ -75,6 +76,7 @@ export interface CreateTechnicianInput {
   phone: string;
   skills?: string[];
   serviceAreaIds?: string[];
+  serviceZipCodes?: string[];
   hoursPerDay?: number;
   status?: TechnicianStatus;
   calendarColor?: string;
@@ -89,6 +91,7 @@ export interface UpdateTechnicianInput {
   phone?: string;
   skills?: string[];
   serviceAreaIds?: string[];
+  serviceZipCodes?: string[];
   hoursPerDay?: number;
   status?: TechnicianStatus;
   calendarColor?: string;

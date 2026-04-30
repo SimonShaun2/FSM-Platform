@@ -1,0 +1,350 @@
+import { and, eq, isNull } from "drizzle-orm";
+import pino from "pino";
+import sharp from "sharp";
+
+import {
+  assets,
+  customers,
+  db,
+  fileAttachments,
+  jobs,
+  properties,
+  users,
+  estimates,
+  invoices
+} from "@fsm/db";
+import {
+  AppError,
+  ErrorCode,
+  type AttachmentEntityType,
+  type AttachmentListResult,
+  type FileAttachment,
+  type JobPhotoType,
+  type ListAttachmentsQuery
+} from "@fsm/types";
+
+import { uploadFile } from "../lib/storage.js";
+
+type AssetRow = typeof assets.$inferSelect;
+type CustomerRow = typeof customers.$inferSelect;
+type EstimateRow = typeof estimates.$inferSelect;
+type FileAttachmentRow = typeof fileAttachments.$inferSelect;
+type InvoiceRow = typeof invoices.$inferSelect;
+type JobRow = typeof jobs.$inferSelect;
+type PropertyRow = typeof properties.$inferSelect;
+type UserRow = typeof users.$inferSelect;
+type SelectExecutor = Pick<typeof db, "select">;
+type TransactionExecutor = Pick<typeof db, "select" | "insert" | "update">;
+
+interface UploadAttachmentInput {
+  entityType: AttachmentEntityType;
+  entityId: string;
+  fileName: string;
+  mimeType: string;
+  fileBuffer: Buffer;
+  caption?: string;
+  photoType?: JobPhotoType;
+  takenAt?: string;
+}
+
+const logger = pino({
+  name: "attachment-service"
+});
+
+const DEFAULT_PAGE = 1;
+const DEFAULT_LIMIT = 25;
+const MAX_LIMIT = 100;
+const MAX_FILE_SIZE_BYTES = 50 * 1024 * 1024;
+const IMAGE_MIME_TYPES = new Set(["image/jpeg", "image/png", "image/webp"]);
+const ALLOWED_MIME_TYPES = new Set([
+  "image/jpeg",
+  "image/png",
+  "image/webp",
+  "application/pdf",
+  "text/plain",
+  "application/msword",
+  "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
+  "video/mp4",
+  "video/quicktime"
+]);
+
+function sanitizeFileName(fileName: string): string {
+  const trimmedValue = fileName.trim();
+  const sanitizedValue = trimmedValue.replace(/[^a-zA-Z0-9._-]+/gu, "-");
+  return sanitizedValue.length > 0 ? sanitizedValue : "attachment";
+}
+
+function normalizeOptionalString(value: string | undefined): string | null | undefined {
+  if (value === undefined) {
+    return undefined;
+  }
+
+  const normalizedValue = value.trim();
+  return normalizedValue.length > 0 ? normalizedValue : null;
+}
+
+function toFileAttachment(row: FileAttachmentRow): FileAttachment {
+  return {
+    ...row,
+    entityType: row.entityType as FileAttachment["entityType"],
+    fileType: (row.fileType ?? "photo") as FileAttachment["fileType"],
+    photoType: (row.photoType ?? "general") as FileAttachment["photoType"]
+  };
+}
+
+async function getActor(companyId: string, actorId: string, executor: SelectExecutor): Promise<UserRow> {
+  const [actor] = await executor
+    .select()
+    .from(users)
+    .where(and(eq(users.companyId, companyId), eq(users.id, actorId), isNull(users.deletedAt)))
+    .limit(1);
+
+  if (!actor) {
+    throw new AppError(ErrorCode.NOT_FOUND, "User not found");
+  }
+
+  return actor;
+}
+
+async function resolveAttachmentContext(
+  companyId: string,
+  entityType: AttachmentEntityType,
+  entityId: string,
+  executor: SelectExecutor
+): Promise<{ jobId: string | null; customerId: string | null }> {
+  if (entityType === "job" || entityType === "work_order") {
+    const [job] = await executor
+      .select()
+      .from(jobs)
+      .where(and(eq(jobs.companyId, companyId), eq(jobs.id, entityId), isNull(jobs.deletedAt)))
+      .limit(1);
+
+    if (!job) {
+      throw new AppError(ErrorCode.NOT_FOUND, "Job not found");
+    }
+
+    return { jobId: job.id, customerId: job.customerId };
+  }
+
+  if (entityType === "customer") {
+    const [customer] = await executor
+      .select()
+      .from(customers)
+      .where(and(eq(customers.companyId, companyId), eq(customers.id, entityId), isNull(customers.deletedAt)))
+      .limit(1);
+
+    if (!customer) {
+      throw new AppError(ErrorCode.NOT_FOUND, "Customer not found");
+    }
+
+    return { jobId: null, customerId: customer.id };
+  }
+
+  if (entityType === "property") {
+    const [property] = await executor
+      .select()
+      .from(properties)
+      .where(and(eq(properties.companyId, companyId), eq(properties.id, entityId), isNull(properties.deletedAt)))
+      .limit(1);
+
+    if (!property) {
+      throw new AppError(ErrorCode.NOT_FOUND, "Property not found");
+    }
+
+    return { jobId: null, customerId: property.customerId };
+  }
+
+  if (entityType === "asset") {
+    const [asset] = await executor
+      .select()
+      .from(assets)
+      .where(and(eq(assets.companyId, companyId), eq(assets.id, entityId), isNull(assets.deletedAt)))
+      .limit(1);
+
+    if (!asset) {
+      throw new AppError(ErrorCode.NOT_FOUND, "Asset not found");
+    }
+
+    return { jobId: null, customerId: asset.customerId };
+  }
+
+  if (entityType === "estimate") {
+    const [estimate] = await executor
+      .select()
+      .from(estimates)
+      .where(and(eq(estimates.companyId, companyId), eq(estimates.id, entityId), isNull(estimates.deletedAt)))
+      .limit(1);
+
+    if (!estimate) {
+      throw new AppError(ErrorCode.NOT_FOUND, "Estimate not found");
+    }
+
+    return { jobId: estimate.jobId, customerId: estimate.customerId };
+  }
+
+  const [invoice] = await executor
+    .select()
+    .from(invoices)
+    .where(and(eq(invoices.companyId, companyId), eq(invoices.id, entityId), isNull(invoices.deletedAt)))
+    .limit(1);
+
+  if (!invoice) {
+    throw new AppError(ErrorCode.NOT_FOUND, "Invoice not found");
+  }
+
+  return { jobId: invoice.jobId, customerId: invoice.customerId };
+}
+
+function getAttachmentFileType(mimeType: string): FileAttachment["fileType"] {
+  if (mimeType.startsWith("image/")) {
+    return "photo";
+  }
+
+  if (mimeType.startsWith("video/")) {
+    return "video";
+  }
+
+  return "document";
+}
+
+async function buildThumbnail(fileBuffer: Buffer): Promise<Buffer> {
+  return sharp(fileBuffer)
+    .resize({ width: 400, height: 400, fit: "inside", withoutEnlargement: true })
+    .webp({ quality: 82 })
+    .toBuffer();
+}
+
+export async function uploadAttachment(
+  companyId: string,
+  actorId: string,
+  input: UploadAttachmentInput
+): Promise<FileAttachment> {
+  if (!ALLOWED_MIME_TYPES.has(input.mimeType)) {
+    throw new AppError(ErrorCode.VALIDATION_ERROR, "This file type is not supported");
+  }
+
+  if (input.fileBuffer.byteLength > MAX_FILE_SIZE_BYTES) {
+    throw new AppError(ErrorCode.VALIDATION_ERROR, "Files must be 50MB or smaller");
+  }
+
+  const sanitizedFileName = sanitizeFileName(input.fileName);
+  const timestamp = Date.now();
+  const fileKey = `attachments/${companyId}/${timestamp}-${sanitizedFileName}`;
+  await getActor(companyId, actorId, db);
+  const attachmentContext = await resolveAttachmentContext(companyId, input.entityType, input.entityId, db);
+  const uploadedFile = await uploadFile(fileKey, input.fileBuffer, input.mimeType);
+  let thumbnailUrl: string | null = null;
+
+  if (IMAGE_MIME_TYPES.has(input.mimeType)) {
+    const thumbnailBuffer = await buildThumbnail(input.fileBuffer);
+    const uploadedThumbnail = await uploadFile(
+      `attachments/${companyId}/${timestamp}-thumb-${sanitizedFileName}.webp`,
+      thumbnailBuffer,
+      "image/webp"
+    );
+    thumbnailUrl = uploadedThumbnail.url;
+  }
+
+  return db.transaction(async (tx: TransactionExecutor) => {
+    const insertedRows = await tx
+      .insert(fileAttachments)
+      .values({
+        companyId,
+        entityType: input.entityType,
+        entityId: input.entityId,
+        jobId: attachmentContext.jobId,
+        customerId: attachmentContext.customerId,
+        uploadedById: actorId,
+        fileName: sanitizedFileName,
+        fileUrl: uploadedFile.url,
+        thumbnailUrl,
+        mimeType: input.mimeType,
+        fileSizeBytes: input.fileBuffer.byteLength,
+        fileType: getAttachmentFileType(input.mimeType),
+        caption: normalizeOptionalString(input.caption) ?? null,
+        photoType: input.photoType ?? "general",
+        takenAt: input.takenAt ? new Date(input.takenAt) : null
+      })
+      .returning();
+    const attachment = insertedRows[0];
+
+    if (!attachment) {
+      throw new AppError(ErrorCode.INTERNAL_ERROR, "Failed to create attachment");
+    }
+
+    logger.info(
+      { companyId, entityType: input.entityType, entityId: input.entityId, attachmentId: attachment.id },
+      "Attachment uploaded"
+    );
+
+    return toFileAttachment(attachment);
+  });
+}
+
+export async function listAttachments(
+  companyId: string,
+  query: ListAttachmentsQuery
+): Promise<AttachmentListResult> {
+  const page = query.page && query.page > 0 ? query.page : DEFAULT_PAGE;
+  const limit = query.limit && query.limit > 0 ? Math.min(query.limit, MAX_LIMIT) : DEFAULT_LIMIT;
+
+  const rows = await db
+    .select()
+    .from(fileAttachments)
+    .where(
+      and(
+        eq(fileAttachments.companyId, companyId),
+        eq(fileAttachments.entityType, query.entityType),
+        eq(fileAttachments.entityId, query.entityId),
+        isNull(fileAttachments.deletedAt)
+      )
+    );
+
+  const sortedRows = rows.slice().sort((left, right) => right.createdAt.getTime() - left.createdAt.getTime());
+  const total = sortedRows.length;
+  const totalPages = total === 0 ? 1 : Math.ceil(total / limit);
+  const startIndex = (page - 1) * limit;
+
+  return {
+    data: sortedRows.slice(startIndex, startIndex + limit).map((row) => toFileAttachment(row)),
+    total,
+    page,
+    limit,
+    totalPages
+  };
+}
+
+export async function deleteAttachment(companyId: string, actorId: string, attachmentId: string): Promise<void> {
+  await db.transaction(async (tx: TransactionExecutor) => {
+    await getActor(companyId, actorId, tx);
+    const [attachment] = await tx
+      .select()
+      .from(fileAttachments)
+      .where(
+        and(
+          eq(fileAttachments.companyId, companyId),
+          eq(fileAttachments.id, attachmentId),
+          isNull(fileAttachments.deletedAt)
+        )
+      )
+      .limit(1);
+
+    if (!attachment) {
+      throw new AppError(ErrorCode.NOT_FOUND, "Attachment not found");
+    }
+
+    await tx
+      .update(fileAttachments)
+      .set({
+        deletedAt: new Date(),
+        updatedAt: new Date()
+      })
+      .where(
+        and(
+          eq(fileAttachments.companyId, companyId),
+          eq(fileAttachments.id, attachmentId),
+          isNull(fileAttachments.deletedAt)
+        )
+      );
+  });
+}

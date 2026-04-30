@@ -1,11 +1,11 @@
-import { ScaffoldPage } from "@/src/components/layout/ScaffoldPage";
+"use client";
+
+import { useParams } from "next/navigation";
+
+import { ServiceAgreementDetailClient } from "@/src/components/service-agreements/ServiceAgreementDetailClient";
 
 export default function ServiceAgreementDetailPage() {
-  return (
-    <ScaffoldPage
-      title="Service Agreement Detail"
-      subtitle="Agreement history, billing status, and visits will be rendered here next."
-      ticket="023"
-    />
-  );
+  const params = useParams<{ id: string }>();
+
+  return <ServiceAgreementDetailClient agreementId={params.id} />;
 }

@@ -25,6 +25,25 @@ const nullableBillingCycleSchema = {
   anyOf: [{ type: "string", enum: ["monthly", "annual"] }, { type: "null" }]
 } as const;
 
+const nullableStripeStatusSchema = {
+  anyOf: [
+    {
+      type: "string",
+      enum: [
+        "active",
+        "canceled",
+        "incomplete",
+        "incomplete_expired",
+        "past_due",
+        "paused",
+        "trialing",
+        "unpaid"
+      ]
+    },
+    { type: "null" }
+  ]
+} as const;
+
 const errorResponseSchema = {
   type: "object",
   additionalProperties: false,
@@ -91,6 +110,9 @@ const agreementListItemSchema = {
     "lastServiceDate",
     "price",
     "billingCycle",
+    "stripeStatus",
+    "stripeCurrentPeriodEnd",
+    "stripeCancelAtPeriodEnd",
     "customer",
     "createdAt"
   ],
@@ -103,6 +125,9 @@ const agreementListItemSchema = {
     lastServiceDate: nullableDateSchema,
     price: nullableStringSchema,
     billingCycle: nullableBillingCycleSchema,
+    stripeStatus: nullableStripeStatusSchema,
+    stripeCurrentPeriodEnd: nullableDateTimeSchema,
+    stripeCancelAtPeriodEnd: { type: "boolean" },
     customer: {
       type: "object",
       additionalProperties: false,
@@ -132,8 +157,13 @@ const agreementDetailSchema = {
     "lastServiceDate",
     "price",
     "billingCycle",
+    "stripeStatus",
     "stripeCancelAtPeriodEnd",
     "stripeCurrentPeriodEnd",
+    "paymentMethodLabel",
+    "retryPaymentUrl",
+    "latestInvoiceAmountDue",
+    "latestInvoiceDueDate",
     "includedServices",
     "notes",
     "customer",
@@ -154,8 +184,13 @@ const agreementDetailSchema = {
     lastServiceDate: nullableDateSchema,
     price: nullableStringSchema,
     billingCycle: nullableBillingCycleSchema,
+    stripeStatus: nullableStripeStatusSchema,
     stripeCancelAtPeriodEnd: { type: "boolean" },
     stripeCurrentPeriodEnd: nullableDateTimeSchema,
+    paymentMethodLabel: nullableStringSchema,
+    retryPaymentUrl: nullableStringSchema,
+    latestInvoiceAmountDue: nullableStringSchema,
+    latestInvoiceDueDate: nullableDateSchema,
     includedServices: {
       type: "array",
       items: { type: "string" }
@@ -357,6 +392,7 @@ export const ListAgreementsQuerySchema = z
     status: maintenancePlanStatusSchema.optional(),
     customerId: uuidSchema.optional(),
     templateId: uuidSchema.optional(),
+    search: z.string().trim().min(1).max(120).optional(),
     expiresAfter: isoDateSchema.optional(),
     expiresBefore: isoDateSchema.optional(),
     sortBy: z.enum(["nextServiceDate", "createdAt", "status"]).default("nextServiceDate"),
@@ -386,11 +422,13 @@ export const cancelAgreementValidation = withZodValidation({
   params: ServiceAgreementIdParamsSchema,
   body: CancelAgreementSchema
 });
+export const pauseAgreementValidation = withZodValidation({ params: ServiceAgreementIdParamsSchema });
 export const recordVisitValidation = withZodValidation({
   params: ServiceAgreementIdParamsSchema,
   body: RecordVisitSchema
 });
 export const listVisitsValidation = withZodValidation({ params: ServiceAgreementIdParamsSchema });
+export const retryPaymentValidation = withZodValidation({ params: ServiceAgreementIdParamsSchema });
 
 export const listTemplatesSchema = {
   tags: ["service-agreements"],
@@ -536,6 +574,25 @@ export const updateAgreementRouteSchema = {
 } as const;
 
 export const cancelAgreementRouteSchema = updateAgreementRouteSchema;
+export const pauseAgreementRouteSchema = updateAgreementRouteSchema;
+
+export const retryPaymentRouteSchema = {
+  tags: ["service-agreements"],
+  response: {
+    200: {
+      type: "object",
+      additionalProperties: false,
+      required: ["retryPaymentUrl"],
+      properties: {
+        retryPaymentUrl: { type: "string" }
+      }
+    },
+    400: errorResponseSchema,
+    401: errorResponseSchema,
+    404: errorResponseSchema,
+    409: errorResponseSchema
+  }
+} as const;
 
 export const recordVisitRouteSchema = {
   tags: ["service-agreements"],

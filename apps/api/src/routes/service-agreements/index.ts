@@ -10,7 +10,9 @@ import {
   listAgreementsHandler,
   listTemplatesHandler,
   listVisitsHandler,
+  pauseAgreementHandler,
   recordVisitHandler,
+  retryPaymentHandler,
   updateAgreementHandler,
   updateTemplateHandler
 } from "./handlers.js";
@@ -29,8 +31,12 @@ import {
   listTemplatesSchema,
   listVisitsRouteSchema,
   listVisitsValidation,
+  pauseAgreementRouteSchema,
+  pauseAgreementValidation,
   recordVisitRouteSchema,
   recordVisitValidation,
+  retryPaymentRouteSchema,
+  retryPaymentValidation,
   templateIdValidation,
   updateAgreementRouteSchema,
   updateAgreementValidation,
@@ -94,6 +100,18 @@ const serviceAgreementRoutes: FastifyPluginAsync = async (fastify) => {
     preValidation: cancelAgreementValidation,
     schema: cancelAgreementRouteSchema
   }, cancelAgreementHandler);
+
+  fastify.post("/service-agreements/:id/pause", {
+    preHandler: [authenticate, requireOwnerOrAdmin],
+    preValidation: pauseAgreementValidation,
+    schema: pauseAgreementRouteSchema
+  }, pauseAgreementHandler);
+
+  fastify.post("/service-agreements/:id/retry-payment", {
+    preHandler: authenticate,
+    preValidation: retryPaymentValidation,
+    schema: retryPaymentRouteSchema
+  }, retryPaymentHandler);
 
   fastify.post("/service-agreements/:id/visits", {
     preHandler: authenticate,

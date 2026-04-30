@@ -82,8 +82,19 @@ function createAuthContext(role: "owner" | "admin" | "dispatcher" = "owner") {
 describe("product routes", () => {
   it("GET /products returns paginated results and supports filters", async () => {
     const auth = createAuthContext();
+    const customer = fakeDb.seedCustomer({
+      companyId: auth.company.id,
+      firstName: "Jules",
+      lastName: "Harper"
+    });
+    const job = fakeDb.seedJob({
+      companyId: auth.company.id,
+      customerId: customer.id,
+      title: "Capacitor Swap",
+      status: "completed"
+    });
 
-    fakeDb.seedProductCatalog({
+    const materialProduct = fakeDb.seedProductCatalog({
       companyId: auth.company.id,
       name: "Capacitor",
       category: "material",
@@ -100,6 +111,14 @@ describe("product routes", () => {
       name: "Inactive Product",
       isActive: false
     });
+    fakeDb.seedJobProduct({
+      companyId: auth.company.id,
+      jobId: job.id,
+      productCatalogId: materialProduct.id,
+      name: materialProduct.name,
+      unitPrice: materialProduct.unitPrice,
+      total: materialProduct.unitPrice
+    });
 
     const response = await request(app.server)
       .get("/api/v1/products?category=material")
@@ -108,6 +127,7 @@ describe("product routes", () => {
     expect(response.status).toBe(200);
     expect(response.body.total).toBe(1);
     expect(response.body.data[0].name).toBe("Capacitor");
+    expect(response.body.data[0].usedOnJobs).toBe(1);
   });
 
   it("GET /products/search returns max 20 active matches only", async () => {
@@ -191,9 +211,28 @@ describe("product routes", () => {
 
   it("GET /products/:id supports success and 404 for unknown ids", async () => {
     const auth = createAuthContext();
+    const customer = fakeDb.seedCustomer({
+      companyId: auth.company.id,
+      firstName: "Morgan",
+      lastName: "Blake"
+    });
+    const job = fakeDb.seedJob({
+      companyId: auth.company.id,
+      customerId: customer.id,
+      title: "Diagnostic Visit",
+      status: "completed"
+    });
     const product = fakeDb.seedProductCatalog({
       companyId: auth.company.id,
       name: "Diagnostic Service"
+    });
+    fakeDb.seedJobProduct({
+      companyId: auth.company.id,
+      jobId: job.id,
+      productCatalogId: product.id,
+      name: product.name,
+      unitPrice: product.unitPrice,
+      total: "95.00"
     });
 
     const successResponse = await request(app.server)
@@ -205,6 +244,8 @@ describe("product routes", () => {
 
     expect(successResponse.status).toBe(200);
     expect(successResponse.body.product.id).toBe(product.id);
+    expect(successResponse.body.usageStats.usedOnJobs).toBe(1);
+    expect(successResponse.body.usageStats.recentJobs).toHaveLength(1);
     expect(missingResponse.status).toBe(404);
   });
 

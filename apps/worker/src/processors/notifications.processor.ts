@@ -265,6 +265,54 @@ function getAgreementEmailType(data: Record<string, unknown>): AgreementEmailTyp
   return value === "renewal_reminder" || value === "payment_failed" ? value : null;
 }
 
+async function handleSmsNotificationJob(
+  job: Job<Record<string, unknown>>,
+  dependencies: NotificationsDependencies,
+  options: {
+    jobLabel: string;
+    requiredKeys?: string[];
+    buildBody?: (data: Record<string, unknown>) => string | null;
+  }
+): Promise<void> {
+  const companyId = getJobString(job.data, "companyId");
+  const toPhone = getJobString(job.data, "toPhone") ?? getJobString(job.data, "customerPhone");
+  const body = options.buildBody ? options.buildBody(job.data) : getJobString(job.data, "body") ?? getJobString(job.data, "message");
+
+  if (!companyId || !toPhone || !body) {
+    logger.warn({ jobId: job.id ?? null, jobName: job.name }, `${options.jobLabel} job missing required SMS data`);
+    return;
+  }
+
+  try {
+    await dependencies.sms.sendSms(toPhone, body);
+    logger.info(
+      {
+        companyId,
+        jobName: job.name,
+        notificationId: getJobString(job.data, "notificationId"),
+        bookingRequestId: getJobString(job.data, "bookingRequestId"),
+        reviewRequestId: getJobString(job.data, "reviewRequestId"),
+        jobId: getJobString(job.data, "jobId")
+      },
+      `${options.jobLabel} SMS sent`
+    );
+  } catch (error) {
+    logger.error(
+      {
+        err: error,
+        companyId,
+        jobName: job.name,
+        notificationId: getJobString(job.data, "notificationId"),
+        bookingRequestId: getJobString(job.data, "bookingRequestId"),
+        reviewRequestId: getJobString(job.data, "reviewRequestId"),
+        jobId: getJobString(job.data, "jobId")
+      },
+      `${options.jobLabel} SMS failed`
+    );
+    throw error;
+  }
+}
+
 function isInvoiceUnpaid(status: InvoiceStatus): boolean {
   return status === "sent" || status === "partially_paid" || status === "overdue";
 }
@@ -1032,6 +1080,46 @@ export async function handleSendServiceAgreementEmail(
   logger.info({ companyId, maintenancePlanId, ownerId: owner.id }, "Service agreement payment failure email sent");
 }
 
+export async function handleSendOnTheWayNotification(
+  job: Job<Record<string, unknown>>,
+  dependencies: NotificationsDependencies
+): Promise<void> {
+  await handleSmsNotificationJob(job, dependencies, {
+    jobLabel: "OTW notification"
+  });
+}
+
+export async function handleSendReviewRequest(
+  job: Job<Record<string, unknown>>,
+  dependencies: NotificationsDependencies
+): Promise<void> {
+  await handleSmsNotificationJob(job, dependencies, {
+    jobLabel: "Review request",
+    buildBody(data) {
+      const referenceId = getJobString(data, "referenceId");
+      const companyName = getJobString(data, "companyName") ?? "ServiceRev";
+      const technicianName = getJobString(data, "technicianName");
+
+      if (!referenceId) {
+        return null;
+      }
+
+      const technicianFragment = technicianName ? ` from ${technicianName}` : "";
+      const reviewUrl = `${env.APP_URL.replace(/\/$/, "")}/review/${referenceId}`;
+      return `${companyName}: thanks for your recent visit${technicianFragment}. Please leave a quick review: ${reviewUrl}`;
+    }
+  });
+}
+
+export async function handleSendBookingNotification(
+  job: Job<Record<string, unknown>>,
+  dependencies: NotificationsDependencies
+): Promise<void> {
+  await handleSmsNotificationJob(job, dependencies, {
+    jobLabel: "Booking notification"
+  });
+}
+
 export function createNotificationsProcessor(
   dependenciesProvider: NotificationsDependencies | (() => Promise<NotificationsDependencies>)
 ): Processor<Record<string, unknown>, void, string> {
@@ -1057,6 +1145,17 @@ export function createNotificationsProcessor(
       case "send-service-agreement-email":
       case "send-service-agreement-payment-failed-email":
         await handleSendServiceAgreementEmail(job, dependencies);
+        return;
+      case "send-otw-notification":
+        await handleSendOnTheWayNotification(job, dependencies);
+        return;
+      case "send-review-request":
+        await handleSendReviewRequest(job, dependencies);
+        return;
+      case "send-booking-request-alert":
+      case "send-booking-confirmation":
+      case "send-booking-decline":
+        await handleSendBookingNotification(job, dependencies);
         return;
       default:
         logger.warn({ jobId: job.id ?? null, jobName: job.name }, "Unknown notifications job received");

@@ -1,6 +1,7 @@
 "use client";
 
 import Link from "next/link";
+import { useState } from "react";
 import { useDraggable } from "@dnd-kit/core";
 import { CalendarClock, Clock3, GripVertical, Sparkles, WandSparkles } from "lucide-react";
 import type { DispatchNextBestJob, DispatchView } from "@fsm/types";
@@ -39,6 +40,14 @@ interface DispatchQueuePanelProps {
   autoFittingJobId: string | null;
   convertingEstimateId: string | null;
 }
+
+const bookingSourceFilters = [
+  { id: "all", label: "All Sources" },
+  { id: "google", label: "Google" },
+  { id: "facebook", label: "Facebook" },
+  { id: "instagram", label: "Instagram" },
+  { id: "direct", label: "Direct" }
+] as const;
 
 interface QueueTabButtonProps {
   isActive: boolean;
@@ -438,6 +447,7 @@ export function DispatchQueuePanel({
   autoFittingJobId,
   convertingEstimateId
 }: DispatchQueuePanelProps) {
+  const [bookingSourceFilter, setBookingSourceFilter] = useState<(typeof bookingSourceFilters)[number]["id"]>("all");
   const normalizedSearch = search.trim().toLowerCase();
   const nextBestJobs = (dispatchView?.nextBestJobs ?? []).filter((job) => {
     if (!normalizedSearch) {
@@ -463,6 +473,10 @@ export function DispatchQueuePanel({
     );
   });
   const filteredBookingRequests = bookingRequests.filter((request) => {
+    if (bookingSourceFilter !== "all" && request.source !== bookingSourceFilter) {
+      return false;
+    }
+
     if (!normalizedSearch) {
       return true;
     }
@@ -530,6 +544,23 @@ export function DispatchQueuePanel({
                   <h2 className="mt-2 text-lg font-semibold text-neutral-900">Pending booking requests</h2>
                 </div>
                 <Clock3 className="h-4 w-4 text-neutral-400" />
+              </div>
+              <div className="flex flex-wrap gap-2">
+                {bookingSourceFilters.map((filter) => (
+                  <button
+                    key={filter.id}
+                    type="button"
+                    onClick={() => setBookingSourceFilter(filter.id)}
+                    className={cn(
+                      "inline-flex min-h-11 items-center rounded-full px-4 text-sm font-semibold transition",
+                      bookingSourceFilter === filter.id
+                        ? "bg-brand-primary text-white"
+                        : "bg-neutral-100 text-neutral-500 hover:text-neutral-800"
+                    )}
+                  >
+                    {filter.label}
+                  </button>
+                ))}
               </div>
               <BookingRequestsSection
                 requests={filteredBookingRequests}

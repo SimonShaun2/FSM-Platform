@@ -12,7 +12,7 @@ import { StatBadge } from "@/src/components/ui/StatBadge";
 import type { BookingRequestDetail } from "@/src/hooks/dispatch.hooks";
 import { cn } from "@/src/lib/utils";
 
-import { formatDispatchRange, formatDispatchTime, fromDateTimeInputValue, getStatusTone } from "./dispatch.utils";
+import { formatDispatchRange, formatDispatchTime, getStatusTone } from "./dispatch.utils";
 
 interface DispatchDetailPanelProps {
   selectedDate: string;
@@ -41,6 +41,16 @@ function Section({ title, children }: { title: string; children: ReactNode }) {
       <div className="mt-3">{children}</div>
     </section>
   );
+}
+
+function buildBookingWindow(date: string, window: "morning" | "afternoon") {
+  const startHour = window === "afternoon" ? 13 : 10;
+  const endHour = window === "afternoon" ? 15 : 12;
+
+  return {
+    scheduledStart: new Date(`${date}T${String(startHour).padStart(2, "0")}:00:00`).toISOString(),
+    scheduledEnd: new Date(`${date}T${String(endHour).padStart(2, "0")}:00:00`).toISOString()
+  };
 }
 
 function ActionButton({
@@ -263,17 +273,23 @@ function BookingDetailView({
   onConfirmBooking: (id: string, input: ConfirmBookingRequestInput) => Promise<void>;
   onDeclineBooking: (id: string, reason?: string) => Promise<void>;
 }) {
-  const [technicianId, setTechnicianId] = useState(technicians[0]?.id ?? "");
-  const [scheduledStart, setScheduledStart] = useState(`${selectedDate}T10:00`);
-  const [scheduledEnd, setScheduledEnd] = useState(`${selectedDate}T12:00`);
+  const eligibleTechnicians = technicians.filter((technician) =>
+    technician.serviceZipCodes.includes(bookingRequest.zip)
+  );
+  const technicianOptions = eligibleTechnicians.length > 0 ? eligibleTechnicians : technicians;
+  const [technicianId, setTechnicianId] = useState(technicianOptions[0]?.id ?? "");
+  const [scheduledDate, setScheduledDate] = useState(bookingRequest.preferredDate ?? selectedDate);
+  const [timeWindow, setTimeWindow] = useState<"morning" | "afternoon">(
+    bookingRequest.preferredWindow === "afternoon" ? "afternoon" : "morning"
+  );
   const [declineReason, setDeclineReason] = useState("");
 
   useEffect(() => {
-    setTechnicianId(technicians[0]?.id ?? "");
-    setScheduledStart(`${selectedDate}T10:00`);
-    setScheduledEnd(`${selectedDate}T12:00`);
+    setTechnicianId(technicianOptions[0]?.id ?? "");
+    setScheduledDate(bookingRequest.preferredDate ?? selectedDate);
+    setTimeWindow(bookingRequest.preferredWindow === "afternoon" ? "afternoon" : "morning");
     setDeclineReason("");
-  }, [bookingRequest.id, technicians, selectedDate]);
+  }, [bookingRequest.id, bookingRequest.preferredDate, bookingRequest.preferredWindow, technicianOptions, selectedDate]);
 
   return (
     <div className="surface-card sticky top-[88px] space-y-4 p-5">
@@ -343,6 +359,12 @@ function BookingDetailView({
 
       <Section title="Confirm into schedule">
         <div className="space-y-3">
+          {eligibleTechnicians.length === 0 ? (
+            <div className="rounded-[20px] border border-warning/25 bg-warning-light px-4 py-3 text-sm text-neutral-700">
+              No technician currently covers ZIP {bookingRequest.zip}. Dispatch can still assign manually if overflow is allowed.
+            </div>
+          ) : null}
+
           <label className="block text-sm font-medium text-neutral-700">
             Technician
             <select
@@ -350,7 +372,7 @@ function BookingDetailView({
               onChange={(event) => setTechnicianId(event.target.value)}
               className="mt-2 w-full rounded-2xl border border-neutral-200 bg-white px-3 py-2.5 text-sm outline-none transition focus:border-brand-accent"
             >
-              {technicians.map((technician) => (
+              {technicianOptions.map((technician) => (
                 <option key={technician.id} value={technician.id}>
                   {technician.name}
                 </option>
@@ -360,40 +382,58 @@ function BookingDetailView({
 
           <div className="grid gap-3 md:grid-cols-2">
             <label className="block text-sm font-medium text-neutral-700">
-              Start
+              Confirm date
               <input
-                type="datetime-local"
-                value={scheduledStart}
-                onChange={(event) => setScheduledStart(event.target.value)}
+                type="date"
+                value={scheduledDate}
+                onChange={(event) => setScheduledDate(event.target.value)}
                 className="mt-2 w-full rounded-2xl border border-neutral-200 bg-white px-3 py-2.5 text-sm outline-none transition focus:border-brand-accent"
               />
             </label>
             <label className="block text-sm font-medium text-neutral-700">
-              End
-              <input
-                type="datetime-local"
-                value={scheduledEnd}
-                onChange={(event) => setScheduledEnd(event.target.value)}
+              Time window
+              <select
+                value={timeWindow}
+                onChange={(event) => setTimeWindow(event.target.value as "morning" | "afternoon")}
                 className="mt-2 w-full rounded-2xl border border-neutral-200 bg-white px-3 py-2.5 text-sm outline-none transition focus:border-brand-accent"
-              />
+              >
+                <option value="morning">Morning - 10:00 AM</option>
+                <option value="afternoon">Afternoon - 1:00 PM</option>
+              </select>
             </label>
+          </div>
+
+          <div className="rounded-[20px] bg-brand-accent-light/40 px-4 py-4 text-sm text-neutral-700">
+            <p className="font-semibold text-neutral-900">Confirmation SMS preview</p>
+            <p className="mt-2">
+              Hi {bookingRequest.firstName}! Your {bookingRequest.serviceType ?? bookingRequest.serviceCategory ?? "service"} is confirmed for{" "}
+              {scheduledDate} in the {timeWindow} window. We will send an on-the-way alert before arrival.
+            </p>
           </div>
 
           <button
             type="button"
             onClick={() => {
+              const bookingWindow = buildBookingWindow(scheduledDate, timeWindow);
               void onConfirmBooking(bookingRequest.id, {
                 technicianId,
-                scheduledStart: fromDateTimeInputValue(scheduledStart),
-                scheduledEnd: fromDateTimeInputValue(scheduledEnd)
+                scheduledStart: bookingWindow.scheduledStart,
+                scheduledEnd: bookingWindow.scheduledEnd
               });
             }}
-            disabled={!technicianId || confirmBookingPending}
+            disabled={!technicianId || !scheduledDate || confirmBookingPending}
             className="inline-flex w-full items-center justify-center gap-2 rounded-2xl bg-brand-accent px-4 py-3 text-sm font-semibold text-white transition hover:bg-brand-primary disabled:cursor-not-allowed disabled:opacity-70"
           >
             <CalendarCheck2 className="h-4 w-4" />
-            {confirmBookingPending ? "Confirming..." : "Confirm booking"}
+            {confirmBookingPending ? "Confirming..." : "Confirm & schedule job"}
           </button>
+
+          <a
+            href={`tel:${bookingRequest.phone}`}
+            className="inline-flex w-full items-center justify-center rounded-2xl border border-neutral-200 bg-white px-4 py-3 text-sm font-semibold text-neutral-700 transition hover:bg-neutral-100"
+          >
+            Call customer
+          </a>
         </div>
       </Section>
 

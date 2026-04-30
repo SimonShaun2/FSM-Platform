@@ -1,6 +1,15 @@
 export type MaintenancePlanStatus = "active" | "paused" | "expired" | "cancelled";
 export type MaintenancePlanFrequency = "monthly" | "bi_monthly" | "quarterly" | "bi_annual" | "annual";
 export type ServiceAgreementBillingCycle = "monthly" | "annual";
+export type ServiceAgreementStripeStatus =
+  | "active"
+  | "canceled"
+  | "incomplete"
+  | "incomplete_expired"
+  | "past_due"
+  | "paused"
+  | "trialing"
+  | "unpaid";
 
 export interface ServiceAgreementTemplate {
   id: string;
@@ -74,6 +83,9 @@ export interface AgreementListItem {
   lastServiceDate: string | null;
   price: string | null;
   billingCycle: ServiceAgreementBillingCycle | null;
+  stripeStatus: ServiceAgreementStripeStatus | null;
+  stripeCurrentPeriodEnd: Date | null;
+  stripeCancelAtPeriodEnd: boolean;
   customer: {
     id: string;
     firstName: string;
@@ -94,8 +106,13 @@ export interface AgreementDetail {
   lastServiceDate: string | null;
   price: string | null;
   billingCycle: ServiceAgreementBillingCycle | null;
+  stripeStatus: ServiceAgreementStripeStatus | null;
   stripeCancelAtPeriodEnd: boolean;
   stripeCurrentPeriodEnd: Date | null;
+  paymentMethodLabel: string | null;
+  retryPaymentUrl: string | null;
+  latestInvoiceAmountDue: string | null;
+  latestInvoiceDueDate: string | null;
   includedServices: string[];
   notes: string | null;
   customer: {
@@ -185,6 +202,10 @@ export interface CancelAgreementInput {
   reason?: string;
 }
 
+export interface RetryAgreementPaymentResult {
+  retryPaymentUrl: string;
+}
+
 export interface RecordVisitInput {
   completedDate: string;
   jobId?: string;
@@ -195,6 +216,7 @@ export interface ListAgreementsQuery {
   status?: MaintenancePlanStatus;
   customerId?: string;
   templateId?: string;
+  search?: string;
   expiresAfter?: string;
   expiresBefore?: string;
   sortBy?: "nextServiceDate" | "createdAt" | "status";

@@ -6,12 +6,15 @@ import {
   dismissRecommendationHandler,
   getRecommendationHandler,
   getRevenueSummaryHandler,
+  labelPhotoHandler,
   listRecommendationsHandler,
   snoozeRecommendationHandler
 } from "./handlers.js";
 import {
   actionRecommendationValidation,
   getRecommendationRouteSchema,
+  labelPhotoRouteSchema,
+  labelPhotoValidation,
   listRecommendationsRouteSchema,
   listRecommendationsValidation,
   mutateRecommendationRouteSchema,
@@ -24,6 +27,12 @@ import {
 const aiRoutes: FastifyPluginAsync = async (fastify) => {
   const authenticate = fastify.authenticate;
   const requireOwnerOrAdmin = requireRole(["owner", "admin"]);
+
+  fastify.post("/label-photo", {
+    preHandler: [authenticate],
+    preValidation: [labelPhotoValidation],
+    schema: labelPhotoRouteSchema
+  }, labelPhotoHandler);
 
   fastify.get("/revenue-summary", {
     preHandler: [authenticate, requireOwnerOrAdmin],

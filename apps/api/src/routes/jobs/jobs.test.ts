@@ -7,8 +7,11 @@ import { setupTestEnv } from "../../test-support/env-setup.js";
 
 setupTestEnv();
 
-const { addQueueJob } = vi.hoisted(() => ({
-  addQueueJob: vi.fn()
+const { addQueueJob, redisDelMock, redisGetMock, redisSetMock } = vi.hoisted(() => ({
+  addQueueJob: vi.fn(),
+  redisDelMock: vi.fn(async () => 1),
+  redisGetMock: vi.fn(async () => null),
+  redisSetMock: vi.fn(async () => "OK")
 }));
 
 vi.mock("drizzle-orm", async () => {
@@ -24,6 +27,11 @@ vi.mock("@fsm/db", async () => {
 vi.mock("@fsm/jobs", () => ({
   aiQueue: {
     add: addQueueJob
+  },
+  redisConnection: {
+    get: redisGetMock,
+    set: redisSetMock,
+    del: redisDelMock
   }
 }));
 
@@ -46,6 +54,9 @@ beforeAll(async () => {
 beforeEach(async () => {
   fakeDb.resetTestState();
   addQueueJob.mockReset();
+  redisDelMock.mockClear();
+  redisGetMock.mockClear();
+  redisSetMock.mockClear();
   app = await buildAppModule.buildApp();
   await app.ready();
 });

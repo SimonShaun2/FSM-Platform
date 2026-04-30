@@ -9,6 +9,7 @@ import type {
   ListAgreementsQuery,
   MaintenanceVisit,
   RecordVisitInput,
+  RetryAgreementPaymentResult,
   ServiceAgreementTemplate,
   UpdateAgreementInput,
   UpdateTemplateInput
@@ -20,7 +21,9 @@ import {
   getAgreement,
   listAgreements,
   listVisits,
+  pauseAgreement,
   recordVisit,
+  retryAgreementPayment,
   updateAgreement
 } from "../../services/service-agreement.service.js";
 import {
@@ -67,6 +70,9 @@ function toAgreementListItemResponse(agreement: AgreementListItem) {
     lastServiceDate: agreement.lastServiceDate,
     price: agreement.price,
     billingCycle: agreement.billingCycle,
+    stripeStatus: agreement.stripeStatus,
+    stripeCurrentPeriodEnd: toIsoString(agreement.stripeCurrentPeriodEnd),
+    stripeCancelAtPeriodEnd: agreement.stripeCancelAtPeriodEnd,
     customer: agreement.customer,
     createdAt: agreement.createdAt.toISOString()
   };
@@ -85,8 +91,13 @@ function toAgreementDetailResponse(agreement: AgreementDetail) {
     lastServiceDate: agreement.lastServiceDate,
     price: agreement.price,
     billingCycle: agreement.billingCycle,
+    stripeStatus: agreement.stripeStatus,
     stripeCancelAtPeriodEnd: agreement.stripeCancelAtPeriodEnd,
     stripeCurrentPeriodEnd: toIsoString(agreement.stripeCurrentPeriodEnd),
+    paymentMethodLabel: agreement.paymentMethodLabel,
+    retryPaymentUrl: agreement.retryPaymentUrl,
+    latestInvoiceAmountDue: agreement.latestInvoiceAmountDue,
+    latestInvoiceDueDate: agreement.latestInvoiceDueDate,
     includedServices: agreement.includedServices,
     notes: agreement.notes,
     customer: agreement.customer,
@@ -221,6 +232,23 @@ export async function cancelAgreementHandler(request: FastifyRequest, reply: Fas
   return reply.send({
     agreement: toAgreementDetailResponse(detail)
   });
+}
+
+export async function pauseAgreementHandler(request: FastifyRequest, reply: FastifyReply): Promise<FastifyReply> {
+  const params = request.params as ServiceAgreementIdParams;
+  await pauseAgreement(request.company.id, request.user.id, params.id);
+  const detail = await getAgreement(request.company.id, params.id);
+
+  return reply.send({
+    agreement: toAgreementDetailResponse(detail)
+  });
+}
+
+export async function retryPaymentHandler(request: FastifyRequest, reply: FastifyReply): Promise<FastifyReply> {
+  const params = request.params as ServiceAgreementIdParams;
+  const result: RetryAgreementPaymentResult = await retryAgreementPayment(request.company.id, params.id);
+
+  return reply.send(result);
 }
 
 export async function recordVisitHandler(request: FastifyRequest, reply: FastifyReply): Promise<FastifyReply> {

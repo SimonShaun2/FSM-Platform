@@ -1,11 +1,5 @@
-import { ScaffoldPage } from "@/src/components/layout/ScaffoldPage";
+import { MobileConversationList } from "@/src/components/mobile/MobileConversationList";
 
 export default function MobileMessagesPage() {
-  return (
-    <ScaffoldPage
-      title="Messages"
-      subtitle="Technician conversations and campaign replies will appear here next."
-      ticket="029"
-    />
-  );
+  return <MobileConversationList />;
 }

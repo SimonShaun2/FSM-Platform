@@ -1,11 +1,5 @@
-import { ScaffoldPage } from "@/src/components/layout/ScaffoldPage";
+import { MobileProfileScreen } from "@/src/components/mobile/MobileProfileScreen";
 
 export default function MobileProfilePage() {
-  return (
-    <ScaffoldPage
-      title="Profile"
-      subtitle="Technician identity, availability, and settings land here next."
-      ticket="029"
-    />
-  );
+  return <MobileProfileScreen />;
 }

@@ -1,6 +1,5 @@
 "use client";
 
-import { publicEnv } from "@fsm/config";
 import {
   type AddJobProductInput,
   type CreateReviewRequestInput,
@@ -18,8 +17,8 @@ import {
 } from "@fsm/types";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 
-import { getAuthToken } from "@/src/lib/auth";
-import { api, ApiError, type ApiErrorPayload } from "@/src/lib/api";
+import { api } from "@/src/lib/api";
+import { uploadFile } from "@/src/lib/upload";
 
 interface ActivityEventRecord {
   id: string;
@@ -51,6 +50,38 @@ interface JobResponse {
   job: JobDetail;
 }
 
+export interface JobListRecord {
+  id: string;
+  jobNumber: string;
+  title: string;
+  type: string;
+  priority: string;
+  status: string;
+  assetId?: string | null;
+  scheduledStart: string | null;
+  scheduledEnd: string | null;
+  customer: {
+    id: string;
+    firstName: string;
+    lastName: string;
+    phone: string | null;
+  };
+  property: {
+    id: string;
+    addressLine1: string;
+    city: string;
+    state: string;
+  } | null;
+  technician: {
+    id: string;
+    firstName: string;
+    lastName: string;
+    phone: string | null;
+    calendarColor: string | null;
+  } | null;
+  createdAt: string;
+}
+
 interface JobTaskResponse {
   task: JobTask;
 }
@@ -74,6 +105,8 @@ interface TimeEntryResponse {
 interface TimeEntriesResponse {
   timeEntries: TimeEntry[];
 }
+
+interface JobListResponse extends PaginatedResponse<JobListRecord> {}
 
 export interface OnTheWayNotificationRecord {
   id: string;
@@ -118,10 +151,6 @@ export interface ReviewRequestRecord {
 
 interface ReviewRequestResponse {
   reviewRequest: ReviewRequestRecord;
-}
-
-interface AttachmentResponse {
-  attachment: FileAttachment;
 }
 
 export interface CompanySettingsRecord {
@@ -182,10 +211,27 @@ export interface SendOnTheWayInput {
   technicianLng?: number;
 }
 
-const API_BASE = publicEnv.NEXT_PUBLIC_API_URL;
+export interface JobListQueryInput {
+  status?: string | string[];
+  technicianId?: string;
+  customerId?: string;
+  propertyId?: string;
+  assetId?: string;
+  type?: string;
+  priority?: string;
+  scheduledAfter?: string;
+  scheduledBefore?: string;
+  search?: string;
+  sortBy?: "scheduledStart" | "createdAt" | "priority" | "status";
+  sortOrder?: "asc" | "desc";
+  page?: number;
+  limit?: number;
+  enabled?: boolean;
+}
 
 const jobKeys = {
   all: ["jobs"] as const,
+  list: (query: JobListQueryInput) => ["jobs", "list", query] as const,
   detail: (jobId: string) => ["jobs", "detail", jobId] as const,
   tasks: (jobId: string) => ["jobs", "tasks", jobId] as const,
   products: (jobId: string) => ["jobs", "products", jobId] as const,
@@ -195,17 +241,6 @@ const jobKeys = {
   activity: (jobId: string) => ["jobs", "activity", jobId] as const,
   productSearch: (search: string) => ["jobs", "product-search", search] as const
 };
-
-function toErrorPayload(text: string): ApiErrorPayload {
-  try {
-    return JSON.parse(text) as ApiErrorPayload;
-  } catch {
-    return {
-      error: "NOT_IMPLEMENTED",
-      message: text || "Request failed"
-    };
-  }
-}
 
 async function invalidateJobQueries(queryClient: ReturnType<typeof useQueryClient>, jobId: string) {
   await Promise.all([
@@ -222,63 +257,60 @@ async function invalidateJobQueries(queryClient: ReturnType<typeof useQueryClien
 }
 
 function uploadAttachmentRequest(jobId: string, input: UploadAttachmentInput): Promise<FileAttachment> {
-  return new Promise((resolve, reject) => {
-    const formData = new FormData();
-    const token = getAuthToken();
-    const request = new XMLHttpRequest();
+  return uploadFile({
+    file: input.file,
+    entityType: "job",
+    entityId: jobId,
+    ...(input.photoType ? { photoType: input.photoType } : {}),
+    ...(input.caption ? { caption: input.caption } : {}),
+    ...(input.takenAt ? { takenAt: input.takenAt } : {}),
+    ...(input.onProgress ? { onProgress: input.onProgress } : {})
+  });
+}
 
-    formData.append("file", input.file);
-    formData.append("entityType", "job");
-    formData.append("entityId", jobId);
+function buildQueryString(values: Record<string, string | number | string[] | undefined>) {
+  const params = new URLSearchParams();
 
-    if (input.caption) {
-      formData.append("caption", input.caption);
+  for (const [key, value] of Object.entries(values)) {
+    if (value === undefined) {
+      continue;
     }
 
-    if (input.photoType) {
-      formData.append("photoType", input.photoType);
-    }
-
-    if (input.takenAt) {
-      formData.append("takenAt", input.takenAt);
-    }
-
-    request.open("POST", `${API_BASE}/api/v1/attachments`);
-    request.withCredentials = true;
-
-    if (token) {
-      request.setRequestHeader("Authorization", `Bearer ${token}`);
-    }
-
-    request.upload.onprogress = (event) => {
-      if (!event.lengthComputable) {
-        return;
+    if (Array.isArray(value)) {
+      if (value.length > 0) {
+        params.set(key, value.join(","));
       }
+      continue;
+    }
 
-      input.onProgress?.(Math.round((event.loaded / event.total) * 100));
-    };
+    params.set(key, String(value));
+  }
 
-    request.onerror = () => {
-      reject(new Error("Upload failed"));
-    };
+  return params.toString();
+}
 
-    request.onload = () => {
-      const payload = toErrorPayload(request.responseText);
+export function useJobsList(query: JobListQueryInput) {
+  const queryString = buildQueryString({
+    status: Array.isArray(query.status) ? query.status : query.status ? [query.status] : undefined,
+    technicianId: query.technicianId,
+    customerId: query.customerId,
+    propertyId: query.propertyId,
+    assetId: query.assetId,
+    type: query.type,
+    priority: query.priority,
+    scheduledAfter: query.scheduledAfter,
+    scheduledBefore: query.scheduledBefore,
+    search: query.search,
+    sortBy: query.sortBy,
+    sortOrder: query.sortOrder,
+    page: query.page,
+    limit: query.limit
+  });
 
-      if (request.status < 200 || request.status >= 300) {
-        reject(new ApiError(request.status, payload));
-        return;
-      }
-
-      try {
-        const parsed = JSON.parse(request.responseText) as AttachmentResponse;
-        resolve(parsed.attachment);
-      } catch {
-        reject(new Error("Attachment upload response was invalid"));
-      }
-    };
-
-    request.send(formData);
+  return useQuery({
+    queryKey: jobKeys.list(query),
+    queryFn: () => api.get<JobListResponse>(`/api/v1/jobs?${queryString}`),
+    enabled: query.enabled ?? true
   });
 }
 

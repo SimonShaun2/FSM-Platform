@@ -1,11 +1,5 @@
-import { ScaffoldPage } from "@/src/components/layout/ScaffoldPage";
+import { ProductCatalogClient } from "@/src/components/products/ProductCatalogClient";
 
 export default function ProductsPage() {
-  return (
-    <ScaffoldPage
-      title="Products"
-      subtitle="Catalog management, pricing, and upsell presets are queued for this route next."
-      ticket="022"
-    />
-  );
+  return <ProductCatalogClient />;
 }

@@ -11,7 +11,9 @@ import {
   createProduct,
   deleteProduct,
   getProduct,
+  getProductUsageStats,
   listProducts,
+  listProductUsageCounts,
   searchProducts,
   updateProduct
 } from "../../services/product-catalog.service.js";
@@ -45,14 +47,42 @@ function toProductResponse(product: Product) {
   };
 }
 
+function toProductListItemResponse(product: Product, usedOnJobs: number) {
+  return {
+    ...toProductResponse(product),
+    usedOnJobs
+  };
+}
+
+function toProductUsageStatsResponse(
+  usageStats: Awaited<ReturnType<typeof getProductUsageStats>>
+) {
+  return {
+    usedOnJobs: usageStats.usedOnJobs,
+    totalRevenue: usageStats.totalRevenue,
+    averageRevenuePerJob: usageStats.averageRevenuePerJob,
+    lastUsedAt: toIsoString(usageStats.lastUsedAt),
+    recentJobs: usageStats.recentJobs.map((job) => ({
+      jobId: job.jobId,
+      jobNumber: job.jobNumber,
+      customerName: job.customerName,
+      usedAt: job.usedAt.toISOString(),
+      totalRevenue: job.totalRevenue
+    }))
+  };
+}
+
 export async function listProductsHandler(
   request: FastifyRequest,
   reply: FastifyReply
 ): Promise<FastifyReply> {
-  const result = await listProducts(request.company.id, request.query as ListProductsQuery);
+  const [result, usageCounts] = await Promise.all([
+    listProducts(request.company.id, request.query as ListProductsQuery),
+    listProductUsageCounts(request.company.id)
+  ]);
 
   return reply.send({
-    data: result.data.map((product) => toProductResponse(product)),
+    data: result.data.map((product) => toProductListItemResponse(product, usageCounts.get(product.id) ?? 0)),
     total: result.total,
     page: result.page,
     limit: result.limit,
@@ -92,10 +122,14 @@ export async function getProductHandler(
   reply: FastifyReply
 ): Promise<FastifyReply> {
   const params = request.params as ProductIdParams;
-  const product = await getProduct(request.company.id, params.id);
+  const [product, usageStats] = await Promise.all([
+    getProduct(request.company.id, params.id),
+    getProductUsageStats(request.company.id, params.id)
+  ]);
 
   return reply.send({
-    product: toProductResponse(product)
+    product: toProductResponse(product),
+    usageStats: toProductUsageStatsResponse(usageStats)
   });
 }
 

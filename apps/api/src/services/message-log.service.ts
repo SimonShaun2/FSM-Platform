@@ -2,6 +2,7 @@ import { and, eq, isNull } from "drizzle-orm";
 
 import {
   campaigns,
+  customers,
   db,
   messageLogs
 } from "@fsm/db";
@@ -30,6 +31,18 @@ export interface MessageLogListItem {
   failedAt: Date | null;
   failureReason: string | null;
   createdAt: Date;
+}
+
+export interface MessageConversationListItem {
+  customerId: string;
+  firstName: string;
+  lastName: string;
+  displayName: string | null;
+  phone: string | null;
+  lastMessagePreview: string;
+  lastMessageAt: Date;
+  lastDirection: "inbound" | "outbound";
+  unreadCount: number;
 }
 
 const DEFAULT_PAGE = 1;
@@ -105,4 +118,78 @@ export async function listMessageLogs(
     }));
 
   return paginate(logs, page, limit);
+}
+
+export async function listMessageConversations(
+  companyId: string,
+  page?: number,
+  limit?: number
+): Promise<PaginatedResult<MessageConversationListItem> & { totalUnread: number }> {
+  const normalizedPage = normalizePage(page);
+  const normalizedLimit = normalizeLimit(limit);
+  const [logRows, customerRows] = await Promise.all([
+    db
+      .select()
+      .from(messageLogs)
+      .where(and(eq(messageLogs.companyId, companyId), isNull(messageLogs.deletedAt)))
+      .limit(MAX_RESULT_WINDOW),
+    db
+      .select()
+      .from(customers)
+      .where(and(eq(customers.companyId, companyId), isNull(customers.deletedAt)))
+      .limit(MAX_RESULT_WINDOW)
+  ]);
+  const customerById = new Map(customerRows.map((customer) => [customer.id, customer]));
+  const groupedByCustomerId = new Map<string, MessageConversationListItem>();
+
+  for (const row of logRows) {
+    if (!row.customerId) {
+      continue;
+    }
+
+    const customer = customerById.get(row.customerId);
+
+    if (!customer) {
+      continue;
+    }
+
+    const existing = groupedByCustomerId.get(row.customerId);
+    const nextPreview = row.body.trim().slice(0, 160);
+    const isInbound = row.direction === "inbound";
+
+    if (!existing) {
+      groupedByCustomerId.set(row.customerId, {
+        customerId: row.customerId,
+        firstName: customer.firstName,
+        lastName: customer.lastName,
+        displayName: `${customer.firstName} ${customer.lastName}`.trim() || null,
+        phone: customer.phone,
+        lastMessagePreview: nextPreview,
+        lastMessageAt: row.createdAt,
+        lastDirection: isInbound ? "inbound" : "outbound",
+        unreadCount: isInbound ? 1 : 0
+      });
+      continue;
+    }
+
+    if (row.createdAt.getTime() > existing.lastMessageAt.getTime()) {
+      existing.lastMessageAt = row.createdAt;
+      existing.lastMessagePreview = nextPreview;
+      existing.lastDirection = isInbound ? "inbound" : "outbound";
+    }
+
+    if (isInbound) {
+      existing.unreadCount += 1;
+    }
+  }
+
+  const ordered = Array.from(groupedByCustomerId.values()).sort(
+    (left, right) => right.lastMessageAt.getTime() - left.lastMessageAt.getTime()
+  );
+  const paginated = paginate(ordered, normalizedPage, normalizedLimit);
+
+  return {
+    ...paginated,
+    totalUnread: ordered.reduce((sum, conversation) => sum + conversation.unreadCount, 0)
+  };
 }

@@ -68,8 +68,8 @@ const STATIC_PAGE_META: Array<{ prefix: string; meta: PageMeta }> = [
   {
     prefix: "/products",
     meta: {
-      title: "Products",
-      subtitle: "Control the catalog behind every quote and invoice."
+      title: "Product Catalog",
+      subtitle: "Control the catalog behind every quote, job, and invoice."
     }
   },
   {

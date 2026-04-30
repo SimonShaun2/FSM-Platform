@@ -1,8 +1,9 @@
 import type { ReactNode } from "react";
 import { cookies } from "next/headers";
-import { redirect } from "next/navigation";
+import { notFound, redirect } from "next/navigation";
 
-import { AppShell } from "@/src/components/layout/AppShell";
+import { AuthRouteBridge } from "@/src/components/layout/AuthRouteBridge";
+import { MobileAppShell } from "@/src/components/mobile/MobileAppShell";
 import { readServerAuthSession } from "@/src/lib/auth";
 
 export default async function MobileLayout({ children }: { children: ReactNode }) {
@@ -13,13 +14,13 @@ export default async function MobileLayout({ children }: { children: ReactNode }
     redirect("/login");
   }
 
+  if (session.role !== "technician") {
+    notFound();
+  }
+
   return (
-    <AppShell
-      companyName={session.company.name}
-      role={session.role}
-      userName={`${session.user.firstName} ${session.user.lastName}`.trim()}
-    >
-      {children}
-    </AppShell>
+    <AuthRouteBridge session={session}>
+      <MobileAppShell session={session}>{children}</MobileAppShell>
+    </AuthRouteBridge>
   );
 }

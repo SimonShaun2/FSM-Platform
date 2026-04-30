@@ -12,6 +12,7 @@ import {
 import type {
   ActionRecommendationBody,
   DismissRecommendationBody,
+  LabelPhotoBody,
   ListRecommendationsQueryInput,
   RecommendationIdParams,
   SnoozeRecommendationBody
@@ -150,5 +151,29 @@ export async function snoozeRecommendationHandler(
 
   return reply.send({
     recommendation: toRecommendationResponse(recommendation)
+  });
+}
+
+export async function labelPhotoHandler(
+  request: FastifyRequest,
+  reply: FastifyReply
+): Promise<FastifyReply> {
+  const body = request.body as LabelPhotoBody;
+  const cleanedFileName = body.fileName.replace(/\.[a-z0-9]+$/iu, "").replace(/[-_]+/gu, " ").trim();
+  const contextName = body.assetName?.trim() || body.jobTitle?.trim() || cleanedFileName || "Job photo";
+  const typeLabel =
+    body.photoType === "before"
+      ? "Before repair"
+      : body.photoType === "after"
+        ? "After repair"
+        : body.photoType === "document"
+          ? "Document"
+          : "General photo";
+  const label = body.assetName?.trim() || contextName;
+  const caption = `${contextName} — ${typeLabel}`;
+
+  return reply.send({
+    label,
+    caption
   });
 }

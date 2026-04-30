@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { Mail, MessageSquareText, PencilLine, Plus, Trash2 } from "lucide-react";
+import { Mail, MessageSquareText, PencilLine, Plus, ShieldCheck, Trash2 } from "lucide-react";
 
 import type {
   CustomerAgreementRecord,
@@ -75,6 +75,13 @@ export function CustomerHeader({ customer, agreements, invoices, onMessage, onEd
           >
             <Plus className="h-4 w-4" />
             New Job
+          </Link>
+          <Link
+            href={`/service-agreements?enrollCustomerId=${customer.id}`}
+            className="inline-flex items-center gap-2 rounded-full border border-neutral-200 px-4 py-2.5 text-sm font-semibold text-neutral-700 transition hover:bg-neutral-50"
+          >
+            <ShieldCheck className="h-4 w-4" />
+            New Agreement
           </Link>
           <button
             type="button"

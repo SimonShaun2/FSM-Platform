@@ -1,11 +1,10 @@
 "use client";
 
 import { useParams } from "next/navigation";
-
-import { JobDetailClient } from "@/src/components/jobs/JobDetailClient";
+import { MobileJobDetail } from "@/src/components/mobile/MobileJobDetail";
 
 export default function MobileJobDetailPage() {
   const params = useParams<{ id: string }>();
 
-  return <JobDetailClient jobId={params.id} />;
+  return <MobileJobDetail jobId={params.id} />;
 }

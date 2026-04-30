@@ -242,6 +242,8 @@ export const activityEventTypeEnum = pgEnum("activity_event_type", [
   "job.rescheduled",
   "job.cancelled",
   "job.closed",
+  "job.time_started",
+  "job.time_stopped",
   "job.task_completed",
   "job.product_added",
   "job.product_removed",
@@ -279,6 +281,7 @@ export const activityEventTypeEnum = pgEnum("activity_event_type", [
   "technician.deleted",
   "technician.assigned",
   "technician.unassigned",
+  "technician.on_the_way",
   // Service agreement template
   "service_agreement_template.created",
   "service_agreement_template.updated",
@@ -300,6 +303,9 @@ export const activityEventTypeEnum = pgEnum("activity_event_type", [
   "campaign.sent",
   "campaign.opened",
   "campaign.replied",
+  // Review requests
+  "review_request.sent",
+  "review_request.completed",
   // Message
   "message.sent",
   "message.received",
@@ -308,6 +314,11 @@ export const activityEventTypeEnum = pgEnum("activity_event_type", [
   "import.completed",
   "import.rolled_back",
   "import.failed",
+  // Booking
+  "booking.requested",
+  "booking.confirmed",
+  "booking.cancelled",
+  "booking.completed",
 ]);
 
 export const aiRecommendationTypeEnum = pgEnum("ai_recommendation_type", [
@@ -371,6 +382,42 @@ export const messageChannelEnum = pgEnum("message_channel", [
 export const messageDirectionEnum = pgEnum("message_direction", [
   "outbound",
   "inbound",
+]);
+
+export const reviewRequestStatusEnum = pgEnum("review_request_status", [
+  "pending",
+  "sent",
+  "clicked",
+  "completed",
+  "declined",
+]);
+
+export const attachmentEntityTypeEnum = pgEnum("attachment_entity_type", [
+  "job",
+  "customer",
+  "property",
+  "asset",
+  "estimate",
+  "invoice",
+  "work_order",
+]);
+
+export const bookingRequestStatusEnum = pgEnum("booking_request_status", [
+  "pending",
+  "confirmed",
+  "cancelled",
+  "completed",
+  "no_show",
+]);
+
+export const bookingSourceEnum = pgEnum("booking_source", [
+  "google",
+  "facebook",
+  "instagram",
+  "yelp",
+  "direct",
+  "website",
+  "qr_code",
 ]);
 
 // ─────────────────────────────────────────────
@@ -1201,6 +1248,7 @@ export const automationRuleTypeEnum = pgEnum("automation_rule_type", [
   "maintenance_due",
   "service_agreement_renewal",
   "job_follow_up",
+  "review_request",
 ]);
 
 export const automationRules = pgTable("automation_rules", {
@@ -1280,6 +1328,159 @@ export const jobProducts = pgTable("job_products", {
 }, (t) => ({
   companyIdx: index("job_products_company_idx").on(t.companyId),
   jobIdx: index("job_products_job_idx").on(t.jobId),
+}));
+
+export const timeEntries = pgTable("time_entries", {
+  id: id(),
+  companyId: companyId(),
+  jobId: uuid("job_id").notNull().references(() => jobs.id),
+  technicianId: uuid("technician_id").notNull().references(() => technicians.id),
+  startedAt: timestamp("started_at").notNull(),
+  endedAt: timestamp("ended_at"),
+  durationMinutes: integer("duration_minutes"),
+  entryType: varchar("entry_type", { length: 30 }).default("on_site"),
+  notes: text("notes"),
+  travelFromAddress: text("travel_from_address"),
+  ...timestamps,
+}, (t) => ({
+  companyIdx: index("time_entries_company_idx").on(t.companyId),
+  jobIdx: index("time_entries_job_idx").on(t.jobId),
+  technicianIdx: index("time_entries_technician_idx").on(t.technicianId),
+}));
+
+export const reviewRequests = pgTable("review_requests", {
+  id: id(),
+  companyId: companyId(),
+  jobId: uuid("job_id").references(() => jobs.id),
+  customerId: uuid("customer_id").notNull().references(() => customers.id),
+  technicianId: uuid("technician_id").references(() => technicians.id),
+  referenceId: uuid("reference_id").notNull().defaultRandom(),
+  status: reviewRequestStatusEnum("status").notNull().default("pending"),
+  channel: varchar("channel", { length: 20 }).default("sms"),
+  reviewUrl: text("review_url"),
+  sentAt: timestamp("sent_at"),
+  clickedAt: timestamp("clicked_at"),
+  completedAt: timestamp("completed_at"),
+  rating: integer("rating"),
+  reviewText: text("review_text"),
+  ...timestamps,
+}, (t) => ({
+  companyIdx: index("review_requests_company_idx").on(t.companyId),
+  customerIdx: index("review_requests_customer_idx").on(t.customerId),
+  jobIdx: index("review_requests_job_idx").on(t.jobId),
+  statusIdx: index("review_requests_status_idx").on(t.status),
+  referenceIdx: uniqueIndex("review_requests_reference_idx").on(t.referenceId),
+}));
+
+export const fileAttachments = pgTable("file_attachments", {
+  id: id(),
+  companyId: companyId(),
+  entityType: attachmentEntityTypeEnum("entity_type").notNull(),
+  entityId: uuid("entity_id").notNull(),
+  jobId: uuid("job_id"),
+  customerId: uuid("customer_id"),
+  uploadedById: uuid("uploaded_by_id").references(() => users.id),
+  fileName: varchar("file_name", { length: 255 }).notNull(),
+  fileUrl: text("file_url").notNull(),
+  thumbnailUrl: text("thumbnail_url"),
+  mimeType: varchar("mime_type", { length: 100 }),
+  fileSizeBytes: integer("file_size_bytes"),
+  fileType: varchar("file_type", { length: 30 }).default("photo"),
+  caption: text("caption"),
+  photoType: varchar("photo_type", { length: 20 }).default("general"),
+  takenAt: timestamp("taken_at"),
+  ...timestamps,
+}, (t) => ({
+  companyIdx: index("file_attachments_company_idx").on(t.companyId),
+  entityIdx: index("file_attachments_entity_idx").on(t.entityType, t.entityId),
+  jobIdx: index("file_attachments_job_idx").on(t.jobId),
+  customerIdx: index("file_attachments_customer_idx").on(t.customerId),
+}));
+
+export const onTheWayNotifications = pgTable("on_the_way_notifications", {
+  id: id(),
+  companyId: companyId(),
+  jobId: uuid("job_id").notNull().references(() => jobs.id),
+  technicianId: uuid("technician_id").notNull().references(() => technicians.id),
+  customerId: uuid("customer_id").notNull().references(() => customers.id),
+  sentAt: timestamp("sent_at"),
+  channel: varchar("channel", { length: 20 }).default("sms"),
+  message: text("message"),
+  estimatedArrivalMinutes: integer("estimated_arrival_minutes"),
+  technicianLat: decimal("technician_lat", { precision: 10, scale: 7 }),
+  technicianLng: decimal("technician_lng", { precision: 10, scale: 7 }),
+  ...timestamps,
+}, (t) => ({
+  companyIdx: index("on_the_way_company_idx").on(t.companyId),
+  jobIdx: index("on_the_way_job_idx").on(t.jobId),
+}));
+
+export const bookingRequests = pgTable("booking_requests", {
+  id: id(),
+  companyId: companyId(),
+  customerId: uuid("customer_id").references(() => customers.id),
+  jobId: uuid("job_id").references(() => jobs.id),
+  assignedTechnicianId: uuid("assigned_technician_id").references(() => technicians.id),
+  firstName: varchar("first_name", { length: 100 }).notNull(),
+  lastName: varchar("last_name", { length: 100 }).notNull(),
+  phone: varchar("phone", { length: 30 }).notNull(),
+  email: varchar("email", { length: 255 }),
+  addressLine1: varchar("address_line1", { length: 255 }).notNull(),
+  addressLine2: varchar("address_line2", { length: 100 }),
+  city: varchar("city", { length: 100 }).notNull(),
+  state: varchar("state", { length: 50 }).notNull(),
+  zip: varchar("zip", { length: 20 }).notNull(),
+  propertyType: varchar("property_type", { length: 30 }).default("residential"),
+  serviceCategory: varchar("service_category", { length: 100 }),
+  serviceType: varchar("service_type", { length: 100 }),
+  serviceDetail: varchar("service_detail", { length: 255 }),
+  urgency: varchar("urgency", { length: 30 }).default("this_week"),
+  customerNotes: text("customer_notes"),
+  preferredDate: date("preferred_date"),
+  preferredWindow: varchar("preferred_window", { length: 50 }),
+  status: bookingRequestStatusEnum("status").notNull().default("pending"),
+  source: bookingSourceEnum("source").notNull().default("direct"),
+  referenceNumber: varchar("reference_number", { length: 50 }),
+  isPropertyOwner: boolean("is_property_owner").default(false),
+  smsConsentAppointments: boolean("sms_consent_appointments").default(false),
+  smsConsentMarketing: boolean("sms_consent_marketing").default(false),
+  confirmedAt: timestamp("confirmed_at"),
+  confirmedById: uuid("confirmed_by_id"),
+  confirmationSentAt: timestamp("confirmation_sms_sent_at"),
+  cancelledAt: timestamp("cancelled_at"),
+  cancellationReason: text("cancellation_reason"),
+  ...timestamps,
+}, (t) => ({
+  companyIdx: index("booking_requests_company_idx").on(t.companyId),
+  statusIdx: index("booking_requests_status_idx").on(t.status),
+  zipIdx: index("booking_requests_zip_idx").on(t.zip),
+  sourceIdx: index("booking_requests_source_idx").on(t.source),
+  phoneIdx: index("booking_requests_phone_idx").on(t.phone),
+}));
+
+export const bookingSettings = pgTable("booking_settings", {
+  id: id(),
+  companyId: companyId(),
+  isEnabled: boolean("is_enabled").notNull().default(false),
+  bookingSlug: varchar("booking_slug", { length: 100 }),
+  offeredServices: jsonb("offered_services").default([]),
+  availableHoursStart: integer("available_hours_start").default(8),
+  availableHoursEnd: integer("available_hours_end").default(17),
+  availableDays: text("available_days").array().default(["mon", "tue", "wed", "thu", "fri"]),
+  slotDuration: integer("slot_duration").default(2),
+  maxAdvanceDays: integer("max_advance_days").default(14),
+  autoConfirm: boolean("auto_confirm").default(false),
+  googleReviewUrl: text("google_review_url"),
+  yelpReviewUrl: text("yelp_review_url"),
+  facebookReviewUrl: text("facebook_review_url"),
+  allowZipOverflow: boolean("allow_zip_overflow").default(false),
+  balanceWorkload: boolean("balance_workload").default(true),
+  notifyOnNewBooking: boolean("notify_on_new_booking").default(true),
+  notificationEmail: varchar("notification_email", { length: 255 }),
+  ...timestamps,
+}, (t) => ({
+  companyIdx: uniqueIndex("booking_settings_company_idx").on(t.companyId),
+  slugIdx: uniqueIndex("booking_settings_slug_idx").on(t.bookingSlug),
 }));
 
 // ─────────────────────────────────────────────

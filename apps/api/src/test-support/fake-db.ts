@@ -32,7 +32,13 @@ type TableName =
   | "jobTasks"
   | "jobProducts"
   | "scheduleSlots"
-  | "activityEvents";
+  | "activityEvents"
+  | "timeEntries"
+  | "reviewRequests"
+  | "fileAttachments"
+  | "onTheWayNotifications"
+  | "bookingRequests"
+  | "bookingSettings";
 
 type UserRole = "owner" | "admin" | "dispatcher" | "office" | "technician";
 type TechnicianStatus = "active" | "inactive" | "on_leave";
@@ -80,7 +86,8 @@ type AutomationRuleType =
   | "dormant_customer"
   | "maintenance_due"
   | "service_agreement_renewal"
-  | "job_follow_up";
+  | "job_follow_up"
+  | "review_request";
 type AiRecommendationType =
   | "reactivation"
   | "aging_asset"
@@ -103,6 +110,21 @@ type MessageChannel = "sms" | "email";
 type MessageDirection = "inbound" | "outbound";
 type ProductCategory = "service" | "labor" | "material" | "equipment" | "fee" | "bundle";
 type JobTaskStatus = "pending" | "in_progress" | "completed" | "skipped";
+type TimeEntryType = "travel" | "on_site" | "break";
+type ReviewRequestStatus = "pending" | "sent" | "clicked" | "completed" | "declined";
+type AttachmentEntityType =
+  | "job"
+  | "customer"
+  | "property"
+  | "asset"
+  | "estimate"
+  | "invoice"
+  | "work_order";
+type AttachmentFileType = "photo" | "document" | "video";
+type BookingRequestStatus = "pending" | "confirmed" | "cancelled" | "completed" | "no_show";
+type BookingSource = "google" | "facebook" | "instagram" | "yelp" | "direct" | "website" | "qr_code";
+type BookingUrgency = "emergency" | "this_week" | "flexible";
+type PreferredBookingWindow = "morning" | "afternoon" | "first_available";
 
 export interface TestCompanyRecord {
   id: string;
@@ -749,6 +771,144 @@ export interface TestActivityEventRecord {
   occurredAt: Date;
 }
 
+export interface TestTimeEntryRecord {
+  id: string;
+  companyId: string;
+  jobId: string;
+  technicianId: string;
+  startedAt: Date;
+  endedAt: Date | null;
+  durationMinutes: number | null;
+  entryType: TimeEntryType | null;
+  notes: string | null;
+  travelFromAddress: string | null;
+  createdAt: Date;
+  updatedAt: Date;
+  deletedAt: Date | null;
+}
+
+export interface TestReviewRequestRecord {
+  id: string;
+  companyId: string;
+  jobId: string | null;
+  customerId: string;
+  technicianId: string | null;
+  referenceId: string;
+  status: ReviewRequestStatus;
+  channel: MessageChannel;
+  reviewUrl: string | null;
+  sentAt: Date | null;
+  clickedAt: Date | null;
+  completedAt: Date | null;
+  rating: number | null;
+  reviewText: string | null;
+  createdAt: Date;
+  updatedAt: Date;
+  deletedAt: Date | null;
+}
+
+export interface TestFileAttachmentRecord {
+  id: string;
+  companyId: string;
+  entityType: AttachmentEntityType;
+  entityId: string;
+  jobId: string | null;
+  customerId: string | null;
+  uploadedById: string | null;
+  fileName: string;
+  fileUrl: string;
+  thumbnailUrl: string | null;
+  mimeType: string | null;
+  fileSizeBytes: number | null;
+  fileType: AttachmentFileType | null;
+  caption: string | null;
+  photoType: JobPhotoType | null;
+  takenAt: Date | null;
+  createdAt: Date;
+  updatedAt: Date;
+  deletedAt: Date | null;
+}
+
+export interface TestOnTheWayNotificationRecord {
+  id: string;
+  companyId: string;
+  jobId: string;
+  technicianId: string;
+  customerId: string;
+  sentAt: Date | null;
+  channel: MessageChannel;
+  message: string | null;
+  estimatedArrivalMinutes: number | null;
+  technicianLat: string | null;
+  technicianLng: string | null;
+  createdAt: Date;
+  updatedAt: Date;
+  deletedAt: Date | null;
+}
+
+export interface TestBookingRequestRecord {
+  id: string;
+  companyId: string;
+  customerId: string | null;
+  jobId: string | null;
+  assignedTechnicianId: string | null;
+  firstName: string;
+  lastName: string;
+  phone: string;
+  email: string | null;
+  addressLine1: string;
+  addressLine2: string | null;
+  city: string;
+  state: string;
+  zip: string;
+  propertyType: string | null;
+  serviceCategory: string | null;
+  serviceType: string | null;
+  serviceDetail: string | null;
+  urgency: BookingUrgency | null;
+  customerNotes: string | null;
+  preferredDate: string | null;
+  preferredWindow: PreferredBookingWindow | null;
+  status: BookingRequestStatus;
+  source: BookingSource;
+  referenceNumber: string | null;
+  isPropertyOwner: boolean | null;
+  smsConsentAppointments: boolean | null;
+  smsConsentMarketing: boolean | null;
+  confirmedAt: Date | null;
+  confirmedById: string | null;
+  confirmationSentAt: Date | null;
+  cancelledAt: Date | null;
+  cancellationReason: string | null;
+  createdAt: Date;
+  updatedAt: Date;
+  deletedAt: Date | null;
+}
+
+export interface TestBookingSettingsRecord {
+  id: string;
+  companyId: string;
+  isEnabled: boolean;
+  bookingSlug: string | null;
+  offeredServices: Array<Record<string, unknown>>;
+  availableHoursStart: number | null;
+  availableHoursEnd: number | null;
+  availableDays: string[] | null;
+  slotDuration: number | null;
+  maxAdvanceDays: number | null;
+  autoConfirm: boolean | null;
+  googleReviewUrl: string | null;
+  yelpReviewUrl: string | null;
+  facebookReviewUrl: string | null;
+  allowZipOverflow: boolean | null;
+  balanceWorkload: boolean | null;
+  notifyOnNewBooking: boolean | null;
+  notificationEmail: string | null;
+  createdAt: Date;
+  updatedAt: Date;
+  deletedAt: Date | null;
+}
+
 type AnyTestRecord =
   | TestCompanyRecord
   | TestUserRecord
@@ -778,7 +938,13 @@ type AnyTestRecord =
   | TestJobTaskRecord
   | TestJobProductRecord
   | TestScheduleSlotRecord
-  | TestActivityEventRecord;
+  | TestActivityEventRecord
+  | TestTimeEntryRecord
+  | TestReviewRequestRecord
+  | TestFileAttachmentRecord
+  | TestOnTheWayNotificationRecord
+  | TestBookingRequestRecord
+  | TestBookingSettingsRecord;
 
 type MockTable =
   | typeof companiesTable
@@ -809,7 +975,13 @@ type MockTable =
   | typeof jobTasksTable
   | typeof jobProductsTable
   | typeof scheduleSlotsTable
-  | typeof activityEventsTable;
+  | typeof activityEventsTable
+  | typeof timeEntriesTable
+  | typeof reviewRequestsTable
+  | typeof fileAttachmentsTable
+  | typeof onTheWayNotificationsTable
+  | typeof bookingRequestsTable
+  | typeof bookingSettingsTable;
 
 interface TestState {
   companies: TestCompanyRecord[];
@@ -841,6 +1013,12 @@ interface TestState {
   jobProducts: TestJobProductRecord[];
   scheduleSlots: TestScheduleSlotRecord[];
   activityEvents: TestActivityEventRecord[];
+  timeEntries: TestTimeEntryRecord[];
+  reviewRequests: TestReviewRequestRecord[];
+  fileAttachments: TestFileAttachmentRecord[];
+  onTheWayNotifications: TestOnTheWayNotificationRecord[];
+  bookingRequests: TestBookingRequestRecord[];
+  bookingSettings: TestBookingSettingsRecord[];
 }
 
 interface OrderByDefinition {
@@ -1515,6 +1693,150 @@ const activityEventsTable = {
   occurredAt: "occurredAt"
 } as const;
 
+const timeEntriesTable = {
+  __name: "timeEntries",
+  id: "id",
+  companyId: "companyId",
+  jobId: "jobId",
+  technicianId: "technicianId",
+  startedAt: "startedAt",
+  endedAt: "endedAt",
+  durationMinutes: "durationMinutes",
+  entryType: "entryType",
+  notes: "notes",
+  travelFromAddress: "travelFromAddress",
+  createdAt: "createdAt",
+  updatedAt: "updatedAt",
+  deletedAt: "deletedAt"
+} as const;
+
+const reviewRequestsTable = {
+  __name: "reviewRequests",
+  id: "id",
+  companyId: "companyId",
+  jobId: "jobId",
+  customerId: "customerId",
+  technicianId: "technicianId",
+  referenceId: "referenceId",
+  status: "status",
+  channel: "channel",
+  reviewUrl: "reviewUrl",
+  sentAt: "sentAt",
+  clickedAt: "clickedAt",
+  completedAt: "completedAt",
+  rating: "rating",
+  reviewText: "reviewText",
+  createdAt: "createdAt",
+  updatedAt: "updatedAt",
+  deletedAt: "deletedAt"
+} as const;
+
+const fileAttachmentsTable = {
+  __name: "fileAttachments",
+  id: "id",
+  companyId: "companyId",
+  entityType: "entityType",
+  entityId: "entityId",
+  jobId: "jobId",
+  customerId: "customerId",
+  uploadedById: "uploadedById",
+  fileName: "fileName",
+  fileUrl: "fileUrl",
+  thumbnailUrl: "thumbnailUrl",
+  mimeType: "mimeType",
+  fileSizeBytes: "fileSizeBytes",
+  fileType: "fileType",
+  caption: "caption",
+  photoType: "photoType",
+  takenAt: "takenAt",
+  createdAt: "createdAt",
+  updatedAt: "updatedAt",
+  deletedAt: "deletedAt"
+} as const;
+
+const onTheWayNotificationsTable = {
+  __name: "onTheWayNotifications",
+  id: "id",
+  companyId: "companyId",
+  jobId: "jobId",
+  technicianId: "technicianId",
+  customerId: "customerId",
+  sentAt: "sentAt",
+  channel: "channel",
+  message: "message",
+  estimatedArrivalMinutes: "estimatedArrivalMinutes",
+  technicianLat: "technicianLat",
+  technicianLng: "technicianLng",
+  createdAt: "createdAt",
+  updatedAt: "updatedAt",
+  deletedAt: "deletedAt"
+} as const;
+
+const bookingRequestsTable = {
+  __name: "bookingRequests",
+  id: "id",
+  companyId: "companyId",
+  customerId: "customerId",
+  jobId: "jobId",
+  assignedTechnicianId: "assignedTechnicianId",
+  firstName: "firstName",
+  lastName: "lastName",
+  phone: "phone",
+  email: "email",
+  addressLine1: "addressLine1",
+  addressLine2: "addressLine2",
+  city: "city",
+  state: "state",
+  zip: "zip",
+  propertyType: "propertyType",
+  serviceCategory: "serviceCategory",
+  serviceType: "serviceType",
+  serviceDetail: "serviceDetail",
+  urgency: "urgency",
+  customerNotes: "customerNotes",
+  preferredDate: "preferredDate",
+  preferredWindow: "preferredWindow",
+  status: "status",
+  source: "source",
+  referenceNumber: "referenceNumber",
+  isPropertyOwner: "isPropertyOwner",
+  smsConsentAppointments: "smsConsentAppointments",
+  smsConsentMarketing: "smsConsentMarketing",
+  confirmedAt: "confirmedAt",
+  confirmedById: "confirmedById",
+  confirmationSentAt: "confirmationSentAt",
+  cancelledAt: "cancelledAt",
+  cancellationReason: "cancellationReason",
+  createdAt: "createdAt",
+  updatedAt: "updatedAt",
+  deletedAt: "deletedAt"
+} as const;
+
+const bookingSettingsTable = {
+  __name: "bookingSettings",
+  id: "id",
+  companyId: "companyId",
+  isEnabled: "isEnabled",
+  bookingSlug: "bookingSlug",
+  offeredServices: "offeredServices",
+  availableHoursStart: "availableHoursStart",
+  availableHoursEnd: "availableHoursEnd",
+  availableDays: "availableDays",
+  slotDuration: "slotDuration",
+  maxAdvanceDays: "maxAdvanceDays",
+  autoConfirm: "autoConfirm",
+  googleReviewUrl: "googleReviewUrl",
+  yelpReviewUrl: "yelpReviewUrl",
+  facebookReviewUrl: "facebookReviewUrl",
+  allowZipOverflow: "allowZipOverflow",
+  balanceWorkload: "balanceWorkload",
+  notifyOnNewBooking: "notifyOnNewBooking",
+  notificationEmail: "notificationEmail",
+  createdAt: "createdAt",
+  updatedAt: "updatedAt",
+  deletedAt: "deletedAt"
+} as const;
+
 const state: TestState = {
   companies: [],
   users: [],
@@ -1544,7 +1866,13 @@ const state: TestState = {
   jobTasks: [],
   jobProducts: [],
   scheduleSlots: [],
-  activityEvents: []
+  activityEvents: [],
+  timeEntries: [],
+  reviewRequests: [],
+  fileAttachments: [],
+  onTheWayNotifications: [],
+  bookingRequests: [],
+  bookingSettings: []
 };
 
 function nextId(): string {
@@ -1585,6 +1913,16 @@ function restoreState(snapshot: TestState): void {
   state.jobProducts.splice(0, state.jobProducts.length, ...snapshot.jobProducts);
   state.scheduleSlots.splice(0, state.scheduleSlots.length, ...snapshot.scheduleSlots);
   state.activityEvents.splice(0, state.activityEvents.length, ...snapshot.activityEvents);
+  state.timeEntries.splice(0, state.timeEntries.length, ...snapshot.timeEntries);
+  state.reviewRequests.splice(0, state.reviewRequests.length, ...snapshot.reviewRequests);
+  state.fileAttachments.splice(0, state.fileAttachments.length, ...snapshot.fileAttachments);
+  state.onTheWayNotifications.splice(
+    0,
+    state.onTheWayNotifications.length,
+    ...snapshot.onTheWayNotifications
+  );
+  state.bookingRequests.splice(0, state.bookingRequests.length, ...snapshot.bookingRequests);
+  state.bookingSettings.splice(0, state.bookingSettings.length, ...snapshot.bookingSettings);
 }
 
 function getRows(tableName: TableName): AnyTestRecord[] {
@@ -1647,6 +1985,18 @@ function getRows(tableName: TableName): AnyTestRecord[] {
       return state.scheduleSlots;
     case "activityEvents":
       return state.activityEvents;
+    case "timeEntries":
+      return state.timeEntries;
+    case "reviewRequests":
+      return state.reviewRequests;
+    case "fileAttachments":
+      return state.fileAttachments;
+    case "onTheWayNotifications":
+      return state.onTheWayNotifications;
+    case "bookingRequests":
+      return state.bookingRequests;
+    case "bookingSettings":
+      return state.bookingSettings;
   }
 }
 
@@ -2509,6 +2859,188 @@ function createActivityEventRecord(
   };
 }
 
+function createTimeEntryRecord(
+  values: Partial<TestTimeEntryRecord> &
+    Pick<TestTimeEntryRecord, "companyId" | "jobId" | "technicianId" | "startedAt">
+): TestTimeEntryRecord {
+  const now = new Date();
+
+  return {
+    id: values.id ?? nextId(),
+    companyId: values.companyId,
+    jobId: values.jobId,
+    technicianId: values.technicianId,
+    startedAt: values.startedAt,
+    endedAt: values.endedAt ?? null,
+    durationMinutes: values.durationMinutes ?? null,
+    entryType: values.entryType ?? "on_site",
+    notes: values.notes ?? null,
+    travelFromAddress: values.travelFromAddress ?? null,
+    createdAt: values.createdAt ?? now,
+    updatedAt: values.updatedAt ?? now,
+    deletedAt: values.deletedAt ?? null
+  };
+}
+
+function createReviewRequestRecord(
+  values: Partial<TestReviewRequestRecord> &
+    Pick<TestReviewRequestRecord, "companyId" | "customerId">
+): TestReviewRequestRecord {
+  const now = new Date();
+
+  return {
+    id: values.id ?? nextId(),
+    companyId: values.companyId,
+    jobId: values.jobId ?? null,
+    customerId: values.customerId,
+    technicianId: values.technicianId ?? null,
+    referenceId: values.referenceId ?? nextId(),
+    status: values.status ?? "pending",
+    channel: values.channel ?? "sms",
+    reviewUrl: values.reviewUrl ?? null,
+    sentAt: values.sentAt ?? null,
+    clickedAt: values.clickedAt ?? null,
+    completedAt: values.completedAt ?? null,
+    rating: values.rating ?? null,
+    reviewText: values.reviewText ?? null,
+    createdAt: values.createdAt ?? now,
+    updatedAt: values.updatedAt ?? now,
+    deletedAt: values.deletedAt ?? null
+  };
+}
+
+function createFileAttachmentRecord(
+  values: Partial<TestFileAttachmentRecord> &
+    Pick<TestFileAttachmentRecord, "companyId" | "entityType" | "entityId" | "fileName" | "fileUrl">
+): TestFileAttachmentRecord {
+  const now = new Date();
+
+  return {
+    id: values.id ?? nextId(),
+    companyId: values.companyId,
+    entityType: values.entityType,
+    entityId: values.entityId,
+    jobId: values.jobId ?? null,
+    customerId: values.customerId ?? null,
+    uploadedById: values.uploadedById ?? null,
+    fileName: values.fileName,
+    fileUrl: values.fileUrl,
+    thumbnailUrl: values.thumbnailUrl ?? null,
+    mimeType: values.mimeType ?? null,
+    fileSizeBytes: values.fileSizeBytes ?? null,
+    fileType: values.fileType ?? "photo",
+    caption: values.caption ?? null,
+    photoType: values.photoType ?? "general",
+    takenAt: values.takenAt ?? null,
+    createdAt: values.createdAt ?? now,
+    updatedAt: values.updatedAt ?? now,
+    deletedAt: values.deletedAt ?? null
+  };
+}
+
+function createOnTheWayNotificationRecord(
+  values: Partial<TestOnTheWayNotificationRecord> &
+    Pick<TestOnTheWayNotificationRecord, "companyId" | "jobId" | "technicianId" | "customerId">
+): TestOnTheWayNotificationRecord {
+  const now = new Date();
+
+  return {
+    id: values.id ?? nextId(),
+    companyId: values.companyId,
+    jobId: values.jobId,
+    technicianId: values.technicianId,
+    customerId: values.customerId,
+    sentAt: values.sentAt ?? null,
+    channel: values.channel ?? "sms",
+    message: values.message ?? null,
+    estimatedArrivalMinutes: values.estimatedArrivalMinutes ?? null,
+    technicianLat: values.technicianLat ?? null,
+    technicianLng: values.technicianLng ?? null,
+    createdAt: values.createdAt ?? now,
+    updatedAt: values.updatedAt ?? now,
+    deletedAt: values.deletedAt ?? null
+  };
+}
+
+function createBookingRequestRecord(
+  values: Partial<TestBookingRequestRecord> &
+    Pick<
+      TestBookingRequestRecord,
+      "companyId" | "firstName" | "lastName" | "phone" | "addressLine1" | "city" | "state" | "zip"
+    >
+): TestBookingRequestRecord {
+  const now = new Date();
+
+  return {
+    id: values.id ?? nextId(),
+    companyId: values.companyId,
+    customerId: values.customerId ?? null,
+    jobId: values.jobId ?? null,
+    assignedTechnicianId: values.assignedTechnicianId ?? null,
+    firstName: values.firstName,
+    lastName: values.lastName,
+    phone: values.phone,
+    email: values.email ?? null,
+    addressLine1: values.addressLine1,
+    addressLine2: values.addressLine2 ?? null,
+    city: values.city,
+    state: values.state,
+    zip: values.zip,
+    propertyType: values.propertyType ?? "residential",
+    serviceCategory: values.serviceCategory ?? null,
+    serviceType: values.serviceType ?? null,
+    serviceDetail: values.serviceDetail ?? null,
+    urgency: values.urgency ?? "this_week",
+    customerNotes: values.customerNotes ?? null,
+    preferredDate: values.preferredDate ?? null,
+    preferredWindow: values.preferredWindow ?? null,
+    status: values.status ?? "pending",
+    source: values.source ?? "direct",
+    referenceNumber: values.referenceNumber ?? null,
+    isPropertyOwner: values.isPropertyOwner ?? false,
+    smsConsentAppointments: values.smsConsentAppointments ?? false,
+    smsConsentMarketing: values.smsConsentMarketing ?? false,
+    confirmedAt: values.confirmedAt ?? null,
+    confirmedById: values.confirmedById ?? null,
+    confirmationSentAt: values.confirmationSentAt ?? null,
+    cancelledAt: values.cancelledAt ?? null,
+    cancellationReason: values.cancellationReason ?? null,
+    createdAt: values.createdAt ?? now,
+    updatedAt: values.updatedAt ?? now,
+    deletedAt: values.deletedAt ?? null
+  };
+}
+
+function createBookingSettingsRecord(
+  values: Partial<TestBookingSettingsRecord> & Pick<TestBookingSettingsRecord, "companyId">
+): TestBookingSettingsRecord {
+  const now = new Date();
+
+  return {
+    id: values.id ?? nextId(),
+    companyId: values.companyId,
+    isEnabled: values.isEnabled ?? false,
+    bookingSlug: values.bookingSlug ?? null,
+    offeredServices: values.offeredServices ?? [],
+    availableHoursStart: values.availableHoursStart ?? 8,
+    availableHoursEnd: values.availableHoursEnd ?? 17,
+    availableDays: values.availableDays ?? ["mon", "tue", "wed", "thu", "fri"],
+    slotDuration: values.slotDuration ?? 2,
+    maxAdvanceDays: values.maxAdvanceDays ?? 14,
+    autoConfirm: values.autoConfirm ?? false,
+    googleReviewUrl: values.googleReviewUrl ?? null,
+    yelpReviewUrl: values.yelpReviewUrl ?? null,
+    facebookReviewUrl: values.facebookReviewUrl ?? null,
+    allowZipOverflow: values.allowZipOverflow ?? false,
+    balanceWorkload: values.balanceWorkload ?? true,
+    notifyOnNewBooking: values.notifyOnNewBooking ?? true,
+    notificationEmail: values.notificationEmail ?? null,
+    createdAt: values.createdAt ?? now,
+    updatedAt: values.updatedAt ?? now,
+    deletedAt: values.deletedAt ?? null
+  };
+}
+
 function createRow(tableName: TableName, values: Record<string, unknown>): AnyTestRecord {
   switch (tableName) {
     case "companies":
@@ -2642,6 +3174,38 @@ function createRow(tableName: TableName, values: Record<string, unknown>): AnyTe
       return createActivityEventRecord(
         values as Partial<TestActivityEventRecord> &
           Pick<TestActivityEventRecord, "companyId" | "eventType" | "entityType" | "entityId" | "summary">
+      );
+    case "timeEntries":
+      return createTimeEntryRecord(
+        values as Partial<TestTimeEntryRecord> &
+          Pick<TestTimeEntryRecord, "companyId" | "jobId" | "technicianId" | "startedAt">
+      );
+    case "reviewRequests":
+      return createReviewRequestRecord(
+        values as Partial<TestReviewRequestRecord> &
+          Pick<TestReviewRequestRecord, "companyId" | "customerId">
+      );
+    case "fileAttachments":
+      return createFileAttachmentRecord(
+        values as Partial<TestFileAttachmentRecord> &
+          Pick<TestFileAttachmentRecord, "companyId" | "entityType" | "entityId" | "fileName" | "fileUrl">
+      );
+    case "onTheWayNotifications":
+      return createOnTheWayNotificationRecord(
+        values as Partial<TestOnTheWayNotificationRecord> &
+          Pick<TestOnTheWayNotificationRecord, "companyId" | "jobId" | "technicianId" | "customerId">
+      );
+    case "bookingRequests":
+      return createBookingRequestRecord(
+        values as Partial<TestBookingRequestRecord> &
+          Pick<
+            TestBookingRequestRecord,
+            "companyId" | "firstName" | "lastName" | "phone" | "addressLine1" | "city" | "state" | "zip"
+          >
+      );
+    case "bookingSettings":
+      return createBookingSettingsRecord(
+        values as Partial<TestBookingSettingsRecord> & Pick<TestBookingSettingsRecord, "companyId">
       );
   }
 }
@@ -2872,6 +3436,12 @@ export const jobTasks = jobTasksTable;
 export const jobProducts = jobProductsTable;
 export const scheduleSlots = scheduleSlotsTable;
 export const activityEvents = activityEventsTable;
+export const timeEntries = timeEntriesTable;
+export const reviewRequests = reviewRequestsTable;
+export const fileAttachments = fileAttachmentsTable;
+export const onTheWayNotifications = onTheWayNotificationsTable;
+export const bookingRequests = bookingRequestsTable;
+export const bookingSettings = bookingSettingsTable;
 
 export async function emitEvent(event: Omit<TestActivityEventRecord, "id" | "occurredAt"> & {
   occurredAt?: Date;
@@ -3157,6 +3727,12 @@ export function createDbModuleMock() {
     jobProducts,
     scheduleSlots,
     activityEvents,
+    timeEntries,
+    reviewRequests,
+    fileAttachments,
+    onTheWayNotifications,
+    bookingRequests,
+    bookingSettings,
     emitEvent,
     emitEventWithExecutor,
     markInvoiceOverdueIfNeeded,
@@ -3197,6 +3773,12 @@ export function resetTestState(): void {
   state.jobProducts.length = 0;
   state.scheduleSlots.length = 0;
   state.activityEvents.length = 0;
+  state.timeEntries.length = 0;
+  state.reviewRequests.length = 0;
+  state.fileAttachments.length = 0;
+  state.onTheWayNotifications.length = 0;
+  state.bookingRequests.length = 0;
+  state.bookingSettings.length = 0;
 }
 
 export function seedCompany(
@@ -3455,6 +4037,62 @@ export function seedActivityEvent(
 ): TestActivityEventRecord {
   const record = createActivityEventRecord(values);
   state.activityEvents.push(record);
+  return record;
+}
+
+export function seedTimeEntry(
+  values: Partial<TestTimeEntryRecord> &
+    Pick<TestTimeEntryRecord, "companyId" | "jobId" | "technicianId" | "startedAt">
+): TestTimeEntryRecord {
+  const record = createTimeEntryRecord(values);
+  state.timeEntries.push(record);
+  return record;
+}
+
+export function seedReviewRequest(
+  values: Partial<TestReviewRequestRecord> &
+    Pick<TestReviewRequestRecord, "companyId" | "customerId">
+): TestReviewRequestRecord {
+  const record = createReviewRequestRecord(values);
+  state.reviewRequests.push(record);
+  return record;
+}
+
+export function seedFileAttachment(
+  values: Partial<TestFileAttachmentRecord> &
+    Pick<TestFileAttachmentRecord, "companyId" | "entityType" | "entityId" | "fileName" | "fileUrl">
+): TestFileAttachmentRecord {
+  const record = createFileAttachmentRecord(values);
+  state.fileAttachments.push(record);
+  return record;
+}
+
+export function seedOnTheWayNotification(
+  values: Partial<TestOnTheWayNotificationRecord> &
+    Pick<TestOnTheWayNotificationRecord, "companyId" | "jobId" | "technicianId" | "customerId">
+): TestOnTheWayNotificationRecord {
+  const record = createOnTheWayNotificationRecord(values);
+  state.onTheWayNotifications.push(record);
+  return record;
+}
+
+export function seedBookingRequest(
+  values: Partial<TestBookingRequestRecord> &
+    Pick<
+      TestBookingRequestRecord,
+      "companyId" | "firstName" | "lastName" | "phone" | "addressLine1" | "city" | "state" | "zip"
+    >
+): TestBookingRequestRecord {
+  const record = createBookingRequestRecord(values);
+  state.bookingRequests.push(record);
+  return record;
+}
+
+export function seedBookingSettings(
+  values: Partial<TestBookingSettingsRecord> & Pick<TestBookingSettingsRecord, "companyId">
+): TestBookingSettingsRecord {
+  const record = createBookingSettingsRecord(values);
+  state.bookingSettings.push(record);
   return record;
 }
 

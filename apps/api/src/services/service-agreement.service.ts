@@ -32,6 +32,8 @@ import {
   type ListAgreementsQuery,
   type PaginatedResult,
   type RecordVisitInput,
+  type RetryAgreementPaymentResult,
+  type ServiceAgreementStripeStatus,
   type ServiceAgreementBillingCycle,
   type UpdateAgreementInput
 } from "@fsm/types";
@@ -40,6 +42,8 @@ import {
   cancelServiceAgreementSubscription,
   createServiceAgreementSubscription,
   createStripeCustomer,
+  pauseServiceAgreementSubscription,
+  retrieveServiceAgreementSubscriptionSnapshot,
   updateServiceAgreementSubscriptionCancelAtPeriodEnd
 } from "../lib/stripe.js";
 
@@ -63,8 +67,29 @@ const DEFAULT_LIST_PAGE = 1;
 const DEFAULT_LIST_LIMIT = 25;
 const MAX_LIST_LIMIT = 100;
 const MAX_RESULT_WINDOW = 10_000;
+const DEFAULT_CALENDAR_TIME_ZONE = "America/Chicago";
 
 const STATUS_ORDER: MaintenancePlan["status"][] = ["active", "paused", "expired", "cancelled"];
+const STRIPE_STATUS_VALUES: ServiceAgreementStripeStatus[] = [
+  "active",
+  "canceled",
+  "incomplete",
+  "incomplete_expired",
+  "past_due",
+  "paused",
+  "trialing",
+  "unpaid"
+];
+
+interface AgreementStripeSnapshot {
+  stripeStatus: ServiceAgreementStripeStatus | null;
+  stripeCurrentPeriodEnd: Date | null;
+  stripeCancelAtPeriodEnd: boolean;
+  paymentMethodLabel: string | null;
+  retryPaymentUrl: string | null;
+  latestInvoiceAmountDue: string | null;
+  latestInvoiceDueDate: string | null;
+}
 
 function buildActorName(firstName: string, lastName: string): string {
   return `${firstName} ${lastName}`.trim();
@@ -76,6 +101,11 @@ function normalizeOptionalString(value: string | undefined): string | null | und
   }
 
   const trimmedValue = value.trim();
+  return trimmedValue.length > 0 ? trimmedValue : null;
+}
+
+function normalizeSearchValue(value: string | undefined): string | null {
+  const trimmedValue = value?.trim().toLowerCase() ?? "";
   return trimmedValue.length > 0 ? trimmedValue : null;
 }
 
@@ -108,11 +138,14 @@ function formatDateOnly(value: Date): string {
 }
 
 function formatCurrentLocalDateOnly(value: Date): string {
-  const year = value.getFullYear();
-  const month = String(value.getMonth() + 1).padStart(2, "0");
-  const day = String(value.getDate()).padStart(2, "0");
+  const formatter = new Intl.DateTimeFormat("en-CA", {
+    timeZone: DEFAULT_CALENDAR_TIME_ZONE,
+    year: "numeric",
+    month: "2-digit",
+    day: "2-digit"
+  });
 
-  return `${year}-${month}-${day}`;
+  return formatter.format(value);
 }
 
 function compareNullableDateStrings(
@@ -135,6 +168,60 @@ function compareNullableDateStrings(
   return sortOrder === "asc"
     ? parseDateOnly(left).getTime() - parseDateOnly(right).getTime()
     : parseDateOnly(right).getTime() - parseDateOnly(left).getTime();
+}
+
+function toStripeStatus(value: string | null | undefined): ServiceAgreementStripeStatus | null {
+  if (!value) {
+    return null;
+  }
+
+  return STRIPE_STATUS_VALUES.includes(value as ServiceAgreementStripeStatus)
+    ? (value as ServiceAgreementStripeStatus)
+    : null;
+}
+
+function buildFallbackStripeSnapshot(plan: MaintenancePlanRow): AgreementStripeSnapshot {
+  return {
+    stripeStatus: null,
+    stripeCurrentPeriodEnd: plan.stripeCurrentPeriodEnd,
+    stripeCancelAtPeriodEnd: plan.stripeCancelAtPeriodEnd ?? false,
+    paymentMethodLabel: null,
+    retryPaymentUrl: null,
+    latestInvoiceAmountDue: null,
+    latestInvoiceDueDate: null
+  };
+}
+
+async function loadAgreementStripeSnapshot(plan: MaintenancePlanRow): Promise<AgreementStripeSnapshot> {
+  if (!plan.stripeSubscriptionId) {
+    return buildFallbackStripeSnapshot(plan);
+  }
+
+  try {
+    const snapshot = await retrieveServiceAgreementSubscriptionSnapshot(plan.stripeSubscriptionId);
+
+    return {
+      stripeStatus: toStripeStatus(snapshot.status),
+      stripeCurrentPeriodEnd: snapshot.currentPeriodEnd,
+      stripeCancelAtPeriodEnd: snapshot.cancelAtPeriodEnd,
+      paymentMethodLabel: snapshot.paymentMethodLabel,
+      retryPaymentUrl: snapshot.retryPaymentUrl,
+      latestInvoiceAmountDue: snapshot.latestInvoiceAmountDue,
+      latestInvoiceDueDate: snapshot.latestInvoiceDueDate
+    };
+  } catch (error: unknown) {
+    logger.error(
+      {
+        err: error,
+        companyId: plan.companyId,
+        agreementId: plan.id,
+        stripeSubscriptionId: plan.stripeSubscriptionId
+      },
+      "Failed to load Stripe billing snapshot for service agreement"
+    );
+
+    return buildFallbackStripeSnapshot(plan);
+  }
 }
 
 export function computeNextServiceDate(
@@ -483,7 +570,29 @@ async function loadAssetsForPlan(
   return assetRecords;
 }
 
-function toAgreementListItem(plan: MaintenancePlanRow, customer: CustomerRow): AgreementListItem {
+function matchesAgreementSearch(
+  plan: MaintenancePlanRow,
+  customer: CustomerRow | undefined,
+  template: ServiceAgreementTemplateRow | undefined,
+  search: string
+): boolean {
+  const customerName = customer
+    ? `${customer.firstName} ${customer.lastName} ${customer.displayName ?? ""}`.toLowerCase()
+    : "";
+  const templateName = template?.name.toLowerCase() ?? "";
+
+  return (
+    plan.name.toLowerCase().includes(search) ||
+    customerName.includes(search) ||
+    templateName.includes(search)
+  );
+}
+
+function toAgreementListItem(
+  plan: MaintenancePlanRow,
+  customer: CustomerRow,
+  stripeSnapshot: AgreementStripeSnapshot
+): AgreementListItem {
   return {
     id: plan.id,
     name: plan.name,
@@ -493,6 +602,9 @@ function toAgreementListItem(plan: MaintenancePlanRow, customer: CustomerRow): A
     lastServiceDate: plan.lastServiceDate,
     price: plan.price,
     billingCycle: plan.price ? (plan.billingCycle as AgreementListItem["billingCycle"]) : null,
+    stripeStatus: stripeSnapshot.stripeStatus,
+    stripeCurrentPeriodEnd: stripeSnapshot.stripeCurrentPeriodEnd,
+    stripeCancelAtPeriodEnd: stripeSnapshot.stripeCancelAtPeriodEnd,
     customer: {
       id: customer.id,
       firstName: customer.firstName,
@@ -508,7 +620,8 @@ function toAgreementDetail(
   property: PropertyRow | null,
   template: ServiceAgreementTemplateRow | null,
   assetRecords: AssetRow[],
-  visits: MaintenanceVisitRow[]
+  visits: MaintenanceVisitRow[],
+  stripeSnapshot: AgreementStripeSnapshot
 ): AgreementDetail {
   return {
     id: plan.id,
@@ -522,8 +635,13 @@ function toAgreementDetail(
     lastServiceDate: plan.lastServiceDate,
     price: plan.price,
     billingCycle: plan.price ? (plan.billingCycle as AgreementDetail["billingCycle"]) : null,
-    stripeCancelAtPeriodEnd: plan.stripeCancelAtPeriodEnd ?? false,
-    stripeCurrentPeriodEnd: plan.stripeCurrentPeriodEnd,
+    stripeStatus: stripeSnapshot.stripeStatus,
+    stripeCancelAtPeriodEnd: stripeSnapshot.stripeCancelAtPeriodEnd,
+    stripeCurrentPeriodEnd: stripeSnapshot.stripeCurrentPeriodEnd,
+    paymentMethodLabel: stripeSnapshot.paymentMethodLabel,
+    retryPaymentUrl: stripeSnapshot.retryPaymentUrl,
+    latestInvoiceAmountDue: stripeSnapshot.latestInvoiceAmountDue,
+    latestInvoiceDueDate: stripeSnapshot.latestInvoiceDueDate,
     includedServices: plan.includedServices ?? [],
     notes: plan.notes,
     customer: {
@@ -579,13 +697,30 @@ export async function listAgreements(
   const limit = Math.min(query.limit ?? DEFAULT_LIST_LIMIT, MAX_LIST_LIMIT);
   const sortBy = query.sortBy ?? "nextServiceDate";
   const sortOrder = query.sortOrder ?? "asc";
+  const search = normalizeSearchValue(query.search);
   const expiresAfter = query.expiresAfter ? parseDateOnly(query.expiresAfter) : null;
   const expiresBefore = query.expiresBefore ? parseDateOnly(query.expiresBefore) : null;
-  const rows = await db
-    .select()
-    .from(maintenancePlans)
-    .where(and(eq(maintenancePlans.companyId, companyId), isNull(maintenancePlans.deletedAt)))
-    .limit(MAX_RESULT_WINDOW);
+  const [rows, companyCustomers, companyTemplates] = await Promise.all([
+    db
+      .select()
+      .from(maintenancePlans)
+      .where(and(eq(maintenancePlans.companyId, companyId), isNull(maintenancePlans.deletedAt)))
+      .limit(MAX_RESULT_WINDOW),
+    db
+      .select()
+      .from(customers)
+      .where(and(eq(customers.companyId, companyId), isNull(customers.deletedAt)))
+      .limit(MAX_RESULT_WINDOW),
+    search
+      ? db
+          .select()
+          .from(serviceAgreementTemplates)
+          .where(and(eq(serviceAgreementTemplates.companyId, companyId), isNull(serviceAgreementTemplates.deletedAt)))
+          .limit(MAX_RESULT_WINDOW)
+      : Promise.resolve([])
+  ]);
+  const customerMap = new Map(companyCustomers.map((customer) => [customer.id, customer]));
+  const templateMap = new Map(companyTemplates.map((template) => [template.id, template]));
 
   const filteredRows = rows.filter((row) => {
     if (query.status && row.status !== query.status) {
@@ -612,6 +747,15 @@ export async function listAgreements(
       }
     }
 
+    if (search && !matchesAgreementSearch(
+      row,
+      customerMap.get(row.customerId),
+      row.serviceAgreementTemplateId ? templateMap.get(row.serviceAgreementTemplateId) : undefined,
+      search
+    )) {
+      return false;
+    }
+
     return true;
   });
 
@@ -631,26 +775,23 @@ export async function listAgreements(
     return compareNullableDateStrings(left.nextServiceDate, right.nextServiceDate, sortOrder);
   });
 
-  const customerIds = [...new Set(sortedRows.map((row) => row.customerId))];
-  const companyCustomers = customerIds.length === 0
-    ? []
-    : await db
-        .select()
-        .from(customers)
-        .where(and(eq(customers.companyId, companyId), isNull(customers.deletedAt)))
-        .limit(MAX_RESULT_WINDOW);
-  const customerMap = new Map(companyCustomers.map((customer) => [customer.id, customer]));
   const total = sortedRows.length;
   const offset = (page - 1) * limit;
-  const data = sortedRows.slice(offset, offset + limit).flatMap((row) => {
-    const customer = customerMap.get(row.customerId);
+  const pagedRows = sortedRows.slice(offset, offset + limit);
+  const data = (
+    await Promise.all(
+      pagedRows.map(async (row) => {
+        const customer = customerMap.get(row.customerId);
 
-    if (!customer) {
-      return [];
-    }
+        if (!customer) {
+          return null;
+        }
 
-    return [toAgreementListItem(row, customer)];
-  });
+        const stripeSnapshot = await loadAgreementStripeSnapshot(row);
+        return toAgreementListItem(row, customer, stripeSnapshot);
+      })
+    )
+  ).flatMap((agreement) => (agreement ? [agreement] : []));
 
   return {
     data,
@@ -663,17 +804,18 @@ export async function listAgreements(
 
 export async function getAgreement(companyId: string, agreementId: string): Promise<AgreementDetail> {
   const plan = await getAgreementRecord(companyId, agreementId, db);
-  const [customer, property, template, visits] = await Promise.all([
+  const [customer, property, template, visits, stripeSnapshot] = await Promise.all([
     getCustomerRecord(companyId, plan.customerId, db),
     plan.propertyId ? getPropertyRecord(companyId, plan.propertyId, db) : Promise.resolve(null),
     plan.serviceAgreementTemplateId
       ? getTemplateRecord(companyId, plan.serviceAgreementTemplateId, db).catch(() => null)
       : Promise.resolve(null),
-    listPlanVisits(companyId, plan.id, db)
+    listPlanVisits(companyId, plan.id, db),
+    loadAgreementStripeSnapshot(plan)
   ]);
   const assetRecords = await loadAssetsForPlan(companyId, plan.customerId, plan.propertyId, plan.assetIds ?? [], db);
 
-  return toAgreementDetail(plan, customer, property, template, assetRecords, visits);
+  return toAgreementDetail(plan, customer, property, template, assetRecords, visits, stripeSnapshot);
 }
 
 export async function createAgreement(
@@ -934,11 +1076,14 @@ export async function cancelAgreement(
 
   const cancelledAgreement = await db.transaction(async (tx) => {
     const actor = await getActor(companyId, actorId, tx);
-    const updatedPlans = await tx
+      const updatedPlans = await tx
         .update(maintenancePlans)
         .set({
           ...(shouldCancelImmediately
-            ? { status: "cancelled", endDate: formatCurrentLocalDateOnly(new Date()) }
+            ? {
+                status: "cancelled",
+                endDate: formatDateOnly(stripeCurrentPeriodEnd ?? new Date())
+              }
             : {}),
           ...(existingAgreement.stripeSubscriptionId ? { stripeCancelAtPeriodEnd } : { stripeCancelAtPeriodEnd: false }),
           ...(stripeCurrentPeriodEnd ? { stripeCurrentPeriodEnd } : {}),
@@ -1002,6 +1147,89 @@ export async function cancelAgreement(
   }
 
   return toMaintenancePlan(cancelledAgreement);
+}
+
+export async function pauseAgreement(
+  companyId: string,
+  actorId: string,
+  agreementId: string
+): Promise<MaintenancePlan> {
+  const existingAgreement = await getAgreementRecord(companyId, agreementId, db);
+
+  if (existingAgreement.status !== "active") {
+    throw new AppError(ErrorCode.CONFLICT, "Only active service agreements can be paused");
+  }
+
+  let stripeCurrentPeriodEnd = existingAgreement.stripeCurrentPeriodEnd;
+  let stripeCancelAtPeriodEnd = existingAgreement.stripeCancelAtPeriodEnd ?? false;
+
+  if (existingAgreement.stripeSubscriptionId) {
+    const subscription = await pauseServiceAgreementSubscription(existingAgreement.stripeSubscriptionId);
+    stripeCurrentPeriodEnd = subscription.currentPeriodEnd;
+    stripeCancelAtPeriodEnd = subscription.cancelAtPeriodEnd;
+  }
+
+  const pausedAgreement = await db.transaction(async (tx) => {
+    const actor = await getActor(companyId, actorId, tx);
+    const updatedPlans = await tx
+      .update(maintenancePlans)
+      .set({
+        status: "paused",
+        ...(stripeCurrentPeriodEnd ? { stripeCurrentPeriodEnd } : {}),
+        stripeCancelAtPeriodEnd,
+        updatedAt: new Date()
+      })
+      .where(
+        and(
+          eq(maintenancePlans.companyId, companyId),
+          eq(maintenancePlans.id, agreementId),
+          isNull(maintenancePlans.deletedAt)
+        )
+      )
+      .returning();
+    const agreement = updatedPlans[0];
+
+    if (!agreement) {
+      throw new AppError(ErrorCode.NOT_FOUND, "Service agreement not found");
+    }
+
+    await emitAgreementEvent(tx, {
+      agreement,
+      actorId: actor.id,
+      actorName: buildActorName(actor.firstName, actor.lastName),
+      eventType: "maintenance_plan.updated",
+      summary: `Maintenance plan ${agreement.name} paused`,
+      payload: {
+        status: "paused",
+        stripeSubscriptionId: agreement.stripeSubscriptionId
+      }
+    });
+
+    return agreement;
+  });
+
+  return toMaintenancePlan(pausedAgreement);
+}
+
+export async function retryAgreementPayment(
+  companyId: string,
+  agreementId: string
+): Promise<RetryAgreementPaymentResult> {
+  const agreement = await getAgreementRecord(companyId, agreementId, db);
+
+  if (!agreement.stripeSubscriptionId) {
+    throw new AppError(ErrorCode.CONFLICT, "Retry payment is unavailable for this agreement");
+  }
+
+  const stripeSnapshot = await retrieveServiceAgreementSubscriptionSnapshot(agreement.stripeSubscriptionId);
+
+  if (!stripeSnapshot.retryPaymentUrl) {
+    throw new AppError(ErrorCode.CONFLICT, "No retry payment link is currently available");
+  }
+
+  return {
+    retryPaymentUrl: stripeSnapshot.retryPaymentUrl
+  };
 }
 
 export async function recordVisit(

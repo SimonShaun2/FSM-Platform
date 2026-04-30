@@ -46,8 +46,12 @@ function getMetadataString(
   return typeof value === "string" && value.length > 0 ? value : null;
 }
 
-function getSubscriptionStatus(status: Stripe.Subscription.Status): MaintenancePlanRow["status"] {
-  switch (status) {
+function getSubscriptionStatus(subscription: Stripe.Subscription): MaintenancePlanRow["status"] {
+  if (subscription.pause_collection) {
+    return "paused";
+  }
+
+  switch (subscription.status) {
     case "active":
     case "past_due":
     case "trialing":
@@ -171,7 +175,7 @@ export async function handleSubscriptionUpdated(
   const periodEnd = subscription.current_period_end
     ? new Date(subscription.current_period_end * 1000)
     : null;
-  const nextStatus = getSubscriptionStatus(subscription.status);
+  const nextStatus = getSubscriptionStatus(subscription);
   const periodStartChanged =
     !!periodStart &&
     (!plan.stripeCurrentPeriodStart || plan.stripeCurrentPeriodStart.getTime() !== periodStart.getTime());

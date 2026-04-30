@@ -1,11 +1,11 @@
-import { ScaffoldPage } from "@/src/components/layout/ScaffoldPage";
+import { ProductCatalogClient } from "@/src/components/products/ProductCatalogClient";
 
-export default function ProductDetailPage() {
-  return (
-    <ScaffoldPage
-      title="Product Detail"
-      subtitle="Product performance, pricing, and usage history land here next."
-      ticket="022"
-    />
-  );
+export default async function ProductDetailPage({
+  params
+}: {
+  params: Promise<{ id: string }>;
+}) {
+  const { id } = await params;
+
+  return <ProductCatalogClient editor={{ mode: "edit", productId: id }} />;
 }

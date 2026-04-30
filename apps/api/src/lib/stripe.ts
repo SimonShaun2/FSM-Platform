@@ -63,6 +63,14 @@ export interface StripeSubscriptionResult {
   cancelAtPeriodEnd: boolean;
 }
 
+export interface ServiceAgreementSubscriptionSnapshotResult extends StripeSubscriptionResult {
+  status: Stripe.Subscription.Status;
+  paymentMethodLabel: string | null;
+  retryPaymentUrl: string | null;
+  latestInvoiceAmountDue: string | null;
+  latestInvoiceDueDate: string | null;
+}
+
 export interface StripeConnectAccountSnapshot {
   id: string;
   chargesEnabled: boolean;
@@ -75,6 +83,14 @@ function toCents(value: string): number {
     .mul(100)
     .toDecimalPlaces(0, Decimal.ROUND_HALF_UP)
     .toNumber();
+}
+
+function centsToCurrencyString(value: number | null | undefined): string | null {
+  if (value === null || value === undefined) {
+    return null;
+  }
+
+  return new Decimal(value).div(100).toFixed(2);
 }
 
 function buildHostedDescription(item: InvoiceCheckoutLineItem): string | undefined {
@@ -98,6 +114,29 @@ function toSubscriptionResult(subscription: Stripe.Subscription): StripeSubscrip
       : null,
     cancelAtPeriodEnd: subscription.cancel_at_period_end
   };
+}
+
+function isExpandedPaymentMethod(value: unknown): value is Stripe.PaymentMethod {
+  return typeof value === "object" && value !== null && "object" in value && value.object === "payment_method";
+}
+
+function getExpandedInvoice(value: unknown): Stripe.Invoice | null {
+  return typeof value === "object" && value !== null && "object" in value && value.object === "invoice"
+    ? (value as Stripe.Invoice)
+    : null;
+}
+
+function buildPaymentMethodLabel(paymentMethod: Stripe.PaymentMethod | null): string | null {
+  if (!paymentMethod || paymentMethod.type !== "card" || !paymentMethod.card) {
+    return null;
+  }
+
+  const brand = paymentMethod.card.brand
+    .split("_")
+    .map((part) => part.charAt(0).toUpperCase() + part.slice(1))
+    .join(" ");
+
+  return `${brand} ending in ${paymentMethod.card.last4}`;
 }
 
 export async function createInvoiceCheckoutSession(
@@ -243,6 +282,45 @@ export async function cancelServiceAgreementSubscription(
 ): Promise<StripeSubscriptionResult> {
   const subscription = await stripe.subscriptions.cancel(subscriptionId);
   return toSubscriptionResult(subscription);
+}
+
+export async function pauseServiceAgreementSubscription(
+  subscriptionId: string
+): Promise<StripeSubscriptionResult> {
+  const subscription = await stripe.subscriptions.update(subscriptionId, {
+    pause_collection: {
+      behavior: "void"
+    }
+  });
+
+  return toSubscriptionResult(subscription);
+}
+
+export async function retrieveServiceAgreementSubscriptionSnapshot(
+  subscriptionId: string
+): Promise<ServiceAgreementSubscriptionSnapshotResult> {
+  const subscription = await stripe.subscriptions.retrieve(subscriptionId, {
+    expand: ["default_payment_method", "latest_invoice", "latest_invoice.default_payment_method"]
+  });
+  const latestInvoice = getExpandedInvoice(subscription.latest_invoice);
+  const subscriptionPaymentMethod = isExpandedPaymentMethod(subscription.default_payment_method)
+    ? subscription.default_payment_method
+    : null;
+  const invoicePaymentMethod = latestInvoice && isExpandedPaymentMethod(latestInvoice.default_payment_method)
+    ? latestInvoice.default_payment_method
+    : null;
+  const paymentMethodLabel = buildPaymentMethodLabel(subscriptionPaymentMethod ?? invoicePaymentMethod);
+
+  return {
+    ...toSubscriptionResult(subscription),
+    status: subscription.status,
+    paymentMethodLabel,
+    retryPaymentUrl: latestInvoice?.hosted_invoice_url ?? null,
+    latestInvoiceAmountDue: centsToCurrencyString(latestInvoice?.amount_due),
+    latestInvoiceDueDate: latestInvoice?.due_date
+      ? new Date(latestInvoice.due_date * 1000).toISOString().slice(0, 10)
+      : null
+  };
 }
 
 export async function createExpressConnectedAccount(companyId: string): Promise<{ id: string }> {

@@ -1,11 +1,5 @@
-import { ScaffoldPage } from "@/src/components/layout/ScaffoldPage";
+import { ProductCatalogClient } from "@/src/components/products/ProductCatalogClient";
 
 export default function NewProductPage() {
-  return (
-    <ScaffoldPage
-      title="New Product"
-      subtitle="Catalog item creation plugs into this shell route in the next product ticket."
-      ticket="022"
-    />
-  );
+  return <ProductCatalogClient editor={{ mode: "create" }} />;
 }

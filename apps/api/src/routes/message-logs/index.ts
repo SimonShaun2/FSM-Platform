@@ -1,12 +1,24 @@
 import type { FastifyPluginAsync } from "fastify";
 
-import { listMessageLogsHandler } from "./handlers.js";
+import { listMessageConversationsHandler, listMessageLogsHandler } from "./handlers.js";
 import {
+  listMessageConversationsRouteSchema,
+  listMessageConversationsValidation,
   listMessageLogsRouteSchema,
   listMessageLogsValidation
 } from "./schemas.js";
 
 const messageLogRoutes: FastifyPluginAsync = async (fastify) => {
+  fastify.get(
+    "/message-logs/conversations",
+    {
+      preValidation: [listMessageConversationsValidation],
+      preHandler: [fastify.authenticate],
+      schema: listMessageConversationsRouteSchema
+    },
+    listMessageConversationsHandler
+  );
+
   fastify.get(
     "/message-logs",
     {

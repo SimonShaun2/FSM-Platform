@@ -7,5 +7,5 @@ export default async function MobileJobTasksPage({
 }) {
   const { id } = await params;
 
-  redirect(`/mobile/jobs/${id}`);
+  redirect(`/mobile/jobs/${id}?tab=tasks`);
 }

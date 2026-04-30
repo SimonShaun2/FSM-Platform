@@ -2,6 +2,7 @@ import { and, eq, isNull } from "drizzle-orm";
 import { Decimal } from "decimal.js";
 
 import {
+  customers,
   db,
   emitEventWithExecutor,
   jobProducts,
@@ -29,6 +30,7 @@ const MAX_RESULT_WINDOW = 10_000;
 type ProductRow = typeof productCatalog.$inferSelect;
 type JobRow = typeof jobs.$inferSelect;
 type JobProductRow = typeof jobProducts.$inferSelect;
+type CustomerRow = typeof customers.$inferSelect;
 type UserRow = typeof users.$inferSelect;
 type SelectExecutor = Pick<typeof db, "select">;
 type TransactionExecutor = Pick<typeof db, "select" | "insert" | "update">;
@@ -38,6 +40,37 @@ type NormalizedListProductsQuery = {
   search?: string;
   page: number;
   limit: number;
+};
+
+export interface ProductRecentJobUsage {
+  jobId: string;
+  jobNumber: string;
+  customerName: string;
+  usedAt: Date;
+  totalRevenue: string;
+}
+
+export interface ProductUsageStats {
+  usedOnJobs: number;
+  totalRevenue: string;
+  averageRevenuePerJob: string;
+  lastUsedAt: Date | null;
+  recentJobs: ProductRecentJobUsage[];
+}
+
+type ProductUsageAccumulator = {
+  totalRevenue: Decimal;
+  jobs: Map<
+    string,
+    {
+      jobId: string;
+      jobNumber: string;
+      customerName: string;
+      usedAt: Date;
+      totalRevenue: Decimal;
+    }
+  >;
+  lastUsedAt: Date | null;
 };
 
 function normalizeOptionalString(value: string | undefined): string | null | undefined {
@@ -79,6 +112,21 @@ function normalizeMoney(value: number | undefined): string | undefined {
 
 function buildActorName(firstName: string, lastName: string): string {
   return `${firstName} ${lastName}`.trim();
+}
+
+function buildCustomerName(customer: CustomerRow | undefined): string {
+  if (!customer) {
+    return "Unknown customer";
+  }
+
+  const displayName = customer.displayName?.trim();
+
+  if (displayName) {
+    return displayName;
+  }
+
+  const fallbackName = `${customer.firstName} ${customer.lastName}`.trim();
+  return fallbackName || "Unknown customer";
 }
 
 function normalizeListProductsQuery(query: ListProductsQuery): NormalizedListProductsQuery {
@@ -157,6 +205,14 @@ async function listCompanyProducts(companyId: string, executor: SelectExecutor):
     .limit(MAX_RESULT_WINDOW);
 }
 
+async function listCompanyCustomers(companyId: string, executor: SelectExecutor): Promise<CustomerRow[]> {
+  return executor
+    .select()
+    .from(customers)
+    .where(and(eq(customers.companyId, companyId), isNull(customers.deletedAt)))
+    .limit(MAX_RESULT_WINDOW);
+}
+
 async function getProductRow(
   companyId: string,
   productId: string,
@@ -222,6 +278,115 @@ async function listCompanyJobs(companyId: string, executor: SelectExecutor): Pro
     .from(jobs)
     .where(and(eq(jobs.companyId, companyId), isNull(jobs.deletedAt)))
     .limit(MAX_RESULT_WINDOW);
+}
+
+async function listCompanyJobProducts(companyId: string, executor: SelectExecutor): Promise<JobProductRow[]> {
+  return executor
+    .select()
+    .from(jobProducts)
+    .where(and(eq(jobProducts.companyId, companyId), isNull(jobProducts.deletedAt)))
+    .limit(MAX_RESULT_WINDOW);
+}
+
+function buildEmptyUsageStats(): ProductUsageStats {
+  return {
+    usedOnJobs: 0,
+    totalRevenue: "0.00",
+    averageRevenuePerJob: "0.00",
+    lastUsedAt: null,
+    recentJobs: []
+  };
+}
+
+async function buildProductUsageStatsMap(
+  companyId: string,
+  executor: SelectExecutor
+): Promise<Map<string, ProductUsageStats>> {
+  const [companyJobs, companyCustomers, companyJobProducts] = await Promise.all([
+    listCompanyJobs(companyId, executor),
+    listCompanyCustomers(companyId, executor),
+    listCompanyJobProducts(companyId, executor)
+  ]);
+
+  const jobsById = new Map(companyJobs.map((row) => [row.id, row]));
+  const customersById = new Map(companyCustomers.map((row) => [row.id, row]));
+  const usageByProductId = new Map<string, ProductUsageAccumulator>();
+
+  for (const row of companyJobProducts) {
+    if (!row.productCatalogId) {
+      continue;
+    }
+
+    const job = jobsById.get(row.jobId);
+
+    if (!job) {
+      continue;
+    }
+
+    const customer = customersById.get(job.customerId);
+    const revenue = new Decimal(row.total);
+    const usedAt = row.createdAt;
+    const usage =
+      usageByProductId.get(row.productCatalogId) ??
+      {
+        totalRevenue: new Decimal(0),
+        jobs: new Map(),
+        lastUsedAt: null
+      };
+
+    usage.totalRevenue = usage.totalRevenue.add(revenue);
+
+    if (!usage.lastUsedAt || usedAt.getTime() > usage.lastUsedAt.getTime()) {
+      usage.lastUsedAt = usedAt;
+    }
+
+    const existingJobUsage = usage.jobs.get(job.id);
+
+    if (existingJobUsage) {
+      existingJobUsage.totalRevenue = existingJobUsage.totalRevenue.add(revenue);
+
+      if (usedAt.getTime() > existingJobUsage.usedAt.getTime()) {
+        existingJobUsage.usedAt = usedAt;
+      }
+    } else {
+      usage.jobs.set(job.id, {
+        jobId: job.id,
+        jobNumber: job.jobNumber,
+        customerName: buildCustomerName(customer),
+        usedAt,
+        totalRevenue: revenue
+      });
+    }
+
+    usageByProductId.set(row.productCatalogId, usage);
+  }
+
+  const usageStatsByProductId = new Map<string, ProductUsageStats>();
+
+  for (const [productId, usage] of usageByProductId.entries()) {
+    const usedOnJobs = usage.jobs.size;
+    const recentJobs = [...usage.jobs.values()]
+      .sort((left, right) => right.usedAt.getTime() - left.usedAt.getTime())
+      .slice(0, 4)
+      .map((jobUsage) => ({
+        jobId: jobUsage.jobId,
+        jobNumber: jobUsage.jobNumber,
+        customerName: jobUsage.customerName,
+        usedAt: jobUsage.usedAt,
+        totalRevenue: jobUsage.totalRevenue.toFixed(2)
+      }));
+
+    usageStatsByProductId.set(productId, {
+      usedOnJobs,
+      totalRevenue: usage.totalRevenue.toFixed(2),
+      averageRevenuePerJob:
+        usedOnJobs > 0 ? usage.totalRevenue.div(usedOnJobs).toFixed(2) : "0.00",
+      lastUsedAt: usage.lastUsedAt,
+      recentJobs
+    });
+  }
+
+  return usageStatsByProductId;
 }
 
 export async function listProducts(
@@ -308,6 +473,24 @@ export async function searchProducts(companyId: string, q: string): Promise<Prod
 export async function getProduct(companyId: string, productId: string): Promise<Product> {
   const row = await getProductRow(companyId, productId, db);
   return toProduct(row);
+}
+
+export async function listProductUsageCounts(companyId: string): Promise<Map<string, number>> {
+  const usageStatsByProductId = await buildProductUsageStatsMap(companyId, db);
+
+  return new Map(
+    [...usageStatsByProductId.entries()].map(([productId, stats]) => [productId, stats.usedOnJobs])
+  );
+}
+
+export async function getProductUsageStats(
+  companyId: string,
+  productId: string
+): Promise<ProductUsageStats> {
+  await getProductRow(companyId, productId, db);
+
+  const usageStatsByProductId = await buildProductUsageStatsMap(companyId, db);
+  return usageStatsByProductId.get(productId) ?? buildEmptyUsageStats();
 }
 
 export async function createProduct(

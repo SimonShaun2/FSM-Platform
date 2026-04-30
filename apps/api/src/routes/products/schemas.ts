@@ -85,6 +85,45 @@ const productSchema = {
   }
 } as const;
 
+const productListItemSchema = {
+  type: "object",
+  additionalProperties: false,
+  required: [...productSchema.required, "usedOnJobs"],
+  properties: {
+    ...productSchema.properties,
+    usedOnJobs: { type: "integer" }
+  }
+} as const;
+
+const productRecentJobUsageSchema = {
+  type: "object",
+  additionalProperties: false,
+  required: ["jobId", "jobNumber", "customerName", "usedAt", "totalRevenue"],
+  properties: {
+    jobId: { type: "string" },
+    jobNumber: { type: "string" },
+    customerName: { type: "string" },
+    usedAt: { type: "string", format: "date-time" },
+    totalRevenue: { type: "string" }
+  }
+} as const;
+
+const productUsageStatsSchema = {
+  type: "object",
+  additionalProperties: false,
+  required: ["usedOnJobs", "totalRevenue", "averageRevenuePerJob", "lastUsedAt", "recentJobs"],
+  properties: {
+    usedOnJobs: { type: "integer" },
+    totalRevenue: { type: "string" },
+    averageRevenuePerJob: { type: "string" },
+    lastUsedAt: nullableDateTimeSchema,
+    recentJobs: {
+      type: "array",
+      items: productRecentJobUsageSchema
+    }
+  }
+} as const;
+
 function buildUpdateSchema<T extends z.ZodRawShape>(shape: T) {
   return z
     .object(shape)
@@ -188,7 +227,7 @@ export const listProductsSchema = {
       properties: {
         data: {
           type: "array",
-          items: productSchema
+          items: productListItemSchema
         },
         total: { type: "integer" },
         page: { type: "integer" },
@@ -244,9 +283,10 @@ export const getProductSchema = {
     200: {
       type: "object",
       additionalProperties: false,
-      required: ["product"],
+      required: ["product", "usageStats"],
       properties: {
-        product: productSchema
+        product: productSchema,
+        usageStats: productUsageStatsSchema
       }
     },
     400: errorResponseSchema,

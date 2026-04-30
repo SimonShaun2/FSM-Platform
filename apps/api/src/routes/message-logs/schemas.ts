@@ -81,10 +81,22 @@ export const ListMessageLogsQuerySchema = z
   })
   .strict();
 
+export const ListMessageConversationsQuerySchema = z
+  .object({
+    page: z.coerce.number().int().min(1).default(1),
+    limit: z.coerce.number().int().min(1).max(100).default(25)
+  })
+  .strict();
+
 export type ListMessageLogsQueryInput = z.infer<typeof ListMessageLogsQuerySchema>;
+export type ListMessageConversationsQueryInput = z.infer<typeof ListMessageConversationsQuerySchema>;
 
 export const listMessageLogsValidation = withZodValidation({
   query: ListMessageLogsQuerySchema
+});
+
+export const listMessageConversationsValidation = withZodValidation({
+  query: ListMessageConversationsQuerySchema
 });
 
 export const listMessageLogsRouteSchema = {
@@ -103,6 +115,55 @@ export const listMessageLogsRouteSchema = {
         page: { type: "integer" },
         limit: { type: "integer" },
         totalPages: { type: "integer" }
+      }
+    },
+    400: errorResponseSchema,
+    401: errorResponseSchema
+  }
+} as const;
+
+export const listMessageConversationsRouteSchema = {
+  tags: ["message-logs"],
+  response: {
+    200: {
+      type: "object",
+      additionalProperties: false,
+      required: ["data", "total", "page", "limit", "totalPages", "totalUnread"],
+      properties: {
+        data: {
+          type: "array",
+          items: {
+            type: "object",
+            additionalProperties: false,
+            required: [
+              "customerId",
+              "firstName",
+              "lastName",
+              "displayName",
+              "phone",
+              "lastMessagePreview",
+              "lastMessageAt",
+              "lastDirection",
+              "unreadCount"
+            ],
+            properties: {
+              customerId: { type: "string" },
+              firstName: { type: "string" },
+              lastName: { type: "string" },
+              displayName: nullableStringSchema,
+              phone: nullableStringSchema,
+              lastMessagePreview: { type: "string" },
+              lastMessageAt: { type: "string", format: "date-time" },
+              lastDirection: { type: "string" },
+              unreadCount: { type: "integer" }
+            }
+          }
+        },
+        total: { type: "integer" },
+        page: { type: "integer" },
+        limit: { type: "integer" },
+        totalPages: { type: "integer" },
+        totalUnread: { type: "integer" }
       }
     },
     400: errorResponseSchema,
