@@ -1,0 +1,1 @@
+ALTER TABLE "technicians" ADD COLUMN "available_days" text[] DEFAULT '{"mon","tue","wed","thu","fri"}';

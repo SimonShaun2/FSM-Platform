@@ -269,7 +269,17 @@ describe("auth and company routes", () => {
       .set("Authorization", `Bearer ${registerResponse.tokens.accessToken}`)
       .send({
         name: "Updated HVAC Co",
-        website: "https://example.com"
+        website: "https://example.com",
+        settings: {
+          tradingName: "Updated Trade Name",
+          currency: "USD",
+          notifications: {
+            bookingRequest: {
+              email: true,
+              sms: false
+            }
+          }
+        }
       });
     const validationResponse = await request(app.server)
       .patch("/api/v1/company")
@@ -285,6 +295,8 @@ describe("auth and company routes", () => {
 
     expect(successResponse.status).toBe(200);
     expect(successResponse.body.company.name).toBe("Updated HVAC Co");
+    expect(successResponse.body.company.settings.tradingName).toBe("Updated Trade Name");
+    expect(successResponse.body.company.settings.notifications.bookingRequest.email).toBe(true);
     expect(validationResponse.status).toBe(400);
     expect(unauthorizedResponse.status).toBe(401);
   });

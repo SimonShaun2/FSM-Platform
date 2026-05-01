@@ -1,11 +1,21 @@
-import { ScaffoldPage } from "@/src/components/layout/ScaffoldPage";
+import { cookies } from "next/headers";
+import { redirect } from "next/navigation";
 
-export default function ReportingPage() {
-  return (
-    <ScaffoldPage
-      title="Reporting"
-      subtitle="Simple revenue, conversion, and utilization reporting will land here next."
-      ticket="026"
-    />
-  );
+import { ReportingDashboardClient } from "@/src/components/reporting/ReportingDashboardClient";
+import { readServerAuthSession } from "@/src/lib/auth";
+import { getDefaultRouteForRole } from "@/src/lib/route-access";
+
+export default async function ReportingPage() {
+  const cookieStore = await cookies();
+  const session = readServerAuthSession(cookieStore);
+
+  if (!session) {
+    redirect("/login");
+  }
+
+  if (session.role !== "owner" && session.role !== "admin") {
+    redirect(getDefaultRouteForRole(session.role));
+  }
+
+  return <ReportingDashboardClient />;
 }

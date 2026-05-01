@@ -90,7 +90,11 @@ beforeEach(async () => {
     id: "acct_new_123",
     chargesEnabled: true,
     payoutsEnabled: true,
-    detailsSubmitted: true
+    detailsSubmitted: true,
+    accountName: "Acme HVAC Services",
+    payoutSchedule: "Daily",
+    lastPayoutAmount: "4800.00",
+    lastPayoutAt: "2026-04-29T15:00:00.000Z"
   });
   app = await buildAppModule.buildApp();
   await app.ready();
@@ -156,7 +160,11 @@ describe("stripe connect routes", () => {
       id: "acct_existing",
       chargesEnabled: true,
       payoutsEnabled: false,
-      detailsSubmitted: true
+      detailsSubmitted: true,
+      accountName: "Acme HVAC Services",
+      payoutSchedule: "Daily",
+      lastPayoutAmount: "4800.00",
+      lastPayoutAt: "2026-04-29T15:00:00.000Z"
     });
 
     const response = await request(app.server)
@@ -169,7 +177,12 @@ describe("stripe connect routes", () => {
       chargesEnabled: true,
       payoutsEnabled: false,
       detailsSubmitted: true,
-      stripeAccountId: "acct_existing"
+      stripeAccountId: "acct_existing",
+      accountName: "Acme HVAC Services",
+      payoutSchedule: "Daily",
+      lastPayoutAmount: "4800.00",
+      lastPayoutAt: "2026-04-29T15:00:00.000Z",
+      platformFeePercent: expect.any(Number)
     });
   });
 
@@ -206,7 +219,11 @@ describe("stripe connect routes", () => {
       id: "acct_pending",
       chargesEnabled: false,
       payoutsEnabled: false,
-      detailsSubmitted: true
+      detailsSubmitted: true,
+      accountName: "Acme HVAC Services",
+      payoutSchedule: "Daily",
+      lastPayoutAmount: "0.00",
+      lastPayoutAt: null
     });
 
     const pendingResponse = await request(app.server)

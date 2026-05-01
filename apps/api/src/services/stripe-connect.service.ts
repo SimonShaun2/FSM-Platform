@@ -1,6 +1,7 @@
 import { and, eq, isNull } from "drizzle-orm";
 
 import { companies, db, emitEventWithExecutor } from "@fsm/db";
+import { env } from "@fsm/config";
 import { AppError, ErrorCode, type StripeConnectStatus } from "@fsm/types";
 
 import {
@@ -60,7 +61,12 @@ function buildStripeConnectStatus(
       chargesEnabled: snapshot.chargesEnabled,
       payoutsEnabled: snapshot.payoutsEnabled,
       detailsSubmitted: snapshot.detailsSubmitted,
-      stripeAccountId: company.stripeAccountId
+      stripeAccountId: company.stripeAccountId,
+      accountName: snapshot.accountName,
+      payoutSchedule: snapshot.payoutSchedule,
+      lastPayoutAmount: snapshot.lastPayoutAmount,
+      lastPayoutAt: snapshot.lastPayoutAt,
+      platformFeePercent: env.STRIPE_PLATFORM_FEE_PERCENT
     };
   }
 
@@ -71,7 +77,8 @@ function buildStripeConnectStatus(
     chargesEnabled: storedSettings.chargesEnabled ?? false,
     payoutsEnabled: storedSettings.payoutsEnabled ?? false,
     detailsSubmitted: storedSettings.detailsSubmitted ?? false,
-    stripeAccountId: company.stripeAccountId
+    stripeAccountId: company.stripeAccountId,
+    platformFeePercent: env.STRIPE_PLATFORM_FEE_PERCENT
   };
 }
 

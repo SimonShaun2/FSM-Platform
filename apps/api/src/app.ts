@@ -9,6 +9,7 @@ import errorHandlerPlugin from "./plugins/error-handler.js";
 import requestLoggerPlugin from "./plugins/request-logger.js";
 import activityEventRoutes from "./routes/activity-events/index.js";
 import aiRoutes from "./routes/ai/index.js";
+import automationRuleRoutes from "./routes/automation-rules/index.js";
 import attachmentRoutes from "./routes/attachments/index.js";
 import authRoutes from "./routes/auth/index.js";
 import bookingRoutes from "./routes/booking/index.js";
@@ -47,6 +48,7 @@ export async function buildApp() {
 
   await app.register(activityEventRoutes, { prefix: "/api/v1" });
   await app.register(aiRoutes, { prefix: "/api/v1/ai" });
+  await app.register(automationRuleRoutes, { prefix: "/api/v1" });
   await app.register(authRoutes, { prefix: "/api/v1/auth" });
   await app.register(campaignRoutes, { prefix: "/api/v1" });
   await app.register(companyRoutes, { prefix: "/api/v1/company" });

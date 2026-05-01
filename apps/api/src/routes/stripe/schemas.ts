@@ -27,7 +27,20 @@ const stripeConnectStatusSchema = {
     chargesEnabled: { type: "boolean" },
     payoutsEnabled: { type: "boolean" },
     detailsSubmitted: { type: "boolean" },
-    stripeAccountId: { type: "string" }
+    stripeAccountId: { type: "string" },
+    accountName: {
+      anyOf: [{ type: "string" }, { type: "null" }]
+    },
+    payoutSchedule: {
+      anyOf: [{ type: "string" }, { type: "null" }]
+    },
+    lastPayoutAmount: {
+      anyOf: [{ type: "string" }, { type: "null" }]
+    },
+    lastPayoutAt: {
+      anyOf: [{ type: "string", format: "date-time" }, { type: "null" }]
+    },
+    platformFeePercent: { type: "number" }
   }
 } as const;
 

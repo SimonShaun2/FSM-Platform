@@ -231,6 +231,15 @@ describe("phase2 operations services", () => {
       channel: "sms"
     });
     const landing = await reviewRequestService.getPublicReviewLanding(reviewRequest.referenceId);
+    const clickedRequest = fakeDb
+      .getTestState()
+      .reviewRequests.find((item) => item.id === reviewRequest.id);
+    expect(landing.companyName).toBe("Acme HVAC");
+    expect(landing.technicianName).toBe("Taylor Tech");
+    expect(landing.status).toBe("clicked");
+    expect(clickedRequest?.status).toBe("clicked");
+    expect(clickedRequest?.clickedAt).not.toBeNull();
+    const resentRequest = await reviewRequestService.resendReviewRequest(company.id, reviewRequest.id);
     const completed = await reviewRequestService.completePublicReviewRequest(reviewRequest.referenceId, {
       rating: 5,
       reviewText: "Great visit"
@@ -245,8 +254,14 @@ describe("phase2 operations services", () => {
         referenceId: reviewRequest.referenceId
       })
     );
-    expect(landing.companyName).toBe("Acme HVAC");
-    expect(landing.technicianName).toBe("Taylor Tech");
+    expect(resentRequest.status).toBe("sent");
+    expect(addQueueJob).toHaveBeenLastCalledWith(
+      "send-review-request",
+      expect.objectContaining({
+        companyId: company.id,
+        reviewRequestId: reviewRequest.id
+      })
+    );
     expect(completed.status).toBe("completed");
     expect(fakeDb.getTestState().activityEvents.at(-1)?.eventType).toBe("review_request.completed");
   });

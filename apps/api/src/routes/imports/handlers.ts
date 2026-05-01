@@ -14,7 +14,8 @@ import {
 } from "../../services/import.service.js";
 import type {
   ConfirmMappingBody,
-  ImportSessionIdParams
+  ImportSessionIdParams,
+  StartImportBody
 } from "./schemas.js";
 
 function toImportSessionResponse(importSession: Awaited<ReturnType<typeof getImportSession>>) {
@@ -32,7 +33,8 @@ function toImportSessionResponse(importSession: Awaited<ReturnType<typeof getImp
     columnMappings: importSession.columnMappings,
     completedAt: importSession.completedAt?.toISOString() ?? null,
     rolledBackAt: importSession.rolledBackAt?.toISOString() ?? null,
-    createdAt: importSession.createdAt.toISOString()
+    createdAt: importSession.createdAt.toISOString(),
+    errorMessage: importSession.errorMessage ?? null
   };
 }
 
@@ -113,7 +115,13 @@ export async function startImportHandler(
   reply: FastifyReply
 ): Promise<FastifyReply> {
   const params = request.params as ImportSessionIdParams;
-  const importSession = await startImport(request.company.id, request.user.id, params.id);
+  const body = request.body as StartImportBody;
+  const importSession = await startImport(
+    request.company.id,
+    request.user.id,
+    params.id,
+    body.duplicateActions
+  );
 
   return reply.send({
     importSession: toImportSessionResponse(importSession)

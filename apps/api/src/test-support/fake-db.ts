@@ -113,6 +113,7 @@ type JobTaskStatus = "pending" | "in_progress" | "completed" | "skipped";
 type TimeEntryType = "travel" | "on_site" | "break";
 type ReviewRequestStatus = "pending" | "sent" | "clicked" | "completed" | "declined";
 type AttachmentEntityType =
+  | "company"
   | "job"
   | "customer"
   | "property"
@@ -682,6 +683,7 @@ export interface TestTechnicianRecord {
   skills: string[] | null;
   serviceAreaIds: string[] | null;
   serviceZipCodes: string[] | null;
+  availableDays: string[] | null;
   hoursPerDay: string | null;
   totalJobsCompleted: number | null;
   avgJobDurationMinutes: number | null;
@@ -900,6 +902,8 @@ export interface TestBookingSettingsRecord {
   googleReviewUrl: string | null;
   yelpReviewUrl: string | null;
   facebookReviewUrl: string | null;
+  customReviewUrl: string | null;
+  tagline: string | null;
   allowZipOverflow: boolean | null;
   balanceWorkload: boolean | null;
   notifyOnNewBooking: boolean | null;
@@ -1600,6 +1604,7 @@ const techniciansTable = {
   skills: "skills",
   serviceAreaIds: "serviceAreaIds",
   serviceZipCodes: "serviceZipCodes",
+  availableDays: "availableDays",
   hoursPerDay: "hoursPerDay",
   totalJobsCompleted: "totalJobsCompleted",
   avgJobDurationMinutes: "avgJobDurationMinutes",
@@ -2743,6 +2748,7 @@ function createTechnicianRecord(
     skills: values.skills ?? [],
     serviceAreaIds: values.serviceAreaIds ?? [],
     serviceZipCodes: values.serviceZipCodes ?? [],
+    availableDays: values.availableDays ?? ["mon", "tue", "wed", "thu", "fri"],
     hoursPerDay: values.hoursPerDay ?? "8",
     totalJobsCompleted: values.totalJobsCompleted ?? 0,
     avgJobDurationMinutes: values.avgJobDurationMinutes ?? null,
@@ -3031,6 +3037,8 @@ function createBookingSettingsRecord(
     googleReviewUrl: values.googleReviewUrl ?? null,
     yelpReviewUrl: values.yelpReviewUrl ?? null,
     facebookReviewUrl: values.facebookReviewUrl ?? null,
+    customReviewUrl: values.customReviewUrl ?? null,
+    tagline: values.tagline ?? null,
     allowZipOverflow: values.allowZipOverflow ?? false,
     balanceWorkload: values.balanceWorkload ?? true,
     notifyOnNewBooking: values.notifyOnNewBooking ?? true,

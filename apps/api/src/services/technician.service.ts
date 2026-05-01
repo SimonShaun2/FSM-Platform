@@ -18,6 +18,7 @@ import {
   type ListTechniciansQuery,
   type PaginatedResult,
   type PerformanceSummary,
+  type TechnicianAvailableDay,
   type Technician,
   type TechnicianDetail,
   type UpdateTechnicianInput
@@ -26,6 +27,8 @@ import {
 const MAX_RESULT_WINDOW = 10_000;
 const MAX_AVAILABILITY_RANGE_DAYS = 30;
 const DEFAULT_HOURS_PER_DAY = "8";
+const DEFAULT_AVAILABLE_DAYS: TechnicianAvailableDay[] = ["mon", "tue", "wed", "thu", "fri"];
+const ALL_AVAILABLE_DAYS: TechnicianAvailableDay[] = ["mon", "tue", "wed", "thu", "fri", "sat", "sun"];
 const DEFAULT_CALENDAR_COLOR = "#6366f1";
 const DEFAULT_TECHNICIAN_STATUS = "active";
 const DEFAULT_LIST_PAGE = 1;
@@ -91,9 +94,45 @@ function normalizeStringArray(values: string[] | undefined): string[] | undefine
   return normalizedValues;
 }
 
+function normalizeAvailableDays(values: string[] | undefined): TechnicianAvailableDay[] | undefined {
+  const normalizedValues = normalizeStringArray(values);
+
+  if (normalizedValues === undefined) {
+    return undefined;
+  }
+
+  const allowedDays = new Set<TechnicianAvailableDay>(ALL_AVAILABLE_DAYS);
+  const result: TechnicianAvailableDay[] = [];
+
+  for (const value of normalizedValues) {
+    const normalizedValue = value.toLowerCase() as TechnicianAvailableDay;
+
+    if (!allowedDays.has(normalizedValue) || result.includes(normalizedValue)) {
+      continue;
+    }
+
+    result.push(normalizedValue);
+  }
+
+  return result;
+}
+
 function parseHoursPerDay(value: string | null): number {
   const numericValue = Number(value ?? DEFAULT_HOURS_PER_DAY);
   return Number.isFinite(numericValue) && numericValue > 0 ? numericValue : Number(DEFAULT_HOURS_PER_DAY);
+}
+
+function getWeekdayKey(dateValue: Date): TechnicianAvailableDay {
+  const weekdayKeys: TechnicianAvailableDay[] = ["sun", "mon", "tue", "wed", "thu", "fri", "sat"];
+
+  return weekdayKeys[dateValue.getUTCDay()] ?? "mon";
+}
+
+function mapTechnicianRow(row: TechnicianRow): Technician {
+  return {
+    ...row,
+    availableDays: normalizeAvailableDays(row.availableDays ?? undefined) ?? null
+  };
 }
 
 function parseDateKey(dateValue: string): Date {
@@ -120,6 +159,7 @@ function normalizeCreateTechnicianInput(input: CreateTechnicianInput) {
     skills: normalizeStringArray(input.skills) ?? [],
     serviceAreaIds: normalizeStringArray(input.serviceAreaIds) ?? [],
     serviceZipCodes: normalizeStringArray(input.serviceZipCodes) ?? [],
+    availableDays: normalizeAvailableDays(input.availableDays) ?? [...DEFAULT_AVAILABLE_DAYS],
     hoursPerDay: input.hoursPerDay ?? Number(DEFAULT_HOURS_PER_DAY),
     status: input.status ?? DEFAULT_TECHNICIAN_STATUS,
     calendarColor: input.calendarColor ?? DEFAULT_CALENDAR_COLOR,
@@ -139,6 +179,8 @@ function normalizeUpdateTechnicianInput(input: UpdateTechnicianInput) {
       input.serviceAreaIds !== undefined ? normalizeStringArray(input.serviceAreaIds) ?? [] : undefined,
     serviceZipCodes:
       input.serviceZipCodes !== undefined ? normalizeStringArray(input.serviceZipCodes) ?? [] : undefined,
+    availableDays:
+      input.availableDays !== undefined ? normalizeAvailableDays(input.availableDays) ?? [...DEFAULT_AVAILABLE_DAYS] : undefined,
     hoursPerDay: input.hoursPerDay,
     status: input.status,
     calendarColor: input.calendarColor,
@@ -281,7 +323,7 @@ async function getTechnicianRecord(
   companyId: string,
   technicianId: string,
   executor: SelectExecutor
-): Promise<TechnicianRow> {
+): Promise<Technician> {
   const [technician] = await executor
     .select()
     .from(technicians)
@@ -292,7 +334,7 @@ async function getTechnicianRecord(
     throw new AppError(ErrorCode.NOT_FOUND, "Technician not found");
   }
 
-  return technician;
+  return mapTechnicianRow(technician);
 }
 
 async function listCompanyJobsForTechnician(
@@ -396,7 +438,7 @@ export async function listTechnicians(
   const offset = (normalizedQuery.page - 1) * normalizedQuery.limit;
 
   return {
-    data: sortedTechnicians.slice(offset, offset + normalizedQuery.limit),
+    data: sortedTechnicians.slice(offset, offset + normalizedQuery.limit).map(mapTechnicianRow),
     total,
     page: normalizedQuery.page,
     limit: normalizedQuery.limit,
@@ -452,6 +494,7 @@ export async function createTechnician(
         skills: normalizedInput.skills,
         serviceAreaIds: normalizedInput.serviceAreaIds,
         serviceZipCodes: normalizedInput.serviceZipCodes,
+        availableDays: normalizedInput.availableDays,
         hoursPerDay: String(normalizedInput.hoursPerDay),
         status: normalizedInput.status,
         calendarColor: normalizedInput.calendarColor,
@@ -489,7 +532,7 @@ export async function createTechnician(
       summary: `Technician ${technician.firstName} ${technician.lastName} created`
     });
 
-    return technician;
+    return mapTechnicianRow(technician);
   });
 }
 
@@ -509,6 +552,7 @@ export async function updateTechnician(
     ...(normalizedInput.skills !== undefined ? { skills: normalizedInput.skills } : {}),
     ...(normalizedInput.serviceAreaIds !== undefined ? { serviceAreaIds: normalizedInput.serviceAreaIds } : {}),
     ...(normalizedInput.serviceZipCodes !== undefined ? { serviceZipCodes: normalizedInput.serviceZipCodes } : {}),
+    ...(normalizedInput.availableDays !== undefined ? { availableDays: normalizedInput.availableDays } : {}),
     ...(normalizedInput.hoursPerDay !== undefined ? { hoursPerDay: String(normalizedInput.hoursPerDay) } : {}),
     ...(normalizedInput.status !== undefined ? { status: normalizedInput.status } : {}),
     ...(normalizedInput.calendarColor !== undefined ? { calendarColor: normalizedInput.calendarColor } : {}),
@@ -573,7 +617,7 @@ export async function updateTechnician(
       summary: `Technician ${updatedTechnician.firstName} ${updatedTechnician.lastName} updated`
     });
 
-    return updatedTechnician;
+    return mapTechnicianRow(updatedTechnician);
   });
 }
 
@@ -631,6 +675,7 @@ export async function getTechnicianAvailability(
   const rangeDates = listDateRange(normalizedRange.startDate, normalizedRange.endDate);
   const companyScheduleSlots = await listCompanyScheduleSlotsForTechnician(companyId, technicianId, db);
   const technicianHoursPerDay = parseHoursPerDay(technician.hoursPerDay);
+  const availableDays = new Set((technician.availableDays ?? DEFAULT_AVAILABLE_DAYS).map((value) => value.toLowerCase()));
 
   const slotsByDate = new Map<string, ScheduleSlotRow[]>();
 
@@ -658,11 +703,13 @@ export async function getTechnicianAvailability(
         (sum, slot) => sum + calculateMinutesBetween(slot.startTime, slot.endTime),
         0
       );
+      const isAvailableDay = availableDays.has(getWeekdayKey(parseDateKey(dateKey)));
+      const totalAvailableMinutes = isAvailableDay ? Math.round(technicianHoursPerDay * 60) : 0;
 
       return {
         date: dateKey,
         totalBookedMinutes,
-        availableMinutes: Math.round(technicianHoursPerDay * 60) - totalBookedMinutes,
+        availableMinutes: Math.max(0, totalAvailableMinutes - totalBookedMinutes),
         slots: daySlots.map((slot) => ({
           id: slot.id,
           jobId: slot.jobId,
@@ -769,6 +816,6 @@ export async function linkUserToTechnician(
       summary: `Technician ${updatedTechnician.firstName} ${updatedTechnician.lastName} linked to a user`
     });
 
-    return updatedTechnician;
+    return mapTechnicianRow(updatedTechnician);
   });
 }

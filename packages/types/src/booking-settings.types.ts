@@ -13,6 +13,8 @@ export interface BookingSettings {
   googleReviewUrl: string | null;
   yelpReviewUrl: string | null;
   facebookReviewUrl: string | null;
+  customReviewUrl: string | null;
+  tagline: string | null;
   allowZipOverflow: boolean | null;
   balanceWorkload: boolean | null;
   notifyOnNewBooking: boolean | null;
@@ -32,13 +34,15 @@ export interface UpdateBookingSettingsInput {
   slotDuration?: number;
   maxAdvanceDays?: number;
   autoConfirm?: boolean;
-  googleReviewUrl?: string;
-  yelpReviewUrl?: string;
-  facebookReviewUrl?: string;
+  googleReviewUrl?: string | null;
+  yelpReviewUrl?: string | null;
+  facebookReviewUrl?: string | null;
+  customReviewUrl?: string | null;
+  tagline?: string | null;
   allowZipOverflow?: boolean;
   balanceWorkload?: boolean;
   notifyOnNewBooking?: boolean;
-  notificationEmail?: string;
+  notificationEmail?: string | null;
 }
 
 export interface PublicBookingSettings {
@@ -54,6 +58,8 @@ export interface PublicBookingSettings {
   googleReviewUrl: string | null;
   yelpReviewUrl: string | null;
   facebookReviewUrl: string | null;
+  customReviewUrl: string | null;
+  tagline: string | null;
   phone: string | null;
   logoUrl: string | null;
   serviceAreaZipCodes: string[];

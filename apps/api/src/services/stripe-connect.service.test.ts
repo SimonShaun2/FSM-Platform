@@ -65,7 +65,11 @@ beforeEach(() => {
     id: "acct_new_123",
     chargesEnabled: true,
     payoutsEnabled: true,
-    detailsSubmitted: true
+    detailsSubmitted: true,
+    accountName: "Acme HVAC Services",
+    payoutSchedule: "Daily",
+    lastPayoutAmount: "4800.00",
+    lastPayoutAt: "2026-04-29T15:00:00.000Z"
   });
 });
 
@@ -127,7 +131,12 @@ describe("stripe-connect.service", () => {
       chargesEnabled: true,
       payoutsEnabled: true,
       detailsSubmitted: true,
-      stripeAccountId: "acct_existing"
+      stripeAccountId: "acct_existing",
+      accountName: "Acme HVAC Services",
+      payoutSchedule: "Daily",
+      lastPayoutAmount: "4800.00",
+      lastPayoutAt: "2026-04-29T15:00:00.000Z",
+      platformFeePercent: expect.any(Number)
     });
     expect(persistedCompany?.settings).toEqual({
       stripeConnect: {
@@ -160,7 +169,11 @@ describe("stripe-connect.service", () => {
       id: "acct_existing",
       chargesEnabled: true,
       payoutsEnabled: false,
-      detailsSubmitted: true
+      detailsSubmitted: true,
+      accountName: "Acme HVAC Services",
+      payoutSchedule: "Daily",
+      lastPayoutAmount: "4800.00",
+      lastPayoutAt: "2026-04-29T15:00:00.000Z"
     });
 
     const result = await stripeConnectService.getConnectStatus(company.id);
@@ -170,7 +183,12 @@ describe("stripe-connect.service", () => {
       chargesEnabled: true,
       payoutsEnabled: false,
       detailsSubmitted: true,
-      stripeAccountId: "acct_existing"
+      stripeAccountId: "acct_existing",
+      accountName: "Acme HVAC Services",
+      payoutSchedule: "Daily",
+      lastPayoutAmount: "4800.00",
+      lastPayoutAt: "2026-04-29T15:00:00.000Z",
+      platformFeePercent: expect.any(Number)
     });
   });
 
@@ -185,7 +203,11 @@ describe("stripe-connect.service", () => {
       id: "acct_pending",
       chargesEnabled: false,
       payoutsEnabled: false,
-      detailsSubmitted: true
+      detailsSubmitted: true,
+      accountName: "Ready HVAC",
+      payoutSchedule: "Daily",
+      lastPayoutAmount: "0.00",
+      lastPayoutAt: null
     });
 
     await expect(stripeConnectService.createDashboardLink(noAccountCompany.id)).rejects.toMatchObject({

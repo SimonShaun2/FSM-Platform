@@ -4,6 +4,7 @@ import { withZodValidation } from "../shared/validation.js";
 
 const uuidSchema = z.string().uuid();
 const isoDatePattern = /^\d{4}-\d{2}-\d{2}$/u;
+const bookingSlugPattern = /^[a-z0-9]+(?:-[a-z0-9]+)*$/u;
 const bookingStatusSchema = z.enum(["pending", "confirmed", "cancelled", "completed", "no_show"]);
 const bookingSourceSchema = z.enum(["google", "facebook", "instagram", "yelp", "direct", "website", "qr_code"]);
 
@@ -179,6 +180,8 @@ const bookingSettingsSchema = {
     googleReviewUrl: nullableStringSchema,
     yelpReviewUrl: nullableStringSchema,
     facebookReviewUrl: nullableStringSchema,
+    customReviewUrl: nullableStringSchema,
+    tagline: nullableStringSchema,
     allowZipOverflow: {
       anyOf: [{ type: "boolean" }, { type: "null" }]
     },
@@ -223,6 +226,15 @@ export const BookingAnalyticsQuerySchema = z.object({
   days: z.coerce.number().int().min(1).max(365).default(30)
 }).strict();
 
+export const BookingSlugAvailabilityQuerySchema = z.object({
+  slug: z
+    .string()
+    .trim()
+    .min(3)
+    .max(100)
+    .regex(bookingSlugPattern, "slug must use lowercase letters, numbers, and hyphens only")
+}).strict();
+
 export const ConfirmBookingRequestSchema = z.object({
   technicianId: uuidSchema,
   scheduledStart: z.string().datetime({ offset: true }),
@@ -235,7 +247,13 @@ export const DeclineBookingRequestSchema = z.object({
 
 export const UpdateBookingSettingsSchema = buildUpdateSchema({
   isEnabled: z.boolean().optional(),
-  bookingSlug: z.string().trim().min(1).optional(),
+  bookingSlug: z
+    .string()
+    .trim()
+    .min(3)
+    .max(100)
+    .regex(bookingSlugPattern, "bookingSlug must use lowercase letters, numbers, and hyphens only")
+    .optional(),
   offeredServices: z.array(z.record(z.unknown())).optional(),
   availableHoursStart: z.coerce.number().int().min(0).max(23).optional(),
   availableHoursEnd: z.coerce.number().int().min(1).max(24).optional(),
@@ -243,13 +261,15 @@ export const UpdateBookingSettingsSchema = buildUpdateSchema({
   slotDuration: z.coerce.number().int().min(1).max(12).optional(),
   maxAdvanceDays: z.coerce.number().int().min(1).max(30).optional(),
   autoConfirm: z.boolean().optional(),
-  googleReviewUrl: z.string().trim().url().optional(),
-  yelpReviewUrl: z.string().trim().url().optional(),
-  facebookReviewUrl: z.string().trim().url().optional(),
+  googleReviewUrl: z.string().trim().url().nullable().optional(),
+  yelpReviewUrl: z.string().trim().url().nullable().optional(),
+  facebookReviewUrl: z.string().trim().url().nullable().optional(),
+  customReviewUrl: z.string().trim().url().nullable().optional(),
+  tagline: z.string().trim().max(160).nullable().optional(),
   allowZipOverflow: z.boolean().optional(),
   balanceWorkload: z.boolean().optional(),
   notifyOnNewBooking: z.boolean().optional(),
-  notificationEmail: z.string().trim().email().optional()
+  notificationEmail: z.string().trim().email().nullable().optional()
 }).refine((input) => {
   if (input.availableHoursStart === undefined || input.availableHoursEnd === undefined) {
     return true;
@@ -263,12 +283,16 @@ export const UpdateBookingSettingsSchema = buildUpdateSchema({
 
 export type BookingRequestIdParams = z.infer<typeof BookingRequestIdParamsSchema>;
 export type BookingAnalyticsQuery = z.infer<typeof BookingAnalyticsQuerySchema>;
+export type BookingSlugAvailabilityQuery = z.infer<typeof BookingSlugAvailabilityQuerySchema>;
 
 export const bookingRequestListValidation = withZodValidation({
   query: BookingRequestListQuerySchema
 });
 export const bookingAnalyticsValidation = withZodValidation({
   query: BookingAnalyticsQuerySchema
+});
+export const bookingSlugAvailabilityValidation = withZodValidation({
+  query: BookingSlugAvailabilityQuerySchema
 });
 export const bookingRequestIdValidation = withZodValidation({
   params: BookingRequestIdParamsSchema
@@ -368,6 +392,24 @@ export const bookingSettingsRouteSchema = {
       required: ["settings"],
       properties: {
         settings: bookingSettingsSchema
+      }
+    },
+    400: errorResponseSchema,
+    401: errorResponseSchema,
+    403: errorResponseSchema
+  }
+} as const;
+
+export const bookingSlugAvailabilityRouteSchema = {
+  tags: ["booking"],
+  response: {
+    200: {
+      type: "object",
+      additionalProperties: false,
+      required: ["slug", "available"],
+      properties: {
+        slug: { type: "string" },
+        available: { type: "boolean" }
       }
     },
     400: errorResponseSchema,

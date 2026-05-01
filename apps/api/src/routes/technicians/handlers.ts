@@ -22,6 +22,7 @@ import {
 } from "../../services/technician.service.js";
 import type {
   AvailabilityQuery,
+  ServiceAreasBody,
   LinkUserBody,
   TechnicianIdParams
 } from "./schemas.js";
@@ -35,6 +36,7 @@ function toTechnicianListItem(technician: Technician) {
     phone: technician.phone,
     skills: technician.skills ?? [],
     serviceZipCodes: technician.serviceZipCodes ?? [],
+    availableDays: technician.availableDays ?? ["mon", "tue", "wed", "thu", "fri"],
     status: technician.status,
     calendarColor: technician.calendarColor ?? "#6366f1",
     hoursPerDay: technician.hoursPerDay ?? "8",
@@ -54,6 +56,7 @@ function toTechnicianDetailResponse(technician: TechnicianDetail) {
     skills: technician.skills ?? [],
     serviceAreaIds: technician.serviceAreaIds ?? [],
     serviceZipCodes: technician.serviceZipCodes ?? [],
+    availableDays: technician.availableDays ?? ["mon", "tue", "wed", "thu", "fri"],
     status: technician.status,
     calendarColor: technician.calendarColor ?? "#6366f1",
     hoursPerDay: technician.hoursPerDay ?? "8",
@@ -176,6 +179,22 @@ export async function deleteTechnicianHandler(
 
   return reply.send({
     success: true
+  });
+}
+
+export async function updateTechnicianServiceAreasHandler(
+  request: FastifyRequest,
+  reply: FastifyReply
+): Promise<FastifyReply> {
+  const params = request.params as TechnicianIdParams;
+  const body = request.body as ServiceAreasBody;
+  await updateTechnician(request.company.id, request.user.id, params.id, {
+    serviceZipCodes: body.serviceZipCodes
+  });
+  const detail = await getTechnician(request.company.id, params.id);
+
+  return reply.send({
+    technician: toTechnicianDetailResponse(detail)
   });
 }
 

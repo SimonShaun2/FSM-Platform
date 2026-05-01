@@ -2,11 +2,14 @@ import type { FastifyPluginAsync } from "fastify";
 
 import {
   listReviewRequestsHandler,
+  resendReviewRequestHandler,
   updateReviewRequestHandler
 } from "./handlers.js";
 import {
   listReviewRequestsRouteSchema,
   listReviewRequestsValidation,
+  resendReviewRequestRouteSchema,
+  resendReviewRequestValidation,
   updateReviewRequestRouteSchema,
   updateReviewRequestValidation
 } from "./schemas.js";
@@ -23,6 +26,12 @@ const reviewRequestRoutes: FastifyPluginAsync = async (fastify) => {
     preValidation: [updateReviewRequestValidation],
     schema: updateReviewRequestRouteSchema
   }, updateReviewRequestHandler);
+
+  fastify.post("/review-requests/:id/resend", {
+    preHandler: [fastify.authenticate],
+    preValidation: [resendReviewRequestValidation],
+    schema: resendReviewRequestRouteSchema
+  }, resendReviewRequestHandler);
 };
 
 export default reviewRequestRoutes;

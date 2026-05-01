@@ -1,11 +1,5 @@
-import { ScaffoldPage } from "@/src/components/layout/ScaffoldPage";
+import { TechnicianTeamClient } from "@/src/components/technicians/TechnicianTeamClient";
 
 export default function SettingsUsersPage() {
-  return (
-    <ScaffoldPage
-      title="User Settings"
-      subtitle="Team invites, role management, and permissions plug into this route next."
-      ticket="027"
-    />
-  );
+  return <TechnicianTeamClient />;
 }

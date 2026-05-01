@@ -76,6 +76,10 @@ export interface StripeConnectAccountSnapshot {
   chargesEnabled: boolean;
   payoutsEnabled: boolean;
   detailsSubmitted: boolean;
+  accountName: string | null;
+  payoutSchedule: string | null;
+  lastPayoutAmount: string | null;
+  lastPayoutAt: string | null;
 }
 
 function toCents(value: string): number {
@@ -137,6 +141,14 @@ function buildPaymentMethodLabel(paymentMethod: Stripe.PaymentMethod | null): st
     .join(" ");
 
   return `${brand} ending in ${paymentMethod.card.last4}`;
+}
+
+function formatPayoutSchedule(interval: string | null | undefined): string | null {
+  if (!interval) {
+    return null;
+  }
+
+  return interval.charAt(0).toUpperCase() + interval.slice(1);
 }
 
 export async function createInvoiceCheckoutSession(
@@ -351,13 +363,23 @@ export async function createConnectOnboardingLink(accountId: string): Promise<{ 
 }
 
 export async function retrieveConnectedAccount(accountId: string): Promise<StripeConnectAccountSnapshot> {
-  const account = await stripe.accounts.retrieve(accountId);
+  const [account, payouts] = await Promise.all([
+    stripe.accounts.retrieve(accountId),
+    stripe.payouts.list({ limit: 1 }, { stripeAccount: accountId })
+  ]);
+  const lastPayout = payouts.data[0];
 
   return {
     id: account.id,
     chargesEnabled: account.charges_enabled,
     payoutsEnabled: account.payouts_enabled,
-    detailsSubmitted: account.details_submitted
+    detailsSubmitted: account.details_submitted,
+    accountName: account.business_profile?.name ?? account.company?.name ?? null,
+    payoutSchedule: formatPayoutSchedule(account.settings?.payouts?.schedule?.interval),
+    lastPayoutAmount: centsToCurrencyString(lastPayout?.amount ?? null),
+    lastPayoutAt: lastPayout?.arrival_date
+      ? new Date(lastPayout.arrival_date * 1000).toISOString()
+      : null
   };
 }
 

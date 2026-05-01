@@ -20,6 +20,7 @@ import {
   listImportsRouteSchema,
   listImportsValidation,
   rollbackImportRouteSchema,
+  startImportValidation,
   startImportRouteSchema
 } from "./schemas.js";
 
@@ -52,7 +53,7 @@ const importRoutes: FastifyPluginAsync = async (fastify) => {
 
   fastify.post("/imports/:id/start", {
     preHandler: [authenticate, requireOwnerOrAdmin],
-    preValidation: importSessionIdValidation,
+    preValidation: startImportValidation,
     schema: startImportRouteSchema
   }, startImportHandler);
 

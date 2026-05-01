@@ -25,6 +25,8 @@ export interface PublicBookingSettingsRecord {
   googleReviewUrl: string | null;
   yelpReviewUrl: string | null;
   facebookReviewUrl: string | null;
+  customReviewUrl?: string | null;
+  tagline?: string | null;
   phone?: string | null;
   logoUrl?: string | null;
   serviceAreaZipCodes?: string[];
@@ -66,12 +68,19 @@ export interface BookingSettingsRecord {
   googleReviewUrl: string | null;
   yelpReviewUrl: string | null;
   facebookReviewUrl: string | null;
+  customReviewUrl: string | null;
+  tagline: string | null;
   allowZipOverflow: boolean | null;
   balanceWorkload: boolean | null;
   notifyOnNewBooking: boolean | null;
   notificationEmail: string | null;
   autoAssignTech?: boolean | null;
   updatedAt: string;
+}
+
+interface BookingSlugAvailabilityResponse {
+  slug: string;
+  available: boolean;
 }
 
 export interface BookingStatsRecord {
@@ -218,6 +227,15 @@ export function useUpdateBookingSettings() {
         queryClient.invalidateQueries({ queryKey: ["dispatch"] })
       ]);
     }
+  });
+}
+
+export function useCheckBookingSlugAvailability() {
+  return useMutation({
+    mutationFn: (slug: string) =>
+      api.get<BookingSlugAvailabilityResponse>(
+        `/api/v1/booking-settings/check-slug?slug=${encodeURIComponent(slug)}`
+      )
   });
 }
 

@@ -73,15 +73,55 @@ export interface ListReviewRequestsQuery {
   limit?: number;
 }
 
+export interface ReviewRequestFunnelStats {
+  pending: number;
+  sent: number;
+  clicked: number;
+  completed: number;
+  declined: number;
+  averageRating: number | null;
+}
+
+export interface ReviewRequestListResponse extends PaginatedResult<ReviewRequestListItem> {
+  stats: ReviewRequestFunnelStats;
+}
+
+export interface ReviewRequestSettings {
+  google: {
+    label: "Google";
+    url: string | null;
+    isActive: boolean;
+  };
+  yelp: {
+    label: "Yelp";
+    url: string | null;
+    isActive: boolean;
+  };
+  facebook: {
+    label: "Facebook";
+    url: string | null;
+    isActive: boolean;
+  };
+  custom: {
+    label: "Custom";
+    url: string | null;
+    isActive: boolean;
+  };
+}
+
 export interface PublicReviewLanding {
   reviewRequestId: string;
   companyName: string;
   technicianName: string | null;
   status: ReviewRequestStatus;
+  reviewUrl: string | null;
+  expiresAt: string | null;
+  settings: ReviewRequestSettings;
   reviewLinks: {
     google: string | null;
     yelp: string | null;
     facebook: string | null;
+    custom: string | null;
   };
 }
 

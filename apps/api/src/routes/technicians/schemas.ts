@@ -5,6 +5,8 @@ import { withZodValidation } from "../shared/validation.js";
 const uuidSchema = z.string().uuid();
 const isoDatePattern = /^\d{4}-\d{2}-\d{2}$/;
 const calendarColorPattern = /^#[0-9A-Fa-f]{6}$/;
+const zipCodePattern = /^\d{5}$/;
+const availableDayEnum = z.enum(["mon", "tue", "wed", "thu", "fri", "sat", "sun"]);
 
 const nullableStringSchema = {
   anyOf: [{ type: "string" }, { type: "null" }]
@@ -45,6 +47,7 @@ const technicianListItemSchema = {
     "phone",
     "skills",
     "serviceZipCodes",
+    "availableDays",
     "status",
     "calendarColor",
     "hoursPerDay",
@@ -60,6 +63,7 @@ const technicianListItemSchema = {
     phone: { type: "string" },
     skills: { type: "array", items: { type: "string" } },
     serviceZipCodes: { type: "array", items: { type: "string" } },
+    availableDays: { type: "array", items: { type: "string", enum: ["mon", "tue", "wed", "thu", "fri", "sat", "sun"] } },
     status: { type: "string", enum: ["active", "inactive", "on_leave"] },
     calendarColor: { type: "string" },
     hoursPerDay: { type: "string" },
@@ -81,6 +85,7 @@ const technicianDetailSchema = {
     "skills",
     "serviceAreaIds",
     "serviceZipCodes",
+    "availableDays",
     "status",
     "calendarColor",
     "hoursPerDay",
@@ -103,6 +108,7 @@ const technicianDetailSchema = {
     skills: { type: "array", items: { type: "string" } },
     serviceAreaIds: { type: "array", items: { type: "string" } },
     serviceZipCodes: { type: "array", items: { type: "string" } },
+    availableDays: { type: "array", items: { type: "string", enum: ["mon", "tue", "wed", "thu", "fri", "sat", "sun"] } },
     status: { type: "string", enum: ["active", "inactive", "on_leave"] },
     calendarColor: { type: "string" },
     hoursPerDay: { type: "string" },
@@ -244,7 +250,8 @@ export const CreateTechnicianSchema = z
     phone: z.string().trim().min(1),
     skills: z.array(z.string().trim().min(1)).optional().default([]),
     serviceAreaIds: z.array(uuidSchema).optional().default([]),
-    serviceZipCodes: z.array(z.string().trim().min(1)).optional().default([]),
+    serviceZipCodes: z.array(z.string().trim().regex(zipCodePattern)).optional().default([]),
+    availableDays: z.array(availableDayEnum).optional().default(["mon", "tue", "wed", "thu", "fri"]),
     hoursPerDay: z.coerce.number().min(1).max(24).optional().default(8),
     status: z.enum(["active", "inactive", "on_leave"]).optional().default("active"),
     calendarColor: z.string().regex(calendarColorPattern).optional().default("#6366f1"),
@@ -260,7 +267,8 @@ export const UpdateTechnicianSchema = buildUpdateSchema({
   phone: z.string().trim().min(1).optional(),
   skills: z.array(z.string().trim().min(1)).optional(),
   serviceAreaIds: z.array(uuidSchema).optional(),
-  serviceZipCodes: z.array(z.string().trim().min(1)).optional(),
+  serviceZipCodes: z.array(z.string().trim().regex(zipCodePattern)).optional(),
+  availableDays: z.array(availableDayEnum).optional(),
   hoursPerDay: z.coerce.number().min(1).max(24).optional(),
   status: z.enum(["active", "inactive", "on_leave"]).optional(),
   calendarColor: z.string().regex(calendarColorPattern).optional(),
@@ -306,9 +314,16 @@ export const LinkUserSchema = z
   })
   .strict();
 
+export const ServiceAreasSchema = z
+  .object({
+    serviceZipCodes: z.array(z.string().trim().regex(zipCodePattern))
+  })
+  .strict();
+
 export type TechnicianIdParams = z.infer<typeof TechnicianIdParamsSchema>;
 export type AvailabilityQuery = z.infer<typeof AvailabilityQuerySchema>;
 export type LinkUserBody = z.infer<typeof LinkUserSchema>;
+export type ServiceAreasBody = z.infer<typeof ServiceAreasSchema>;
 
 export const listTechniciansValidation = withZodValidation({ query: ListTechniciansQuerySchema });
 export const createTechnicianValidation = withZodValidation({ body: CreateTechnicianSchema });
@@ -324,6 +339,10 @@ export const availabilityValidation = withZodValidation({
 export const linkUserValidation = withZodValidation({
   params: TechnicianIdParamsSchema,
   body: LinkUserSchema
+});
+export const serviceAreasValidation = withZodValidation({
+  params: TechnicianIdParamsSchema,
+  body: ServiceAreasSchema
 });
 
 export const listTechniciansSchema = {
@@ -458,6 +477,25 @@ export const getTechnicianPerformanceSchema = {
 } as const;
 
 export const linkUserToTechnicianSchema = {
+  tags: ["technicians"],
+  response: {
+    200: {
+      type: "object",
+      additionalProperties: false,
+      required: ["technician"],
+      properties: {
+        technician: technicianDetailSchema
+      }
+    },
+    400: errorResponseSchema,
+    401: errorResponseSchema,
+    403: errorResponseSchema,
+    404: errorResponseSchema,
+    409: errorResponseSchema
+  }
+} as const;
+
+export const updateTechnicianServiceAreasSchema = {
   tags: ["technicians"],
   response: {
     200: {

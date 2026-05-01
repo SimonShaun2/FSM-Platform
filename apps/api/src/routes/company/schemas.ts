@@ -2,6 +2,38 @@ import { z } from "zod";
 
 import { withZodValidation } from "../shared/validation.js";
 
+const notificationPreferenceSchema = z
+  .object({
+    email: z.boolean().optional(),
+    sms: z.boolean().optional()
+  })
+  .strict()
+  .refine((value) => Object.keys(value).length > 0, {
+    message: "At least one notification channel is required"
+  });
+
+const companyNotificationSettingsSchema = z
+  .object({
+    bookingRequest: notificationPreferenceSchema.nullable().optional(),
+    estimateFollowUp: notificationPreferenceSchema.nullable().optional(),
+    invoiceRecovery: notificationPreferenceSchema.nullable().optional(),
+    paymentReceived: notificationPreferenceSchema.nullable().optional(),
+    reviewRequest: notificationPreferenceSchema.nullable().optional(),
+    serviceDueAlert: notificationPreferenceSchema.nullable().optional()
+  })
+  .strict();
+
+const companySettingsSchema = z
+  .object({
+    tradingName: z.string().trim().min(1).nullable().optional(),
+    currency: z.string().trim().length(3).nullable().optional(),
+    notifications: companyNotificationSettingsSchema.optional()
+  })
+  .strict()
+  .refine((value) => Object.keys(value).length > 0, {
+    message: "At least one company setting is required"
+  });
+
 const nullableStringSchema = {
   anyOf: [{ type: "string" }, { type: "null" }]
 } as const;
@@ -42,7 +74,65 @@ const companyResponseSchema = {
     logoUrl: nullableStringSchema,
     settings: {
       type: "object",
-      additionalProperties: true
+      additionalProperties: true,
+      properties: {
+        tradingName: nullableStringSchema,
+        currency: nullableStringSchema,
+        notifications: {
+          type: "object",
+          additionalProperties: false,
+          properties: {
+            bookingRequest: {
+              type: "object",
+              additionalProperties: false,
+              properties: {
+                email: { type: "boolean" },
+                sms: { type: "boolean" }
+              }
+            },
+            estimateFollowUp: {
+              type: "object",
+              additionalProperties: false,
+              properties: {
+                email: { type: "boolean" },
+                sms: { type: "boolean" }
+              }
+            },
+            invoiceRecovery: {
+              type: "object",
+              additionalProperties: false,
+              properties: {
+                email: { type: "boolean" },
+                sms: { type: "boolean" }
+              }
+            },
+            paymentReceived: {
+              type: "object",
+              additionalProperties: false,
+              properties: {
+                email: { type: "boolean" },
+                sms: { type: "boolean" }
+              }
+            },
+            reviewRequest: {
+              type: "object",
+              additionalProperties: false,
+              properties: {
+                email: { type: "boolean" },
+                sms: { type: "boolean" }
+              }
+            },
+            serviceDueAlert: {
+              type: "object",
+              additionalProperties: false,
+              properties: {
+                email: { type: "boolean" },
+                sms: { type: "boolean" }
+              }
+            }
+          }
+        }
+      }
     },
     createdAt: { type: "string", format: "date-time" }
   }
@@ -80,7 +170,8 @@ export const UpdateCompanySchema = z
     state: z.string().trim().min(1).optional(),
     zip: z.string().trim().min(1).optional(),
     timezone: z.string().trim().min(1).optional(),
-    logoUrl: z.string().trim().url().optional()
+    logoUrl: z.string().trim().url().optional(),
+    settings: companySettingsSchema.optional()
   })
   .strict()
   .refine((input) => Object.keys(input).length > 0, {

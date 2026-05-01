@@ -3,7 +3,7 @@ import { z } from "zod";
 import { withZodValidation } from "../shared/validation.js";
 
 const uuidSchema = z.string().uuid();
-const entityTypeSchema = z.enum(["job", "customer", "property", "asset", "estimate", "invoice", "work_order"]);
+const entityTypeSchema = z.enum(["company", "job", "customer", "property", "asset", "estimate", "invoice", "work_order"]);
 
 const nullableStringSchema = {
   anyOf: [{ type: "string" }, { type: "null" }]

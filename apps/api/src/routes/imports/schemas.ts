@@ -100,9 +100,21 @@ export const ImportSessionIdParamsSchema = z
 
 export const ConfirmMappingSchema = z
   .object({
-    mappingOverrides: z.record(z.string().trim().min(1)).optional().default({})
+    mappingOverrides: z.record(z.string(), z.string().trim().min(1).nullable()).optional().default({})
   })
   .strict();
+
+export const StartImportSchema = z
+  .object({
+    duplicateActions: z
+      .record(z.string(), z.enum(["skip", "update_existing", "import_new"]))
+      .optional()
+      .default({})
+  })
+  .strict()
+  .default({
+    duplicateActions: {}
+  });
 
 export const ListImportsQuerySchema = z
   .object({
@@ -115,6 +127,7 @@ export const ListImportsQuerySchema = z
 
 export type ConfirmMappingBody = z.infer<typeof ConfirmMappingSchema>;
 export type ImportSessionIdParams = z.infer<typeof ImportSessionIdParamsSchema>;
+export type StartImportBody = z.infer<typeof StartImportSchema>;
 
 export const confirmMappingValidation = withZodValidation({
   params: ImportSessionIdParamsSchema,
@@ -122,6 +135,10 @@ export const confirmMappingValidation = withZodValidation({
 });
 export const importSessionIdValidation = withZodValidation({
   params: ImportSessionIdParamsSchema
+});
+export const startImportValidation = withZodValidation({
+  params: ImportSessionIdParamsSchema,
+  body: StartImportSchema
 });
 export const listImportsValidation = withZodValidation({
   query: ListImportsQuerySchema

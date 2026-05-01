@@ -34,6 +34,8 @@ interface CreateImportSessionOptions {
   mimeType?: string;
 }
 
+type DuplicateAction = "skip" | "update_existing" | "import_new";
+
 const logger = pino({
   name: "import-service"
 });
@@ -319,7 +321,7 @@ export async function confirmMapping(
   companyId: string,
   _actorId: string,
   importSessionId: string,
-  mappingOverrides: Record<string, string>
+  mappingOverrides: Record<string, string | null>
 ): Promise<ImportSession> {
   const importSession = await getImportSessionRow(companyId, importSessionId, db);
 
@@ -332,6 +334,11 @@ export async function confirmMapping(
   };
 
   for (const [columnName, fieldName] of Object.entries(mappingOverrides)) {
+    if (fieldName === null) {
+      mergedMappings[columnName] = null;
+      continue;
+    }
+
     const trimmedFieldName = fieldName.trim();
     mergedMappings[columnName] = trimmedFieldName.length > 0 ? trimmedFieldName : null;
   }
@@ -381,7 +388,8 @@ export async function confirmMapping(
 export async function startImport(
   companyId: string,
   _actorId: string,
-  importSessionId: string
+  importSessionId: string,
+  duplicateActions: Record<string, DuplicateAction> = {}
 ): Promise<ImportSession> {
   const importSession = await getImportSessionRow(companyId, importSessionId, db);
 
@@ -389,16 +397,20 @@ export async function startImport(
     throw new AppError(ErrorCode.CONFLICT, "Import session is not ready to start");
   }
 
-  if ((importSession.errorRows ?? 0) > 0) {
-    throw new AppError(ErrorCode.CONFLICT, "Resolve validation errors before starting the import");
-  }
+  const nextAiInferences = {
+    ...normalizeAiInferences(importSession.aiInferences),
+    duplicateActions
+  };
 
   const now = new Date();
   const updatedSessions = await db
     .update(importSessions)
     .set({
       status: "importing",
+      importedRows: 0,
+      skippedRows: 0,
       errorMessage: null,
+      aiInferences: nextAiInferences,
       updatedAt: now
     })
     .where(and(eq(importSessions.companyId, companyId), eq(importSessions.id, importSessionId), isNull(importSessions.deletedAt)))

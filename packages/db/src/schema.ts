@@ -393,6 +393,7 @@ export const reviewRequestStatusEnum = pgEnum("review_request_status", [
 ]);
 
 export const attachmentEntityTypeEnum = pgEnum("attachment_entity_type", [
+  "company",
   "job",
   "customer",
   "property",
@@ -618,6 +619,7 @@ export const technicians = pgTable("technicians", {
   skills: text("skills").array().default([]), // hvac, plumbing, electrical
   serviceAreaIds: uuid("service_area_ids").array().default([]),
   serviceZipCodes: text("service_zip_codes").array().default([]),
+  availableDays: text("available_days").array().default(["mon", "tue", "wed", "thu", "fri"]),
   hoursPerDay: decimal("hours_per_day", { precision: 4, scale: 2 }).default("8"),
   // Performance (updated on job completion)
   totalJobsCompleted: integer("total_jobs_completed").default(0),
@@ -1473,6 +1475,8 @@ export const bookingSettings = pgTable("booking_settings", {
   googleReviewUrl: text("google_review_url"),
   yelpReviewUrl: text("yelp_review_url"),
   facebookReviewUrl: text("facebook_review_url"),
+  customReviewUrl: text("custom_review_url"),
+  tagline: text("tagline"),
   allowZipOverflow: boolean("allow_zip_overflow").default(false),
   balanceWorkload: boolean("balance_workload").default(true),
   notifyOnNewBooking: boolean("notify_on_new_booking").default(true),

@@ -2,6 +2,7 @@ import type { PaginatedResult } from "./customer.types.js";
 import type { JobPhotoType } from "./job.types.js";
 
 export type AttachmentEntityType =
+  | "company"
   | "job"
   | "customer"
   | "property"

@@ -71,9 +71,20 @@ export const mobileNavigation: NavItem[] = [
 export const settingsNavigation: NavItem[] = [
   { label: "General", href: "/settings/general", icon: Settings },
   { label: "Payments", href: "/settings/payments", icon: CreditCard },
-  { label: "Automation", href: "/settings/automation", icon: Sparkles },
+  { label: "Automation Rules", href: "/settings/automation", icon: Sparkles },
+  { label: "Notifications", href: "/settings/notifications", icon: MessageSquareText },
+  { label: "Booking", href: "/settings/booking/general", icon: CalendarDays },
+  { label: "Review Links", href: "/settings/review-links", icon: MessageSquareText },
   { label: "Users", href: "/settings/users", icon: Users },
-  { label: "Booking Links", href: "/settings/booking/links", icon: CalendarDays },
-  { label: "Service Areas", href: "/settings/booking/service-areas", icon: Package },
-  { label: "Review Links", href: "/settings/review-links", icon: MessageSquareText }
+  { label: "Billing", href: "/settings/billing", icon: Package }
+];
+
+export const bookingSettingsNavigation: NavItem[] = [
+  { label: "General", href: "/settings/booking/general", icon: CalendarDays },
+  { label: "Services", href: "/settings/booking/services", icon: Package },
+  { label: "Availability", href: "/settings/booking/availability", icon: CalendarDays },
+  { label: "Booking Links", href: "/settings/booking/links", icon: MessageSquareText },
+  { label: "Service Areas", href: "/settings/booking/service-areas", icon: Users },
+  { label: "Notifications", href: "/settings/booking/notifications", icon: MessageSquareText },
+  { label: "Appearance", href: "/settings/booking/appearance", icon: Settings }
 ];

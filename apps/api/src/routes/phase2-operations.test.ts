@@ -295,6 +295,25 @@ describe("phase2 operations routes", () => {
     expect(patchReviewResponse.status).toBe(200);
     expect(patchReviewResponse.body.reviewRequest.status).toBe("completed");
 
+    const thirdReview = fakeDb.seedReviewRequest({
+      companyId: auth.company.id,
+      customerId: job.customerId,
+      jobId: job.id,
+      technicianId: technician.id,
+      referenceId: randomUUID(),
+      status: "clicked",
+      channel: "email",
+      sentAt: new Date("2026-04-28T14:00:00.000Z"),
+      clickedAt: new Date("2026-04-28T14:10:00.000Z")
+    });
+
+    const resendReviewResponse = await request(app.server)
+      .post(`/api/v1/review-requests/${thirdReview.id}/resend`)
+      .set("Authorization", auth.authorization);
+
+    expect(resendReviewResponse.status).toBe(200);
+    expect(resendReviewResponse.body.reviewRequest.status).toBe("sent");
+
     const secondReview = fakeDb.seedReviewRequest({
       companyId: auth.company.id,
       customerId: job.customerId,
@@ -311,6 +330,7 @@ describe("phase2 operations routes", () => {
 
     expect(publicLandingResponse.status).toBe(200);
     expect(publicLandingResponse.body.review.companyName).toBe("Acme HVAC");
+    expect(publicLandingResponse.body.review.status).toBe("clicked");
 
     const publicCompleteResponse = await request(app.server)
       .post(`/api/v1/public/reviews/${secondReview.referenceId}/complete`)

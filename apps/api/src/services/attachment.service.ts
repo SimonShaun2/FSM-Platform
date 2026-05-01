@@ -4,6 +4,7 @@ import sharp from "sharp";
 
 import {
   assets,
+  companies,
   customers,
   db,
   fileAttachments,
@@ -112,6 +113,20 @@ async function resolveAttachmentContext(
   entityId: string,
   executor: SelectExecutor
 ): Promise<{ jobId: string | null; customerId: string | null }> {
+  if (entityType === "company") {
+    const [company] = await executor
+      .select()
+      .from(companies)
+      .where(and(eq(companies.id, entityId), eq(companies.id, companyId), isNull(companies.deletedAt)))
+      .limit(1);
+
+    if (!company) {
+      throw new AppError(ErrorCode.NOT_FOUND, "Company not found");
+    }
+
+    return { jobId: null, customerId: null };
+  }
+
   if (entityType === "job" || entityType === "work_order") {
     const [job] = await executor
       .select()

@@ -50,6 +50,13 @@ interface ValidationResult {
   validationErrors: ValidationError[];
 }
 
+type DuplicateAction = "skip" | "update_existing" | "import_new";
+
+interface CustomerDuplicateMatch {
+  customer: CustomerRow;
+  reason: "email" | "phone" | "name";
+}
+
 const logger = pino({
   name: "csv-import-processor"
 });
@@ -106,6 +113,26 @@ function normalizeValidationErrors(value: unknown): ValidationError[] {
   return validationErrors;
 }
 
+function normalizeAiInferences(value: unknown): Record<string, unknown> {
+  return isPlainObject(value) ? value : {};
+}
+
+function normalizeDuplicateActions(value: unknown): Record<string, DuplicateAction> {
+  if (!isPlainObject(value)) {
+    return {};
+  }
+
+  const duplicateActions: Record<string, DuplicateAction> = {};
+
+  for (const [key, action] of Object.entries(value)) {
+    if (action === "skip" || action === "update_existing" || action === "import_new") {
+      duplicateActions[key] = action;
+    }
+  }
+
+  return duplicateActions;
+}
+
 function buildEmptyMapping(headers: string[]): ColumnMapping {
   return Object.fromEntries(headers.map((header) => [header, null]));
 }
@@ -135,8 +162,122 @@ function normalizePhoneValue(value: string | null | undefined): string | null {
   return digitsOnly.length > 0 ? digitsOnly : null;
 }
 
+function normalizeCustomerNameValue(value: string | null | undefined): string | null {
+  const normalizedValue = normalizeTextValue(value);
+  return normalizedValue ? normalizedValue.toLowerCase() : null;
+}
+
 function isValidEmail(value: string): boolean {
   return /^[^\s@]+@[^\s@]+\.[^\s@]+$/u.test(value);
+}
+
+function getMappedCustomerName(mappedRow: CustomerImportRow): string | null {
+  if (mappedRow.displayName) {
+    return mappedRow.displayName;
+  }
+
+  const fullName = `${mappedRow.firstName} ${mappedRow.lastName}`.trim();
+  return fullName.length > 0 ? fullName : null;
+}
+
+function buildCustomerLookupMaps(existingCustomers: CustomerRow[]) {
+  const emailMap = new Map<string, CustomerRow>();
+  const phoneMap = new Map<string, CustomerRow>();
+  const nameMap = new Map<string, CustomerRow>();
+
+  for (const customer of existingCustomers) {
+    const normalizedEmail = normalizeEmailValue(customer.email);
+    const normalizedPhone = normalizePhoneValue(customer.phone);
+    const normalizedName = normalizeCustomerNameValue(
+      customer.displayName ?? `${customer.firstName} ${customer.lastName}`.trim()
+    );
+
+    if (normalizedEmail && !emailMap.has(normalizedEmail)) {
+      emailMap.set(normalizedEmail, customer);
+    }
+
+    if (normalizedPhone && !phoneMap.has(normalizedPhone)) {
+      phoneMap.set(normalizedPhone, customer);
+    }
+
+    if (normalizedName && !nameMap.has(normalizedName)) {
+      nameMap.set(normalizedName, customer);
+    }
+  }
+
+  return {
+    emailMap,
+    phoneMap,
+    nameMap
+  };
+}
+
+function findDuplicateCustomer(
+  mappedRow: CustomerImportRow,
+  existingCustomers: ReturnType<typeof buildCustomerLookupMaps>
+): CustomerDuplicateMatch | null {
+  const normalizedEmail = normalizeEmailValue(mappedRow.email);
+  if (normalizedEmail) {
+    const customer = existingCustomers.emailMap.get(normalizedEmail);
+    if (customer) {
+      return { customer, reason: "email" };
+    }
+  }
+
+  const normalizedPhone = normalizePhoneValue(mappedRow.phone);
+  if (normalizedPhone) {
+    const customer = existingCustomers.phoneMap.get(normalizedPhone);
+    if (customer) {
+      return { customer, reason: "phone" };
+    }
+  }
+
+  const normalizedName = normalizeCustomerNameValue(getMappedCustomerName(mappedRow));
+  if (normalizedName) {
+    const customer = existingCustomers.nameMap.get(normalizedName);
+    if (customer) {
+      return { customer, reason: "name" };
+    }
+  }
+
+  return null;
+}
+
+function buildCustomerUpdateValues(existingCustomer: CustomerRow, mappedRow: CustomerImportRow, now: Date) {
+  const mergedTags = Array.from(
+    new Set([...(existingCustomer.tags ?? []), ...mappedRow.tags])
+  );
+  const mergedNotes = mappedRow.notes
+    ? existingCustomer.internalNotes
+      ? existingCustomer.internalNotes.includes(mappedRow.notes)
+        ? existingCustomer.internalNotes
+        : `${existingCustomer.internalNotes}\n${mappedRow.notes}`
+      : mappedRow.notes
+    : existingCustomer.internalNotes;
+
+  return {
+    ...(existingCustomer.firstName.trim().length === 0 && mappedRow.firstName.length > 0
+      ? { firstName: mappedRow.firstName }
+      : {}),
+    ...(existingCustomer.lastName.trim().length === 0 && mappedRow.lastName.length > 0
+      ? { lastName: mappedRow.lastName }
+      : {}),
+    ...(existingCustomer.displayName === null && mappedRow.displayName
+      ? { displayName: mappedRow.displayName }
+      : {}),
+    ...(existingCustomer.email === null && mappedRow.email
+      ? { email: mappedRow.email }
+      : {}),
+    ...(existingCustomer.phone === null && mappedRow.phone
+      ? { phone: mappedRow.phone }
+      : {}),
+    ...(existingCustomer.altPhone === null && mappedRow.altPhone
+      ? { altPhone: mappedRow.altPhone }
+      : {}),
+    tags: mergedTags,
+    internalNotes: mergedNotes,
+    updatedAt: now
+  };
 }
 
 function parseCsv(buffer: Buffer): { headers: string[]; rows: ParsedCsvRow[] } {
@@ -207,16 +348,7 @@ function validateCustomerRows(rows: ParsedCsvRow[], columnMapping: ColumnMapping
   const validationErrors: ValidationError[] = [];
   const rowErrors = new Set<number>();
   let duplicateRows = 0;
-  const emailSet = new Set(
-    existingCustomers
-      .map((customer) => normalizeEmailValue(customer.email))
-      .filter((value): value is string => value !== null)
-  );
-  const phoneSet = new Set(
-    existingCustomers
-      .map((customer) => normalizePhoneValue(customer.phone))
-      .filter((value): value is string => value !== null)
-  );
+  const customerLookupMaps = buildCustomerLookupMaps(existingCustomers);
 
   for (const row of rows) {
     const mappedRow = mapCustomerRow(row.values, columnMapping);
@@ -247,13 +379,7 @@ function validateCustomerRows(rows: ParsedCsvRow[], columnMapping: ColumnMapping
       continue;
     }
 
-    const normalizedEmail = normalizeEmailValue(mappedRow.email);
-    const normalizedPhone = normalizePhoneValue(mappedRow.phone);
-
-    if (
-      (normalizedEmail && emailSet.has(normalizedEmail)) ||
-      (normalizedPhone && phoneSet.has(normalizedPhone))
-    ) {
+    if (findDuplicateCustomer(mappedRow, customerLookupMaps)) {
       duplicateRows += 1;
     }
   }
@@ -460,18 +586,12 @@ export async function handleExecuteImport(job: Job<Record<string, unknown>>): Pr
     const parsedCsv = parseCsv(fileBuffer);
     const columnMapping = normalizeColumnMappings(importSession.columnMappings);
     const validationErrors = normalizeValidationErrors(importSession.validationErrors);
+    const duplicateActions = normalizeDuplicateActions(
+      normalizeAiInferences(importSession.aiInferences).duplicateActions
+    );
     const invalidRowNumbers = new Set(validationErrors.map((validationError) => validationError.row));
     const existingCustomers = await getCompanyCustomers(companyId);
-    const emailSet = new Set(
-      existingCustomers
-        .map((customer) => normalizeEmailValue(customer.email))
-        .filter((value): value is string => value !== null)
-    );
-    const phoneSet = new Set(
-      existingCustomers
-        .map((customer) => normalizePhoneValue(customer.phone))
-        .filter((value): value is string => value !== null)
-    );
+    const customerLookupMaps = buildCustomerLookupMaps(existingCustomers);
     let importedRows = 0;
     let skippedRows = 0;
     let duplicateRows = 0;
@@ -493,23 +613,59 @@ export async function handleExecuteImport(job: Job<Record<string, unknown>>): Pr
         const mappedRow = mapCustomerRow(row.values, columnMapping);
         const normalizedEmail = normalizeEmailValue(mappedRow.email);
         const normalizedPhone = normalizePhoneValue(mappedRow.phone);
+        const duplicateMatch = findDuplicateCustomer(mappedRow, customerLookupMaps);
 
-        if (
-          (normalizedEmail && emailSet.has(normalizedEmail)) ||
-          (normalizedPhone && phoneSet.has(normalizedPhone))
-        ) {
+        if (duplicateMatch) {
           duplicateRows += 1;
-          skippedRows += 1;
+          const duplicateAction = duplicateActions[String(row.rowNumber)] ?? "skip";
 
-          logger.debug(
-            {
-              companyId,
-              importSessionId,
-              rowNumber: row.rowNumber
-            },
-            "Skipping duplicate customer row during import"
-          );
-          continue;
+          if (duplicateAction === "skip") {
+            skippedRows += 1;
+
+            logger.debug(
+              {
+                companyId,
+                importSessionId,
+                rowNumber: row.rowNumber
+              },
+              "Skipping duplicate customer row during import"
+            );
+            continue;
+          }
+
+          if (duplicateAction === "update_existing") {
+            await db.transaction(async (tx) => {
+              await tx
+                .update(customers)
+                .set(buildCustomerUpdateValues(duplicateMatch.customer, mappedRow, new Date()))
+                .where(
+                  and(
+                    eq(customers.companyId, companyId),
+                    eq(customers.id, duplicateMatch.customer.id),
+                    isNull(customers.deletedAt)
+                  )
+                )
+                .returning();
+
+              if (mappedRow.addressLine1 && mappedRow.city && mappedRow.state && mappedRow.zip) {
+                await tx.insert(properties).values({
+                  id: randomUUID(),
+                  companyId,
+                  customerId: duplicateMatch.customer.id,
+                  addressLine1: mappedRow.addressLine1,
+                  city: mappedRow.city,
+                  state: mappedRow.state,
+                  zip: mappedRow.zip,
+                  type: "residential",
+                  isPrimary: false,
+                  importSessionId
+                }).returning();
+              }
+            });
+
+            importedRows += 1;
+            continue;
+          }
         }
 
         const customerId = randomUUID();
@@ -544,11 +700,49 @@ export async function handleExecuteImport(job: Job<Record<string, unknown>>): Pr
         }
 
         if (normalizedEmail) {
-          emailSet.add(normalizedEmail);
+          customerLookupMaps.emailMap.set(normalizedEmail, {
+            id: customerId,
+            companyId,
+            firstName: mappedRow.firstName,
+            lastName: mappedRow.lastName,
+            displayName: mappedRow.displayName,
+            email: mappedRow.email,
+            phone: mappedRow.phone,
+            altPhone: mappedRow.altPhone,
+            leadSource: null,
+            referredBy: null,
+            tags: mappedRow.tags,
+            internalNotes: mappedRow.notes,
+            lifetimeValue: "0",
+            totalJobs: 0,
+            lastServiceDate: null,
+            firstServiceDate: null,
+            prefersSms: false,
+            prefersEmail: false,
+            doNotContact: false,
+            stripeCustomerId: null,
+            importSessionId,
+            createdAt: new Date(),
+            updatedAt: new Date(),
+            deletedAt: null
+          });
         }
 
         if (normalizedPhone) {
-          phoneSet.add(normalizedPhone);
+          const mappedCustomer = customerLookupMaps.emailMap.get(normalizedEmail ?? "") ?? null;
+          if (mappedCustomer) {
+            customerLookupMaps.phoneMap.set(normalizedPhone, mappedCustomer);
+          }
+        }
+
+        const normalizedName = normalizeCustomerNameValue(getMappedCustomerName(mappedRow));
+        if (normalizedName) {
+          const mappedCustomer =
+            (normalizedEmail ? customerLookupMaps.emailMap.get(normalizedEmail) : undefined) ??
+            (normalizedPhone ? customerLookupMaps.phoneMap.get(normalizedPhone) : undefined);
+          if (mappedCustomer) {
+            customerLookupMaps.nameMap.set(normalizedName, mappedCustomer);
+          }
         }
       }
 
@@ -568,6 +762,22 @@ export async function handleExecuteImport(job: Job<Record<string, unknown>>): Pr
       const progress = parsedCsv.rows.length === 0
         ? 100
         : Math.round((processedRows / parsedCsv.rows.length) * 100);
+      await db
+        .update(importSessions)
+        .set({
+          importedRows,
+          skippedRows,
+          duplicateRows,
+          updatedAt: new Date()
+        })
+        .where(
+          and(
+            eq(importSessions.companyId, companyId),
+            eq(importSessions.id, importSessionId),
+            isNull(importSessions.deletedAt)
+          )
+        )
+        .returning();
       await job.updateProgress?.(progress);
     }
 

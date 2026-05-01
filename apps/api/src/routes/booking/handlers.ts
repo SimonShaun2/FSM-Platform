@@ -8,6 +8,7 @@ import type {
 } from "@fsm/types";
 
 import {
+  checkBookingSlugAvailability,
   confirmBookingRequest,
   declineBookingRequest,
   getBookingDemandByZip,
@@ -19,7 +20,8 @@ import {
 } from "../../services/booking.service.js";
 import type {
   BookingAnalyticsQuery,
-  BookingRequestIdParams
+  BookingRequestIdParams,
+  BookingSlugAvailabilityQuery
 } from "./schemas.js";
 
 function toIsoString(value: Date | null): string | null {
@@ -83,6 +85,8 @@ function toBookingSettingsResponse(settings: Awaited<ReturnType<typeof getBookin
     googleReviewUrl: settings.googleReviewUrl,
     yelpReviewUrl: settings.yelpReviewUrl,
     facebookReviewUrl: settings.facebookReviewUrl,
+    customReviewUrl: settings.customReviewUrl,
+    tagline: settings.tagline,
     allowZipOverflow: settings.allowZipOverflow,
     balanceWorkload: settings.balanceWorkload,
     notifyOnNewBooking: settings.notifyOnNewBooking,
@@ -177,6 +181,16 @@ export async function updateBookingSettingsHandler(
   return reply.send({
     settings: toBookingSettingsResponse(settings)
   });
+}
+
+export async function getBookingSlugAvailabilityHandler(
+  request: FastifyRequest,
+  reply: FastifyReply
+): Promise<FastifyReply> {
+  const query = request.query as BookingSlugAvailabilityQuery;
+  const result = await checkBookingSlugAvailability(request.company.id, query.slug);
+
+  return reply.send(result);
 }
 
 export async function getBookingRequestStatsHandler(

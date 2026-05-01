@@ -178,6 +178,9 @@ export const updateReviewRequestValidation = withZodValidation({
   params: ReviewRequestIdParamsSchema,
   body: UpdateReviewRequestSchema
 });
+export const resendReviewRequestValidation = withZodValidation({
+  params: ReviewRequestIdParamsSchema
+});
 
 export const listReviewRequestsRouteSchema = {
   tags: ["review-requests"],
@@ -198,13 +201,16 @@ export const listReviewRequestsRouteSchema = {
         stats: {
           type: "object",
           additionalProperties: false,
-          required: ["pending", "sent", "clicked", "completed", "declined"],
+          required: ["pending", "sent", "clicked", "completed", "declined", "averageRating"],
           properties: {
             pending: { type: "integer" },
             sent: { type: "integer" },
             clicked: { type: "integer" },
             completed: { type: "integer" },
-            declined: { type: "integer" }
+            declined: { type: "integer" },
+            averageRating: {
+              anyOf: [{ type: "number" }, { type: "null" }]
+            }
           }
         }
       }
@@ -227,5 +233,22 @@ export const updateReviewRequestRouteSchema = {
     400: errorResponseSchema,
     401: errorResponseSchema,
     404: errorResponseSchema
+  }
+} as const;
+
+export const resendReviewRequestRouteSchema = {
+  tags: ["review-requests"],
+  response: {
+    200: {
+      type: "object",
+      additionalProperties: false,
+      required: ["reviewRequest"],
+      properties: {
+        reviewRequest: reviewRequestSchema
+      }
+    },
+    401: errorResponseSchema,
+    404: errorResponseSchema,
+    409: errorResponseSchema
   }
 } as const;

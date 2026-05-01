@@ -22,6 +22,7 @@ import {
   type PaginatedResult,
   type PublicReviewLanding,
   type ReviewRequest,
+  type ReviewRequestFunnelStats,
   type ReviewRequestListItem,
   type UpdateReviewRequestInput
 } from "@fsm/types";
@@ -35,14 +36,6 @@ type TechnicianRow = typeof technicians.$inferSelect;
 type UserRow = typeof users.$inferSelect;
 type SelectExecutor = Pick<typeof db, "select">;
 type TransactionExecutor = Pick<typeof db, "select" | "insert" | "update">;
-
-export interface ReviewRequestFunnelStats {
-  pending: number;
-  sent: number;
-  clicked: number;
-  completed: number;
-  declined: number;
-}
 
 const logger = pino({
   name: "review-request-service"
@@ -65,12 +58,61 @@ function normalizeOptionalString(value: string | undefined): string | null | und
   return normalizedValue.length > 0 ? normalizedValue : null;
 }
 
+function getReviewSettings(settings: BookingSettingsRow | null): PublicReviewLanding["settings"] {
+  return {
+    google: {
+      label: "Google",
+      url: settings?.googleReviewUrl ?? null,
+      isActive: Boolean(settings?.googleReviewUrl)
+    },
+    yelp: {
+      label: "Yelp",
+      url: settings?.yelpReviewUrl ?? null,
+      isActive: Boolean(settings?.yelpReviewUrl)
+    },
+    facebook: {
+      label: "Facebook",
+      url: settings?.facebookReviewUrl ?? null,
+      isActive: Boolean(settings?.facebookReviewUrl)
+    },
+    custom: {
+      label: "Custom",
+      url: settings?.customReviewUrl ?? null,
+      isActive: Boolean(settings?.customReviewUrl)
+    }
+  };
+}
+
 function toReviewRequest(row: ReviewRequestRow): ReviewRequest {
   return {
     ...row,
     status: row.status as ReviewRequest["status"],
     channel: (row.channel ?? "sms") as ReviewRequest["channel"]
   };
+}
+
+async function queueReviewRequestNotification(
+  companyId: string,
+  reviewRequest: ReviewRequestRow,
+  executor: SelectExecutor
+): Promise<void> {
+  const [customer, company, technician] = await Promise.all([
+    getCustomerRecord(companyId, reviewRequest.customerId, executor),
+    getCompanyRecord(companyId, executor),
+    reviewRequest.technicianId
+      ? getTechnicianRecord(companyId, reviewRequest.technicianId, executor)
+      : Promise.resolve(null)
+  ]);
+
+  await notificationsQueue.add("send-review-request", {
+    companyId,
+    reviewRequestId: reviewRequest.id,
+    customerId: reviewRequest.customerId,
+    customerPhone: customer.phone,
+    referenceId: reviewRequest.referenceId,
+    companyName: company.name,
+    technicianName: technician ? `${technician.firstName} ${technician.lastName}`.trim() : null
+  });
 }
 
 async function getActor(companyId: string, actorId: string, executor: SelectExecutor): Promise<UserRow> {
@@ -217,7 +259,11 @@ export async function createReviewRequest(
     }
 
     const primaryReviewUrl =
-      settings?.googleReviewUrl ?? settings?.yelpReviewUrl ?? settings?.facebookReviewUrl ?? null;
+      settings?.googleReviewUrl ??
+      settings?.yelpReviewUrl ??
+      settings?.facebookReviewUrl ??
+      settings?.customReviewUrl ??
+      null;
     const insertedRequests = await tx
       .insert(reviewRequests)
       .values({
@@ -272,6 +318,53 @@ export async function createReviewRequest(
   await notificationsQueue.add("send-review-request", result.queueData);
   logger.info({ companyId, jobId, reviewRequestId: result.reviewRequest.id }, "Queued review request");
   return result.reviewRequest;
+}
+
+export async function resendReviewRequest(
+  companyId: string,
+  reviewRequestId: string
+): Promise<ReviewRequest> {
+  const reviewRequest = await db.transaction(async (tx: TransactionExecutor) => {
+    const existingReviewRequest = await getReviewRequestRecord(companyId, reviewRequestId, tx);
+
+    if (existingReviewRequest.status === "completed") {
+      throw new AppError(ErrorCode.CONFLICT, "Completed review requests cannot be resent");
+    }
+
+    if (existingReviewRequest.status === "declined") {
+      throw new AppError(ErrorCode.CONFLICT, "Declined review requests cannot be resent");
+    }
+
+    const now = new Date();
+    const updatedRows = await tx
+      .update(reviewRequests)
+      .set({
+        status: "sent",
+        sentAt: now,
+        clickedAt: null,
+        updatedAt: now
+      })
+      .where(
+        and(
+          eq(reviewRequests.companyId, companyId),
+          eq(reviewRequests.id, reviewRequestId),
+          isNull(reviewRequests.deletedAt)
+        )
+      )
+      .returning();
+    const updatedReviewRequest = updatedRows[0];
+
+    if (!updatedReviewRequest) {
+      throw new AppError(ErrorCode.INTERNAL_ERROR, "Failed to resend review request");
+    }
+
+    return updatedReviewRequest;
+  });
+
+  await queueReviewRequestNotification(companyId, reviewRequest, db);
+  logger.info({ companyId, reviewRequestId }, "Queued review request resend");
+
+  return toReviewRequest(reviewRequest);
 }
 
 export async function listReviewRequests(
@@ -345,7 +438,18 @@ export async function listReviewRequests(
     sent: rows.filter((row) => row.status === "sent").length,
     clicked: rows.filter((row) => row.status === "clicked").length,
     completed: rows.filter((row) => row.status === "completed").length,
-    declined: rows.filter((row) => row.status === "declined").length
+    declined: rows.filter((row) => row.status === "declined").length,
+    averageRating:
+      rows.filter((row) => typeof row.rating === "number").length > 0
+        ? Number(
+            (
+              rows
+                .filter((row): row is ReviewRequestRow & { rating: number } => typeof row.rating === "number")
+                .reduce((total, row) => total + row.rating, 0) /
+              rows.filter((row) => typeof row.rating === "number").length
+            ).toFixed(1)
+          )
+        : null
   };
 
   return {
@@ -418,35 +522,62 @@ export async function updateReviewRequest(
 }
 
 export async function getPublicReviewLanding(referenceId: string): Promise<PublicReviewLanding> {
-  const [reviewRequest] = await db
-    .select()
-    .from(reviewRequests)
-    .where(and(eq(reviewRequests.referenceId, referenceId), isNull(reviewRequests.deletedAt)))
-    .limit(1);
+  return db.transaction(async (tx: TransactionExecutor) => {
+    const [reviewRequest] = await tx
+      .select()
+      .from(reviewRequests)
+      .where(and(eq(reviewRequests.referenceId, referenceId), isNull(reviewRequests.deletedAt)))
+      .limit(1);
 
-  if (!reviewRequest) {
-    throw new AppError(ErrorCode.NOT_FOUND, "Review request not found");
-  }
-
-  const [company, technician, settings] = await Promise.all([
-    getCompanyRecord(reviewRequest.companyId, db),
-    reviewRequest.technicianId
-      ? getTechnicianRecord(reviewRequest.companyId, reviewRequest.technicianId, db)
-      : Promise.resolve(null),
-    getBookingSettingsRecord(reviewRequest.companyId, db)
-  ]);
-
-  return {
-    reviewRequestId: reviewRequest.id,
-    companyName: company.name,
-    technicianName: technician ? `${technician.firstName} ${technician.lastName}`.trim() : null,
-    status: reviewRequest.status as PublicReviewLanding["status"],
-    reviewLinks: {
-      google: settings?.googleReviewUrl ?? null,
-      yelp: settings?.yelpReviewUrl ?? null,
-      facebook: settings?.facebookReviewUrl ?? null
+    if (!reviewRequest) {
+      throw new AppError(ErrorCode.NOT_FOUND, "Review request not found");
     }
-  };
+
+    const shouldTrackClick = reviewRequest.status === "sent" && reviewRequest.clickedAt === null;
+    const resolvedReviewRequest = shouldTrackClick
+      ? (
+          await tx
+            .update(reviewRequests)
+            .set({
+              status: "clicked",
+              clickedAt: new Date(),
+              updatedAt: new Date()
+            })
+            .where(
+              and(
+                eq(reviewRequests.companyId, reviewRequest.companyId),
+                eq(reviewRequests.id, reviewRequest.id),
+                isNull(reviewRequests.deletedAt)
+              )
+            )
+            .returning()
+        )[0] ?? reviewRequest
+      : reviewRequest;
+
+    const [company, technician, settings] = await Promise.all([
+      getCompanyRecord(resolvedReviewRequest.companyId, tx),
+      resolvedReviewRequest.technicianId
+        ? getTechnicianRecord(resolvedReviewRequest.companyId, resolvedReviewRequest.technicianId, tx)
+        : Promise.resolve(null),
+      getBookingSettingsRecord(resolvedReviewRequest.companyId, tx)
+    ]);
+
+    return {
+      reviewRequestId: resolvedReviewRequest.id,
+      companyName: company.name,
+      technicianName: technician ? `${technician.firstName} ${technician.lastName}`.trim() : null,
+      status: resolvedReviewRequest.status as PublicReviewLanding["status"],
+      reviewUrl: resolvedReviewRequest.reviewUrl,
+      expiresAt: null,
+      settings: getReviewSettings(settings),
+      reviewLinks: {
+        google: settings?.googleReviewUrl ?? null,
+        yelp: settings?.yelpReviewUrl ?? null,
+        facebook: settings?.facebookReviewUrl ?? null,
+        custom: settings?.customReviewUrl ?? null
+      }
+    };
+  });
 }
 
 export async function completePublicReviewRequest(

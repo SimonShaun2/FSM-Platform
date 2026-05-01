@@ -4,6 +4,7 @@ import type { UpdateReviewRequestInput } from "@fsm/types";
 
 import {
   listReviewRequests,
+  resendReviewRequest,
   updateReviewRequest
 } from "../../services/review-request.service.js";
 import type {
@@ -84,6 +85,18 @@ export async function updateReviewRequestHandler(
     params.id,
     request.body as UpdateReviewRequestInput
   );
+
+  return reply.send({
+    reviewRequest: toReviewRequestResponse(reviewRequest)
+  });
+}
+
+export async function resendReviewRequestHandler(
+  request: FastifyRequest,
+  reply: FastifyReply
+): Promise<FastifyReply> {
+  const params = request.params as ReviewRequestIdParams;
+  const reviewRequest = await resendReviewRequest(request.company.id, params.id);
 
   return reply.send({
     reviewRequest: toReviewRequestResponse(reviewRequest)

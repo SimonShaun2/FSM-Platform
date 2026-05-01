@@ -1,3 +1,11 @@
-export default function PublicReviewPage() {
-  return <div>TODO: TICKET-025</div>;
+import { PublicReviewClient } from "@/src/components/reviews/PublicReviewClient";
+
+export default async function PublicReviewPage({
+  params
+}: {
+  params: Promise<{ token: string }>;
+}) {
+  const { token } = await params;
+
+  return <PublicReviewClient token={token} />;
 }

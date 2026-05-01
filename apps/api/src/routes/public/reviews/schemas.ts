@@ -54,12 +54,60 @@ export const publicReviewRouteSchema = {
         review: {
           type: "object",
           additionalProperties: false,
-          required: ["reviewRequestId", "companyName", "technicianName", "status", "reviewLinks"],
+          required: [
+            "reviewRequestId",
+            "companyName",
+            "technicianName",
+            "status",
+            "reviewUrl",
+            "expiresAt",
+            "settings",
+            "reviewLinks"
+          ],
           properties: {
             reviewRequestId: { type: "string" },
             companyName: { type: "string" },
             technicianName: nullableStringSchema,
             status: { type: "string" },
+            reviewUrl: nullableStringSchema,
+            expiresAt: nullableDateTimeSchema,
+            settings: {
+              type: "object",
+              additionalProperties: false,
+              required: ["google", "yelp", "facebook"],
+              properties: {
+                google: {
+                  type: "object",
+                  additionalProperties: false,
+                  required: ["label", "url", "isActive"],
+                  properties: {
+                    label: { type: "string" },
+                    url: nullableStringSchema,
+                    isActive: { type: "boolean" }
+                  }
+                },
+                yelp: {
+                  type: "object",
+                  additionalProperties: false,
+                  required: ["label", "url", "isActive"],
+                  properties: {
+                    label: { type: "string" },
+                    url: nullableStringSchema,
+                    isActive: { type: "boolean" }
+                  }
+                },
+                facebook: {
+                  type: "object",
+                  additionalProperties: false,
+                  required: ["label", "url", "isActive"],
+                  properties: {
+                    label: { type: "string" },
+                    url: nullableStringSchema,
+                    isActive: { type: "boolean" }
+                  }
+                }
+              }
+            },
             reviewLinks: {
               type: "object",
               additionalProperties: false,

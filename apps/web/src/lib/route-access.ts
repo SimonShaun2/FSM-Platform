@@ -8,6 +8,7 @@ const EXACT_PUBLIC_ROUTES = new Set(["/login", "/signup"]);
 
 const ROLE_ALLOWED_PREFIXES: Record<UserRole, string[]> = {
   owner: [
+    "/onboarding",
     "/dashboard",
     "/dispatch",
     "/customers",
@@ -23,6 +24,7 @@ const ROLE_ALLOWED_PREFIXES: Record<UserRole, string[]> = {
     "/mobile"
   ],
   admin: [
+    "/onboarding",
     "/dashboard",
     "/dispatch",
     "/customers",

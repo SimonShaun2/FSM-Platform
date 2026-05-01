@@ -1,6 +1,7 @@
 export type UserRole = "owner" | "admin" | "dispatcher" | "office" | "technician";
 
 export type TechnicianStatus = "active" | "inactive" | "on_leave";
+export type TechnicianAvailableDay = "mon" | "tue" | "wed" | "thu" | "fri" | "sat" | "sun";
 
 export interface Technician {
   id: string;
@@ -14,6 +15,7 @@ export interface Technician {
   skills: string[] | null;
   serviceAreaIds: string[] | null;
   serviceZipCodes: string[] | null;
+  availableDays: TechnicianAvailableDay[] | null;
   hoursPerDay: string | null;
   totalJobsCompleted: number | null;
   avgJobDurationMinutes: number | null;
@@ -77,6 +79,7 @@ export interface CreateTechnicianInput {
   skills?: string[];
   serviceAreaIds?: string[];
   serviceZipCodes?: string[];
+  availableDays?: TechnicianAvailableDay[];
   hoursPerDay?: number;
   status?: TechnicianStatus;
   calendarColor?: string;
@@ -92,6 +95,7 @@ export interface UpdateTechnicianInput {
   skills?: string[];
   serviceAreaIds?: string[];
   serviceZipCodes?: string[];
+  availableDays?: TechnicianAvailableDay[];
   hoursPerDay?: number;
   status?: TechnicianStatus;
   calendarColor?: string;

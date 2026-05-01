@@ -212,7 +212,7 @@ function BookingHeader({
           <div className="min-w-0">
             <p className="truncate text-base font-semibold">{settings?.companyName ?? "ServiceRev"}</p>
             <p className="truncate text-xs text-white/70">
-              {settings?.phone ?? "(918) 555-0100"} - Book a service appointment
+              {settings?.tagline?.trim() || `${settings?.phone ?? "(918) 555-0100"} - Book a service appointment`}
             </p>
           </div>
         </div>

@@ -79,6 +79,7 @@ const MAX_LIMIT = 100;
 const DEFAULT_AVAILABLE_DAYS = ["mon", "tue", "wed", "thu", "fri"];
 const DEFAULT_SLOT_DURATION = 2;
 const DEFAULT_MAX_ADVANCE_DAYS = 14;
+const BOOKING_SLUG_PATTERN = /^[a-z0-9]+(?:-[a-z0-9]+)*$/u;
 const BOOKING_SOURCE_VALUES = new Set([
   "google",
   "facebook",
@@ -102,6 +103,10 @@ function normalizeOptionalString(value: string | null | undefined): string | nul
 
   const normalizedValue = value.trim();
   return normalizedValue.length > 0 ? normalizedValue : null;
+}
+
+function normalizeBookingSlug(value: string): string {
+  return value.trim().toLowerCase();
 }
 
 function normalizePhone(value: string): string {
@@ -154,6 +159,8 @@ function toPublicBookingSettings(
     googleReviewUrl: row.googleReviewUrl,
     yelpReviewUrl: row.yelpReviewUrl,
     facebookReviewUrl: row.facebookReviewUrl,
+    customReviewUrl: row.customReviewUrl,
+    tagline: row.tagline,
     phone: company.phone,
     logoUrl: company.logoUrl,
     serviceAreaZipCodes
@@ -318,6 +325,41 @@ async function getCompanyByBookingSlug(
 
   const company = await getCompanyById(settings.companyId, executor);
   return { company, settings };
+}
+
+async function isBookingSlugAvailable(
+  companyId: string,
+  slug: string,
+  executor: SelectExecutor
+): Promise<boolean> {
+  const normalizedSlug = normalizeBookingSlug(slug);
+  const [matchingBookingSettings] = await executor
+    .select()
+    .from(bookingSettings)
+    .where(and(eq(bookingSettings.bookingSlug, normalizedSlug), isNull(bookingSettings.deletedAt)))
+    .limit(1);
+
+  if (matchingBookingSettings && matchingBookingSettings.companyId !== companyId) {
+    return false;
+  }
+
+  const [matchingCompany] = await executor
+    .select()
+    .from(companies)
+    .where(and(eq(companies.slug, normalizedSlug), isNull(companies.deletedAt)))
+    .limit(1);
+
+  return !matchingCompany || matchingCompany.id === companyId;
+}
+
+async function assertBookingSlugAvailable(
+  companyId: string,
+  slug: string,
+  executor: SelectExecutor
+): Promise<void> {
+  if (!(await isBookingSlugAvailable(companyId, slug, executor))) {
+    throw new AppError(ErrorCode.CONFLICT, "That booking URL is already in use");
+  }
 }
 
 async function getActor(companyId: string, actorId: string, executor: SelectExecutor): Promise<UserRow> {
@@ -819,6 +861,25 @@ export async function getBookingSettings(companyId: string): Promise<BookingSett
   });
 }
 
+export async function checkBookingSlugAvailability(
+  companyId: string,
+  slug: string
+): Promise<{ slug: string; available: boolean }> {
+  const normalizedSlug = normalizeBookingSlug(slug);
+
+  if (!BOOKING_SLUG_PATTERN.test(normalizedSlug)) {
+    throw new AppError(
+      ErrorCode.VALIDATION_ERROR,
+      "booking slug must use lowercase letters, numbers, and hyphens only"
+    );
+  }
+
+  return {
+    slug: normalizedSlug,
+    available: await isBookingSlugAvailable(companyId, normalizedSlug, db)
+  };
+}
+
 export async function updateBookingSettings(
   companyId: string,
   actorId: string,
@@ -827,11 +888,24 @@ export async function updateBookingSettings(
   return db.transaction(async (tx) => {
     await getActor(companyId, actorId, tx);
     const existingSettings = await ensureBookingSettingsRow(companyId, tx);
+    const normalizedBookingSlug = input.bookingSlug !== undefined ? normalizeBookingSlug(input.bookingSlug) : undefined;
+
+    if (normalizedBookingSlug !== undefined) {
+      if (!BOOKING_SLUG_PATTERN.test(normalizedBookingSlug)) {
+        throw new AppError(
+          ErrorCode.VALIDATION_ERROR,
+          "booking slug must use lowercase letters, numbers, and hyphens only"
+        );
+      }
+
+      await assertBookingSlugAvailable(companyId, normalizedBookingSlug, tx);
+    }
+
     const updatedRows = await tx
       .update(bookingSettings)
       .set({
         ...(input.isEnabled !== undefined ? { isEnabled: input.isEnabled } : {}),
-        ...(input.bookingSlug !== undefined ? { bookingSlug: input.bookingSlug.trim() } : {}),
+        ...(normalizedBookingSlug !== undefined ? { bookingSlug: normalizedBookingSlug } : {}),
         ...(input.offeredServices !== undefined ? { offeredServices: input.offeredServices } : {}),
         ...(input.availableHoursStart !== undefined ? { availableHoursStart: input.availableHoursStart } : {}),
         ...(input.availableHoursEnd !== undefined ? { availableHoursEnd: input.availableHoursEnd } : {}),
@@ -842,6 +916,8 @@ export async function updateBookingSettings(
         ...(input.googleReviewUrl !== undefined ? { googleReviewUrl: normalizeOptionalString(input.googleReviewUrl) ?? null } : {}),
         ...(input.yelpReviewUrl !== undefined ? { yelpReviewUrl: normalizeOptionalString(input.yelpReviewUrl) ?? null } : {}),
         ...(input.facebookReviewUrl !== undefined ? { facebookReviewUrl: normalizeOptionalString(input.facebookReviewUrl) ?? null } : {}),
+        ...(input.customReviewUrl !== undefined ? { customReviewUrl: normalizeOptionalString(input.customReviewUrl) ?? null } : {}),
+        ...(input.tagline !== undefined ? { tagline: normalizeOptionalString(input.tagline) ?? null } : {}),
         ...(input.allowZipOverflow !== undefined ? { allowZipOverflow: input.allowZipOverflow } : {}),
         ...(input.balanceWorkload !== undefined ? { balanceWorkload: input.balanceWorkload } : {}),
         ...(input.notifyOnNewBooking !== undefined ? { notifyOnNewBooking: input.notifyOnNewBooking } : {}),

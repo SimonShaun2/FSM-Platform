@@ -4,4 +4,9 @@ export interface StripeConnectStatus {
   payoutsEnabled?: boolean;
   detailsSubmitted?: boolean;
   stripeAccountId?: string;
+  accountName?: string | null;
+  payoutSchedule?: string | null;
+  lastPayoutAmount?: string | null;
+  lastPayoutAt?: string | null;
+  platformFeePercent?: number;
 }

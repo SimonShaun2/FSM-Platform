@@ -1,9 +1,27 @@
 import { and, eq, isNull } from "drizzle-orm";
 
 import { companies, db, emitEventWithExecutor } from "@fsm/db";
-import { AppError, ErrorCode } from "@fsm/types";
+import {
+  AppError,
+  ErrorCode,
+  type CompanyNotificationSettings,
+  type CompanySettings,
+  type NotificationChannelPreferences
+} from "@fsm/types";
 
 type CompanyRecord = typeof companies.$inferSelect;
+type NotificationChannelPreferenceInput = {
+  email?: boolean | undefined;
+  sms?: boolean | undefined;
+};
+type CompanyNotificationSettingsInput = {
+  [K in keyof CompanyNotificationSettings]?: NotificationChannelPreferenceInput | null | undefined;
+};
+type CompanySettingsInput = {
+  tradingName?: string | null | undefined;
+  currency?: string | null | undefined;
+  notifications?: CompanyNotificationSettingsInput | undefined;
+};
 
 interface UpdateCompanyInput {
   name?: string | undefined;
@@ -17,6 +35,7 @@ interface UpdateCompanyInput {
   zip?: string | undefined;
   timezone?: string | undefined;
   logoUrl?: string | undefined;
+  settings?: CompanySettingsInput | undefined;
 }
 
 function requireResult<T>(value: T | undefined, message: string): T {
@@ -31,8 +50,119 @@ function normalizeEmail(email: string): string {
   return email.trim().toLowerCase();
 }
 
+function normalizeCurrency(value: string | null): string | null {
+  if (value === null) {
+    return null;
+  }
+
+  const normalizedValue = value.trim().toUpperCase();
+  return normalizedValue.length > 0 ? normalizedValue : null;
+}
+
+function normalizeOptionalSettingString(value: string | null): string | null {
+  if (value === null) {
+    return null;
+  }
+
+  const normalizedValue = value.trim();
+  return normalizedValue.length > 0 ? normalizedValue : null;
+}
+
 function buildActorName(firstName: string, lastName: string): string {
   return `${firstName} ${lastName}`.trim();
+}
+
+function normalizeCompanySettings(settings: CompanyRecord["settings"]): CompanySettings {
+  if (!settings || typeof settings !== "object" || Array.isArray(settings)) {
+    return {};
+  }
+
+  return { ...(settings as CompanySettings) };
+}
+
+function normalizeNotificationPreference(
+  currentValue: NotificationChannelPreferences | null | undefined,
+  inputValue: NotificationChannelPreferenceInput | null | undefined
+): NotificationChannelPreferences | null | undefined {
+  if (inputValue === undefined) {
+    return currentValue;
+  }
+
+  if (inputValue === null) {
+    return null;
+  }
+
+  return {
+    email: inputValue.email ?? currentValue?.email ?? false,
+    sms: inputValue.sms ?? currentValue?.sms ?? false
+  };
+}
+
+function normalizeNotificationSettings(
+  currentValue: CompanyNotificationSettings | null | undefined,
+  inputValue: CompanyNotificationSettingsInput | undefined
+): CompanyNotificationSettings | null | undefined {
+  if (inputValue === undefined) {
+    return currentValue;
+  }
+
+  return {
+    ...(inputValue.bookingRequest !== undefined
+      ? { bookingRequest: normalizeNotificationPreference(currentValue?.bookingRequest, inputValue.bookingRequest) ?? null }
+      : currentValue?.bookingRequest !== undefined
+        ? { bookingRequest: currentValue.bookingRequest }
+        : {}),
+    ...(inputValue.estimateFollowUp !== undefined
+      ? { estimateFollowUp: normalizeNotificationPreference(currentValue?.estimateFollowUp, inputValue.estimateFollowUp) ?? null }
+      : currentValue?.estimateFollowUp !== undefined
+        ? { estimateFollowUp: currentValue.estimateFollowUp }
+        : {}),
+    ...(inputValue.invoiceRecovery !== undefined
+      ? { invoiceRecovery: normalizeNotificationPreference(currentValue?.invoiceRecovery, inputValue.invoiceRecovery) ?? null }
+      : currentValue?.invoiceRecovery !== undefined
+        ? { invoiceRecovery: currentValue.invoiceRecovery }
+        : {}),
+    ...(inputValue.paymentReceived !== undefined
+      ? { paymentReceived: normalizeNotificationPreference(currentValue?.paymentReceived, inputValue.paymentReceived) ?? null }
+      : currentValue?.paymentReceived !== undefined
+        ? { paymentReceived: currentValue.paymentReceived }
+        : {}),
+    ...(inputValue.reviewRequest !== undefined
+      ? { reviewRequest: normalizeNotificationPreference(currentValue?.reviewRequest, inputValue.reviewRequest) ?? null }
+      : currentValue?.reviewRequest !== undefined
+        ? { reviewRequest: currentValue.reviewRequest }
+        : {}),
+    ...(inputValue.serviceDueAlert !== undefined
+      ? { serviceDueAlert: normalizeNotificationPreference(currentValue?.serviceDueAlert, inputValue.serviceDueAlert) ?? null }
+      : currentValue?.serviceDueAlert !== undefined
+        ? { serviceDueAlert: currentValue.serviceDueAlert }
+        : {})
+  };
+}
+
+function buildCompanySettingsUpdate(
+  currentSettings: CompanyRecord["settings"],
+  input: CompanySettingsInput | undefined
+): CompanySettings | undefined {
+  if (input === undefined) {
+    return undefined;
+  }
+
+  const nextSettings = normalizeCompanySettings(currentSettings);
+
+  if (input.tradingName !== undefined) {
+    nextSettings.tradingName = normalizeOptionalSettingString(input.tradingName);
+  }
+
+  if (input.currency !== undefined) {
+    nextSettings.currency = normalizeCurrency(input.currency);
+  }
+
+  if (input.notifications !== undefined) {
+    nextSettings.notifications = normalizeNotificationSettings(nextSettings.notifications, input.notifications) ?? null;
+  }
+
+  return nextSettings;
 }
 
 export async function getCompany(companyId: string): Promise<CompanyRecord> {
@@ -71,7 +201,10 @@ export async function updateCompany(
     ...(input.state !== undefined ? { state: input.state } : {}),
     ...(input.zip !== undefined ? { zip: input.zip } : {}),
     ...(input.timezone !== undefined ? { timezone: input.timezone } : {}),
-    ...(input.logoUrl !== undefined ? { logoUrl: input.logoUrl } : {})
+    ...(input.logoUrl !== undefined ? { logoUrl: input.logoUrl } : {}),
+    ...(input.settings !== undefined
+      ? { settings: buildCompanySettingsUpdate(existingCompany.settings, input.settings) ?? existingCompany.settings }
+      : {})
   };
 
   if (Object.keys(updateValues).length === 0) {

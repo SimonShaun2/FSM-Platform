@@ -4,6 +4,7 @@ import { useEffect, useMemo, useState } from "react";
 import { Bar, BarChart, CartesianGrid, ResponsiveContainer, Tooltip, XAxis } from "recharts";
 
 import { PageLayout } from "@/src/components/layout/PageLayout";
+import { ZipChipEditor } from "@/src/components/shared/ZipChipEditor";
 import { SkeletonCard } from "@/src/components/ui/SkeletonCard";
 import { useBookingDemandByZip, useBookingSettings, useUpdateBookingSettings } from "@/src/hooks/booking.hooks";
 import { useDispatchView } from "@/src/hooks/dispatch.hooks";
@@ -13,25 +14,6 @@ import { cn } from "@/src/lib/utils";
 
 const today = new Date().toISOString().slice(0, 10);
 
-function ZipChip({
-  zip,
-  onRemove
-}: {
-  zip: string;
-  onRemove?: () => void;
-}) {
-  return (
-    <span className="inline-flex items-center gap-2 rounded-full bg-success-light px-3 py-1 text-xs font-semibold text-success">
-      {zip}
-      {onRemove ? (
-        <button type="button" onClick={onRemove} className="text-success/80 transition hover:text-success">
-          x
-        </button>
-      ) : null}
-    </span>
-  );
-}
-
 export default function BookingServiceAreasPage() {
   const techniciansQuery = useTechnicians();
   const dispatchQuery = useDispatchView(today);
@@ -40,7 +22,6 @@ export default function BookingServiceAreasPage() {
   const updateSettings = useUpdateBookingSettings();
   const [selectedTechId, setSelectedTechId] = useState<string | null>(null);
   const [draftZipMap, setDraftZipMap] = useState<Record<string, string[]>>({});
-  const [newZip, setNewZip] = useState("");
 
   const technicians = techniciansQuery.data?.data ?? [];
   const dispatchTechnicians = dispatchQuery.data?.technicians ?? [];
@@ -78,63 +59,18 @@ export default function BookingServiceAreasPage() {
     setSelectedTechId((current) => current ?? technicians[0]?.id ?? null);
   }, [technicians]);
 
-  async function handleRemoveZip(zip: string) {
-    if (!selectedTechnician) {
-      return;
-    }
-
-    const nextZips = selectedTechZips.filter((value) => value !== zip);
-
-    setDraftZipMap((current) => ({
-      ...current,
-      [selectedTechnician.id]: nextZips
-    }));
-
-    try {
-      await selectedTechMutation.mutateAsync(nextZips);
-      showToast({
-        tone: "success",
-        title: "Service area updated",
-        description: `${selectedTechnician.firstName} no longer covers ${zip}.`
-      });
-    } catch (error) {
-      setDraftZipMap((current) => ({
-        ...current,
-        [selectedTechnician.id]: selectedTechnician.serviceZipCodes
-      }));
-      showToast({
-        tone: "error",
-        title: "Could not update service areas",
-        description: error instanceof Error ? error.message : "Try again."
-      });
-    }
-  }
-
   async function handleSaveZips() {
     if (!selectedTechnician) {
       return;
     }
 
-    const normalizedZip = newZip.trim();
-    if (normalizedZip.length > 0 && !/^\d{5}$/u.test(normalizedZip)) {
-      showToast({
-        tone: "error",
-        title: "ZIP code invalid",
-        description: "Use a 5-digit ZIP code before saving."
-      });
-      return;
-    }
-
-    const mergedZips = Array.from(new Set([...selectedTechZips, ...(normalizedZip ? [normalizedZip] : [])])).sort();
-
     setDraftZipMap((current) => ({
       ...current,
-      [selectedTechnician.id]: mergedZips
+      [selectedTechnician.id]: selectedTechZips
     }));
 
     try {
-      await selectedTechMutation.mutateAsync(mergedZips);
-      setNewZip("");
+      await selectedTechMutation.mutateAsync(selectedTechZips);
       showToast({
         tone: "success",
         title: "Service areas saved",
@@ -227,7 +163,12 @@ export default function BookingServiceAreasPage() {
 
                     <div className="flex flex-wrap gap-2">
                       {zips.slice(0, 4).map((zip) => (
-                        <ZipChip key={zip} zip={zip} />
+                        <span
+                          key={zip}
+                          className="inline-flex items-center rounded-full bg-success-light px-3 py-1 text-xs font-semibold text-success"
+                        >
+                          {zip}
+                        </span>
                       ))}
                       {zips.length > 4 ? (
                         <span className="inline-flex items-center rounded-full bg-neutral-100 px-3 py-1 text-xs font-semibold text-neutral-500">
@@ -291,34 +232,20 @@ export default function BookingServiceAreasPage() {
 
             {selectedTechnician ? (
               <>
-                <div className="mt-4 flex flex-wrap gap-2">
-                  {selectedTechZips.map((zip) => (
-                    <ZipChip key={zip} zip={zip} onRemove={() => void handleRemoveZip(zip)} />
-                  ))}
+                <div className="mt-4">
+                  <ZipChipEditor
+                    zips={selectedTechZips}
+                    onChange={(nextZips) => {
+                      setDraftZipMap((current) => ({
+                        ...current,
+                        [selectedTechnician.id]: nextZips
+                      }));
+                    }}
+                    color="#16A34A"
+                  />
                 </div>
 
                 <div className="mt-5 space-y-3">
-                  <label className="block">
-                    <span className="text-sm font-semibold text-neutral-700">Add ZIP code</span>
-                    <div className="mt-2 flex gap-2">
-                      <input
-                        value={newZip}
-                        onChange={(event) => setNewZip(event.target.value)}
-                        placeholder="e.g. 74133"
-                        className="min-h-11 flex-1 rounded-2xl border border-neutral-200 px-3 text-sm outline-none transition focus:border-brand-accent"
-                      />
-                      <button
-                        type="button"
-                        onClick={() => {
-                          void handleSaveZips();
-                        }}
-                        className="min-h-11 rounded-2xl bg-brand-accent px-4 text-sm font-semibold text-white transition hover:bg-brand-primary"
-                      >
-                        +
-                      </button>
-                    </div>
-                  </label>
-
                   <button
                     type="button"
                     onClick={() => {
