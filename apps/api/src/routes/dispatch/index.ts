@@ -1,13 +1,14 @@
 import type { FastifyPluginAsync } from "fastify";
 
 import {
-  autoFitStubHandler,
+  autoFitHandler,
   getDispatchViewHandler,
   getDispatchWorkloadHandler,
   listApprovedUnconvertedEstimatesHandler,
   listUnscheduledJobsHandler
 } from "./handlers.js";
 import {
+  autoFitValidation,
   autoFitRouteSchema,
   dispatchDateValidation,
   dispatchViewRouteSchema,
@@ -31,8 +32,9 @@ const dispatchRoutes: FastifyPluginAsync = async (fastify) => {
 
   fastify.post("/dispatch/auto-fit", {
     preHandler: [fastify.authenticate],
+    preValidation: [autoFitValidation],
     schema: autoFitRouteSchema
-  }, autoFitStubHandler);
+  }, autoFitHandler);
 
   fastify.get("/jobs/unscheduled", {
     preHandler: [fastify.authenticate],

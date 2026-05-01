@@ -47,9 +47,9 @@ import {
   getJobPhotos,
   getJobTimeline,
   listJobs,
+  patchJob,
   scheduleJob,
   transitionStatus,
-  updateJob
 } from "../../services/job.service.js";
 import type {
   AssignTechnicianBody,
@@ -305,8 +305,7 @@ export async function getJobHandler(request: FastifyRequest, reply: FastifyReply
 
 export async function updateJobHandler(request: FastifyRequest, reply: FastifyReply): Promise<FastifyReply> {
   const params = request.params as JobIdParams;
-  await updateJob(request.company.id, request.user.id, params.id, request.body as UpdateJobInput);
-  const detail = await getJob(request.company.id, params.id);
+  const detail = await patchJob(request.company.id, request.user.id, params.id, request.body as UpdateJobInput);
 
   return reply.send({
     job: toJobDetailResponse(detail)

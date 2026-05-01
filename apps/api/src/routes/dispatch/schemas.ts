@@ -34,8 +34,19 @@ export const DispatchDateQuerySchema = z.object({
 
 export type DispatchDateQuery = z.infer<typeof DispatchDateQuerySchema>;
 
+export const AutoFitBodySchema = z.object({
+  jobId: z.string().uuid(),
+  date: z.string().regex(isoDatePattern).refine(isValidIsoDate, "Invalid ISO date")
+}).strict();
+
+export type AutoFitBody = z.infer<typeof AutoFitBodySchema>;
+
 export const dispatchDateValidation = withZodValidation({
   query: DispatchDateQuerySchema
+});
+
+export const autoFitValidation = withZodValidation({
+  body: AutoFitBodySchema
 });
 
 export const dispatchViewRouteSchema = {
@@ -52,14 +63,52 @@ export const listApprovedUnconvertedEstimatesRouteSchema = dispatchViewRouteSche
 export const autoFitRouteSchema = {
   tags: ["dispatch"],
   response: {
-    501: {
+    200: {
       type: "object",
       additionalProperties: false,
-      required: ["message"],
+      required: ["suggestions", "message"],
       properties: {
-        message: { type: "string" }
+        suggestions: {
+          type: "array",
+          items: {
+            type: "object",
+            additionalProperties: false,
+            required: [
+              "technicianId",
+              "technicianName",
+              "scheduledStart",
+              "scheduledEnd",
+              "score",
+              "scoreBreakdown",
+              "reasoningText"
+            ],
+            properties: {
+              technicianId: { type: "string" },
+              technicianName: { type: "string" },
+              scheduledStart: { type: "string", format: "date-time" },
+              scheduledEnd: { type: "string", format: "date-time" },
+              score: { type: "integer" },
+              scoreBreakdown: {
+                type: "object",
+                additionalProperties: false,
+                required: ["zipMatch", "skillsMatch", "utilizationScore", "gapFitScore"],
+                properties: {
+                  zipMatch: { type: "integer" },
+                  skillsMatch: { type: "integer" },
+                  utilizationScore: { type: "integer" },
+                  gapFitScore: { type: "integer" }
+                }
+              },
+              reasoningText: { type: "string" }
+            }
+          }
+        },
+        message: {
+          anyOf: [{ type: "string" }, { type: "null" }]
+        }
       }
     },
+    400: errorResponseSchema,
     401: errorResponseSchema
   }
 } as const;

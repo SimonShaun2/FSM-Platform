@@ -378,9 +378,16 @@ describe("phase2 operations routes", () => {
     expect(deleteResponse.body.success).toBe(true);
   });
 
-  it("serves dispatch view, workload, queues, and the auto-fit stub", async () => {
+  it("serves dispatch view, workload, queues, and real auto-fit suggestions", async () => {
     const auth = createAuthContext("owner");
-    const { customer, property, technician } = seedFieldGraph(auth.company.id);
+    const { customer, property, technician, job } = seedFieldGraph(auth.company.id);
+    technician.skills = ["HVAC", "Maintenance"];
+    technician.serviceZipCodes = ["74103"];
+    job.status = "lead";
+    job.technicianId = null;
+    job.scheduledStart = null;
+    job.scheduledEnd = null;
+    job.scheduledDurationMinutes = null;
 
     fakeDb.seedJob({
       companyId: auth.company.id,
@@ -389,14 +396,18 @@ describe("phase2 operations routes", () => {
       technicianId: technician.id,
       title: "Morning Repair",
       status: "scheduled",
-      scheduledStart: new Date("2026-04-28T08:00:00.000Z"),
-      scheduledEnd: new Date("2026-04-28T10:00:00.000Z")
+      scheduledStart: new Date("2026-04-28T13:00:00.000Z"),
+      scheduledEnd: new Date("2026-04-28T15:00:00.000Z")
     });
     fakeDb.seedJob({
       companyId: auth.company.id,
       customerId: customer.id,
-      title: "Queue Job",
-      status: "lead"
+      propertyId: property.id,
+      technicianId: technician.id,
+      title: "Afternoon Repair",
+      status: "scheduled",
+      scheduledStart: new Date("2026-04-28T17:00:00.000Z"),
+      scheduledEnd: new Date("2026-04-28T21:00:00.000Z")
     });
     fakeDb.seedEstimate({
       companyId: auth.company.id,
@@ -440,10 +451,16 @@ describe("phase2 operations routes", () => {
     const autoFitResponse = await request(app.server)
       .post("/api/v1/dispatch/auto-fit")
       .set("Authorization", auth.authorization)
-      .send({});
+      .send({
+        jobId: job.id,
+        date: "2026-04-28"
+      });
 
-    expect(autoFitResponse.status).toBe(501);
-    expect(autoFitResponse.body.message).toBe("Auto-fit coming in TICKET-020");
+    expect(autoFitResponse.status).toBe(200);
+    expect(autoFitResponse.body.suggestions).toHaveLength(1);
+    expect(autoFitResponse.body.suggestions[0].technicianId).toBe(technician.id);
+    expect(autoFitResponse.body.suggestions[0].score).toBeGreaterThan(0);
+    expect(autoFitResponse.body.message).toBeNull();
   });
 
   it("serves the public booking flow including zip check, availability, submit, and confirmation", async () => {

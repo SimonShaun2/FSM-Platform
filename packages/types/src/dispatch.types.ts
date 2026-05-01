@@ -61,6 +61,28 @@ export interface DispatchWorkloadRow {
   jobCount: number;
 }
 
+export interface AutoFitScoreBreakdown {
+  zipMatch: number;
+  skillsMatch: number;
+  utilizationScore: number;
+  gapFitScore: number;
+}
+
+export interface AutoFitSuggestion {
+  technicianId: string;
+  technicianName: string;
+  scheduledStart: string;
+  scheduledEnd: string;
+  score: number;
+  scoreBreakdown: AutoFitScoreBreakdown;
+  reasoningText: string;
+}
+
+export interface AutoFitResponse {
+  suggestions: AutoFitSuggestion[];
+  message: string | null;
+}
+
 export interface UnscheduledJob {
   id: string;
   jobNumber: string;

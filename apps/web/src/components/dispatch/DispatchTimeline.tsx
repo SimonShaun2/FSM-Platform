@@ -1,6 +1,7 @@
 "use client";
 
 import { useDroppable } from "@dnd-kit/core";
+import type { ReactNode } from "react";
 import { CalendarPlus2, CalendarRange } from "lucide-react";
 import type { DispatchGap, DispatchJobCard, DispatchTechnicianDay } from "@fsm/types";
 
@@ -28,10 +29,12 @@ interface DispatchTimelineProps {
   technicians: DispatchTechnicianDay[];
   isLoading: boolean;
   selectedJobId: string | null;
+  animatedJobId: string | null;
   quickCreateSlot: DispatchDropSlot | null;
   createQuickJobPending: boolean;
   createQuickJobError: string | null;
   activeDragJobId: string | null;
+  overlay: ReactNode;
   onSelectJob: (jobId: string) => void;
   onOpenQuickCreate: (slot: DispatchDropSlot) => void;
   onCloseQuickCreate: () => void;
@@ -102,10 +105,12 @@ function TimelineGap({
 function TimelineJobBlock({
   job,
   isSelected,
+  isAnimated,
   onSelectJob
 }: {
   job: DispatchJobCard;
   isSelected: boolean;
+  isAnimated: boolean;
   onSelectJob: (jobId: string) => void;
 }) {
   return (
@@ -116,7 +121,8 @@ function TimelineJobBlock({
       className={cn(
         "absolute top-2 z-10 flex h-[72px] flex-col items-start justify-between rounded-[22px] px-4 py-3 text-left shadow-sm transition",
         getStatusTone(job.status),
-        isSelected && "ring-2 ring-brand-accent ring-offset-2 ring-offset-white"
+        isSelected && "ring-2 ring-brand-accent ring-offset-2 ring-offset-white",
+        isAnimated && "animate-pulse ring-2 ring-success ring-offset-2 ring-offset-white shadow-[0_24px_72px_rgba(36,190,145,0.24)]"
       )}
     >
       <div className="min-w-0">
@@ -131,6 +137,7 @@ function TimelineJobBlock({
 function TechnicianRow({
   technician,
   selectedJobId,
+  animatedJobId,
   quickCreateSlot,
   createQuickJobPending,
   createQuickJobError,
@@ -142,6 +149,7 @@ function TechnicianRow({
 }: {
   technician: DispatchTechnicianDay;
   selectedJobId: string | null;
+  animatedJobId: string | null;
   quickCreateSlot: DispatchDropSlot | null;
   createQuickJobPending: boolean;
   createQuickJobError: string | null;
@@ -206,6 +214,7 @@ function TechnicianRow({
             key={job.id}
             job={job}
             isSelected={selectedJobId === job.id}
+            isAnimated={animatedJobId === job.id}
             onSelectJob={onSelectJob}
           />
         ))}
@@ -255,10 +264,12 @@ export function DispatchTimeline({
   technicians,
   isLoading,
   selectedJobId,
+  animatedJobId,
   quickCreateSlot,
   createQuickJobPending,
   createQuickJobError,
   activeDragJobId,
+  overlay,
   onSelectJob,
   onOpenQuickCreate,
   onCloseQuickCreate,
@@ -281,7 +292,8 @@ export function DispatchTimeline({
   }
 
   return (
-    <section className="surface-card overflow-x-auto px-4 py-4">
+    <section className="surface-card relative overflow-x-auto px-4 py-4">
+      {overlay}
       <div className="space-y-3">
         <TimelineHeader />
         {technicians.map((technician) => (
@@ -289,6 +301,7 @@ export function DispatchTimeline({
             key={technician.id}
             technician={technician}
             selectedJobId={selectedJobId}
+            animatedJobId={animatedJobId}
             quickCreateSlot={quickCreateSlot}
             createQuickJobPending={createQuickJobPending}
             createQuickJobError={createQuickJobError}

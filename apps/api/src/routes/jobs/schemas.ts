@@ -525,14 +525,39 @@ export const CreateJobSchema = z
     path: ["scheduledEnd"]
   });
 
-export const UpdateJobSchema = buildUpdateSchema({
-  title: z.string().trim().min(1).max(255).optional(),
-  description: z.string().trim().optional(),
-  type: jobTypeSchema.optional(),
-  priority: jobPrioritySchema.optional(),
-  tags: z.array(z.string().trim().min(1)).optional(),
-  techNotes: z.string().trim().optional()
-});
+export const UpdateJobSchema = z
+  .object({
+    title: z.string().trim().min(1).max(255).optional(),
+    description: z.string().trim().optional(),
+    type: jobTypeSchema.optional(),
+    priority: jobPrioritySchema.optional(),
+    tags: z.array(z.string().trim().min(1)).optional(),
+    techNotes: z.string().trim().optional(),
+    technicianId: uuidSchema.optional(),
+    scheduledStart: dateTimeSchema.optional(),
+    scheduledEnd: dateTimeSchema.optional()
+  })
+  .strict()
+  .refine((input) => Object.keys(input).length > 0, {
+    message: "At least one field is required"
+  })
+  .refine((input) => {
+    return (input.scheduledStart === undefined && input.scheduledEnd === undefined) ||
+      (input.scheduledStart !== undefined && input.scheduledEnd !== undefined);
+  }, {
+    message: "scheduledStart and scheduledEnd must be provided together",
+    path: ["scheduledEnd"]
+  })
+  .refine((input) => {
+    if (!input.scheduledStart || !input.scheduledEnd) {
+      return true;
+    }
+
+    return new Date(input.scheduledEnd).getTime() > new Date(input.scheduledStart).getTime();
+  }, {
+    message: "scheduledEnd must be after scheduledStart",
+    path: ["scheduledEnd"]
+  });
 
 export const TransitionStatusSchema = z
   .object({

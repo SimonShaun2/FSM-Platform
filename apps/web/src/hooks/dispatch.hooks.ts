@@ -2,6 +2,7 @@
 
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import type {
+  AutoFitResponse,
   ConfirmBookingRequestInput,
   DispatchView,
   JobDetail,
@@ -126,19 +127,25 @@ export function useScheduleJob() {
   const queryClient = useQueryClient();
 
   return useMutation({
-    mutationFn: async ({ jobId, technicianId, scheduledStart, scheduledEnd }: ScheduleBoardJobInput) => {
-      await api.post<{ job: JobDetail }>(`/api/v1/jobs/${jobId}/assign`, {
-        technicianId
-      });
-
-      return api.post<{ job: JobDetail }>(`/api/v1/jobs/${jobId}/schedule`, {
+    mutationFn: ({ jobId, technicianId, scheduledStart, scheduledEnd }: ScheduleBoardJobInput) =>
+      api.patch<{ job: JobDetail }>(`/api/v1/jobs/${jobId}`, {
+        technicianId,
         scheduledStart,
         scheduledEnd
-      });
-    },
+      }),
     onSuccess: async () => {
       await invalidateDispatchQueries(queryClient);
     }
+  });
+}
+
+export function useAutoFit() {
+  return useMutation({
+    mutationFn: ({ jobId, date }: { jobId: string; date: string }) =>
+      api.post<AutoFitResponse>("/api/v1/dispatch/auto-fit", {
+        jobId,
+        date
+      })
   });
 }
 

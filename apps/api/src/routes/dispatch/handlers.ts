@@ -1,13 +1,15 @@
 import type { FastifyReply, FastifyRequest } from "fastify";
 
+import type { AutoFitResponse } from "@fsm/types";
+
+import { getAutoFitSuggestions } from "../../services/dispatch-intelligence.service.js";
 import {
-  getDispatchAutoFitMessage,
   getDispatchView,
   getDispatchWorkload,
   listApprovedUnconvertedEstimates,
   listUnscheduledJobs
 } from "../../services/dispatch.service.js";
-import type { DispatchDateQuery } from "./schemas.js";
+import type { AutoFitBody, DispatchDateQuery } from "./schemas.js";
 
 export async function getDispatchViewHandler(
   request: FastifyRequest,
@@ -59,9 +61,16 @@ export async function listApprovedUnconvertedEstimatesHandler(
   });
 }
 
-export async function autoFitStubHandler(
-  _request: FastifyRequest,
+export async function autoFitHandler(
+  request: FastifyRequest,
   reply: FastifyReply
 ): Promise<FastifyReply> {
-  return reply.status(501).send(getDispatchAutoFitMessage());
+  const body = request.body as AutoFitBody;
+  const response: AutoFitResponse = await getAutoFitSuggestions({
+    companyId: request.company.id,
+    jobId: body.jobId,
+    date: body.date
+  });
+
+  return reply.send(response);
 }

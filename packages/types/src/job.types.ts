@@ -189,6 +189,9 @@ export interface UpdateJobInput {
   priority?: JobPriority;
   tags?: string[];
   techNotes?: string;
+  technicianId?: string;
+  scheduledStart?: string;
+  scheduledEnd?: string;
 }
 
 export interface ScheduleJobInput {

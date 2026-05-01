@@ -12,11 +12,11 @@ import {
 } from "@dnd-kit/core";
 import { addDays, format, parseISO, subDays } from "date-fns";
 import { AlertTriangle, ChevronLeft, ChevronRight, Search, Sparkles } from "lucide-react";
-import type { JobDetail } from "@fsm/types";
+import type { AutoFitSuggestion, JobDetail } from "@fsm/types";
 
 import { EmptyState } from "@/src/components/ui/EmptyState";
 import { StatBadge } from "@/src/components/ui/StatBadge";
-import { useDispatchJob, useDispatchView, useScheduleJob } from "@/src/hooks/dispatch.hooks";
+import { useAutoFit, useDispatchJob, useDispatchView, useScheduleJob } from "@/src/hooks/dispatch.hooks";
 import {
   useApprovedEstimatesQueue,
   useBookingRequest,
@@ -39,13 +39,20 @@ import {
 import { DispatchDetailPanel } from "./DispatchDetailPanel";
 import { DispatchQueuePanel } from "./DispatchQueuePanel";
 import { DispatchTimeline } from "./DispatchTimeline";
+import { AutoFitOverlay } from "./AutoFitOverlay";
 import type { DispatchDragJobData, DispatchDropSlot, DispatchDropTargetData } from "./dispatch.utils";
 import {
-  findAutoFitSlot,
   formatDispatchDateLabel,
-  getJobDurationMinutes,
   matchesSearch
 } from "./dispatch.utils";
+
+type AutoFitOverlayState = {
+  jobId: string;
+  suggestions: AutoFitSuggestion[];
+  currentIndex: number;
+  message: string | null;
+  isLoading: boolean;
+};
 
 function getErrorMessage(error: unknown): string {
   if (error instanceof ApiError) {
@@ -102,6 +109,8 @@ export function DispatchBoardClient() {
   const [boardMessage, setBoardMessage] = useState<string | null>(null);
   const [createQuickJobError, setCreateQuickJobError] = useState<string | null>(null);
   const [autoFittingJobId, setAutoFittingJobId] = useState<string | null>(null);
+  const [animatedJobId, setAnimatedJobId] = useState<string | null>(null);
+  const [autoFitOverlay, setAutoFitOverlay] = useState<AutoFitOverlayState | null>(null);
   const [convertingEstimateId, setConvertingEstimateId] = useState<string | null>(null);
   const [completingJobId, setCompletingJobId] = useState<string | null>(null);
   const deferredSearch = useDeferredValue(search);
@@ -113,6 +122,7 @@ export function DispatchBoardClient() {
   const unscheduledJobsQuery = useUnscheduledDispatchJobs();
   const approvedEstimatesQuery = useApprovedEstimatesQueue();
 
+  const autoFitMutation = useAutoFit();
   const scheduleJobMutation = useScheduleJob();
   const completeJobMutation = useCompleteDispatchJob();
   const createQuickJobMutation = useCreateQuickJob();
@@ -134,6 +144,11 @@ export function DispatchBoardClient() {
         return;
       }
 
+      if (autoFitOverlay) {
+        setAutoFitOverlay(null);
+        return;
+      }
+
       if (quickCreateSlot) {
         setQuickCreateSlot(null);
         setCreateQuickJobError(null);
@@ -145,7 +160,19 @@ export function DispatchBoardClient() {
 
     window.addEventListener("keydown", handleKeyDown);
     return () => window.removeEventListener("keydown", handleKeyDown);
-  }, [closeDetail, quickCreateSlot]);
+  }, [autoFitOverlay, closeDetail, quickCreateSlot]);
+
+  useEffect(() => {
+    if (!animatedJobId) {
+      return undefined;
+    }
+
+    const timeoutId = window.setTimeout(() => {
+      setAnimatedJobId(null);
+    }, 1200);
+
+    return () => window.clearTimeout(timeoutId);
+  }, [animatedJobId]);
 
   const technicians = dispatchQuery.data?.technicians ?? [];
   const technicianOptions = technicians.map((technician) => ({
@@ -211,25 +238,70 @@ export function DispatchBoardClient() {
       });
       setSelectedJob(jobId);
       setActiveTab("schedule");
+      setAnimatedJobId(jobId);
     } catch (error) {
       setBoardMessage(getErrorMessage(error));
     }
   }
 
   async function handleAutoFit(jobId: string, preferredTechnicianId: string | null, job: JobDetail | null) {
-    const slot = findAutoFitSlot(technicians, preferredTechnicianId, getJobDurationMinutes(job));
+    void preferredTechnicianId;
+    void job;
 
-    if (!slot) {
-      setBoardMessage("No open gap is large enough for that job right now.");
-      return;
-    }
+    setAutoFitOverlay({
+      jobId,
+      suggestions: [],
+      currentIndex: 0,
+      message: null,
+      isLoading: true
+    });
 
     setAutoFittingJobId(jobId);
 
     try {
-      await scheduleIntoSlot(jobId, slot);
+      const response = await autoFitMutation.mutateAsync({
+        jobId,
+        date: selectedDate
+      });
+
+      setAutoFitOverlay((current) =>
+        current?.jobId === jobId
+          ? {
+              jobId,
+              suggestions: response.suggestions,
+              currentIndex: 0,
+              message: response.message,
+              isLoading: false
+            }
+          : current
+      );
+      setBoardMessage(response.suggestions.length === 0 ? response.message : null);
+      if (response.suggestions.length > 0) {
+        setSelectedJob(jobId);
+      }
+    } catch (error) {
+      setAutoFitOverlay((current) => (current?.jobId === jobId ? null : current));
+      setBoardMessage(getErrorMessage(error));
     } finally {
       setAutoFittingJobId(null);
+    }
+  }
+
+  async function handleAcceptAutoFitSuggestion(suggestion: AutoFitSuggestion) {
+    if (!autoFitOverlay) {
+      return;
+    }
+
+    try {
+      await scheduleIntoSlot(autoFitOverlay.jobId, {
+        technicianId: suggestion.technicianId,
+        technicianName: suggestion.technicianName,
+        scheduledStart: suggestion.scheduledStart,
+        scheduledEnd: suggestion.scheduledEnd
+      });
+      setAutoFitOverlay(null);
+    } catch {
+      // scheduleIntoSlot handles the board-level error message
     }
   }
 
@@ -335,6 +407,49 @@ export function DispatchBoardClient() {
       setSelectedBookingRequest(null);
     }
   }
+
+  const autoFitOverlayNode = autoFitOverlay ? (
+    <AutoFitOverlay
+      suggestions={autoFitOverlay.suggestions}
+      currentIndex={autoFitOverlay.currentIndex}
+      isLoading={autoFitOverlay.isLoading}
+      isAccepting={scheduleJobMutation.isPending}
+      message={autoFitOverlay.message}
+      onAccept={(suggestion) => {
+        void handleAcceptAutoFitSuggestion(suggestion);
+      }}
+      onDecline={() => setAutoFitOverlay(null)}
+      onNext={() => {
+        if (autoFitOverlay.suggestions.length <= 1) {
+          return;
+        }
+
+        setAutoFitOverlay((current) =>
+          current
+            ? {
+                ...current,
+                currentIndex: (current.currentIndex + 1) % current.suggestions.length
+              }
+            : current
+        );
+      }}
+      onPrevious={() => {
+        if (autoFitOverlay.suggestions.length <= 1) {
+          return;
+        }
+
+        setAutoFitOverlay((current) =>
+          current
+            ? {
+                ...current,
+                currentIndex:
+                  (current.currentIndex - 1 + current.suggestions.length) % current.suggestions.length
+              }
+            : current
+        );
+      }}
+    />
+  ) : null;
 
   return (
     <div className="-mx-4 -my-6 space-y-5 px-4 py-6 md:-mx-8 md:-my-8 md:px-8 md:py-8">
@@ -497,10 +612,12 @@ export function DispatchBoardClient() {
               technicians={filteredTechnicians}
               isLoading={dispatchQuery.isLoading}
               selectedJobId={selectedJobId}
+              animatedJobId={animatedJobId}
               quickCreateSlot={quickCreateSlot}
               createQuickJobPending={createQuickJobMutation.isPending}
               createQuickJobError={createQuickJobError}
               activeDragJobId={activeDragJob?.jobId ?? null}
+              overlay={autoFitOverlayNode}
               onSelectJob={(jobId) => {
                 setSelectedJob(jobId);
                 setBoardMessage(null);

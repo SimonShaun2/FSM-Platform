@@ -310,7 +310,10 @@ function normalizeUpdateJobInput(input: UpdateJobInput) {
     type: input.type,
     priority: input.priority,
     tags: input.tags !== undefined ? normalizeStringArray(input.tags) ?? [] : undefined,
-    techNotes: input.techNotes !== undefined ? normalizeOptionalString(input.techNotes) ?? null : undefined
+    techNotes: input.techNotes !== undefined ? normalizeOptionalString(input.techNotes) ?? null : undefined,
+    technicianId: input.technicianId,
+    scheduledStart: input.scheduledStart,
+    scheduledEnd: input.scheduledEnd
   };
 }
 
@@ -963,6 +966,53 @@ export async function updateJob(
 
   await invalidateDispatchDates(companyId, existingJob.scheduledStart, updatedJob.scheduledStart);
   return updatedJob;
+}
+
+function hasMetadataUpdates(input: UpdateJobInput): boolean {
+  return input.title !== undefined ||
+    input.description !== undefined ||
+    input.type !== undefined ||
+    input.priority !== undefined ||
+    input.tags !== undefined ||
+    input.techNotes !== undefined;
+}
+
+function scheduledWindowChanged(
+  job: JobDetail,
+  scheduledStart: string | undefined,
+  scheduledEnd: string | undefined
+): boolean {
+  if (!scheduledStart || !scheduledEnd) {
+    return false;
+  }
+
+  return job.scheduledStart?.toISOString() !== scheduledStart || job.scheduledEnd?.toISOString() !== scheduledEnd;
+}
+
+export async function patchJob(
+  companyId: string,
+  actorId: string,
+  jobId: string,
+  input: UpdateJobInput
+): Promise<JobDetail> {
+  const currentJob = await getJob(companyId, jobId);
+
+  if (hasMetadataUpdates(input)) {
+    await updateJob(companyId, actorId, jobId, input);
+  }
+
+  if (input.technicianId && input.technicianId !== currentJob.technicianId) {
+    await assignTechnician(companyId, actorId, jobId, input.technicianId);
+  }
+
+  if (scheduledWindowChanged(currentJob, input.scheduledStart, input.scheduledEnd)) {
+    await scheduleJob(companyId, actorId, jobId, {
+      scheduledStart: input.scheduledStart as string,
+      scheduledEnd: input.scheduledEnd as string
+    });
+  }
+
+  return getJob(companyId, jobId);
 }
 
 export async function transitionStatus(
