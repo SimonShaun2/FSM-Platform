@@ -315,8 +315,8 @@ explicitly accepted and handed to FSM-0007, or the fix is performed under the co
    provided as local attachments and saved into the candidate branch after the initial
    finding. They remain absent from the production baseline until the branch merges.
 
-7. **No root `CHANGELOG.md` exists to receive the reconciliation event.**
-   The only detected changelog file is inside an unrelated untracked `amida-wp` directory.
+7. **A root `CHANGELOG.md` is saved in the candidate branch but not merged to `origin/main`.**
+   The initial reconciliation and Sprint 0 scaffolding events are recorded there.
 
 ---
 
@@ -331,7 +331,7 @@ explicitly accepted and handed to FSM-0007, or the fix is performed under the co
 4. Add the missing annotated tags where defensible historical commits can be identified.
 5. Add required status checks to `main` branch protection after FSM-0010 defines CI gates.
 6. Add the Sprint 0 control documents to the repository before relying on them as project state.
-7. Add or identify the root `CHANGELOG.md` before recording the reconciliation event.
+7. Merge the candidate branch so the root `CHANGELOG.md` becomes repository state.
 8. Re-run clean-clone verification against the eventual baseline tag after the test suite is green.
 
 ---
