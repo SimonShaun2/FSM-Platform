@@ -1,507 +1,327 @@
 # AGENTS.md
-# FSM Platform — Codex Agent Configuration
-# This file governs how all AI agents operate in this repository.
-# Read this file in full before making any changes to the codebase.
+# FSM Platform V2 — Controlling Operating Document
+
+**This file governs how every team member operates in this repository. Read it in full
+before changing anything.**
+
+**Version:** 2.0 — supersedes all prior versions of this file.
+**Authority:** `MASTER_PRODUCT_SPEC.md` (FSM Platform V2 Master Directive).
+Where this file and the master directive conflict, the master directive wins.
 
 ---
 
-## What This Product Is
+## 0. What Changed in V2 — Read This First
 
-An AI-native Field Service Management (FSM) SaaS platform built for HVAC and trade service businesses.
-It manages customers, properties, assets, jobs, scheduling, dispatch, estimates, invoices, payments,
-service agreements, and an AI Revenue Intelligence layer that surfaces missed revenue opportunities.
+If you have prior context on this repository, the following is **retired**. Do not act on it.
 
-This is a **backend-first, production-grade SaaS application** with persistent data, background workers,
-AI-driven automation, payment processing, and real-time webhooks.
+| Retired | Replaced by |
+|---|---|
+| "Thinner system, smarter brain" | **"Complete when needed. Simple by default."** |
+| Agent 1 / 2 / 3 / 4 model | Fifteen-member permanent team — `TEAM.md` |
+| Agent 4 sole-approval gate | Risk-based approval matrix — `TEAM.md` §5 |
+| Phase 1A / 1B / 1C / 2 / 3 | Sprint 0–22 — `SPRINT_ROADMAP.md` |
+| `TICKET-NNN` | `FSM-NNNN` — `tickets/INDEX.md` |
+| "That's v2" as a scope refusal | Assign to a sprint, or gate behind progressive disclosure |
+| Founder approval between tickets | Autonomous operating loop — `TEAM.md` §6 |
 
-**This is not a prototype. This is not a demo. Every feature must work in production.**
+The engineering principles in §5 below are **retained from V1** and remain repo law.
+They were sound. The team structure and product boundary around them were not.
 
 ---
 
-## Monorepo Structure
+## 1. What This Product Is
+
+A complete, modern, AI-enabled Field Service Management platform for service businesses.
+
+Full lifecycle: **Lead → Customer → Estimate → Approval → Job → Schedule → Dispatch →
+Technician → Field Work → Invoice → Payment → Follow Up → Review → Membership →
+Recurring Service → Marketing → Reporting → Retention.**
+
+It must serve, from one codebase and without an architectural rebuild:
+
+1. A single owner-operator
+2. Small field service companies
+3. Growing multi-crew organisations
+4. Organisations of roughly 50 operating units, technicians, crews or vehicles
+5. Multi-location businesses
+6. Larger organisations
+
+This is production software. Not a prototype. Not a demo. Every feature must work in
+production.
+
+---
+
+## 2. Product North Star
+
+> **Complete when needed. Simple by default.**
+
+The platform may become functionally deep. The interface must not *feel* deep unless the
+user needs that depth. A one-person plumbing company must not feel like it is operating
+enterprise software. A 50-unit operation must not feel like it has outgrown small-business
+software. Both run the same platform.
+
+### Primary differentiator: Complexity On Demand
+
+Advanced capability appears when the company enables it, the user's role requires it, the
+workflow requires it, or the organisation reaches additional operational complexity.
+
+Do not solve feature growth by adding permanent navigation items. Use role-based
+interfaces, feature modules, contextual actions, command/search, saved workspaces,
+configurable dashboards, permission-based navigation, progressive configuration, smart
+defaults, and industry templates.
+
+### Scope test
+
+The V1 test — *"does this make the system thicker without making the brain smarter?"* — is
+retired. It caused correct features to be rejected.
+
+The V2 test is: **does this add capability without adding default-path complexity?**
+If a feature is needed by some customers, it belongs in the platform. The question is never
+*whether* to build it — it is which sprint owns it and how progressive disclosure keeps it
+out of the way of customers who do not need it.
+
+---
+
+## 3. UX Is an Engineering Requirement
+
+Ease of use is a product requirement, not decoration. Two surfaces receive first-class
+attention: the **office experience** (scheduling, dispatch, CRM, estimates, invoicing,
+communications, reporting) and the **field worker experience** (today's work, job info,
+navigation, history, status, photos, forms, time, materials, estimates, invoices,
+signatures, payments, completion).
+
+### Office UX
+
+Dispatchers may touch the system hundreds of times a day. Optimise for speed: fast job
+creation and customer lookup, drag-and-drop scheduling, fast rescheduling, keyboard
+navigation, bulk operations, context menus, inline editing, persistent filters, saved
+views, global search, minimal modal dependency, safe autosave, real-time schedule updates,
+clear conflict and availability indicators, clear unscheduled and priority queues, and no
+unnecessary page navigation.
+
+### Field UX
+
+Assume the technician is wearing gloves, outdoors, on poor cellular service, moving between
+jobs, and not technically sophisticated. They should not need to understand the office
+software.
+
+Ideal primary flow:
 
 ```
-/apps
-  /web          → Next.js 14 frontend (App Router)
-  /api          → Fastify backend (primary API)
-  /worker       → BullMQ background job processor
-  /webhook      → Dedicated Fastify server for inbound webhooks
-
-/packages
-  /db           → Drizzle ORM schema, migrations, seed scripts
-  /types        → Shared TypeScript types and Zod schemas
-  /ui           → Shared React component library
-  /ai           → OpenAI prompts, AI service functions
-  /jobs         → BullMQ queue definitions and job handlers
-  /config       → Shared env validation (Zod), constants
+Open App → See Next Job → Navigate → On My Way → Arrive → Start
+        → Perform Work → Document → Present Options → Capture Approval
+        → Complete → Take Payment → Next Job
 ```
 
-Every package is a proper TypeScript package with its own `package.json`.
-Internal packages are imported as `@fsm/db`, `@fsm/types`, `@fsm/ai`, etc.
+Avoid deep nesting. Never require the same information twice. Large touch targets for core
+status actions. Offline and unstable-network behaviour is designed deliberately, not
+discovered in the field.
+
+### Measured UX
+
+Design and engineering actively reduce: task completion time, interaction count, navigation
+depth, error frequency, training required, mobile completion time, user backtracking, and
+duplicate entry.
 
 ---
 
-## Agent Roles
-
-### Codex — Primary Builder
-Implements features based on PRDs and tickets.
-Owns: API routes, service layer, database queries, worker jobs, frontend pages and components.
-Does NOT: make product decisions, change schema without a PRD directing it, skip error handling.
-
-### ChatGPT — Code QA
-Reviews Codex output for correctness, edge cases, and consistency with these rules.
-Flags violations before merge.
-
-### Claude — Product Owner / Product Manager
-Writes PRDs, user stories, and acceptance criteria.
-Does NOT write implementation code.
-Codex builds to Claude's specs.
-
----
-
-## Product North Star
-
-> **"We're not building ServiceTitan from scratch. We're building a thinner system with a smarter brain."**
-
-Every scope decision is measured against this. If a feature makes the system thicker without making
-the brain smarter, it does not belong in v1. When in doubt, ask: does this help operators find lost
-revenue or run their business more easily? If not, it is v2.
-
----
-
-## Core Principles (Non-Negotiable)
+## 4. Non-Negotiable Core Principles
 
 1. **Backend owns all business logic.** No business logic in the frontend. Ever.
 2. **Every state change emits an activity event.** No exceptions.
-3. **All money flows through Stripe.** No manual payment state management outside of Stripe webhook handlers.
-4. **Background workers handle async work.** No long-running operations in API request handlers.
-5. **Multi-tenant by default.** Every query is scoped to `companyId`. No cross-tenant data leakage.
-6. **TypeScript strict mode everywhere.** No `any`. No `// @ts-ignore`.
-7. **Zod validates all inputs.** Request bodies, query params, env vars — all validated at the boundary.
+3. **All money flows through Stripe.** No manual payment state outside Stripe webhook handlers.
+4. **Background workers handle async work.** No long-running operations in request handlers.
+5. **Multi-tenant by default.** Every query scoped to the tenant. No cross-tenant leakage.
+6. **TypeScript strict everywhere.** No `any`. No `@ts-ignore`.
+7. **Zod validates all inputs.** Bodies, params, env vars — validated at the boundary.
 8. **Errors are explicit.** No silent failures. No swallowed exceptions.
+9. **AI recommends; deterministic services decide.** AI never owns financial state, payment
+   state, job completion state, or permissions. AI outputs never silently change
+   authoritative state.
 
-## Engineering Principles (Maintainability, Extensibility, Low-Risk Iteration)
+---
 
-The software must be built for maintainability, extensibility, and low-risk iteration. We should be
-able to fix bugs, change workflows, add fields, add modules, or extend features without rewriting
+## 5. Engineering Principles (Retained — Repo Law)
+
+The software must be maintainable, extensible, and safe to iterate on. We must be able to
+fix bugs, change workflows, add fields, add modules and extend features without rewriting
 large parts of the system.
 
-These engineering principles are repo law. Codex must follow them on every ticket. Agent 4 must
-flag violations.
+**1. Modular domain services.** Each domain has its own service boundary. One feature must
+not require editing unrelated domains. Domain services own their data and do not reach into
+another service's internals. Cross-domain needs go through explicit service calls or events.
 
-### 1. Modular Domain Services
-Each domain — customers, jobs, technicians, invoices, estimates, service agreements, forms,
-AI recommendations, dispatch — has its own service boundary.
-- One feature must not require editing unrelated domains unless truly necessary.
-- Domain services own their data. They do not reach into other services internals.
-- Cross-domain needs are handled via explicit service function calls or activity events.
+**2. Thin route handlers.** A handler does exactly four things: validate input, read auth
+and tenant context, call a service function, return a response. No database queries, no
+business logic, no business-rule branching in handlers.
 
-### 2. Thin Route Handlers
-API handlers do exactly four things: validate input, read auth/company context, call a service
-function, return a response. Nothing else belongs in a handler.
-- No database queries in handlers.
-- No business logic in handlers.
-- No conditional branching on business rules in handlers.
+**3. Event-driven state changes.** Every meaningful state change emits an activity event.
+AI, notifications, analytics and automations subscribe to events rather than being hardcoded
+into core workflows. New consumers are additive and do not modify the emitter.
 
-### 3. Event-Driven State Changes
-Every meaningful state change emits an activity event. AI, notifications, analytics, and future
-automations subscribe to those events instead of being hardcoded into core workflows.
-- Adding a new automation must not require editing existing service logic.
-- New event consumers are additive — they do not modify the event emitter.
+**4. Background jobs for async work.** Anything over ~100ms or calling an external API
+belongs in a worker. Workers are idempotent and safe to retry.
 
-### 4. Background Jobs for Async Work
-CSV imports, AI analysis, SMS/email sending, invoice reminders, and all future automations run
-through BullMQ workers and queues. Long processes never run inline inside API requests.
-- If a task takes more than ~100ms or calls an external API, it belongs in a worker.
-- Workers are idempotent — safe to retry on failure.
+**5. Stable domain models.** Entities are modelled on the real FSM domain, not on the
+current UI. Shortcut schemas that only support today's screen are not acceptable. Extend
+the model cleanly rather than hacking around it.
 
-### 5. Stable Domain Models
-Core entities are modeled around the real FSM domain:
-company, customer, property, asset, technician, job, estimate, invoice,
-service_agreement, form, activity_event, ai_recommendation.
-- Schemas are not designed around the current UI — they are designed around the domain.
-- Shortcut schemas that only support the current feature are not acceptable.
-- When a new UI need arises, extend the model cleanly — do not hack around it.
+**6. Replaceable integrations.** Stripe, Twilio, SendGrid, OpenAI and R2 are wrapped in
+adapters. Vendor calls are isolated to adapter files. A vendor change touches the adapter
+only.
 
-### 6. Replaceable Integrations
-Stripe, Twilio, SendGrid, OpenAI, and Cloudflare R2 are wrapped in service adapters.
-- External vendor calls are isolated to adapter files, not scattered across services.
-- If a vendor changes, only the adapter file changes — not the rest of the codebase.
-- Adapter files live in /apps/api/src/lib/ (e.g. email.ts, sms.ts, storage.ts).
+**7. Typed contracts.** Strict TypeScript and shared Zod schemas define all API inputs and
+outputs. Frontend calls typed clients and never duplicates backend logic. Shared types live
+in `@fsm/types`. Response shapes are explicit, not inferred from database rows.
 
-### 7. Typed Contracts
-TypeScript strict mode and shared Zod schemas define all API inputs and outputs.
-- Frontend calls typed API clients — never duplicates backend logic.
-- Shared types live in @fsm/types — not duplicated in frontend and backend separately.
-- API response shapes are explicitly defined, not inferred from database row types.
+**8. Small, testable units.** Every service function is testable without standing up the
+whole application. A function that is hard to test is doing too much.
 
-### 8. Small, Testable Units
-Each service function is independently testable without standing up the full application.
-- Unit tests cover service logic.
-- Integration tests cover routes.
-- A function that is hard to test is a signal the function is doing too much.
+**9. No hidden coupling.** Frontend components never depend on database row shapes. Modules
+do not reach into each other. Two services needing the same data share a type, not a query.
 
-### 9. No Hidden Coupling
-- Frontend components do not depend on database row shapes directly.
-- One module does not reach into another modules internals.
-- Cross-module communication uses explicit service functions and shared types from @fsm/types.
-- If two services need the same data, they share a type — they do not share a database query.
+**10. Feature flags for staged rollout.** New AI behaviour, automation, payment logic and
+dispatch experiments must be enable-able and disable-able without breaking the system. Flag
+toggles never require a migration.
 
-### 10. Feature Flags / Staged Rollout Where Useful
-New AI actions, automation behavior, payment logic, and dispatch experiments must be easy to
-enable, disable, or revise without breaking the system.
-- Use a simple featureFlags object in @fsm/config for v1.
-- Flag-gated code paths are clearly marked with a comment: // FEATURE FLAG: [flag-name]
-- No flag should require a database migration to toggle.
-
-The goal is to avoid a fragile demo app. This must be a production-grade SaaS foundation where
-future features can be added cleanly without rebuilding the architecture.
+**11. Modular architecture, not microservices.** Strong domain boundaries without
+operational complexity for its own sake. Split infrastructure only where independent
+scaling, security or failure isolation justifies it.
 
 ---
 
-## Tech Stack (Locked — Do Not Deviate)
+## 6. Technology Baseline
 
-| Layer            | Technology                        |
-|------------------|-----------------------------------|
-| Frontend         | Next.js 14 (App Router), React    |
-| Backend API      | Node.js + Fastify                 |
-| Database         | PostgreSQL + Drizzle ORM          |
-| Background Jobs  | Redis + BullMQ                    |
-| Payments         | Stripe Connect                    |
-| SMS              | Twilio                            |
-| Email            | SendGrid                          |
-| AI               | OpenAI API (GPT-4o)               |
-| File Storage     | Cloudflare R2 (S3-compatible)     |
-| Auth             | JWT + refresh tokens (custom)     |
-| Deployment       | Railway (primary) / Render (alt)  |
-| Package Manager  | pnpm workspaces                   |
-| Testing          | Vitest (unit) + Playwright (e2e)  |
+Treat as the starting architecture. This is **not** permission to rewrite the stack.
+
+| Layer | Technology |
+|---|---|
+| Frontend | Next.js (App Router) + React |
+| Backend API | Node.js + Fastify |
+| Database | PostgreSQL + Drizzle ORM |
+| Background jobs | Redis + BullMQ |
+| Payments | Stripe (Connect, Terminal) |
+| SMS | Twilio |
+| Email | SendGrid |
+| AI | OpenAI |
+| File storage | Cloudflare R2 |
+| Package manager | pnpm workspaces |
+| Language | TypeScript (strict) |
+| Testing | Vitest (unit/integration) + Playwright (E2E) |
+| Deployment | Railway |
+
+Stack changes require an ADR from TL-01 showing: problem, current approach, proposed
+approach, benefit, migration cost, operational impact, security impact, alternatives
+considered, decision. See `docs/adr/`.
 
 ---
 
-## Database Rules
+## 7. Repository Structure
 
-- Schema lives in `/packages/db/schema.ts` — the single source of truth
-- Migrations are generated via `drizzle-kit generate` — never hand-edited
-- All tables have: `id` (UUID), `companyId`, `createdAt`, `updatedAt`, `deletedAt` (soft delete)
+```
+/apps
+  /web       → Next.js frontend
+  /api       → Fastify backend
+  /worker    → BullMQ background processor
+  /webhook   → Inbound webhook receiver
+
+/packages
+  /db        → Drizzle schema (src/schema.ts), migrations, seeds
+  /types     → Shared TypeScript types and Zod schemas
+  /ai        → Prompts and AI service functions
+  /jobs      → BullMQ queue definitions
+  /config    → Env validation, constants, feature flags
+
+/docs
+  /adr       → Architecture Decision Records
+/tickets     → FSM-NNNN implementation tickets + INDEX.md
+```
+
+The authoritative schema is **`packages/db/src/schema.ts`** and nothing else. Any duplicate
+schema file elsewhere in the repository is a defect — see `PROJECT_STATE.md` BD-001.
+
+Internal packages import as `@fsm/db`, `@fsm/types`, `@fsm/ai`, `@fsm/jobs`, `@fsm/config`.
+
+---
+
+## 8. Data Rules
+
+- All tables carry `id` (UUID), tenant scope, `createdAt`, `updatedAt`, `deletedAt`.
 - All deletes are soft deletes. Never `DELETE FROM` in application code.
-- All queries must filter by `companyId` — enforced at the service layer, not the route layer
-- Transactions are used for any operation that writes to more than one table
-- The `activity_events` table receives an insert for every meaningful state change
-
-### Drizzle Query Pattern
-```typescript
-// Always scope to company
-const customer = await db.query.customers.findFirst({
-  where: and(
-    eq(customers.id, customerId),
-    eq(customers.companyId, companyId),
-    isNull(customers.deletedAt)
-  ),
-});
-```
+- Every query filters by tenant, enforced in the service layer, never the route layer.
+- Migrations are generated by `drizzle-kit`. Never hand-edit an applied migration.
+- Transactions wrap any operation writing to more than one table.
+- `activity_events` receives an insert on every meaningful state change.
+- Monetary values are stored and transported as strings. Never parse money to float.
 
 ---
 
-## API Architecture (Fastify)
+## 9. Money Is Never One Number
 
-### Route File Structure
-```
-/apps/api/src/routes/
-  customers/
-    index.ts        → route registration
-    handlers.ts     → request handlers (thin — call service layer)
-    schemas.ts      → Zod input/output schemas
-  jobs/
-    index.ts
-    handlers.ts
-    schemas.ts
-  ...
-```
+These are separate, independently auditable concepts. Never collapse them into a single
+ambiguous percentage:
 
-### Service Layer
-Business logic lives in `/apps/api/src/services/`.
-Handlers call services. Services call the database.
-Services emit activity events.
-Services enqueue background jobs when needed.
+1. Stripe processing cost
+2. Business card surcharge
+3. FSM Platform application fee
+4. FSM Platform subscription price
+5. Business invoice total
+6. Tax
+7. Tips
+8. Membership charges
 
-```typescript
-// Handler — thin
-async function createJobHandler(req, reply) {
-  const job = await jobService.createJob(req.company.id, req.body);
-  return reply.code(201).send(job);
-}
-
-// Service — owns the logic
-async function createJob(companyId: string, input: CreateJobInput) {
-  const job = await db.insert(jobs).values({ ...input, companyId }).returning();
-  await emitEvent('job.created', { companyId, jobId: job.id, actorId: input.createdById });
-  await jobQueue.add('evaluate-revenue-opportunities', { companyId, jobId: job.id });
-  return job;
-}
-```
-
-### Error Shape (Consistent Across All Routes)
-```json
-{
-  "error": "VALIDATION_ERROR",
-  "message": "Human-readable description",
-  "requestId": "req_abc123",
-  "fields": {
-    "phone": "Invalid phone number format"
-  }
-}
-```
-
-Error codes are uppercase snake_case enums:
-`NOT_FOUND`, `UNAUTHORIZED`, `FORBIDDEN`, `VALIDATION_ERROR`, `CONFLICT`, `INTERNAL_ERROR`
-
-### Auth
-Every protected route reads `companyId` and `userId` from the verified JWT.
-The `company` object is attached to `req.company` via a Fastify plugin.
-Never trust `companyId` from the request body — always use `req.company.id`.
+**Card surcharging is OFF by default.** Where a business enables it, the engine computes the
+*lowest permitted amount* under all applicable constraints — card type, network, payment
+method, merchant cost of acceptance, network cap, jurisdiction, provider rules, disclosure
+requirements, and debit/credit classification. A business configuring 5% must never produce
+an illegal or network-prohibited 5% surcharge. Debit is not credit. Do not invent loopholes
+around network rules. Every surcharge decision writes an audit trail: configured
+percentage, permitted percentage, applied percentage, dollar amount, card classification,
+rule version, jurisdiction, disclosure version, transaction ID.
 
 ---
 
-## Activity Events
+## 10. Security
 
-Every meaningful state change writes to `activity_events`. This is the event stream the AI reads.
-
-```typescript
-// /packages/db/src/events.ts
-export async function emitEvent(
-  eventType: ActivityEventType,
-  ctx: {
-    companyId: string;
-    actorId?: string;
-    actorType?: 'user' | 'system' | 'ai' | 'customer';
-    entityType: string;
-    entityId: string;
-    customerId?: string;
-    jobId?: string;
-    estimateId?: string;
-    invoiceId?: string;
-    payload?: Record<string, unknown>;
-    summary: string;
-  }
-) { ... }
-```
-
-Events that must always be emitted (non-exhaustive):
-- `job.created`, `job.scheduled`, `job.started`, `job.completed`, `job.cancelled`
-- `estimate.sent`, `estimate.viewed`, `estimate.approved`, `estimate.declined`
-- `invoice.sent`, `invoice.viewed`, `invoice.overdue`, `payment.received`
-- `customer.created`, `asset.created`, `asset.serviced`
-- `maintenance_plan.created`, `maintenance_visit.completed`
-- `ai.recommendation_created`, `ai.recommendation_actioned`
+Tenant isolation · role-based access · least privilege · secure authentication · token
+security · MFA readiness · rate limiting · encryption · secrets management · webhook
+signature verification · payment security · input validation · audit trails · secure file
+uploads · malware considerations · dependency scanning · session management · data export
+controls · support impersonation auditing. Sensitive actions require explicit authorisation.
 
 ---
 
-## Background Workers (BullMQ)
+## 11. Accessibility
 
-Queue definitions live in `/packages/jobs/`.
-Worker implementations live in `/apps/worker/src/processors/`.
-
-### Queues
-```
-fsm:imports       → CSV import processing, AI column mapping, row ingestion
-fsm:ai            → Revenue analysis, recommendation generation
-fsm:notifications → SMS and email dispatch (Twilio / SendGrid)
-fsm:invoices      → Invoice reminder escalation
-fsm:agreements    → Service agreement renewal scheduling
-fsm:webhooks      → Outbound webhook delivery (future)
-```
-
-### Worker Rules
-- All jobs are idempotent — safe to retry on failure
-- All jobs have a `jobId` or `companyId` in their data payload
-- Failed jobs are logged with full context — never silently dropped
-- Long-running jobs (CSV imports) report progress via job.updateProgress()
-- Workers do not call the Fastify API — they call services and the database directly
+Target WCAG 2.2 AA where practical. Accessibility belongs to the design system: keyboard
+support, focus management, contrast, readable typography, accessible forms, clear error
+messages, adequate touch targets, screen reader semantics.
 
 ---
 
-## Stripe Connect
+## 12. Performance
 
-This platform uses **Stripe Connect** (platform model).
-Each company has a Stripe Connected Account.
-All customer payments flow through the platform.
-The platform takes a transaction fee; the company receives the remainder.
-
-### Rules
-- Never hardcode Stripe fee amounts — read from env/config
-- All Stripe webhook events are processed in `/apps/webhook/`
-- Webhook handlers are idempotent — check if event already processed before acting
-- Use Stripe's `metadata` field to store `companyId` and relevant entity IDs
-- Subscription events (`customer.subscription.updated`, `invoice.payment_failed`, etc.)
-  must update `maintenance_plans.stripeSubscriptionId` and emit activity events
-
-### Stripe Webhook Events to Handle (v1)
-```
-checkout.session.completed
-payment_intent.succeeded
-payment_intent.payment_failed
-invoice.payment_succeeded       → service agreement renewal payment
-invoice.payment_failed          → dunning — notify company
-customer.subscription.created
-customer.subscription.updated
-customer.subscription.deleted   → mark maintenance_plan as cancelled
-account.updated                 → Connected Account onboarding status
-```
+The product must feel fast. Performance budgets are defined and enforced for page
+navigation, customer search, dispatch board, schedule interaction, job opening, mobile job
+data, payment initiation, critical API endpoints, search and reporting. Added features must
+not gradually degrade basic FSM workflows.
 
 ---
 
-## Twilio SMS
+## 13. Observability
 
-Inbound SMS arrives at `/apps/webhook/src/handlers/twilio.ts`.
-Outbound SMS is sent via the `fsm:notifications` BullMQ queue — never inline in a request handler.
-
-### Rules
-- All outbound SMS is queued, not sent synchronously
-- Twilio webhook signatures are verified on every inbound request
-- Inbound messages are logged to `message_logs` with `direction: 'inbound'`
-- Outbound messages are logged to `message_logs` with `direction: 'outbound'` after send confirmation
-- AI-drafted messages must be flagged with a review step before send in v1 (no fully autonomous sending)
+Every production-critical service has structured logs, correlation IDs, error tracking,
+health checks, metrics, alerting, and monitoring for queues, webhooks, payments, database,
+latency and deployments. Failed automations are visible. Integration status is visible.
+Diagnosing a production problem must not require guessing.
 
 ---
 
-## AI (OpenAI)
+## 14. How Work Flows
 
-AI logic lives in `/packages/ai/`.
-The AI reads `activity_events` and customer/asset data to generate revenue recommendations.
+Read `TEAM.md` for roles, ownership and the approval matrix. Read `SPRINT_ROADMAP.md` for
+sequencing. Read `tickets/INDEX.md` for the ticket backlog. Read `CODEX.md` for
+implementation standards and patterns. Read `PROJECT_STATE.md` for current state — it is
+authoritative and updated on every merge.
 
-### Rules
-- All AI calls are async — always via background worker, never in a request handler
-- Prompts are versioned and stored as named exports in `/packages/ai/prompts/`
-- AI responses are parsed and validated with Zod before being written to the database
-- AI never directly sends messages to customers — it creates recommendations that humans action
-- In v1, AI-drafted SMS copy is pre-populated in the UI for human review before send
-- Token usage is logged per call for cost monitoring
-
-### Core AI Jobs (v1)
-```
-evaluate-revenue-opportunities    → runs after job.completed, reads customer/asset history
-detect-dormant-customers          → runs nightly, flags customers inactive > threshold
-estimate-follow-up                → triggered 24h after estimate.sent with no response
-invoice-reminder-escalation       → triggered on invoice.overdue
-service-agreement-opportunity     → identifies customers not on a plan, with eligible assets
-```
-
----
-
-## CSV Import / Onboarding
-
-Import flow:
-1. User uploads CSV → stored in R2, `import_sessions` row created with status `uploaded`
-2. Worker job triggered → AI maps columns to schema fields → status → `mapping`
-3. User reviews and confirms column mappings in UI → status → `preview`
-4. Worker validates all rows → surfaces errors → status stays `preview` until user confirms
-5. User confirms → worker ingests rows → status → `importing` → `completed`
-6. All imported records carry `importSessionId` for rollback traceability
-
-### Rules
-- CSV parsing happens in the worker, not the API
-- Row errors do not abort the import — they are collected and surfaced in bulk
-- Duplicate detection: match on email + companyId for customers; address for properties
-- AI inference (e.g. asset type from job description) is logged in `aiInferences` column
-- Rollback deletes all records with the given `importSessionId` — within a transaction
-
----
-
-## Frontend Rules (Next.js)
-
-- App Router only — no Pages Router
-- All data fetching via server components where possible
-- Client components only when interactivity requires it (dispatch board, forms)
-- No business logic in the frontend — all operations via API calls
-- Auth state managed via httpOnly cookie (set by API on login)
-- Environment variables prefixed `NEXT_PUBLIC_` for client-side only
-- No direct database calls from the frontend — ever
-
-### Dispatch Board
-The dispatch board is the highest-complexity frontend surface.
-It uses optimistic updates with server reconciliation.
-Drag-and-drop is implemented via `@dnd-kit/core`.
-Real-time job status updates use Server-Sent Events (SSE) from the API.
-The board must remain usable if SSE disconnects — fall back to polling every 30s.
-
----
-
-## Testing
-
-- Unit tests for all service layer functions (Vitest)
-- Integration tests for all API routes (Vitest + supertest)
-- E2E tests for critical user flows: job creation, dispatch, invoice payment, CSV import (Playwright)
-- All tests run in CI before merge
-- Test database is seeded fresh for each test suite run
-
----
-
-## Environment Variables
-
-All env vars are validated at startup via Zod in `/packages/config/src/env.ts`.
-The app crashes on startup if a required env var is missing — no silent degradation.
-
-Required vars (all services):
-```
-DATABASE_URL
-REDIS_URL
-STRIPE_SECRET_KEY
-STRIPE_WEBHOOK_SECRET
-STRIPE_PLATFORM_FEE_PERCENT
-OPENAI_API_KEY
-TWILIO_ACCOUNT_SID
-TWILIO_AUTH_TOKEN
-TWILIO_FROM_NUMBER
-SENDGRID_API_KEY
-R2_ACCOUNT_ID
-R2_ACCESS_KEY_ID
-R2_SECRET_ACCESS_KEY
-R2_BUCKET_NAME
-JWT_SECRET
-JWT_REFRESH_SECRET
-```
-
----
-
-## What Codex Must Never Do
-
-1. **Never put business logic in a Next.js route handler or page component**
-2. **Never query the database directly from the frontend**
-3. **Never skip activity event emission on a state change**
-4. **Never process Stripe payments outside of the webhook handler**
-5. **Never send SMS synchronously inside a request handler**
-6. **Never use `any` in TypeScript**
-7. **Never hardcode tenant IDs, API keys, or secrets**
-8. **Never perform a hard delete — always soft delete via `deletedAt`**
-9. **Never run CSV parsing or AI inference inside an API request — use a worker**
-10. **Never trust `companyId` from the request body — always use `req.company.id` from the JWT**
-11. **Never mock data in production code paths**
-12. **Never skip input validation on a route**
-13. **Never make a Stripe API call without storing the result in the database**
-14. **Never deploy with `console.log` debug statements — use the structured logger**
-
----
-
-## Logging
-
-Use `pino` for structured logging in the API and worker.
-Log levels: `error`, `warn`, `info`, `debug`.
-Every request is logged with `requestId`, `companyId`, `userId`, `method`, `path`, `statusCode`, `durationMs`.
-Every background job is logged on start, completion, and failure.
-Never log PII (customer name, email, phone) at `info` level or above — only at `debug`.
-
----
-
-## Pull Request Checklist (Codex self-review before completing a task)
-
-- [ ] All new routes have Zod input validation
-- [ ] All new service functions emit activity events on state changes
-- [ ] All async work is enqueued to BullMQ — not run inline
-- [ ] All database writes are scoped to `companyId`
-- [ ] All Stripe interactions are handled in webhook handlers or service layer
-- [ ] TypeScript strict — no `any`, no ignored errors
-- [ ] Unit tests written for new service functions
-- [ ] No business logic in the frontend
-- [ ] No hardcoded secrets or IDs
-- [ ] Soft delete used — no hard deletes
+Do not ask the founder whether to continue. Follow the operating loop in `TEAM.md` §6.

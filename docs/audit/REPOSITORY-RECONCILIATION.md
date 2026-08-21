@@ -309,9 +309,10 @@ explicitly accepted and handed to FSM-0007, or the fix is performed under the co
    The `gitleaks` scan hit an older `trayloop` path, which reinforces that this repo has
    served as a mixed workspace rather than a tightly bounded product repository.
 
-6. **Sprint 0 control documents are not yet committed.**
+6. **Sprint 0 control documents are not yet present on `origin/main`.**
    `PROJECT_STATE.md`, `TEAM.md`, `SPRINT_ROADMAP.md`, and the FSM ticket files were
-   provided as local attachments but are absent from `origin/main`.
+   provided as local attachments and saved into the candidate branch after the initial
+   finding. They remain absent from the production baseline until the branch merges.
 
 7. **No root `CHANGELOG.md` exists to receive the reconciliation event.**
    The only detected changelog file is inside an unrelated untracked `amida-wp` directory.
@@ -343,7 +344,7 @@ Committed history is reconciled, but the working tree is not. The baseline commi
 the final Sprint 0 audit target because:
 
 - the local working tree remains contaminated by unpublished FSM work and unrelated root folders
-- Sprint 0 control documents are attached locally but not committed to the repository
+- Sprint 0 control documents are saved in the candidate branch but not merged to `origin/main`
 - milestone tags are incomplete
 - `main` is not branch-protected
 - the clean-clone baseline test suite currently fails with 7 API test failures

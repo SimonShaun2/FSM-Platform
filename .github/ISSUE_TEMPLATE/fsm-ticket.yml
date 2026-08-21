@@ -1,0 +1,171 @@
+name: FSM ticket
+description: Create a tracked FSM-NNNN implementation or audit ticket.
+title: "FSM-NNNN: "
+labels:
+  - status:ready
+body:
+  - type: input
+    id: ticket_id
+    attributes:
+      label: Ticket ID
+      description: Use the FSM-NNNN format.
+      placeholder: FSM-0001
+    validations:
+      required: true
+  - type: input
+    id: sprint
+    attributes:
+      label: Sprint
+      placeholder: Sprint 0
+    validations:
+      required: true
+  - type: dropdown
+    id: priority
+    attributes:
+      label: Priority
+      options:
+        - P0
+        - P1
+        - P2
+        - P3
+    validations:
+      required: true
+  - type: input
+    id: domain
+    attributes:
+      label: Domain
+      placeholder: Infrastructure / Repository
+    validations:
+      required: true
+  - type: input
+    id: owner
+    attributes:
+      label: Owner
+      placeholder: DO-01
+    validations:
+      required: true
+  - type: input
+    id: reviewer
+    attributes:
+      label: Reviewer
+      placeholder: TL-01
+    validations:
+      required: true
+  - type: input
+    id: qa_owner
+    attributes:
+      label: QA Owner
+      placeholder: QA-03
+    validations:
+      required: true
+  - type: textarea
+    id: dependencies
+    attributes:
+      label: Dependencies
+      description: Name exact blocking tickets, or write "None".
+    validations:
+      required: true
+  - type: textarea
+    id: objective
+    attributes:
+      label: Objective
+    validations:
+      required: true
+  - type: textarea
+    id: product_context
+    attributes:
+      label: Product Context
+    validations:
+      required: true
+  - type: textarea
+    id: user_story
+    attributes:
+      label: User Story
+    validations:
+      required: true
+  - type: textarea
+    id: scope
+    attributes:
+      label: Scope
+    validations:
+      required: true
+  - type: textarea
+    id: deliverables
+    attributes:
+      label: Deliverables
+    validations:
+      required: true
+  - type: textarea
+    id: acceptance
+    attributes:
+      label: Acceptance Criteria
+      description: Use checkboxes for each required outcome.
+    validations:
+      required: true
+  - type: textarea
+    id: tests
+    attributes:
+      label: Required Tests
+    validations:
+      required: true
+  - type: textarea
+    id: impact
+    attributes:
+      label: Impact
+      description: Cover API, database, frontend, mobile, and integrations.
+    validations:
+      required: true
+  - type: textarea
+    id: security
+    attributes:
+      label: Security Considerations
+    validations:
+      required: true
+  - type: textarea
+    id: tenant_isolation
+    attributes:
+      label: Tenant Isolation Considerations
+    validations:
+      required: true
+  - type: textarea
+    id: observability
+    attributes:
+      label: Observability Requirements
+    validations:
+      required: true
+  - type: textarea
+    id: migrations
+    attributes:
+      label: Migration Requirements
+    validations:
+      required: true
+  - type: textarea
+    id: rollback
+    attributes:
+      label: Rollback Considerations
+    validations:
+      required: true
+  - type: textarea
+    id: non_goals
+    attributes:
+      label: Non-Goals
+    validations:
+      required: true
+  - type: textarea
+    id: required_review
+    attributes:
+      label: Required Review
+    validations:
+      required: true
+  - type: textarea
+    id: required_qa
+    attributes:
+      label: Required QA
+    validations:
+      required: true
+  - type: textarea
+    id: completion
+    attributes:
+      label: Completion Procedure
+    validations:
+      required: true
