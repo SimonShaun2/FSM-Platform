@@ -282,7 +282,7 @@ explicitly accepted and handed to FSM-0007, or the fix is performed under the co
 | No secrets or credentials in pushed tree | Partially verified | HEAD scan is clean apart from placeholder docs text |
 | Secret scanning across full history | Complete with review note | `gitleaks` found 3 likely false positives, no confirmed live credentials |
 | `node_modules`, build output and generated sources untracked | Incomplete | Common outputs are now ignored, but the root remains heavily contaminated |
-| Branch protection active on `main` | Incomplete | `gh api` reports `Branch not protected` for `main` |
+| Branch protection active on `main` | Complete | PR required, one approval required, stale reviews dismissed, admin enforcement on, force pushes/deletions disabled |
 | Baseline SHA recorded in `PROJECT_STATE.md` | Incomplete | Sprint 0 control docs were provided as attachments but are not present in the repository |
 | Clean-clone install/build succeeds on baseline | Complete | Verified in fresh clone |
 | Clean-clone full test suite passes on baseline | Incomplete | Clean clone fails with 7 API test failures |
@@ -302,8 +302,9 @@ explicitly accepted and handed to FSM-0007, or the fix is performed under the co
 3. **Tag history is incomplete.**
    Phase milestones referenced in docs are not reconstructable from remote tags today.
 
-4. **Branch protection is currently absent on `main`.**
-   This leaves the baseline branch vulnerable to direct pushes and accidental history changes.
+4. **Branch protection is active on `main`, but CI status checks are not required yet.**
+   PR review is required, admin enforcement is on, force pushes/deletions are disabled, and
+   required status checks remain unset until FSM-0010 defines the CI gates.
 
 5. **The repository history includes unrelated project material.**
    The `gitleaks` scan hit an older `trayloop` path, which reinforces that this repo has
@@ -328,7 +329,7 @@ explicitly accepted and handed to FSM-0007, or the fix is performed under the co
    - discarded as non-authoritative local work
 3. Formally disposition the 7 clean-clone API test failures under FSM-0007, or fix them under a separate approved ticket.
 4. Add the missing annotated tags where defensible historical commits can be identified.
-5. Enable branch protection on `main`.
+5. Add required status checks to `main` branch protection after FSM-0010 defines CI gates.
 6. Add the Sprint 0 control documents to the repository before relying on them as project state.
 7. Add or identify the root `CHANGELOG.md` before recording the reconciliation event.
 8. Re-run clean-clone verification against the eventual baseline tag after the test suite is green.
@@ -346,5 +347,5 @@ the final Sprint 0 audit target because:
 - the local working tree remains contaminated by unpublished FSM work and unrelated root folders
 - Sprint 0 control documents are saved in the candidate branch but not merged to `origin/main`
 - milestone tags are incomplete
-- `main` is not branch-protected
+- `main` branch protection does not require CI status checks yet because FSM-0010 has not landed
 - the clean-clone baseline test suite currently fails with 7 API test failures
