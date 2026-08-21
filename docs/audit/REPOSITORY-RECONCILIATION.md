@@ -356,12 +356,13 @@ the final Sprint 0 audit target because:
 
 The current working branch is `feature/FSM-0001-repository-reconciliation`.
 
-As of 2026-08-21, it contains four commits ahead of `origin/main`:
+As of 2026-08-21, it contains five commits ahead of `origin/main`:
 
 - `dfc1d98` - `FSM-0001: document repository reconciliation baseline`
 - `c275cf7` - `FSM-0013-0014: add Sprint 0 governance and project scaffolding`
 - `668ccfe` - `FSM-0001: record branch protection status`
 - `2c9fdc1` - `FSM-0001: add repository changelog`
+- `10bd7bf` - `FSM-0001: classify local worktree overlay`
 
 The branch is pushed to origin and represented by draft PR #1:
 
@@ -373,7 +374,10 @@ Current dirty working tree measurement:
 - Untracked status entries: `83`
 - Tracked FSM-looking diff size: `43 files changed, 2580 insertions(+), 254 deletions(-)`
 
-Additional detail is recorded in `docs/audit/LOCAL-WORKTREE-OVERLAY.md`.
+Additional detail is recorded in:
+
+- `docs/audit/LOCAL-WORKTREE-OVERLAY.md`
+- `docs/audit/UNPUBLISHED-FSM-WORK-INVENTORY.md`
 
 **Decision:** do not stage the dirty overlay into this branch without a targeted domain review.
 The safest next action is to merge the Sprint 0 governance/audit branch first, then split

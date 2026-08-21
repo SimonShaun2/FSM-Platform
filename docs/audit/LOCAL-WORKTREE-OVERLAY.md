@@ -16,11 +16,13 @@ Measured on 2026-08-21:
 - Tracked modified files under `README.md`, `apps/`, `packages/`, and `pnpm-lock.yaml`: `43`
 - Untracked status entries: `83`
 - Tracked FSM-looking diff size: `43 files changed, 2580 insertions(+), 254 deletions(-)`
-- Current branch-only Sprint 0 commits ahead of `origin/main`: `4`
+- Current branch-only Sprint 0 commits ahead of `origin/main`: `5`
 
 The overlay appears to contain real unpublished FSM product work mixed with unrelated projects
 and local tooling artifacts. Treating the whole tree as authoritative would contaminate the
 Sprint 0 baseline.
+
+Detailed module-level findings are recorded in `docs/audit/UNPUBLISHED-FSM-WORK-INVENTORY.md`.
 
 ---
 
@@ -150,8 +152,8 @@ Recommendation:
 
 ## 6. Documentation Overlay
 
-The following untracked documentation files may be relevant but are not part of the current
-Sprint 0 governance commit set:
+The following untracked documentation files are not part of the current Sprint 0 governance
+commit set and were confirmed to reference Luma Daily / Shopify rather than FSM:
 
 - `docs/apps.md`
 - `docs/deployment.md`
@@ -159,9 +161,8 @@ Sprint 0 governance commit set:
 
 Recommendation:
 
-- Review for alignment with the V2 governance set.
-- If still accurate, move or reference them under the appropriate Sprint 0 audit ticket.
-- If stale, retire them under FSM-0002 rather than mixing them into reconciliation.
+- Do not stage these files.
+- Remove or relocate them outside the FSM repository during workspace cleanup.
 
 ---
 
