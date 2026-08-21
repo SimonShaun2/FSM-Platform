@@ -349,3 +349,32 @@ the final Sprint 0 audit target because:
 - milestone tags are incomplete
 - `main` branch protection does not require CI status checks yet because FSM-0010 has not landed
 - the clean-clone baseline test suite currently fails with 7 API test failures
+
+---
+
+## 13. Candidate Branch Addendum
+
+The current working branch is `feature/FSM-0001-repository-reconciliation`.
+
+As of 2026-08-21, it contains four commits ahead of `origin/main`:
+
+- `dfc1d98` - `FSM-0001: document repository reconciliation baseline`
+- `c275cf7` - `FSM-0013-0014: add Sprint 0 governance and project scaffolding`
+- `668ccfe` - `FSM-0001: record branch protection status`
+- `2c9fdc1` - `FSM-0001: add repository changelog`
+
+The branch is pushed to origin and represented by draft PR #1:
+
+- `https://github.com/SimonShaun2/FSM-Platform/pull/1`
+
+Current dirty working tree measurement:
+
+- Tracked modified files: `43`
+- Untracked status entries: `83`
+- Tracked FSM-looking diff size: `43 files changed, 2580 insertions(+), 254 deletions(-)`
+
+Additional detail is recorded in `docs/audit/LOCAL-WORKTREE-OVERLAY.md`.
+
+**Decision:** do not stage the dirty overlay into this branch without a targeted domain review.
+The safest next action is to merge the Sprint 0 governance/audit branch first, then split
+the unpublished FSM product overlay into separate reviewable branches.
