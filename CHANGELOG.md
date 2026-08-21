@@ -13,6 +13,7 @@ All notable repository-level changes are recorded here.
   `docs/audit/GITHUB-PROJECT-INFRASTRUCTURE.md`.
 - FSM-0014 ADR process, template, and initial ADR records under `docs/adr/`.
 - GitHub issue and pull request templates under `.github/`.
+- Restored annotated milestone tag `v1.0.0` on the Phase 1 boundary commit.
 
 ### Changed
 

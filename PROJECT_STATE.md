@@ -41,8 +41,8 @@ facts, not reported status. Sprint 0 tickets verify and extend them.
 | HEAD commit | `12b2322` |
 | Total commits | 17 |
 | Last push to origin | 2026-05-02 |
-| Tags present on origin | `v2.0.0` only |
-| Tags referenced in docs but absent from origin | `v1.0.0`, `v3.0.0` |
+| Tags present on origin | `v1.0.0`, `v2.0.0` |
+| Tags referenced in docs but absent from origin | `v3.0.0` |
 | Visibility | Public |
 
 ### Applications
@@ -126,8 +126,8 @@ eliminated, not synchronised.
 **Severity:** Medium · **Owner:** DO-01 · **Ticket:** FSM-0001
 
 `docs/README.md` marks Phase 1 as `v1.0.0` complete and Phase 3 as `v3.0.0` complete.
-Neither tag exists on origin. Only `v2.0.0` is present. Milestone history is not
-recoverable from the remote.
+`v1.0.0` has now been restored on commit `57a87fc`. `v3.0.0` does not exist on origin
+because Phase 3 is not fully represented in committed history.
 
 ### BD-003 — Local/remote divergence of unknown size
 **Severity:** High · **Owner:** DO-01 · **Ticket:** FSM-0001

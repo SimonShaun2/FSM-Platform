@@ -61,10 +61,12 @@ git ls-remote --tags origin
 
 ### Present locally
 
+- `v1.0.0`
 - `v2.0.0`
 
 ### Present on origin
 
+- `v1.0.0`
 - `v2.0.0`
 
 ### Missing vs documented milestone history
@@ -72,11 +74,18 @@ git ls-remote --tags origin
 The following milestone tags are referenced by project documentation but are absent from
 the repository:
 
-- `v1.0.0`
 - `v3.0.0`
 - `v2.0.0-baseline`
 
-**Conclusion:** milestone tagging is incomplete and remains open work under FSM-0001.
+### Tag restoration
+
+`v1.0.0` was restored on 2026-08-21 as an annotated tag pointing at commit
+`57a87fc9a2f882ad15faa2f04a1e1ca4bc2c0717`, whose commit message is
+`Phase 1C complete: TICKETS 010-013 - BullMQ Workers, CSV Import, AI Revenue Engine, SMS Automation`.
+
+**Conclusion:** milestone tagging is partially complete. `v3.0.0` is not defensible from
+committed history because TICKET-034 is documented as approved but no corresponding commit
+exists on `main`, and tickets 035-038 are present only in the local dirty overlay.
 
 ---
 
@@ -278,7 +287,7 @@ explicitly accepted and handed to FSM-0007, or the fix is performed under the co
 | Criterion | Status | Notes |
 |---|---|---|
 | `git log origin/main..HEAD` returns empty | Complete | No committed divergence |
-| Remote tags include required milestones | Incomplete | Only `v2.0.0` exists |
+| Remote tags include required milestones | Incomplete | `v1.0.0` and `v2.0.0` exist; `v3.0.0` and `v2.0.0-baseline` remain absent |
 | No secrets or credentials in pushed tree | Partially verified | HEAD scan is clean apart from placeholder docs text |
 | Secret scanning across full history | Complete with review note | `gitleaks` found 3 likely false positives, no confirmed live credentials |
 | `node_modules`, build output and generated sources untracked | Incomplete | Common outputs are now ignored, but the root remains heavily contaminated |
@@ -346,7 +355,7 @@ the final Sprint 0 audit target because:
 
 - the local working tree remains contaminated by unpublished FSM work and unrelated root folders
 - Sprint 0 control documents are saved in the candidate branch but not merged to `origin/main`
-- milestone tags are incomplete
+- milestone tags are incomplete: `v1.0.0` and `v2.0.0` exist; `v3.0.0` and `v2.0.0-baseline` remain absent
 - `main` branch protection does not require CI status checks yet because FSM-0010 has not landed
 - the clean-clone baseline test suite currently fails with 7 API test failures
 
