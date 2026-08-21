@@ -284,17 +284,27 @@ Initial review notes:
 
 ---
 
-## 10. Unrelated Documentation
+## 10. Unrelated Root Files
 
-The following untracked docs are unrelated to FSM and reference Luma Daily / Shopify:
+The following untracked docs and root theme files are unrelated to FSM and reference Luma
+Daily / Shopify:
 
 - `docs/apps.md`
 - `docs/deployment.md`
 - `docs/qa-checklist.md`
+- `.theme-check.yml`
+- `config/settings_data.json`
+- `config/settings_schema.json`
+- `layout/theme.liquid`
+- `locales/en.default.json`
+
+The following root script is also unrelated to the FSM platform baseline:
+
+- `run-node-migration.js`
 
 Decision:
 
-- Do not stage these files.
+- Do not stage these files or folders.
 - Remove or relocate outside the FSM repository during workspace cleanup.
 
 ---

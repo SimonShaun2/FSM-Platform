@@ -91,11 +91,15 @@ The following untracked root entries do not appear to belong to the FSM platform
 - `.chrome-noir-9230-fresh/`
 - `.chrome-noir-9232/`
 - `.codex_tmp/`
+- `.theme-check.yml`
 - `_node_spec_extract/`
 - `_node_spec_extract.zip`
 - `amida-wp/`
 - `apps/restaurant-waitlist/`
+- `config/`
 - `hubspot-sdr-agent/`
+- `layout/`
+- `locales/`
 - `luma-daily/`
 - `luma-daily-deploy-staging/`
 - `luma-daily-main-fix/`
@@ -108,6 +112,7 @@ The following untracked root entries do not appear to belong to the FSM platform
 - `repgeo-solo-v3-animations-fixed.zip`
 - `RepGeo-mono/`
 - `resume_redesign/`
+- `run-node-migration.js`
 - `seo-agency-site/`
 - `SimonShaun2-profile/`
 - `trayloop_bugfix/`
@@ -133,24 +138,7 @@ Recommendation:
 
 ---
 
-## 5. Ambiguous Root Entries
-
-These entries may be local artifacts or may need human classification:
-
-- `.theme-check.yml`
-- `config/`
-- `layout/`
-- `locales/`
-- `run-node-migration.js`
-
-Recommendation:
-
-- Inspect before removing or ignoring.
-- Do not stage as part of FSM-0001.
-
----
-
-## 6. Documentation Overlay
+## 5. Documentation Overlay
 
 The following untracked documentation files are not part of the current Sprint 0 governance
 commit set and were confirmed to reference Luma Daily / Shopify rather than FSM:
@@ -166,7 +154,7 @@ Recommendation:
 
 ---
 
-## 7. Baseline Decision
+## 6. Baseline Decision
 
 FSM-0001 should not merge the dirty overlay as-is.
 
