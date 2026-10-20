@@ -1,51 +1,46 @@
 # Pull Request
 
-## Ticket
+## Ticket and branch
 
-- Ticket ID:
-- Issue link:
+- FS ticket and Notion URL:
+- Legacy FSM-NNNN issue mapping, if applicable:
+- Integration base and exact base SHA:
+- Exact head SHA:
+- Draft/In Progress or ready for review:
+- Approved batch ID and enumerated membership (leave blank until authorized):
 
-## Summary
+## Scope and tandem split
 
--
+- Acceptance and non-goals:
+- Senior developer pair and distinct file/section ownership:
+- Branch and merge order:
+- Self-review and partner cross-review:
+- Independent reviewer (not an implementer):
+- Design owner if UX changes:
+- QA owner and negative cases:
+- Security required? Why:
+- Technical Lead contract decision if architecture changes:
 
-## Self-Review Checklist
+## Shared contract and consumers
 
-- [ ] I read `AGENTS.md`, `CODEX.md`, `PROJECT_STATE.md`, and the ticket.
-- [ ] The PR scope matches the ticket and does not include unrelated files.
-- [ ] Tenant-scoped data access is preserved where applicable.
-- [ ] State changes emit activity events where applicable.
-- [ ] Async work uses queues/workers where applicable.
-- [ ] No secrets, credentials, `.env` files, or key material are included.
+- Contract name/version, owner and durable path, or none:
+- Consumers and migration/compatibility plan:
+- Partner acknowledgements:
+- Schema, event, queue, auth, consent or money implications:
 
-## Shared Contract Changes
+## Evidence at this exact head
 
-State one:
+- Local commands/results and relevant UI evidence:
+- QA evidence URL:
+- Independent reviewer evidence URL:
+- Security and Design evidence URLs when required:
+- Gayle verdict/check URL:
+- Approved batch CI run URL and conclusion:
 
-- None.
-- Contract changed:
+## Risk and observability
 
-Affected consumers:
+- Tenant/consent/authorization negatives:
+- Logs, metrics, audit events and rollback:
+- Blockers and fix cards:
 
--
-
-## Test Evidence
-
-Commands run and results:
-
--
-
-## Observability Added
-
-State one:
-
-- None.
-- Added:
-
-## Peer Reviewer
-
--
-
-## QA Owner
-
--
+Open drafts remain In Progress. A changed head requires fresh affected sign-offs. No standalone CI, auto-merge, production promotion, Vercel/website setup or live payment changes from this PR. Do not mark Done until approved integration merge and acceptance evidence.
