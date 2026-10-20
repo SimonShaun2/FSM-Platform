@@ -9,7 +9,7 @@
 | Base (`main`) | `12b23226c0e0c199626940117fc7f0fa89f87375` |
 | PR | [#1](https://github.com/SimonShaun2/FSM-Platform/pull/1) |
 | Prior review head | `99bb96b54c21ee65c5904b0c1d70d98c63e1946e` |
-| Remediation head | Record at commit time via `git rev-parse HEAD` on branch `cursor/fs-1-pr1-remediation-0f37` |
+| Remediation head | `4e85901` — full SHA via `git rev-parse HEAD` on `cursor/fs-1-pr1-remediation-0f37` (local; not pushed) |
 
 ## Reviewer 1 doc findings — remediation status
 

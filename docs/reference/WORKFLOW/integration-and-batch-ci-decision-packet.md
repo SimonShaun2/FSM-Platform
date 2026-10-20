@@ -1,6 +1,6 @@
 # Decision packet — integration target & approved-batch CI
 
-**For:** Shaun (founder) · **From:** Platform 1 (FS-1 remediation) · **Date:** 2026-10-20  
+**For:** Shaun (founder) · **From:** Platform 1 (FS-1 remediation) · **Date:** 2026-10-20
 **Status:** Awaiting decision — **not decided in this commit**
 
 ## Why this exists
