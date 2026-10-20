@@ -1,3 +1,9 @@
+# Historical ServiceRev workflow — reference only
+
+This file describes the earlier V1/Phase 2 product workflow and is not a current build or release instruction. The founder's agent-first FSM direction, current FS-* Notion board, TEAM.md and GITHUB_WORKFLOW.md govern present work. Preserve this file for product pattern inventory; do not infer permission to build the full suite, send customer messages, charge money, run standalone CI or deploy from its flow diagrams.
+
+---
+
 # ServiceRev — Full Product Workflow
 **Version:** Phase 2 (Final)
 **Principle:** Thinner system, smarter brain.
