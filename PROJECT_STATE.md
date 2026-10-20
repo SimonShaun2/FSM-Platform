@@ -1,14 +1,11 @@
 # PROJECT_STATE.md
 
 **Repository:** `SimonShaun2/FSM-Platform`
-**Controlling document:** `MASTER_PRODUCT_SPEC.md` (FSM Platform V2 Master Directive)
-**Current sprint:** Sprint 0 — Existing Repository Audit and Rebaseline
-**State owner:** Claude (Product Manager)
-**Last updated:** 2026-08-21
+**Status:** Historical repository baseline and V2 audit snapshot as of 2026-08-21, with a 2026-10-20 governance annotation. The referenced `MASTER_PRODUCT_SPEC.md` is not present at the verified head.
+**Current execution:** Agent-first FS-* [Notion build board](https://app.notion.com/p/74b3a1145d3f49d586ac6cdbf174ceb2) and `TEAM.md` (26 roles). Historical FSM-NNNN statuses and owner IDs below are not current assignments. Map them explicitly before use.
+**State owner:** Chief of Staff with Product Owner and Technical Lead.
 
-This file is the single authoritative record of project state. It is updated on every
-merge per the automated progression rules in `GITHUB_WORKFLOW.md`. Chat memory is not
-project state. This file is.
+This file preserves measured repository facts and old audit work. Update verified facts at an approved integration merge; never infer that an old sprint status or automatic progression rule overrides the current board, exact-head gates or founder production authority.
 
 ---
 
@@ -21,8 +18,8 @@ The V1 product boundary — *"Thinner system, smarter brain"* — is **retired**
 The V2 product north star is **"Complete when needed. Simple by default."**
 
 The V1 four-agent model (Agent 1 Backend / Agent 2 Frontend / Agent 3 Infrastructure /
-Agent 4 QA) is **retired**. The permanent fifteen-member team defined in `TEAM.md` is
-the sole operating model. See §7 below for the full retirement register.
+Agent 4 QA) is **retired**. The permanent 26-role team with ten senior developers in five
+pairs is defined in `TEAM.md`. See §7 below for the retirement register.
 
 No existing code is presumed correct merely because it exists. Every meaningful component
 is classified KEEP / REFACTOR / REPLACE / REMOVE during Sprint 0 before any V2 feature
@@ -156,10 +153,7 @@ inside a route module, breaking the established `routes/<domain>/` convention.
 ### BD-006 — Legacy governance contradicts the V2 operating model
 **Severity:** High · **Owner:** TL-01 · **Ticket:** FSM-0002
 
-`AGENTS.md` and `CODEX.md` both encode the retired four-agent model, the retired
-"thinner system" product boundary, and a Phase 1A–Phase 2 roadmap superseded by the
-Sprint 0–22 roadmap. `CODEX.md` mandates an Agent 4 approval gate that no longer exists.
-Per master directive §51, exactly one authoritative operating model may remain in the repo.
+Historical finding at the 2026-08-21 baseline: `AGENTS.md` and `CODEX.md` encoded the retired four-agent model and Agent 4 gate. The draft governance correction on PR #1 replaces these with the founder's 26-role agent-first team and exact-head batch gate. Its branch/base and CI enforcement remain unresolved; do not treat the draft as merged policy on `main`.
 
 ---
 
@@ -217,9 +211,9 @@ be corrected under FSM-0002.
 | Retired | Replaced by |
 |---|---|
 | "Thinner system, smarter brain" north star | "Complete when needed. Simple by default." |
-| Agent 1 / Agent 2 / Agent 3 / Agent 4 model | Fifteen-member permanent team, `TEAM.md` |
-| Agent 4 sole-approval gate | Risk-based approval matrix, `TEAM.md` §5 |
-| Phase 1A / 1B / 1C / Phase 2 / Phase 3 roadmap | Sprint 0–22, `SPRINT_ROADMAP.md` |
-| `TICKET-NNN` identifiers | `FSM-NNNN` identifiers, `tickets/INDEX.md` |
+| Agent 1 / Agent 2 / Agent 3 / Agent 4 model | 26 permanent roles, ten senior developers in five pairs, `TEAM.md` |
+| Agent 4 sole-approval gate | Exact-head risk matrix and Gayle gate, `TEAM.md` §3 |
+| Phase 1A / 1B / 1C / Phase 2 / Phase 3 roadmap | Current agent-first FS board; historical full-suite plan deferred |
+| `TICKET-NNN` identifiers | Current FS-* board IDs; historical FSM-NNNN issues require mapping |
 | "v1 / v2 deferral" scope language | Sprint assignment and progressive disclosure |
-| Founder approval between tickets and sprints | Autonomous operating loop, master directive §41 |
+| Founder approval between routine tickets | Bounded CoS loop within WIP; founder retains production and exceptional authority |
