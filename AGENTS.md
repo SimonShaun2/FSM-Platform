@@ -7,9 +7,9 @@
 
 ## What This Product Is
 
-An AI-native Field Service Management (FSM) SaaS platform built for HVAC and trade service businesses.
-It manages customers, properties, assets, jobs, scheduling, dispatch, estimates, invoices, payments,
-service agreements, and an AI Revenue Intelligence layer that surfaces missed revenue opportunities.
+Renvani is a growth company for home services. It helps home service businesses attract more customers through their own channels, turn more inquiries into booked jobs, and bring customers back. The platform connects growth and service operations so owners can build a stronger business and rely less on rented leads.
+
+AI powers how the product works; the promise is helping businesses grow and own their customer relationships. This repository contains the FSM foundation that supports Renvani’s growth and service operations.
 
 This is a **backend-first, production-grade SaaS application** with persistent data, background workers,
 AI-driven automation, payment processing, and real-time webhooks.
@@ -61,11 +61,11 @@ Codex builds to Claude's specs.
 
 ## Product North Star
 
-> **"We're not building ServiceTitan from scratch. We're building a thinner system with a smarter brain."**
+> **Help home service businesses own their growth: win more direct customers, deliver great service, and earn more repeat revenue.**
 
-Every scope decision is measured against this. If a feature makes the system thicker without making
-the brain smarter, it does not belong in v1. When in doubt, ask: does this help operators find lost
-revenue or run their business more easily? If not, it is v2.
+Renvani is a growth company for home services. Its platform connects growth and service operations so owners can attract direct customers, convert inquiries into booked jobs, deliver great service, and bring customers back. AI powers how the product works; it is not the company identity.
+
+Use Owner.com as a product and growth reference adapted to home services. Do not pursue ServiceTitan feature parity. Evaluate scope by whether it helps home service businesses attract direct customers, convert inquiries, serve customers well, or earn repeat revenue, unless it is a necessary technical or security dependency.
 
 ---
 
