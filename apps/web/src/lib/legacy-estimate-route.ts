@@ -39,6 +39,9 @@ export function classifyLegacyEstimateGetPath(pathname: string): LegacyEstimateG
   }
 
   const segment = segments[1];
+  if (segment === undefined) {
+    return { kind: "not-legacy" };
+  }
 
   if (LEGACY_ESTIMATE_RESERVED_SEGMENTS.has(segment)) {
     return { kind: "reserved" };
