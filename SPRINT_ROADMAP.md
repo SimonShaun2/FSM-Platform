@@ -1,10 +1,10 @@
 # SPRINT_ROADMAP.md
 
-**Authority:** FSM Platform V2 Master Directive §49
-**Owner:** Claude (Product Manager)
-**Supersedes:** the Phase 1A / 1B / 1C / Phase 2 / Phase 3 structure
+**Status:** Historical full-FSM suite sequencing reference, deferred behind the founder's 2026-10-20 agent-first direction.
+**Current authority:** [Field Service Build Board](https://app.notion.com/p/74b3a1145d3f49d586ac6cdbf174ceb2) and `TEAM.md`. **Owner:** Product Owner.
+**Scope:** This document preserves potential later suite modules; its old sprint numbering, staffing IDs and CI tiers do not authorize current implementation or release.
 
-Sprints are dependency-ordered, not date-ordered. A sprint begins when its dependencies
+The current agent-first FS-* board controls work. The historical full-suite sprints below are dependency-ordered, not date-ordered. A sprint begins when its dependencies
 clear. Sprints may run partially in parallel where `TEAM.md` §4 allows. Additional sprints
 may be inserted where feature depth requires — the numbering is not sacred, and oversized
 sprints must not be forced to preserve it.
@@ -22,13 +22,13 @@ Identify technical debt, obsolete architecture, conflicting instructions, reusab
 and migration risk. Classify every meaningful area KEEP / REFACTOR / REPLACE / REMOVE.
 Retire legacy governance. The audit becomes the restart baseline.
 
-Tickets FSM-0001 → FSM-0014. **No V2 feature work begins until FSM-0012 is merged.**
+Historical tickets FSM-0001 → FSM-0014 remain a reconciliation reference. Current FS-* P0 work follows its own board dependencies and exact-head gates; later full-suite feature work requires a new Product Owner decision.
 
 ---
 
 ## Sprint 1 — Architecture, Developer Platform, CI/CD and Design System
 
-Target architecture and module boundaries. Tiered CI pipeline. Environment strategy.
+Target architecture and module boundaries. Approved-batch-only CI pipeline per `GITHUB_WORKFLOW.md`. Environment strategy.
 Migration tooling and validation. Observability foundation. Design system foundation and
 tokens. Progressive disclosure primitives — feature modules, role-based navigation,
 command/search shell. Performance budgets. Accessibility baseline.
