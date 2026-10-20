@@ -27,3 +27,17 @@ These are Renvani’s product areas, connected across one customer and service l
 5. **Command Center:** Gives owners visibility into outcomes, recommendations, approvals, and exceptions across Renvani. **Agent:** Owner Agent.
 
 Growth includes branded acquisition and local discovery; the Revenue Agent handles inquiry conversion. Command Center is the owner-facing control experience across the product areas, not a separate specialist agent. Together, the portfolio supports direct acquisition → booked work → reliable service → repeat business.
+
+## Full FSM product scope — in scope
+
+The broader FSM suite is part of Renvani’s product scope, built and released in stages. The agent-led growth loop is the initial wedge; it does not replace or exclude the operating suite. Reference workflows from FSM-Platform include:
+
+- Customer, property, and asset management
+- Online booking, availability, scheduling, and dispatch
+- Jobs, crew/technician workflows, checklists, time tracking, photos, and job updates
+- Estimates, approvals, invoices, and payments
+- Service agreements, maintenance plans, and recurring work
+- Customer communications, reviews, and customer portal
+- Product catalog, reporting, onboarding, imports, and business settings
+
+Businesses may begin with Renvani agents alongside their current systems. Over time, Renvani builds out these native FSM products and workflows for home services.
