@@ -1,110 +1,27 @@
 # GITHUB_WORKFLOW.md
 
-**Authority:** Master Directive §56, §57, §58, §59 · **Owner:** DO-01
+**Authority:** Founder FSM direction, TEAM.md and the [Field Service Build Board](https://app.notion.com/p/74b3a1145d3f49d586ac6cdbf174ceb2). **Owner:** Platform 1 with Technical Lead and Gayle. This replaces the unmerged draft's automatic per-commit/per-PR CI and auto-merge provisions.
 
-How work moves through GitHub. Project state lives in the repository, never in conversation.
+## 1. Traceability and readiness
 
----
-
-## 1. Structure
-
-**Milestones** — one per sprint, Sprint 0 through Sprint 22.
-**Issues** — one per `FSM-NNNN` ticket, using the §54 issue template.
-**Project views** — Backlog · Ready · In Progress · Design Review · Peer Review · QA ·
-Blocked · Ready to Merge · Done · Release Candidate.
-
-Full label taxonomy is specified in FSM-0013.
-
----
+A ticket carries acceptance, dependencies, risk, pair ownership, split, contract/consumers, evidence, PR, exact head, batch, gate verdict and next action. The current Notion board is the execution queue; legacy FSM-NNNN GitHub issues and the older V2 sprint plan need explicit mapping rather than silent substitution. A dependency-cleared ticket becomes Ready after Product Owner and Technical Lead contract/risk acceptance, not merely because a status formula says Done. One In Progress ticket and at most two waiting PRs per pair; fixes first. Open drafts stay In Progress.
 
 ## 2. Branches
 
-```
-main                          protected · PR required · CI required · no direct push
-feature/FSM-NNNN-short-slug   one branch per ticket
-fix/FSM-NNNN-short-slug       defect remediation
-release/vX.Y.Z                release candidates
-```
+Main is protected and is not a direct-write workspace. The official FSM integration branch, protection and how existing PR #1 (currently based on main) is retargeted are a pending governance decision. Until resolved, keep PR #1 draft and do not merge it into main. Do not infer a branch name from TrayLoop. Feature/fix branches identify the board ticket, branch point and merge order. No rebase, force-push or direct push to an integration or production branch.
 
-Branch names carry the ticket ID so work is traceable from branch to issue to PR to changelog.
+## 3. Tandem PR packet
 
----
+The Product Owner specifies acceptance and non-goals. Two senior developers on the same ticket agree a versioned contract, consumer list, file/section ownership, test ownership and merge order before code. Partners edit different files or meaningful test/oracle/docs slices, cross-review, and report combined local commands/results. Every PR states ticket, base/head SHA, shared contracts and migration, self-review, observability, independent reviewer, assigned QA, Security need and batch membership. A chat claim or a local artifact in an isolated Cursor VM is not a shared handoff. The reviewer cannot be an implementer.
 
-## 3. Readiness Is Computed
+## 4. CI batches and exact-head gate
 
-A ticket is `Ready` when every dependency is `Done` — never because someone decided it was.
-On merge, the dependency graph is recalculated and newly unblocked tickets become `Ready`
-and are assigned to their owning role.
+CI is only initiated through an **approved batch**. Before the single authorized run, record exact batch membership, PR heads, integration ancestry, expected commands, budget/time limit and owner. No standalone per-commit, per-PR or draft CI. Platform records the run URL and conclusion at that head. A local green test is not CI. Do not use an automated merge-on-green path.
 
-Owners pick up `Ready` work in priority order without waiting for instruction.
+QA posts reproducible commands, output and UI evidence against the exact head. The distinct reviewer covers code and shared contract. Security signs high-risk tenant, auth, consent, agent action, payment or gate authority changes. Design accepts material UX. Technical Lead accepts architecture contracts. Gayle issues a derived exact-head PASS only after all required evidence and approved batch CI. A new head invalidates affected sign-offs; a failed gate creates a bounded fix card for the original pair and fresh review. A comment labeled PASS cannot publish or substitute for a protected gate.
 
----
+## 5. Integration, completion and release
 
-## 4. Pull Requests
+After Gayle PASS, the authorized integration merge updates the board and repository state with exact merge SHA and evidence. Done means the approved implementation is merged to the integration branch and acceptance is met. Production is a separate founder promotion with release certification by Technical Lead, QA 4, Platform and Security by risk. No deployment, Vercel or public website setup from these tickets. Live payments and Stripe are deferred to the end and require separate founder authorization.
 
-Every PR must state:
-
-1. Ticket ID and link
-2. Self-review checklist confirmation (`CODEX.md` §6)
-3. Shared contract changes, with affected consumers — or explicitly "none"
-4. Test evidence
-5. Observability added
-6. Peer reviewer
-7. QA owner
-
-A PR with no ticket is rejected. Approval follows the risk-based matrix in `TEAM.md` §5.
-The reviewer must never be the implementation owner.
-
----
-
-## 5. CI Gates
-
-Tiered per FSM-0010:
-
-| Tier | Trigger | Contents | Budget |
-|---|---|---|---|
-| 1 | Every commit | Format · lint · typecheck · unit tests · affected build · governance terminology check | < 5 min |
-| 2 | Every PR | Integration tests · migration validation · tenant isolation suite · dependency audit · secret scanning · full build | < 15 min |
-| 3 | Pre-merge to `main` | E2E · accessibility · performance · API contract tests | < 30 min |
-| 4 | Release | Full regression · security scan · artifact generation · release certification | Untimed |
-
-Do not run every expensive suite on every trivial commit. Use intelligent gates that provide
-equivalent safety.
-
----
-
-## 6. Automated Progression
-
-When all required checks pass, without founder confirmation:
-
-1. Merge the PR
-2. Close the issue
-3. Update `PROJECT_STATE.md`
-4. Update `CHANGELOG.md`
-5. Update ticket status
-6. Recalculate the dependency graph
-7. Unlock newly available work
-8. Assign next work to the correct persistent owner
-9. Continue execution
-
-Stop only for the five conditions in `TEAM.md` §6.
-
----
-
-## 7. Cross-Team Notification
-
-Changing a shared interface — API contract, schema, event contract, queue payload, design
-token, payment contract, feature flag, authentication behaviour — requires, in the PR: the
-versioned change, the owner, known consumers, tests, and a migration plan where required.
-
-Notification happens through the PR and the contract file. Not through chat.
-
----
-
-## 8. Releases
-
-Release branch cut from `main` → Tier 4 gates → certification by TL-01, QA-03 and DevOps →
-tag → deploy per `RELEASE_RUNBOOK.md` → `CHANGELOG.md` updated → `PROJECT_STATE.md` updated.
-
-Destructive production operations require founder authorisation. Everything else proceeds
-under the team's granted authority.
+The Chief of Staff observes Cursor, GitHub and Notion evidence, fills the next dependency-cleared pair capacity, and maintains reviewer/QA/Design/Platform work. Do not claim a session is still executing merely because its chat exists.
