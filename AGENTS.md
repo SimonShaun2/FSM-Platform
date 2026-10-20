@@ -18,10 +18,10 @@ If you have prior context on this repository, the following is **retired**. Do n
 | "Thinner system, smarter brain" | **"Complete when needed. Simple by default."** |
 | Agent 1 / 2 / 3 / 4 model | 26 permanent role-named agents; ten senior developers in five pairs — `TEAM.md` |
 | Agent 4 sole-approval gate | Exact-head independent QA, review, Security-by-risk and Gayle batch gate — `TEAM.md` §3 |
-| Phase 1A / 1B / 1C / 2 / 3 | Sprint 0–22 — `SPRINT_ROADMAP.md` |
-| `TICKET-NNN` | `FSM-NNNN` — `tickets/INDEX.md` |
-| "That's v2" as a scope refusal | Assign to a sprint, or gate behind progressive disclosure |
-| Founder approval between tickets | Autonomous operating loop — `TEAM.md` §6 |
+| Phase 1A / 1B / 1C / 2 / 3 | Agent-first FS board now; historical full-suite sprints are deferred |
+| `TICKET-NNN` | FS-* board tickets now; legacy `FSM-NNNN` issues require explicit mapping |
+| "That's v2" as a scope refusal | Product Owner sequences the current agent-first loop and later suite by evidence |
+| Founder approval between routine tickets | Autonomous operating loop — `TEAM.md` §5; founder retains production and exceptional authority |
 
 The engineering principles in §5 below are **retained from V1** and remain repo law.
 They were sound. The team structure and product boundary around them were not.
@@ -205,7 +205,7 @@ Treat as the starting architecture. This is **not** permission to rewrite the st
 | Testing | Vitest (unit/integration) + Playwright (E2E) |
 | Deployment | Railway |
 
-Stack changes require an ADR from TL-01 showing: problem, current approach, proposed
+Stack changes require an ADR from the Technical Lead showing: problem, current approach, proposed
 approach, benefit, migration cost, operational impact, security impact, alternatives
 considered, decision. See `docs/adr/`.
 
