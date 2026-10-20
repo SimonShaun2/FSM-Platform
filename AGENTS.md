@@ -5,8 +5,7 @@
 before changing anything.**
 
 **Version:** 2.0 — supersedes all prior versions of this file.
-**Authority:** `MASTER_PRODUCT_SPEC.md` (FSM Platform V2 Master Directive).
-Where this file and the master directive conflict, the master directive wins.
+**Authority:** Founder agent-first FSM direction recorded 2026-10-20 in the [Notion build HQ](https://app.notion.com/p/3ff317b92d1581df8eb5f7353616f529). The referenced `MASTER_PRODUCT_SPEC.md` is not present at the verified repository head. Until reconciled, use the founder's current direction and `TEAM.md` for team/process, and preserve existing engineering safety rules. Escalate any material product contradiction to Product Owner and founder.
 
 ---
 
@@ -17,8 +16,8 @@ If you have prior context on this repository, the following is **retired**. Do n
 | Retired | Replaced by |
 |---|---|
 | "Thinner system, smarter brain" | **"Complete when needed. Simple by default."** |
-| Agent 1 / 2 / 3 / 4 model | Fifteen-member permanent team — `TEAM.md` |
-| Agent 4 sole-approval gate | Risk-based approval matrix — `TEAM.md` §5 |
+| Agent 1 / 2 / 3 / 4 model | 26 permanent role-named agents; ten senior developers in five pairs — `TEAM.md` |
+| Agent 4 sole-approval gate | Exact-head independent QA, review, Security-by-risk and Gayle batch gate — `TEAM.md` §3 |
 | Phase 1A / 1B / 1C / 2 / 3 | Sprint 0–22 — `SPRINT_ROADMAP.md` |
 | `TICKET-NNN` | `FSM-NNNN` — `tickets/INDEX.md` |
 | "That's v2" as a scope refusal | Assign to a sprint, or gate behind progressive disclosure |
@@ -31,11 +30,9 @@ They were sound. The team structure and product boundary around them were not.
 
 ## 1. What This Product Is
 
-A complete, modern, AI-enabled Field Service Management platform for service businesses.
+An agent-first field-service growth and operations product for service businesses. The existing FSM codebase is its substrate. A full FSM software suite is a later optional offering, not the first build milestone.
 
-Full lifecycle: **Lead → Customer → Estimate → Approval → Job → Schedule → Dispatch →
-Technician → Field Work → Invoice → Payment → Follow Up → Review → Membership →
-Recurring Service → Marketing → Reporting → Retention.**
+Current first loop: **direct inquiry → qualification → draft/approval → booking or estimate → service handoff → follow-up → measured direct job**. The full FSM lifecycle remains a future product capability and should not force early rollout of every module.
 
 It must serve, from one codebase and without an architectural rebuild:
 
@@ -75,10 +72,8 @@ defaults, and industry templates.
 The V1 test — *"does this make the system thicker without making the brain smarter?"* — is
 retired. It caused correct features to be rejected.
 
-The V2 test is: **does this add capability without adding default-path complexity?**
-If a feature is needed by some customers, it belongs in the platform. The question is never
-*whether* to build it — it is which sprint owns it and how progressive disclosure keeps it
-out of the way of customers who do not need it.
+The current scope test is: **does this strengthen an operator-approved, measurable direct-job loop without adding default-path complexity?**
+Additional FSM capability is sequenced on the board and introduced only when validated for the current product phase. Do not treat an old sprint assignment as authorization to implement it now.
 
 ---
 
@@ -129,7 +124,7 @@ duplicate entry.
 
 1. **Backend owns all business logic.** No business logic in the frontend. Ever.
 2. **Every state change emits an activity event.** No exceptions.
-3. **All money flows through Stripe.** No manual payment state outside Stripe webhook handlers.
+3. **Money remains controlled.** Existing payment behavior follows its Stripe/webhook boundaries. New Stripe and live-payment work is deferred to the end and requires separate founder authority.
 4. **Background workers handle async work.** No long-running operations in request handlers.
 5. **Multi-tenant by default.** Every query scoped to the tenant. No cross-tenant leakage.
 6. **TypeScript strict everywhere.** No `any`. No `@ts-ignore`.
@@ -319,9 +314,4 @@ Diagnosing a production problem must not require guessing.
 
 ## 14. How Work Flows
 
-Read `TEAM.md` for roles, ownership and the approval matrix. Read `SPRINT_ROADMAP.md` for
-sequencing. Read `tickets/INDEX.md` for the ticket backlog. Read `CODEX.md` for
-implementation standards and patterns. Read `PROJECT_STATE.md` for current state — it is
-authoritative and updated on every merge.
-
-Do not ask the founder whether to continue. Follow the operating loop in `TEAM.md` §6.
+Read `TEAM.md` for the 26-role roster, tandem process, WIP and exact-head approval matrix. The Notion Field Service Build Board governs current agent-first priority and dependencies; `SPRINT_ROADMAP.md` and `tickets/INDEX.md` are legacy V2 scope references pending reconciliation. Read `CODEX.md` for implementation patterns and `PROJECT_STATE.md` for verified repository facts. A draft PR remains In Progress. CI only runs in an approved batch; never merge or mark Done without the gates. Founder retains production promotion.
