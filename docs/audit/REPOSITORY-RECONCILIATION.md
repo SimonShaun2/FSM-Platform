@@ -292,7 +292,7 @@ explicitly accepted and handed to FSM-0007, or the fix is performed under the co
 | Secret scanning across full history | Complete with review note | `gitleaks` found 3 likely false positives, no confirmed live credentials |
 | `node_modules`, build output and generated sources untracked | Incomplete | Common outputs are now ignored, but the root remains heavily contaminated |
 | Branch protection active on `main` | Complete | PR required, one approval required, stale reviews dismissed, admin enforcement on, force pushes/deletions disabled |
-| Baseline SHA recorded in `PROJECT_STATE.md` | Incomplete | Sprint 0 control docs were provided as attachments but are not present in the repository |
+| Baseline SHA recorded in `PROJECT_STATE.md` | Complete on PR branch | Present on `feature/FSM-0001-repository-reconciliation`; absent from `origin/main` until integration merge |
 | Clean-clone install/build succeeds on baseline | Complete | Verified in fresh clone |
 | Clean-clone full test suite passes on baseline | Incomplete | Clean clone fails with 7 API test failures |
 | Subsequent Sprint 0 tickets reference baseline SHA | Incomplete | Cannot be verified from repository files until Sprint 0 control docs are added |
@@ -320,12 +320,15 @@ explicitly accepted and handed to FSM-0007, or the fix is performed under the co
    served as a mixed workspace rather than a tightly bounded product repository.
 
 6. **Sprint 0 control documents are not yet present on `origin/main`.**
-   `PROJECT_STATE.md`, `TEAM.md`, `SPRINT_ROADMAP.md`, and the FSM ticket files were
-   provided as local attachments and saved into the candidate branch after the initial
-   finding. They remain absent from the production baseline until the branch merges.
+   They exist on the PR branch (`feature/FSM-0001-repository-reconciliation`) but remain
+   absent from `origin/main` until an authorized integration merge at an exact head.
 
-7. **A root `CHANGELOG.md` is saved in the candidate branch but not merged to `origin/main`.**
+7. **A root `CHANGELOG.md` is on the PR branch but not merged to `origin/main`.**
    The initial reconciliation and Sprint 0 scaffolding events are recorded there.
+
+8. **Integration branch and batch CI are unset.**
+   PR #1 still targets `main`. `GITHUB_WORKFLOW.md` and `TEAM.md` require a CoS/Technical
+   Lead decision before merge or retarget. Approved-batch CI is policy-only (no workflows).
 
 ---
 
@@ -340,7 +343,9 @@ explicitly accepted and handed to FSM-0007, or the fix is performed under the co
 4. Add the missing annotated tags where defensible historical commits can be identified.
 5. Add required status checks to `main` branch protection after FSM-0010 defines CI gates.
 6. Add the Sprint 0 control documents to the repository before relying on them as project state.
-7. Merge the candidate branch so the root `CHANGELOG.md` becomes repository state.
+7. After CoS/Technical Lead selects the integration branch (and retargets PR #1 if needed),
+   merge governance at an exact head with Gayle/batch evidence — do not merge into `main`
+   by default while integration branch remains undecided.
 8. Re-run clean-clone verification against the eventual baseline tag after the test suite is green.
 
 ---
@@ -363,19 +368,15 @@ the final Sprint 0 audit target because:
 
 ## 13. Candidate Branch Addendum
 
-The current working branch is `feature/FSM-0001-repository-reconciliation`.
+The working branch is `feature/FSM-0001-repository-reconciliation` (PR #1).
 
-As of 2026-08-21, it contains five commits ahead of `origin/main`:
+As of the 2026-08-21 audit snapshot it was five commits ahead of `origin/main`; the branch
+has since accumulated governance remediation commits. Measure with:
 
-- `dfc1d98` - `FSM-0001: document repository reconciliation baseline`
-- `c275cf7` - `FSM-0013-0014: add Sprint 0 governance and project scaffolding`
-- `668ccfe` - `FSM-0001: record branch protection status`
-- `2c9fdc1` - `FSM-0001: add repository changelog`
-- `10bd7bf` - `FSM-0001: classify local worktree overlay`
+`git rev-parse origin/main` and `git rev-parse origin/feature/FSM-0001-repository-reconciliation`
 
-The branch is pushed to origin and represented by draft PR #1:
-
-- `https://github.com/SimonShaun2/FSM-Platform/pull/1`
+PR #1: `https://github.com/SimonShaun2/FSM-Platform/pull/1` — keep draft until integration
+branch, protection required checks, and approved-batch CI are decided (`GITHUB_WORKFLOW.md` §2).
 
 Current dirty working tree measurement:
 
@@ -389,5 +390,6 @@ Additional detail is recorded in:
 - `docs/audit/UNPUBLISHED-FSM-WORK-INVENTORY.md`
 
 **Decision:** do not stage the dirty overlay into this branch without a targeted domain review.
-The safest next action is to merge the Sprint 0 governance/audit branch first, then split
-the unpublished FSM product overlay into separate reviewable branches.
+After governance doc remediation and founder integration/CI decisions, merge PR #1 to the
+**chosen integration branch** (not assumed to be `main`), then split unpublished FSM product
+overlay into separate reviewable branches. See `docs/reference/WORKFLOW/reconciliation.md`.

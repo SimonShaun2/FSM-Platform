@@ -1,6 +1,10 @@
 # Architecture Decision Records
 
-**Owner:** TL-01
+**Historical Sprint 0 labels — subordinate to `TEAM.md` role names.** `TL-01` → Technical Lead;
+`QA-02` → QA 2 (Integration & Security). ADRs on this branch are audit/bootstrap records until
+merged and accepted on the integration branch.
+
+**Owner:** Technical Lead (legacy label TL-01)
 **Authority:** Master Directive sections 39 and 52
 **Bootstrapped by:** FSM-0014
 
@@ -28,8 +32,8 @@ ADR, and the prior record is marked `Superseded` with a forward reference.
 
 ## Authoring And Approval
 
-TL-01 authors or approves every ADR. Claude reviews any ADR with product consequences. QA-02
-reviews any ADR affecting tenant isolation, authentication, or payments. An ADR may not be
+The Technical Lead authors or approves every ADR. Product Owner reviews any ADR with product
+consequences. QA 2 reviews any ADR affecting tenant isolation, authentication, or payments. An ADR may not be
 marked `Accepted` without a recorded decision and its consequences.
 
 ## Numbering
