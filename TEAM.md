@@ -1,183 +1,69 @@
 # TEAM.md
 
-**Authority:** FSM Platform V2 Master Directive §40–§48
-**Supersedes:** the four-agent model previously described in `AGENTS.md` and `CODEX.md`
+**Authority:** Founder FSM direction, 2026-10-20; [Field Service Agents — Team & Operating Rules](https://app.notion.com/p/3ff317b92d15817b9f64dda55cddb97e). This document supersedes the 15-member staffing draft in this PR. Product sequencing is agent-first, with a full FSM suite as a later optional product offering. Shaun is founder and is not counted among the 26 agent roles.
 
-This file defines who exists, what they own, who approves what, and where authority ends.
-It is the sole operating model for this repository.
+## 1. Permanent team: 26 role-named agents
 
----
+Role names describe durable responsibility, not the current ticket. Assignments and pair membership may change through a recorded handoff; the role name remains stable. All current Cursor sessions use Composer 2.5. The Notion roster links each session; a launched chat is not evidence it remains executing.
 
-## 1. Permanent Team
-
-Fifteen members. Composition is fixed for the life of the project. Roles do not rotate
-between sprints — in particular, TL-01 remains Technical Lead throughout.
-
-| ID | Role | Function |
+| Role | Durable responsibility | Current pairing |
 |---|---|---|
-| Claude | Product Manager | Product |
-| TL-01 | Senior Technical Lead | Technical leadership |
-| FE-01 | Senior Frontend Developer | Frontend |
-| FE-02 | Senior Frontend Developer | Frontend |
-| BE-01 | Senior Backend Developer | Backend |
-| BE-02 | Senior Backend Developer | Backend |
-| FS-01 | Senior Full Stack Developer | Full stack |
-| FS-02 | Senior Full Stack Developer | Full stack |
-| DES-01 | Senior Product Designer | Design |
-| DES-02 | Senior Product Designer | Design |
-| QA-01 | Senior QA Engineer | QA |
-| QA-02 | Senior QA Engineer | QA |
-| QA-03 | Senior QA Engineer | QA |
-| DO-01 | Senior DevOps Engineer | DevOps |
-| DO-02 | Senior DevOps Engineer | DevOps |
+| Chief of Staff (E.CoS) | Board, WIP, dependencies, evidence ledger | Leadership |
+| Product Owner | Acceptance, scope and direct-job outcomes | Leadership |
+| Technical Lead | Architecture, contracts and safe sequencing | Leadership |
+| Senior Dev A — Agent Backend | Tenant and agent control plane | Pair 1 with B |
+| Senior Dev B — Data Contracts | Shared types, schemas and negative tests | Pair 1 with A |
+| Senior Dev C — Revenue Backend | Inquiry, quote and consent services | Pair 2 with D |
+| Senior Dev D — Acquisition Web | Direct inquiry and acquisition UX | Pair 2 with C |
+| Senior Dev E — Workflow & Web | Web workflow implementation | Pair 3 with F |
+| Senior Dev F — Integration & Compatibility | Legacy routes and compatibility tests | Pair 3 with E |
+| Senior Dev G — Operator Experience | Approval inbox and office workflow | Pair 4 with H |
+| Senior Dev H — Service Workflows | Service events, completion and retention | Pair 4 with G |
+| Senior Dev I — Adapters & Imports | Vendor adapters and provenance | Pair 5 with J |
+| Senior Dev J — Measurement & Owner Agent | Outbox, attribution and owner brief | Pair 5 with I |
+| Designer 1 — Office UX | Design system and office flows | Design |
+| Designer 2 — Field UX | Field, mobile and customer flows | Design |
+| Reviewer 1 — Backend & Architecture | Independent backend review | Review |
+| Reviewer 2 — UI & Accessibility | Independent UI/docs review | Review |
+| Reviewer 3 — Integration & Adversarial | Independent integration review | Review |
+| QA 1 — Functional Acceptance | Ticket acceptance | QA |
+| QA 2 — Integration & Security | Tenant and integration negatives | QA |
+| QA 3 — Agent Evaluation | Agent behavior and policy evaluation | QA |
+| QA 4 — E2E & Release | Cross-system regression | QA |
+| Platform 1 — CI & Environments | Batch CI and local environment | Platform |
+| Platform 2 — Reliability & Observability | Monitoring and recovery | Platform |
+| Security | Tenant, consent, auth and agent authority | Security |
+| Gayle — Merge Gate | Independent exact-head verdict | Gate |
 
-Totals: 1 Product Manager, 1 Technical Lead, 6 developers, 2 designers, 3 QA engineers,
-2 DevOps engineers.
+Totals: 3 leadership, 10 senior developers in five pairs, 2 designers, 3 reviewers, 4 QA, 2 platform, 1 Security, 1 Gayle = **26**. Founder retains production promotion and exceptional live-money, legal and destructive operations.
 
----
+## 2. Ticket and tandem process
 
-## 2. Permanent Domain Ownership
+The Product Owner records testable acceptance, non-goals, dependencies and risk. The Technical Lead approves architecture and shared contracts. Before code, a pair writes a file/section split, branch and merge order, versioned contract, owner and consumer list, negative tests and migration plan where needed. Partners work on distinct files or meaningful test/oracle/doc slices, cross-review, and locally test the combined result. One active ticket per pair and at most two waiting PRs per pair. Fixes outrank new work. A handoff is durable in the board, ADR, contract or PR; chat alone is not a handoff.
 
-Ownership is durable. The owner is the default implementer and the standing reviewer for
-their domain. Work may be reassigned when capacity requires it; ownership does not move.
+The five active P0 pair tickets are FS-37, FS-38, FS-36, FS-39 and FS-40 respectively. Preflight findings are proposals. Do not start downstream implementation while its explicit dependencies or pair contract remain unresolved. Open drafts stay In Progress; In Review means review is actually under way; Done requires merged integration evidence and all required gates.
 
-| Member | Owns |
+## 3. Risk and approval matrix
+
+| Change | Required evidence before Gayle PASS |
 |---|---|
-| TL-01 | Architecture · cross-domain contracts · security architecture · technical standards |
-| FE-01 | Office application · dispatch · scheduling · CRM · administrative UX |
-| FE-02 | Field experience · mobile responsive workflows · customer-facing experiences |
-| BE-01 | CRM · jobs · scheduling · dispatch · equipment · memberships · service agreements |
-| BE-02 | Pricebook · estimates · invoices · payments · accounting · job costing |
-| FS-01 | Communications · online booking · customer portal · marketing · reviews · referrals |
-| FS-02 | AI · automation · search · integrations · reporting tooling · cross-domain workflows |
-| DES-01 | Office UX · design system · desktop workflows |
-| DES-02 | Field UX · mobile UX · customer experience |
-| QA-01 | Functional acceptance |
-| QA-02 | Integration · security · adversarial · data integrity |
-| QA-03 | E2E · regression · release certification |
-| DO-01 | CI/CD · environments · deployments · infrastructure |
-| DO-02 | Observability · security operations · backups · reliability · performance |
+| Standard | Pair self-review and cross-review, distinct independent reviewer, assigned QA, local evidence, approved batch CI at exact head |
+| UX | Above, plus relevant design acceptance and accessibility checks |
+| Architecture or shared contract | Above, plus Technical Lead decision, versioned contract and consumer/migration evidence |
+| Tenant, consent, auth, agent authority or sensitive data | Above, plus Security and QA negatives at exact head |
+| Platform/CI | Second platform or Technical Lead review, Security for gate authority, QA where behavior changes |
+| Release | Technical Lead, QA 4, Platform, Security by risk, Gayle and founder production promotion |
 
----
+The implementer cannot approve their own work as QA, independent reviewer, Security or Gayle. A changed PR head invalidates affected sign-offs. A failed gate returns a bounded fix card to the original pair and requires fresh evidence. Gayle derives a PASS from machine-verifiable exact-head artifacts and records a verdict; a comment or role label alone is not the gate.
 
-## 3. Authority
+## 4. Branches, CI and release
 
-### Claude — Product Manager
+No direct push to an integration or production branch; no rebase or force-push of reviewed heads. Feature branches and draft PRs are traceable to the board ticket. The official FSM integration branch and migration of this existing PR #1 (currently based on `main`) require an explicit Technical Lead/Chief of Staff decision and branch protection before merge. Do not treat `main` as the team's ordinary integration branch by default.
 
-**May decide without founder approval:** backlog priority · requirement clarification ·
-ticket splitting and merging · dependency sequencing · acceptance criteria · minor UX
-resolution with Design · implementation sequencing with TL-01 · moving work between
-sprints when dependencies require it.
+CI runs **only through approved batches** with enumerated membership, exact head SHA, one authorized run and recorded result. No standalone per-commit or per-PR CI, and local green tests are not CI. No merge or Done without the risk matrix and batch evidence. No deployment, public website or Vercel setup from this process. Stripe and live payment changes remain at the end of the roadmap and need separate founder authority.
 
-**May not decide:** fundamental business model · removal of core product scope · payment
-economics · core security standards · overriding TL-01 on technical safety · overriding a
-QA failure · silent introduction of materially different product strategy.
+## 5. Operating loop and sources
 
-### TL-01 — Technical Lead
+CoS maintains the Notion build board, reconciles observed Cursor and GitHub evidence, assigns the next dependency-cleared ticket within WIP, and keeps reviewer, QA, Security, Design and Platform work ahead of the pairs. Product Owner and Technical Lead decide acceptance and architecture. The founder's current product direction and Notion board outrank stale V2 sprint prose in this unmerged draft until the repository roadmap is reconciled in a separate reviewable change.
 
-Final technical authority on architecture, security architecture, shared contracts, system
-boundaries, performance standards, data integrity standards, engineering standards, and
-architecture disputes.
-
-TL-01 does not review every ordinary PR. TL-01 reviews where architectural risk warrants it.
-
-### DES-01 / DES-02 — Design
-
-Own the design system and approve material UX changes. Developers do not redesign approved
-workflows because another implementation is easier. Designers do not block backend-only
-changes with no UX impact.
-
-### QA-01 / QA-02 / QA-03 — Quality
-
-QA failure blocks the associated ticket. Developers may not mark their own implementation
-QA-approved. QA owns verification; engineering owns remediation. QA provides reproducible
-evidence. QA-03 owns cross-system regression and release certification and is deliberately
-**not** a per-ticket approver — this prevents QA becoming the project bottleneck.
-
-### DO-01 / DO-02 — DevOps
-
-Own CI/CD, environments, deployment, observability, backups and reliability. Destructive
-production operations outside granted authority require founder authorisation.
-
----
-
-## 4. Parallel Execution
-
-Teams work concurrently wherever dependencies allow. The organisation is not serialised.
-
-- Frontend builds against approved API contracts while backend implementation continues.
-- Design runs one or more sprints ahead of active frontend work.
-- QA writes test plans during development, not after it.
-- DevOps builds infrastructure alongside application development.
-- Full stack engineers own complete vertical slices.
-- Backend engineers develop independent domains simultaneously.
-- Product prepares future sprints while the current sprint executes.
-
-TL-01 coordinates architecture without becoming a required reviewer for every small change.
-
----
-
-## 5. Approval Matrix
-
-Approval follows risk and ownership. Not every ticket requires every function.
-
-| Ticket class | Required approvals |
-|---|---|
-| Standard backend | Implementation owner · distinct senior developer reviewer · assigned QA · CI · merge |
-| Standard frontend | Implementation owner · distinct developer reviewer · designer *if UX changed* · assigned QA · CI · merge |
-| Architecture sensitive | Implementation owner · peer reviewer · TL-01 · assigned QA · CI · merge |
-| Payments / auth / tenant isolation / security | Implementation owner · peer reviewer · QA-02 · TL-01 *where architecture changes* · CI · merge |
-| Infrastructure | DevOps owner · second DevOps or TL-01 · QA *where user-facing behaviour is affected* · CI · merge |
-| Release | TL-01 · QA-03 · DevOps · automated release gates |
-
-A reviewer must never be the implementation owner.
-
----
-
-## 6. Autonomous Operating Loop
-
-```
-Plan → Design → Build → Review → Test → Approve → Merge
-     → Deploy when appropriate → Update PROJECT_STATE.md
-     → Recalculate dependencies → Begin next work
-```
-
-The founder is not the normal approval layer. The team does not stop after each ticket to
-ask whether to continue, does not wait for approval before starting the next
-dependency-free ticket, and does not pause between ordinary sprints.
-
-Execution halts only when:
-
-1. A genuine external dependency blocks progress.
-2. Credentials are unavailable.
-3. A product requirement contradicts the master directive.
-4. A legal or regulatory question cannot safely be resolved internally.
-5. A destructive production operation exceeds the team's granted authority.
-
-Otherwise: continue.
-
----
-
-## 7. Cross-Team Contract Rule
-
-Autonomous functions still operate as one organisation. When a team changes a shared
-interface, downstream teams are informed through **repository artifacts, not chat memory**.
-
-Shared interfaces requiring a versioned contract, a named owner, a consumer list where
-practical, tests, and a migration plan where required:
-
-- API contracts
-- Database schema
-- Event contracts
-- Queue payload contracts
-- Design system
-- Payment contracts
-- Feature flags
-- Authentication behaviour
-
----
-
-## 8. Handoff Standard
-
-Every handoff between members is a repository artifact — a ticket, an ADR, a contract file,
-or a PR description. A handoff that exists only in conversation did not happen.
+Adapted process sources from the paused TrayLoop project: [team README](https://github.com/SimonShaun2/SimonShaun2/blob/dev/trayloop/docs/team/README.md), [tandem process](https://github.com/SimonShaun2/SimonShaun2/blob/dev/trayloop/docs/team/process.md), [ticket template](https://github.com/SimonShaun2/SimonShaun2/blob/dev/trayloop/docs/team/ticket-template.md), [split plan](https://github.com/SimonShaun2/SimonShaun2/blob/dev/trayloop/docs/team/split-plan-template.md). Copy the process, not TrayLoop-specific labels, prices, Stripe implementation or branch names.
