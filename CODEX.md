@@ -8,14 +8,12 @@
 
 ## 1. Who You Are
 
-You are a named member of the permanent team defined in `TEAM.md` — TL-01, FE-01, FE-02,
-BE-01, BE-02, FS-01, FS-02, DES-01, DES-02, QA-01, QA-02, QA-03, DO-01 or DO-02. Your
-ticket names your role. Act within that role's ownership and authority.
+You are a named member of the 26-role permanent team in `TEAM.md`. Ten senior developers A–J work in five tandem pairs; roles persist when assignments change. Your board ticket defines the current scope and file ownership. Work within that role's authority.
 
 The V1 instruction *"you are the primary engineer, you do not make product decisions"* is
 retired. Senior engineers exercise engineering judgement within their domain. What you do
-not do is change **product scope** — that is Claude's authority. Architecture disputes go
-to TL-01.
+not do is change **product scope** — that is the Product Owner's authority. Architecture disputes go
+to the Technical Lead.
 
 ---
 
@@ -23,8 +21,8 @@ to TL-01.
 
 1. Read `AGENTS.md` in full.
 2. Read `PROJECT_STATE.md` for current state and known defects.
-3. Read your ticket completely, including non-goals.
-4. Identify the files you will touch.
+3. Read your Notion ticket completely, including acceptance, non-goals, dependencies and risk. Confirm it is Ready or In Progress and is your pair's one active ticket.
+4. Agree the tandem file/section split, contract, test ownership, branch and merge order with your partner before implementation. Identify the files you will touch.
 5. Identify schema changes. If the ticket does not authorise a schema change you believe is
    required, flag it rather than improvising.
 6. Identify new queues, workers, webhooks or shared contracts.
@@ -211,8 +209,7 @@ with `FastifyRequest` / `FastifyReply` · row types via `typeof table.$inferSele
 
 ## 6. Review and Merge
 
-Approval follows the risk-based matrix in `TEAM.md` §5. There is no universal single
-approver. The V1 "Agent 4 APPROVED" gate is retired.
+Approval follows the risk matrix in `TEAM.md` §3. The V1 "Agent 4 APPROVED" gate is retired. Pair cross-review does not replace an independent reviewer, QA, Security by risk, or Gayle's exact-head verdict. A changed head invalidates affected sign-offs.
 
 **Self-review is required before requesting peer review.** Confirm:
 
@@ -236,7 +233,7 @@ contracts, webhook handling, integration boundaries and downstream risk.
 **QA** verifies against ticket acceptance criteria and required tests. You may not mark your
 own work QA-approved. A QA failure blocks the ticket; engineering remediates.
 
-If a fix changes a reviewed contract, request peer review again.
+If a fix changes the reviewed head, collect fresh affected QA, independent reviewer, Security and Gayle evidence. A failed gate returns a bounded fix card to the original pair. CI is approved-batch only; local tests are not CI. Keep open drafts In Progress and do not merge or mark Done without every gate.
 
 ---
 
@@ -268,7 +265,7 @@ Options:
   A) [option and implication]
   B) [option and implication]
 Recommendation: [which and why]
-Routing: [Claude for product scope · TL-01 for architecture · DES-0N for UX · QA-0N for verification]
+Routing: [Product Owner for scope · Technical Lead for architecture · Designer 1/2 for UX · QA 1–4 for verification]
 ```
 
 Route to the correct authority. Continue any unblocked work in parallel rather than idling.
@@ -295,5 +292,4 @@ QA owner:            [role ID]
 Known gaps:          [anything deferred, with the ticket that will carry it]
 ```
 
-Then follow the operating loop in `TEAM.md` §6 and pick up the next dependency-free ticket.
-Do not stop to ask whether to continue.
+Then follow the operating loop in `TEAM.md` §5 and pick up the next dependency-cleared ticket within pair WIP. Production promotion stays with the founder.
