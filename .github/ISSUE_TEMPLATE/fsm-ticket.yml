@@ -1,22 +1,20 @@
-name: FSM ticket
-description: Create a tracked FSM-NNNN implementation or audit ticket.
-title: "FSM-NNNN: "
-labels:
-  - status:ready
+name: FSM ticket (legacy issue mapping)
+description: Map a current FS board ticket to a GitHub implementation or audit issue after Product Owner readiness.
+title: "FS-: "
 body:
   - type: input
     id: ticket_id
     attributes:
       label: Ticket ID
-      description: Use the FSM-NNNN format.
-      placeholder: FSM-0001
+      description: Use the FS-* Notion board ID and URL; include any legacy FSM-NNNN mapping in the objective.
+      placeholder: FS-37
     validations:
       required: true
   - type: input
     id: sprint
     attributes:
-      label: Sprint
-      placeholder: Sprint 0
+      label: Phase / board lane
+      placeholder: P0 Baseline / Architecture
     validations:
       required: true
   - type: dropdown
@@ -41,21 +39,21 @@ body:
     id: owner
     attributes:
       label: Owner
-      placeholder: DO-01
+      placeholder: Pair 1 (Senior Dev A + B)
     validations:
       required: true
   - type: input
     id: reviewer
     attributes:
       label: Reviewer
-      placeholder: TL-01
+      placeholder: Reviewer 1 (independent)
     validations:
       required: true
   - type: input
     id: qa_owner
     attributes:
       label: QA Owner
-      placeholder: QA-03
+      placeholder: QA 1
     validations:
       required: true
   - type: textarea
@@ -166,6 +164,6 @@ body:
   - type: textarea
     id: completion
     attributes:
-      label: Completion Procedure
+      label: Exact-head gates and approved batch completion procedure
     validations:
       required: true
