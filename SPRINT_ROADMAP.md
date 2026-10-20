@@ -5,7 +5,7 @@
 **Scope:** This document preserves potential later suite modules; its old sprint numbering, staffing IDs and CI tiers do not authorize current implementation or release.
 
 The current agent-first FS-* board controls work. The historical full-suite sprints below are dependency-ordered, not date-ordered. A sprint begins when its dependencies
-clear. Sprints may run partially in parallel where `TEAM.md` §4 allows. Additional sprints
+clear. Historical sprints may have parallelizable slices, subject to current `TEAM.md` §2 WIP and dependency gates. Additional sprints
 may be inserted where feature depth requires — the numbering is not sacred, and oversized
 sprints must not be forced to preserve it.
 
@@ -44,7 +44,7 @@ readiness, session management. Tenant isolation enforcement and adversarial test
 Role and permission model including custom roles. Permission-based navigation.
 Support impersonation with audit.
 
-Depends on Sprint 1. Security-sensitive — QA-02 required on every ticket.
+Depends on Sprint 1. Historical security-sensitive scope; current Security + QA 2 risk gates in `TEAM.md` §3 govern when scheduled.
 
 ---
 
@@ -90,7 +90,7 @@ navigation, customer and equipment history, status updates, photos, forms, time,
 estimates, invoices, signatures, payment capture, completion. Offline and unstable-network
 behaviour designed deliberately. Large touch targets. No duplicate entry.
 
-Depends on Sprint 5. DES-02 leads UX; FE-02 implements.
+Depends on Sprint 5. Current Designer 2 and the assigned senior developer pair would own this if scheduled later.
 
 ---
 
@@ -121,7 +121,7 @@ structure, platform liability, dispute and refund responsibility, platform econo
 connected account experience and tax/reporting implications.
 
 Includes the card surcharge engine per `AGENTS.md` §9 — off by default, lowest-permitted-
-amount computation, full audit trail. Security-sensitive throughout; QA-02 required.
+amount computation, full audit trail. Historical scope, deferred. Current Security and QA 2 gates apply if later authorized.
 
 ---
 
@@ -290,7 +290,7 @@ metrics in `AGENTS.md` §3, stability hardening.
 
 ## Sprint 22 — Production Release
 
-Release certification by TL-01, QA-03 and DevOps. Automated release gates. Runbook execution
+If later authorized: release certification by Technical Lead, QA 4 and Platform with Security by risk, approved batch gates, Gayle exact-head verdict and founder production promotion. Runbook execution
 per `RELEASE_RUNBOOK.md`. General availability.
 
 ---
