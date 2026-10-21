@@ -37,7 +37,11 @@ import {
   ErrorCode
 } from "@fsm/types";
 
-import { generateBookingHoldToken, verifyBookingHoldToken } from "../lib/booking-hold-token.js";
+import {
+  finalizeBookingHoldTokenClaim,
+  generateBookingHoldToken,
+  verifyAndClaimBookingHoldToken
+} from "../lib/booking-hold-token.js";
 import { generateJobNumber } from "../lib/job-number.js";
 import { assertNonTerminalBookingRequest } from "./booking-request-guards.js";
 import { invalidateDispatchCache } from "./dispatch.service.js";
@@ -1039,47 +1043,53 @@ export async function holdPublicBookingSlot(
   input: PublicHoldBookingSlotInput
 ): Promise<{ bookingRequest: BookingRequest; hold: BookingSlotHoldView }> {
   const normalizedRef = referenceNumber.trim();
-  const claims = verifyBookingHoldToken(input.holdToken);
-  const { settings } = await getCompanyByBookingSlug(slug, db);
+  const claims = await verifyAndClaimBookingHoldToken(input.holdToken);
 
-  if (claims.companyId !== settings.companyId) {
-    throw new AppError(ErrorCode.FORBIDDEN, "Hold token is not valid for this booking page");
+  try {
+    const { settings } = await getCompanyByBookingSlug(slug, db);
+
+    if (claims.companyId !== settings.companyId) {
+      throw new AppError(ErrorCode.FORBIDDEN, "Hold token is not valid for this booking page");
+    }
+
+    if (claims.referenceNumber !== normalizedRef) {
+      throw new AppError(ErrorCode.FORBIDDEN, "Hold token does not match booking reference");
+    }
+
+    const bookingRequest = await getBookingRequestRecord(settings.companyId, claims.bookingRequestId, db);
+
+    if (bookingRequest.referenceNumber !== normalizedRef) {
+      throw new AppError(ErrorCode.NOT_FOUND, "Booking request not found");
+    }
+
+    const coverage = await checkZipCoverage(slug, bookingRequest.zip);
+
+    if (!coverage.covered) {
+      throw new AppError(ErrorCode.CONFLICT, "This zip code is outside the current booking area");
+    }
+
+    const scheduledStart = parseIsoDateTime(input.scheduledStart, "scheduledStart");
+    const scheduledEnd = parseIsoDateTime(input.scheduledEnd, "scheduledEnd");
+
+    await assertHoldSlotMatchesPublishedAvailability(
+      slug,
+      bookingRequest.zip,
+      input.technicianId,
+      scheduledStart,
+      scheduledEnd
+    );
+
+    const { holdToken: _holdToken, ...holdInput } = input;
+
+    return await holdBookingSlot(settings.companyId, bookingRequest.id, holdInput, {
+      id: null,
+      type: "customer",
+      name: `${bookingRequest.firstName} ${bookingRequest.lastName}`.trim()
+    });
+  } catch (error) {
+    await finalizeBookingHoldTokenClaim(claims, error);
+    throw error;
   }
-
-  if (claims.referenceNumber !== normalizedRef) {
-    throw new AppError(ErrorCode.FORBIDDEN, "Hold token does not match booking reference");
-  }
-
-  const bookingRequest = await getBookingRequestRecord(settings.companyId, claims.bookingRequestId, db);
-
-  if (bookingRequest.referenceNumber !== normalizedRef) {
-    throw new AppError(ErrorCode.NOT_FOUND, "Booking request not found");
-  }
-
-  const coverage = await checkZipCoverage(slug, bookingRequest.zip);
-
-  if (!coverage.covered) {
-    throw new AppError(ErrorCode.CONFLICT, "This zip code is outside the current booking area");
-  }
-
-  const scheduledStart = parseIsoDateTime(input.scheduledStart, "scheduledStart");
-  const scheduledEnd = parseIsoDateTime(input.scheduledEnd, "scheduledEnd");
-
-  await assertHoldSlotMatchesPublishedAvailability(
-    slug,
-    bookingRequest.zip,
-    input.technicianId,
-    scheduledStart,
-    scheduledEnd
-  );
-
-  const { holdToken: _holdToken, ...holdInput } = input;
-
-  return holdBookingSlot(settings.companyId, bookingRequest.id, holdInput, {
-    id: null,
-    type: "customer",
-    name: `${bookingRequest.firstName} ${bookingRequest.lastName}`.trim()
-  });
 }
 
 export async function holdBookingSlotForOperator(
