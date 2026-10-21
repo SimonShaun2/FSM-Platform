@@ -74,12 +74,12 @@ async function loadConsentSnapshotForTarget(
       throw new AppError(ErrorCode.NOT_FOUND, "Booking request not found for consent evaluation");
     }
 
-    const capturedAt = row.createdAt.toISOString();
+    const consentVersion = row.updatedAt.getTime();
     return {
       consentScope,
-      capturedAt,
-      consentVersion: 1,
-      currentConsentVersion: 1,
+      capturedAt: row.updatedAt.toISOString(),
+      consentVersion,
+      currentConsentVersion: consentVersion,
       appointmentOptIn: row.smsConsentAppointments ?? false,
       marketingOptIn: row.smsConsentMarketing ?? false,
       revokedAt: null
@@ -99,12 +99,13 @@ async function loadConsentSnapshotForTarget(
       throw new AppError(ErrorCode.NOT_FOUND, "Customer not found for consent evaluation");
     }
 
+    const consentVersion = row.updatedAt.getTime();
     const capturedAt = row.updatedAt.toISOString();
     return {
       consentScope,
       capturedAt,
-      consentVersion: 1,
-      currentConsentVersion: 1,
+      consentVersion,
+      currentConsentVersion: consentVersion,
       appointmentOptIn: !row.doNotContact,
       marketingOptIn: !row.doNotContact,
       revokedAt: row.doNotContact ? capturedAt : null
