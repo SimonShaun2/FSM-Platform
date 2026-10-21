@@ -7,8 +7,9 @@ import { afterEach, beforeAll, beforeEach, describe, expect, it, vi } from "vite
 
 import { ErrorCode } from "@fsm/types";
 
+import { closeTestApp } from "../../test-support/close-test-app.js";
 import { setupTestEnv } from "../../test-support/env-setup.js";
-import { CSV_IMPORT_FILE_TOO_LARGE_MESSAGE } from "./upload-limits.js";
+import { CSV_IMPORT_FILE_TOO_LARGE_MESSAGE, CSV_IMPORT_MAX_FILE_SIZE_BYTES } from "./upload-limits.js";
 
 setupTestEnv();
 
@@ -45,6 +46,8 @@ let fakeDb: FakeDbModule;
 let tokens: TokensModule;
 let app: AppInstance;
 
+const OVERSIZED_CSV_BUFFER = Buffer.alloc(CSV_IMPORT_MAX_FILE_SIZE_BYTES + 1, 0x61);
+
 beforeAll(async () => {
   buildAppModule = await import("../../app.js");
   fakeDb = await import("../../test-support/fake-db.js");
@@ -64,7 +67,7 @@ beforeEach(async () => {
 });
 
 afterEach(async () => {
-  await app.close();
+  await closeTestApp(app);
 });
 
 function authFor(companyId: string, userId: string, role: "owner" | "admin" = "owner") {
@@ -248,12 +251,10 @@ describe("FS-11 data import contract", () => {
       role: "owner"
     });
 
-    const oversized = Buffer.alloc(10 * 1024 * 1024 + 1, 0x61);
-
     const response = await request(app.server)
       .post("/api/v1/imports")
       .set("Authorization", authFor(company.id, user.id))
-      .attach("file", oversized, {
+      .attach("file", OVERSIZED_CSV_BUFFER, {
         filename: "huge.csv",
         contentType: "text/csv"
       });

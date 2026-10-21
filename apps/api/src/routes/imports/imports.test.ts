@@ -3,6 +3,7 @@ import { afterEach, beforeAll, beforeEach, describe, expect, it, vi } from "vite
 
 import { ErrorCode } from "@fsm/types";
 
+import { closeTestApp } from "../../test-support/close-test-app.js";
 import { setupTestEnv } from "../../test-support/env-setup.js";
 import { CSV_IMPORT_TOO_MANY_FILES_MESSAGE } from "./upload-limits.js";
 
@@ -109,7 +110,7 @@ beforeEach(async () => {
 });
 
 afterEach(async () => {
-  await app.close();
+  await closeTestApp(app);
 });
 
 function createAuthContext(role: "owner" | "admin" | "technician" = "owner") {

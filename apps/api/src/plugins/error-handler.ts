@@ -4,6 +4,7 @@ import { ZodError } from "zod";
 
 import { AppError, ErrorCode, getHttpStatusForErrorCode } from "@fsm/types";
 
+import { abortImportUploadRequest } from "../routes/imports/upload-guards.js";
 import {
   CSV_IMPORT_FILE_TOO_LARGE_MESSAGE,
   CSV_IMPORT_TOO_MANY_FILES_MESSAGE
@@ -46,6 +47,7 @@ const errorHandlerPlugin = fp(async (fastify) => {
 
     if (fastifyError.code === "FST_REQ_FILE_TOO_LARGE") {
       const isImportUpload = request.url.includes("/imports") && request.method === "POST";
+      abortImportUploadRequest(request);
       return reply.status(413).send({
         error: ErrorCode.VALIDATION_ERROR,
         message: isImportUpload ? CSV_IMPORT_FILE_TOO_LARGE_MESSAGE : "Uploaded file is too large",
