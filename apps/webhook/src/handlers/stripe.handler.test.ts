@@ -4,9 +4,8 @@ import type { FastifyReply, FastifyRequest } from "fastify";
 import type Stripe from "stripe";
 import { afterEach, beforeAll, beforeEach, describe, expect, it, vi } from "vitest";
 
-import { notificationsQueueAddMock } from "@fsm/jobs";
-
 import { setupTestEnv } from "../test-support/env-setup.js";
+import { notificationsQueueAddMock } from "../test-support/fsm-jobs.mock.js";
 
 setupTestEnv();
 
