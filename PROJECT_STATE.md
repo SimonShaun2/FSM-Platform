@@ -1,7 +1,7 @@
 # PROJECT_STATE.md
 
-**Repository:** `SimonShaun2/FSM-Platform`
-**Status:** Historical repository baseline and V2 audit snapshot as of 2026-08-21, with a 2026-10-20 governance annotation. The referenced `MASTER_PRODUCT_SPEC.md` is not present at the verified head.
+**Repository:** `SimonShaun2/Renvani` (GitHub rename from `SimonShaun2/FSM-Platform`; remote may still redirect; use Renvani in links and evidence)
+**Status:** Historical repository baseline and V2 audit snapshot as of 2026-08-21, with 2026-10-20 governance and 2026-10-21 rename annotations. The referenced `MASTER_PRODUCT_SPEC.md` is not present at the verified head.
 **Current execution:** Agent-first FS-* [Notion build board](https://app.notion.com/p/74b3a1145d3f49d586ac6cdbf174ceb2) and `TEAM.md` (26 roles). Historical FSM-NNNN statuses and owner IDs below are not current assignments. Map them explicitly before use.
 **State owner:** Chief of Staff with Product Owner and Technical Lead.
 
@@ -11,8 +11,7 @@ This file preserves measured repository facts and old audit work. Update verifie
 
 ## 1. Restart Declaration
 
-FSM Platform is being restarted as **FSM Platform V2** using the existing repository and
-existing codebase. Git history is preserved. No new repository is created.
+**Renvani** (formerly FSM Platform) continues as the single repo for agent-first FS-* work and the optional full FSM suite. Git history is preserved. No new repository is created.
 
 The V1 product boundary — *"Thinner system, smarter brain"* — is **retired**.
 The V2 product north star is **"Complete when needed. Simple by default."**

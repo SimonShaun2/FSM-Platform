@@ -2,8 +2,10 @@
 
 **Ticket:** FSM-0001
 **Date:** 2026-08-21
-**Repository:** `SimonShaun2/FSM-Platform`
+**Repository:** `SimonShaun2/FSM-Platform` (audit date; canonical name since 2026-10-21: **`SimonShaun2/Renvani`**)
 **Prepared from:** direct inspection of the founder machine working tree and `origin/main`
+
+> **2026-10-21 annotation:** GitHub renamed the repository to Renvani. Measured SHAs and paths below remain valid; replace `FSM-Platform` with `Renvani` in new PR URLs and batch evidence. **F1 (founder):** official protected integration branch name and whether PR #1 retargets off `main` — not decided in this document.
 
 ---
 
