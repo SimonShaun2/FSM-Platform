@@ -15,7 +15,8 @@ import {
 import { abortImportUploadRequest } from "./upload-guards.js";
 import {
   CSV_IMPORT_MAX_FILES,
-  CSV_IMPORT_TOO_MANY_FILES_MESSAGE
+  CSV_IMPORT_TOO_MANY_FILES_MESSAGE,
+  csvImportMultipartParserOptions
 } from "./upload-limits.js";
 import type {
   ConfirmMappingBody,
@@ -53,7 +54,7 @@ export async function createImportHandler(
   let fileCount = 0;
 
   try {
-    for await (const part of request.parts()) {
+    for await (const part of request.parts(csvImportMultipartParserOptions)) {
       if (part.type === "file") {
         fileCount += 1;
 

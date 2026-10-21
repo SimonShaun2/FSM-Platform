@@ -20,5 +20,13 @@ export const csvImportMultipartLimits = {
   parts: 10
 } as const;
 
+/** Per-request parser options (@fastify/multipart v9 requires throwFileSizeLimit for toBuffer() to throw). */
+export const csvImportMultipartParserOptions = {
+  throwFileSizeLimit: true,
+  limits: {
+    fileSize: CSV_IMPORT_MAX_FILE_SIZE_BYTES
+  }
+} as const;
+
 export const CSV_IMPORT_FILE_TOO_LARGE_MESSAGE = "CSV files must be smaller than 10MB";
 export const CSV_IMPORT_TOO_MANY_FILES_MESSAGE = "Only one CSV file can be uploaded per import request";

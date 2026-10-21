@@ -3,7 +3,7 @@ import type { FastifyPluginAsync } from "fastify";
 
 import { requireRole } from "../../lib/authorize.js";
 import { rejectOversizedImportBodyByContentLength } from "./upload-guards.js";
-import { csvImportMultipartLimits } from "./upload-limits.js";
+import { csvImportMultipartLimits, csvImportMultipartParserOptions } from "./upload-limits.js";
 import {
   confirmMappingHandler,
   createImportHandler,
@@ -30,7 +30,7 @@ import {
 const importRoutes: FastifyPluginAsync = async (fastify) => {
   await fastify.register(fastifyMultipart, {
     limits: csvImportMultipartLimits,
-    throwFileSizeLimit: true
+    throwFileSizeLimit: csvImportMultipartParserOptions.throwFileSizeLimit
   });
 
   const authenticate = fastify.authenticate;
