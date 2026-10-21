@@ -6,7 +6,7 @@
  *
  * Compatibility (Product D1–D5, Security-reviewed):
  * - New outbound links use `/approve/:token` only (`buildEstimatePublicPath`, worker `approvalUrl`).
- * - Legacy GET `/estimates/:approvalToken` is recovered in `apps/web/middleware.ts` only when:
+ * - Legacy GET/HEAD `/estimates/:approvalToken` is recovered in `apps/web/middleware.ts` only when:
  *   1. Segment is not an RFC4122 UUID and not a reserved path (`new`).
  *   2. Segment matches approval token shape (base64url, 32–100 chars).
  *   3. `GET /api/v1/public/estimates/:token` returns 2xx → **307** to `/approve/:token`.

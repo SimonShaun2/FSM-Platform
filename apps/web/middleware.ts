@@ -41,10 +41,14 @@ function readTokenPayload(token: string): TokenPayload | null {
   }
 }
 
+function isLegacyEstimateRecoveryMethod(method: string): boolean {
+  return method === "GET" || method === "HEAD";
+}
+
 export async function middleware(request: NextRequest) {
   const { pathname } = request.nextUrl;
 
-  if (request.method === "GET") {
+  if (isLegacyEstimateRecoveryMethod(request.method)) {
     const legacyRecovery = await resolveLegacyEstimateGetRecovery(pathname, getPublicApiBaseUrl());
 
     if (legacyRecovery.action === "redirect-approve") {
