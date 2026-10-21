@@ -106,8 +106,8 @@ export async function createInquiryResponseProposal(
       actorType: "ai",
       entityType: "booking_request",
       entityId: bookingRequestId,
-      customerId: row.customerId ?? undefined,
-      jobId: row.jobId ?? undefined,
+      ...(row.customerId ? { customerId: row.customerId } : {}),
+      ...(row.jobId ? { jobId: row.jobId } : {}),
       payload: {
         qualificationScore: qualification.qualificationScore,
         missingInputs: qualification.missingInputs,

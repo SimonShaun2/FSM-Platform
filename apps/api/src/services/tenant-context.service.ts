@@ -244,10 +244,17 @@ export async function resolveInquiryGraphAnchor(
     throw new AppError(ErrorCode.NOT_FOUND, "Booking request not found");
   }
 
-  const bookingRequestRef = await resolveEntityRef(companyId, "booking_request", inquiry.id, {
+  const bookingSource: CanonicalEntityRefV1["source"] = {
     channel: inquiry.source,
-    externalId: inquiry.referenceNumber ?? undefined
-  });
+    ...(inquiry.referenceNumber ? { externalId: inquiry.referenceNumber } : {})
+  };
+
+  const bookingRequestRef = await resolveEntityRef(
+    companyId,
+    "booking_request",
+    inquiry.id,
+    bookingSource
+  );
 
   const anchor: InquiryGraphAnchorV1 = {
     bookingRequest: bookingRequestRef,
