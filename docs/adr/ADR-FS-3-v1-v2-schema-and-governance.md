@@ -75,8 +75,10 @@ Existing codes unchanged: cross-tenant → `NOT_FOUND` / `FORBIDDEN`; stale targ
 
 ## Consequences
 
-- Pair 1 (FS-37) may incorporate U4 into `agent-control-plane@1.0.0` after PO + Security review; U5 remains Security-owned.
-- Implementation cards FS-10/12/17+ stay gated until FS-3 Ready and FS-8 negative evidence (see FS-8).
+- **Agent-first:** P0–P1 adds control-plane DDL and contracts only; full FSM suite modules in `SPRINT_ROADMAP.md` stay deferred (Notion §02 five agent products: revenue, scheduling, service, retention, owner).
+- **FSM substrate:** Existing `main` entities (`jobs`, `booking_request`, dispatch, `ai_recommendations`, invoices) remain the workflow/data layer agents read; no `lead` entity in v1 contract (use `job`).
+- Pair 1 (FS-37) may incorporate U4/U5 spec into `agent-control-plane@1.0.0` after PO + Security **ACK**; implementation stays blocked until FS-3 Ready.
+- Implementation cards FS-10/12/17+ stay gated until FS-3 In Review (dual ACK) and FS-8 negative evidence (see FS-8).
 
 ## Reviewers (required before FS-3 → In Review)
 
