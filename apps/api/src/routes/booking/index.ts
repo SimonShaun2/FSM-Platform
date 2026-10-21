@@ -4,6 +4,7 @@ import { requireRole } from "../../lib/authorize.js";
 import {
   confirmBookingRequestHandler,
   declineBookingRequestHandler,
+  holdBookingSlotHandler,
   getBookingSlugAvailabilityHandler,
   getBookingDemandByZipHandler,
   getBookingRequestHandler,
@@ -25,6 +26,8 @@ import {
   bookingSettingsRouteSchema,
   confirmBookingRequestValidation,
   declineBookingRequestValidation,
+  holdBookingSlotValidation,
+  bookingSlotHoldRouteSchema,
   updateBookingSettingsValidation
 } from "./schemas.js";
 
@@ -48,6 +51,12 @@ const bookingRoutes: FastifyPluginAsync = async (fastify) => {
     preValidation: [confirmBookingRequestValidation],
     schema: bookingRequestRouteSchema
   }, confirmBookingRequestHandler);
+
+  fastify.post("/booking-requests/:id/slot-hold", {
+    preHandler: [fastify.authenticate, bookingAdminRoles],
+    preValidation: [holdBookingSlotValidation],
+    schema: bookingSlotHoldRouteSchema
+  }, holdBookingSlotHandler);
 
   fastify.post("/booking-requests/:id/decline", {
     preHandler: [fastify.authenticate, bookingAdminRoles],
