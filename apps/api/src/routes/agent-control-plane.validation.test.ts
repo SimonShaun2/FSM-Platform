@@ -130,3 +130,94 @@ describe("agent control plane API strict Zod validation", () => {
     expect(response.body.error).toBe("VALIDATION_ERROR");
   });
 });
+
+describe("agent control plane API happy paths", () => {
+  it("POST /revenue/inquiries/:id/response-draft creates an awaiting-approval proposal", async () => {
+    const company = fakeDb.seedCompany({ name: "Happy Co", slug: "happy-co" });
+    const user = fakeDb.seedUser({
+      companyId: company.id,
+      email: "owner@happy-co.test",
+      firstName: "O",
+      lastName: "Wner",
+      role: "owner"
+    });
+    const booking = fakeDb.seedBookingRequest({
+      companyId: company.id,
+      firstName: "Pat",
+      lastName: "Homeowner",
+      phone: "5551234567",
+      email: "pat@example.com",
+      addressLine1: "100 Main St",
+      city: "Austin",
+      state: "TX",
+      zip: "78701",
+      serviceType: "AC tune-up",
+      serviceCategory: "hvac"
+    });
+
+    const response = await request(app.server)
+      .post(`/api/v1/revenue/inquiries/${booking.id}/response-draft`)
+      .set("Authorization", `Bearer ${ownerToken(company.id, user.id, user.role)}`)
+      .send({ idempotencyKey: "idem-inquiry-response-01" });
+
+    expect(response.status).toBe(201);
+    expect(response.body.proposal).toMatchObject({
+      actionType: "message.send_proposed",
+      agentProduct: "revenue",
+      state: "awaiting_approval"
+    });
+    expect(response.body.draft?.body).toBeTypeOf("string");
+    expect(response.body.anchor?.bookingRequest?.entityId).toBe(booking.id);
+  });
+
+  it("GET /agent-actions lists inbox items and POST /agent-actions/:id/approve approves", async () => {
+    const company = fakeDb.seedCompany({ name: "Approve Co", slug: "approve-co" });
+    const user = fakeDb.seedUser({
+      companyId: company.id,
+      email: "owner@approve-co.test",
+      firstName: "A",
+      lastName: "Owner",
+      role: "owner"
+    });
+    const booking = fakeDb.seedBookingRequest({
+      companyId: company.id,
+      firstName: "Sam",
+      lastName: "Caller",
+      phone: "5559876543",
+      addressLine1: "200 Oak Ave",
+      city: "Dallas",
+      state: "TX",
+      zip: "75201",
+      serviceType: "Furnace repair"
+    });
+
+    const draftResponse = await request(app.server)
+      .post(`/api/v1/revenue/inquiries/${booking.id}/response-draft`)
+      .set("Authorization", `Bearer ${ownerToken(company.id, user.id, user.role)}`)
+      .send({ idempotencyKey: "idem-inquiry-response-02" });
+
+    expect(draftResponse.status).toBe(201);
+    const proposalId = draftResponse.body.proposal.id as string;
+
+    const listResponse = await request(app.server)
+      .get("/api/v1/agent-actions")
+      .query({ state: "awaiting_approval", agentProduct: "revenue" })
+      .set("Authorization", `Bearer ${ownerToken(company.id, user.id, user.role)}`);
+
+    expect(listResponse.status).toBe(200);
+    expect(listResponse.body.items).toEqual(
+      expect.arrayContaining([expect.objectContaining({ id: proposalId, state: "awaiting_approval" })])
+    );
+
+    const approveResponse = await request(app.server)
+      .post(`/api/v1/agent-actions/${proposalId}/approve`)
+      .set("Authorization", `Bearer ${ownerToken(company.id, user.id, user.role)}`);
+
+    expect(approveResponse.status).toBe(200);
+    expect(approveResponse.body).toMatchObject({
+      id: proposalId,
+      state: "approved",
+      reviewerId: user.id
+    });
+  });
+});
