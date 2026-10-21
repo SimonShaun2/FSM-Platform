@@ -9,6 +9,7 @@ describe("isPublicRoute", () => {
 
   it("treats branded growth storefront paths as public", () => {
     expect(isPublicRoute("/site/sparkle-co")).toBe(true);
+    expect(isPublicRoute("/site/sparkle-co/inquire")).toBe(true);
   });
 
   it("does not treat authenticated estimate detail paths as public", () => {
