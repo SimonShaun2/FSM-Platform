@@ -25,6 +25,7 @@ import {
 } from "@/src/hooks/estimates.hooks";
 import { useDispatchView } from "@/src/hooks/dispatch.hooks";
 import { api } from "@/src/lib/api";
+import { publicApi } from "@/src/lib/public-api";
 import { cn } from "@/src/lib/utils";
 import { getCompanyTaxRate } from "@/src/components/jobs/jobs.utils";
 
@@ -734,7 +735,7 @@ export function EstimateBuilderClient({ estimateId }: { estimateId?: string }) {
       return;
     }
 
-    await api.post(`/api/v1/public/estimates/${anchorTier.approvalToken}/approve`, input);
+    await publicApi.post(`/api/v1/public/estimates/${anchorTier.approvalToken}/approve`, input);
     await refreshEstimateData();
     setCustomerViewApproved(true);
   }
@@ -744,7 +745,7 @@ export function EstimateBuilderClient({ estimateId }: { estimateId?: string }) {
       return;
     }
 
-    await api.post(`/api/v1/public/estimates/${anchorTier.approvalToken}/decline`, {
+    await publicApi.post(`/api/v1/public/estimates/${anchorTier.approvalToken}/decline`, {
       ...(reason ? { reason } : {})
     });
     await refreshEstimateData();
