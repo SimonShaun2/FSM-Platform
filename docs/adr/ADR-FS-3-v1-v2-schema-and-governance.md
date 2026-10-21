@@ -16,9 +16,16 @@ FSM P0 requires a single schema/governance baseline before agent control-plane c
 
 - Keep committed V1 DDL (38 tables, migrations `0000`–`0016`).
 - Additive agent control-plane tables only for P1.
-- Defer full FSM entity model expansion and overlay migration `0017`.
+- Defer full FSM entity model expansion and overlay migration `0017` (**schema scope only** — not a deferral of Renvani product scope).
 - **Canonical schema file:** `packages/db/src/schema.ts`.
 - Retire duplicate `fsm-schema.ts` under reconciliation ticket FSM-0004 (tracked separately).
+
+### Product scope vs schema scope (PO acknowledged 2026-10-21)
+
+- **Renvani product portfolio (in scope):** Growth, Revenue, Operations, Retention, and Command Center — one lifecycle, staged delivery.
+- **FSM facilitator modules (in scope):** Existing repository capabilities (customers, properties, jobs, dispatch, estimates, invoices, booking, agreements, field tools, reporting, customer-facing workflows) are **finished and improved** per inventory-led tickets; not excluded as “optional suite later.”
+- **Agent-first wedge:** Operators may adopt agents and adapters on incumbent systems before migrating workflow to Renvani-hosted modules; that is a **go-to-market sequence**, not permission to ignore FSM completion work.
+- **What AF-V1E defers:** Overlay migration `0017` and broad entity-model expansion until control-plane contracts land — not the product decision to ship FSM functionality.
 
 ### Tenant identifier
 
@@ -43,7 +50,8 @@ recordVersion = row.updatedAt.toISOString()
 - At execute: reload target row; if `recordVersion` ≠ current `updatedAt.toISOString()` → `ErrorCode.CONFLICT` (409), no side effects (maps to FS37-NT-06).
 - Distinct from payload `contractVersion` `1.0.0`.
 
-**Proposed** until Product Owner and Security acknowledge on FS-3 / FS-37.
+- **Product Owner:** acknowledged 2026-10-21 (PR #19 comment); sub-second concurrent writes: accepted v1 limitation — reload at execute.
+- **Security:** pending acknowledgment; maps to FS37-NT-06 and `CONFLICT` with U5 error-code family.
 
 ## Open items
 
@@ -59,5 +67,5 @@ recordVersion = row.updatedAt.toISOString()
 
 ## Reviewers (required before FS-3 → In Review)
 
-1. **Security** — ADR + U5 closure on FS-8 / FS-37  
-2. **Product Owner** — agent-first baseline vs suite deferral
+1. **Security** — ADR + U5 closure on FS-8 / FS-37 (**pending**)
+2. **Product Owner** — agent-first wedge vs in-scope FSM portfolio (**ACK 2026-10-21**, PR #19)
