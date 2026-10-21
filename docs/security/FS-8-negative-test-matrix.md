@@ -31,12 +31,12 @@
 | --- | --- | --- | --- |
 | NT-01 | Execute without tenant context | 401/403 | Gap (no agent CP) |
 | NT-02 | Cross-tenant entity ref | `NOT_FOUND` | Gap |
-| NT-03 | Tool policy deny | `POLICY_DENIED` | Gap (enum U5 open) |
+| NT-03 | Tool policy deny | `POLICY_DENIED` | Gap (U5 spec in ADR-FS-3; Security ACK pending) |
 | NT-04 | Idempotency key replay mismatch | `CONFLICT` | Gap |
 | NT-05 | Stale idempotency payload | `CONFLICT` | Gap |
-| NT-06 | Stale `recordVersion` | `CONFLICT` | Gap (U4 ADR proposed) |
-| NT-07 | Policy evaluation deny | `POLICY_DENIED` | Gap |
-| NT-08 | Missing consent | `CONSENT_REQUIRED` | Gap (U5 open) |
+| NT-06 | Stale `recordVersion` (`rv1:…`) | `CONFLICT` | Gap (U4 ADR proposed; PO + Security ACK pending) |
+| NT-07 | Policy evaluation deny | `POLICY_DENIED` | Gap (U5 spec; Security ACK pending) |
+| NT-08 | Missing consent | `CONSENT_REQUIRED` | Gap (U5 spec; Security ACK pending) |
 | NT-09 | Public token probe leak | Generic not-found | Partial — public estimate API; **FS-36** legacy path @ `a170c4c` |
 | NT-10 | Outbound SMS without consent guard | No enqueue | Gap (FS-12) |
 | NT-11 | Spoofable attribution `src` | Reject/log | Gap (FS-38 contract) |
@@ -50,4 +50,13 @@ Requires fetchable branch; see FS-36 card SEC-1–6. CoS cannot execute without 
 
 1. Run **Covered** rows in next **approved batch CI**; attach log + SHA to FS-8 Evidence.  
 2. Implement + execute NT rows after FS-37 types PR and FS-12 land (or document explicit deferral per founder).  
-3. Close **U5** enum diff with Dev B on FS-37 contract PR.
+3. **ACK** ADR-FS-3 U5 table; then Dev B adds enum members in FS-37 types PR; execute NT-03/07/08 on FS-12 head.
+
+## U5 — ErrorCode closure (Batch 1 spec @ ADR-FS-3)
+
+`packages/types/src/errors.ts` on `main` has seven members. Contract adds:
+
+- `POLICY_DENIED` → HTTP 403 (NT-03, NT-07, NT-11)
+- `CONSENT_REQUIRED` → HTTP 422 (NT-08; no Twilio/SendGrid in FS-12 minimal slice)
+
+Security sign-off = ACK on this mapping + executed negatives on FS-12 head (not enum merge alone).

@@ -43,21 +43,34 @@ FSM P0 requires a single schema/governance baseline before agent control-plane c
 Required on mutating agent control-plane references where identity is `entityType` + `entityId` + `companyId`:
 
 ```text
-recordVersion = row.updatedAt.toISOString()
+recordVersion = "rv1:" + entityType + ":" + entityId + ":" + row.updatedAt.toISOString()
 ```
 
 - No v1 `version` column on core entities.
-- At execute: reload target row; if `recordVersion` ≠ current `updatedAt.toISOString()` → `ErrorCode.CONFLICT` (409), no side effects (maps to FS37-NT-06).
+- At execute: reload target row; recompute current `recordVersion`; if mismatch → `ErrorCode.CONFLICT` (409), no side effects (maps to FS37-NT-06).
 - Distinct from payload `contractVersion` `1.0.0`.
 
 - **Product Owner:** acknowledged 2026-10-21 (PR #19 comment); sub-second concurrent writes: accepted v1 limitation — reload at execute.
 - **Security:** pending acknowledgment; maps to FS37-NT-06 and `CONFLICT` with U5 error-code family.
 
+### U5 — `ErrorCode` extension (spec closure; implementation gated)
+
+Security + Dev B own the enum diff in the FS-37 types PR **after FS-3 Ready** (no runtime change on `main` @ `12b23226` in Batch 1 docs-only).
+
+| Code | HTTP | FS37-NT | When emitted (v1) |
+| --- | --- | --- | --- |
+| `POLICY_DENIED` | 403 | NT-03, NT-07, NT-11 | Tool not allowlisted; AI money/state change without approval |
+| `CONSENT_REQUIRED` | 422 | NT-08 | Outbound channel blocked until consent guard (FS-8); FS-12 slice has no provider send |
+
+Existing codes unchanged: cross-tenant → `NOT_FOUND` / `FORBIDDEN`; stale target / idempotency → `CONFLICT`.
+
+**Proposed** until Security acknowledges mapping on FS-8 and FS-37 acceptance record.
+
 ## Open items
 
 | ID | Owner | Item |
 | --- | --- | --- |
-| U5 | Security | `CONSENT_REQUIRED` / `POLICY_DENIED` for FS37-NT-08 (types + mapping) |
+| U5 | Security | Acknowledge U5 table above; execute NT rows on FS-12 head (enum lands in types PR) |
 | F1–F4 | Founder | Protected integration branch, PR #1 merge target, master spec location, production promotion |
 
 ## Consequences
