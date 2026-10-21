@@ -1,6 +1,6 @@
+import { ErrorCode } from "@fsm/types";
 import { afterEach, describe, expect, it, vi } from "vitest";
 
-import { ApiError } from "@/src/lib/api";
 import { publicApi, resolvePublicApiBase } from "@/src/lib/public-api";
 
 describe("resolvePublicApiBase", () => {
@@ -26,7 +26,7 @@ describe("publicApi path security", () => {
   it("rejects traversal segments before fetch", async () => {
     await expect(publicApi.get("/api/v1/public/booking/../secrets")).rejects.toMatchObject({
       status: 400,
-      payload: { error: "VALIDATION_ERROR" }
-    } satisfies Partial<ApiError>);
+      payload: { error: ErrorCode.VALIDATION_ERROR }
+    });
   });
 });

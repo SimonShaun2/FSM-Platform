@@ -1,5 +1,5 @@
 import { publicEnv } from "@fsm/config";
-import type { ErrorCode } from "@fsm/types";
+import { ErrorCode } from "@fsm/types";
 
 import { ApiError, type ApiErrorPayload } from "@/src/lib/api";
 import { assertSafePublicApiRequestPath } from "@/src/lib/public-api-path-security";
@@ -34,7 +34,7 @@ async function publicApiFetch<TResponse>(path: string, options: RequestInit = {}
     assertSafePublicApiRequestPath(path);
   } catch {
     throw new ApiError(400, {
-      error: "VALIDATION_ERROR",
+      error: ErrorCode.VALIDATION_ERROR,
       message: "Invalid public API path"
     });
   }
