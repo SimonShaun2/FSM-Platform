@@ -19,6 +19,7 @@ export * from "./job-product.types.js";
 export * from "./job-task.types.js";
 export * from "./booking-request.types.js";
 export * from "./booking-settings.types.js";
+export * from "./scheduling-agent.types.js";
 export * from "./product.types.js";
 export * from "./review-request.types.js";
 export * from "./service-agreement.types.js";

@@ -29,6 +29,7 @@ import productRoutes from "./routes/products/index.js";
 import reportingRoutes from "./routes/reporting/index.js";
 import reviewRequestRoutes from "./routes/review-requests/index.js";
 import revenueInquiryRoutes from "./routes/revenue-inquiries/index.js";
+import schedulingAgentRoutes from "./routes/scheduling-agent/index.js";
 import tenantContextRoutes from "./routes/tenant-context/index.js";
 import serviceAgreementRoutes from "./routes/service-agreements/index.js";
 import stripeRoutes from "./routes/stripe/index.js";
@@ -54,6 +55,7 @@ export async function buildApp() {
   await app.register(agentActionRoutes, { prefix: "/api/v1" });
   await app.register(tenantContextRoutes, { prefix: "/api/v1" });
   await app.register(revenueInquiryRoutes, { prefix: "/api/v1" });
+  await app.register(schedulingAgentRoutes, { prefix: "/api/v1" });
   await app.register(aiRoutes, { prefix: "/api/v1/ai" });
   await app.register(automationRuleRoutes, { prefix: "/api/v1" });
   await app.register(authRoutes, { prefix: "/api/v1/auth" });
