@@ -1,6 +1,6 @@
 import type { FastifyReply, FastifyRequest } from "fastify";
 
-import type { HoldBookingSlotInput, SubmitBookingRequestInput } from "@fsm/types";
+import type { PublicHoldBookingSlotInput, SubmitBookingRequestInput } from "@fsm/types";
 
 import {
   captureBookingInterest,
@@ -69,7 +69,8 @@ export async function submitBookingRequestHandler(
       referenceNumber: result.bookingRequest.referenceNumber,
       status: result.bookingRequest.status
     },
-    confirmation: result.confirmation
+    confirmation: result.confirmation,
+    holdToken: result.holdToken
   });
 }
 
@@ -104,7 +105,7 @@ export async function holdPublicBookingSlotHandler(
   const result = await holdPublicBookingSlot(
     params.slug,
     params.ref,
-    request.body as HoldBookingSlotInput
+    request.body as PublicHoldBookingSlotInput
   );
 
   return reply.send({

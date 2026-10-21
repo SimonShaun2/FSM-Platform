@@ -100,6 +100,11 @@ export interface BookingSlotHoldView {
   scheduledEnd: string;
 }
 
+/** Public slot hold requires signed token from submit (FS-21 security). */
+export interface PublicHoldBookingSlotInput extends HoldBookingSlotInput {
+  holdToken: string;
+}
+
 export interface DeclineBookingRequestInput {
   reason?: string;
 }

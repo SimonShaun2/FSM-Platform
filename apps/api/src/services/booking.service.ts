@@ -1,3 +1,5 @@
+import { randomBytes } from "node:crypto";
+
 import { and, eq, isNull } from "drizzle-orm";
 import { Decimal } from "decimal.js";
 
@@ -25,6 +27,7 @@ import {
   type CheckZipCoverageResult,
   type ConfirmBookingRequestInput,
   type HoldBookingSlotInput,
+  type PublicHoldBookingSlotInput,
   type BookingSlotHoldView,
   type ListBookingRequestsQuery,
   type PublicBookingSettings,
@@ -34,6 +37,7 @@ import {
   ErrorCode
 } from "@fsm/types";
 
+import { generateBookingHoldToken, verifyBookingHoldToken } from "../lib/booking-hold-token.js";
 import { generateJobNumber } from "../lib/job-number.js";
 import { assertNonTerminalBookingRequest } from "./booking-request-guards.js";
 import { invalidateDispatchCache } from "./dispatch.service.js";
@@ -222,10 +226,8 @@ function createBookingDateCursor(date: string): Date {
 
 function buildReferenceNumber(now: Date): string {
   const datePart = now.toISOString().slice(0, 10).replace(/-/gu, "");
-  const suffix = Math.floor(Math.random() * 10_000)
-    .toString()
-    .padStart(4, "0");
-  return `BK-${datePart}-${suffix}`;
+  const entropy = randomBytes(12).toString("base64url");
+  return `BK-${datePart}-${entropy}`;
 }
 
 function deriveSource(value: string | undefined): BookingRequest["source"] {
@@ -812,6 +814,27 @@ export async function getBookingAvailability(
   return days.flatMap((date) => buildAvailabilityWindowsForDay(date, settings, technicianPool, companySlots));
 }
 
+async function assertHoldSlotMatchesPublishedAvailability(
+  slug: string,
+  zip: string,
+  technicianId: string,
+  scheduledStart: Date,
+  scheduledEnd: Date
+): Promise<void> {
+  const date = formatDateOnly(scheduledStart);
+  const windows = await getBookingAvailability(slug, zip, date);
+  const startIso = scheduledStart.toISOString();
+  const endIso = scheduledEnd.toISOString();
+  const matched = windows.some(
+    (window) =>
+      window.start === startIso && window.end === endIso && window.technicianIds.includes(technicianId)
+  );
+
+  if (!matched) {
+    throw new AppError(ErrorCode.CONFLICT, "Selected slot is not available for this booking area");
+  }
+}
+
 export async function listBookingRequests(
   companyId: string,
   query: ListBookingRequestsQuery
@@ -1013,26 +1036,46 @@ async function holdBookingSlot(
 export async function holdPublicBookingSlot(
   slug: string,
   referenceNumber: string,
-  input: HoldBookingSlotInput
+  input: PublicHoldBookingSlotInput
 ): Promise<{ bookingRequest: BookingRequest; hold: BookingSlotHoldView }> {
+  const normalizedRef = referenceNumber.trim();
+  const claims = verifyBookingHoldToken(input.holdToken);
   const { settings } = await getCompanyByBookingSlug(slug, db);
-  const [bookingRequest] = await db
-    .select()
-    .from(bookingRequests)
-    .where(
-      and(
-        eq(bookingRequests.companyId, settings.companyId),
-        eq(bookingRequests.referenceNumber, referenceNumber),
-        isNull(bookingRequests.deletedAt)
-      )
-    )
-    .limit(1);
 
-  if (!bookingRequest) {
+  if (claims.companyId !== settings.companyId) {
+    throw new AppError(ErrorCode.FORBIDDEN, "Hold token is not valid for this booking page");
+  }
+
+  if (claims.referenceNumber !== normalizedRef) {
+    throw new AppError(ErrorCode.FORBIDDEN, "Hold token does not match booking reference");
+  }
+
+  const bookingRequest = await getBookingRequestRecord(settings.companyId, claims.bookingRequestId, db);
+
+  if (bookingRequest.referenceNumber !== normalizedRef) {
     throw new AppError(ErrorCode.NOT_FOUND, "Booking request not found");
   }
 
-  return holdBookingSlot(settings.companyId, bookingRequest.id, input, {
+  const coverage = await checkZipCoverage(slug, bookingRequest.zip);
+
+  if (!coverage.covered) {
+    throw new AppError(ErrorCode.CONFLICT, "This zip code is outside the current booking area");
+  }
+
+  const scheduledStart = parseIsoDateTime(input.scheduledStart, "scheduledStart");
+  const scheduledEnd = parseIsoDateTime(input.scheduledEnd, "scheduledEnd");
+
+  await assertHoldSlotMatchesPublishedAvailability(
+    slug,
+    bookingRequest.zip,
+    input.technicianId,
+    scheduledStart,
+    scheduledEnd
+  );
+
+  const { holdToken: _holdToken, ...holdInput } = input;
+
+  return holdBookingSlot(settings.companyId, bookingRequest.id, holdInput, {
     id: null,
     type: "customer",
     name: `${bookingRequest.firstName} ${bookingRequest.lastName}`.trim()
@@ -1140,7 +1183,7 @@ export async function submitBookingRequest(
   slug: string,
   input: SubmitBookingRequestInput,
   sourceParam?: string
-): Promise<{ bookingRequest: BookingRequest; confirmation: BookingConfirmationView }> {
+): Promise<{ bookingRequest: BookingRequest; confirmation: BookingConfirmationView; holdToken: string | null }> {
   const { company, settings } = await getCompanyByBookingSlug(slug, db);
   const normalizedInput: NormalizedBookingInput = {
     firstName: input.firstName.trim(),
@@ -1352,9 +1395,19 @@ export async function submitBookingRequest(
     await invalidateDispatchCache(result.bookingRequest.companyId, formatDateOnly(result.createdJob.scheduledStart));
   }
 
+  const holdToken =
+    result.bookingRequest.status === "pending"
+      ? generateBookingHoldToken({
+          companyId: result.bookingRequest.companyId,
+          bookingRequestId: result.bookingRequest.id,
+          referenceNumber: result.bookingRequest.referenceNumber ?? result.bookingRequest.id
+        })
+      : null;
+
   return {
     bookingRequest: result.bookingRequest,
-    confirmation: buildConfirmationView(result.companyName, result.bookingRequest as BookingRequestRow, result.createdJob)
+    confirmation: buildConfirmationView(result.companyName, result.bookingRequest as BookingRequestRow, result.createdJob),
+    holdToken
   };
 }
 

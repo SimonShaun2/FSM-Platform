@@ -2,6 +2,7 @@ import { beforeAll, beforeEach, describe, expect, it, vi } from "vitest";
 
 import { ErrorCode } from "@fsm/types";
 
+import { generateBookingHoldToken } from "../lib/booking-hold-token.js";
 import { setupTestEnv } from "../test-support/env-setup.js";
 
 setupTestEnv();
@@ -163,6 +164,121 @@ describe("booking in-platform slot hold and confirm (FS-21)", () => {
 
     await expect(
       bookingService.holdBookingSlotForOperator(company.id, actor.id, booking.id, {
+        technicianId: technician.id,
+        scheduledStart: SLOT_START,
+        scheduledEnd: SLOT_END
+      })
+    ).rejects.toMatchObject({ code: ErrorCode.CONFLICT });
+  });
+});
+
+function seedPublicBookingFixture(referenceNumber = "BK-TEST-PUBLIC-001") {
+  const company = fakeDb.seedCompany({ name: "Acme HVAC", slug: "acme-hvac" });
+  fakeDb.seedBookingSettings({ companyId: company.id, bookingSlug: "acme-hvac", isEnabled: true });
+  const actor = fakeDb.seedUser({
+    companyId: company.id,
+    email: "tech@example.com",
+    firstName: "Tess",
+    lastName: "Tech",
+    role: "technician"
+  });
+  const technician = fakeDb.seedTechnician({
+    companyId: company.id,
+    userId: actor.id,
+    firstName: "Tess",
+    lastName: "Tech",
+    phone: "555-0200",
+    serviceZipCodes: ["78701"]
+  });
+  const booking = fakeDb.seedBookingRequest({
+    companyId: company.id,
+    firstName: "Jamie",
+    lastName: "Rivera",
+    phone: "555-0101",
+    addressLine1: "1 Main St",
+    city: "Austin",
+    state: "TX",
+    zip: "78701",
+    status: "pending",
+    referenceNumber
+  });
+
+  return { company, technician, booking };
+}
+
+describe("public booking slot hold security (FS-21)", () => {
+  it("holdPublicBookingSlot requires a valid hold token and published availability window", async () => {
+    const { company, technician, booking } = seedPublicBookingFixture();
+    const holdToken = generateBookingHoldToken({
+      companyId: company.id,
+      bookingRequestId: booking.id,
+      referenceNumber: booking.referenceNumber ?? booking.id
+    });
+    const availability = await bookingService.getBookingAvailability("acme-hvac", "78701", "2026-05-12");
+    const afternoon = availability.find((window) => window.window === "afternoon");
+
+    expect(afternoon).toBeDefined();
+
+    const result = await bookingService.holdPublicBookingSlot("acme-hvac", booking.referenceNumber ?? "", {
+      holdToken,
+      technicianId: technician.id,
+      scheduledStart: afternoon!.start,
+      scheduledEnd: afternoon!.end
+    });
+
+    expect(result.bookingRequest.status).toBe("pending");
+    expect(result.bookingRequest.assignedTechnicianId).toBe(technician.id);
+  });
+
+  it("rejects public hold when hold token does not match reference", async () => {
+    const { company, technician, booking } = seedPublicBookingFixture();
+    const holdToken = generateBookingHoldToken({
+      companyId: company.id,
+      bookingRequestId: booking.id,
+      referenceNumber: "BK-OTHER-REF-0001"
+    });
+
+    await expect(
+      bookingService.holdPublicBookingSlot("acme-hvac", booking.referenceNumber ?? "", {
+        holdToken,
+        technicianId: technician.id,
+        scheduledStart: SLOT_START,
+        scheduledEnd: SLOT_END
+      })
+    ).rejects.toMatchObject({ code: ErrorCode.FORBIDDEN });
+  });
+
+  it("rejects public hold when zip is no longer in service area", async () => {
+    const { company, technician, booking } = seedPublicBookingFixture();
+    const holdToken = generateBookingHoldToken({
+      companyId: company.id,
+      bookingRequestId: booking.id,
+      referenceNumber: booking.referenceNumber ?? booking.id
+    });
+
+    technician.serviceZipCodes = ["73301"];
+
+    await expect(
+      bookingService.holdPublicBookingSlot("acme-hvac", booking.referenceNumber ?? "", {
+        holdToken,
+        technicianId: technician.id,
+        scheduledStart: SLOT_START,
+        scheduledEnd: SLOT_END
+      })
+    ).rejects.toMatchObject({ code: ErrorCode.CONFLICT });
+  });
+
+  it("rejects public hold when slot is not in published availability", async () => {
+    const { company, technician, booking } = seedPublicBookingFixture();
+    const holdToken = generateBookingHoldToken({
+      companyId: company.id,
+      bookingRequestId: booking.id,
+      referenceNumber: booking.referenceNumber ?? booking.id
+    });
+
+    await expect(
+      bookingService.holdPublicBookingSlot("acme-hvac", booking.referenceNumber ?? "", {
+        holdToken,
         technicianId: technician.id,
         scheduledStart: SLOT_START,
         scheduledEnd: SLOT_END

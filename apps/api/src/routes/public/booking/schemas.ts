@@ -37,6 +37,7 @@ export const BookingConfirmationParamsSchema = z.object({
 const uuidSchema = z.string().uuid();
 
 export const PublicHoldBookingSlotSchema = z.object({
+  holdToken: z.string().trim().min(1),
   technicianId: uuidSchema,
   scheduledStart: z.string().datetime({ offset: true }),
   scheduledEnd: z.string().datetime({ offset: true })
@@ -238,7 +239,7 @@ export const submitBookingRouteSchema = {
     201: {
       type: "object",
       additionalProperties: false,
-      required: ["bookingRequest", "confirmation"],
+      required: ["bookingRequest", "confirmation", "holdToken"],
       properties: {
         bookingRequest: {
           type: "object",
@@ -250,6 +251,7 @@ export const submitBookingRouteSchema = {
             status: { type: "string" }
           }
         },
+        holdToken: { anyOf: [{ type: "string" }, { type: "null" }] },
         confirmation: {
           type: "object",
           additionalProperties: false,

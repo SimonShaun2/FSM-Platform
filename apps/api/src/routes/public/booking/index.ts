@@ -27,8 +27,10 @@ import {
 } from "./schemas.js";
 
 const RATE_LIMIT = 10;
+const SLOT_HOLD_REF_RATE_LIMIT = 15;
 const RATE_LIMIT_WINDOW_MS = 60 * 60 * 1000;
 const bookingRequestTimesByIp = new Map<string, number[]>();
+const slotHoldTimesByReference = new Map<string, number[]>();
 
 async function bookingRateLimit(request: FastifyRequest, reply: FastifyReply): Promise<void> {
   if (request.method !== "POST") {
@@ -52,6 +54,41 @@ async function bookingRateLimit(request: FastifyRequest, reply: FastifyReply): P
 
   activeTimes.push(now);
   bookingRequestTimesByIp.set(ipAddress, activeTimes);
+}
+
+async function bookingSlotHoldReferenceRateLimit(
+  request: FastifyRequest,
+  reply: FastifyReply
+): Promise<void> {
+  if (request.method !== "POST") {
+    return;
+  }
+
+  const params = request.params as { slug?: string; ref?: string };
+  const slug = params.slug?.trim() ?? "";
+  const ref = params.ref?.trim() ?? "";
+
+  if (slug.length === 0 || ref.length === 0) {
+    return;
+  }
+
+  const key = `${slug}:${ref}`;
+  const now = Date.now();
+  const cutoff = now - RATE_LIMIT_WINDOW_MS;
+  const requestTimes = slotHoldTimesByReference.get(key) ?? [];
+  const activeTimes = requestTimes.filter((timestamp) => timestamp > cutoff);
+
+  if (activeTimes.length >= SLOT_HOLD_REF_RATE_LIMIT) {
+    await reply.status(429).send({
+      error: "RATE_LIMITED",
+      message: "Too many slot hold attempts for this booking reference. Please try again later.",
+      requestId: request.id
+    });
+    return;
+  }
+
+  activeTimes.push(now);
+  slotHoldTimesByReference.set(key, activeTimes);
 }
 
 const publicBookingRoutes: FastifyPluginAsync = async (fastify) => {
@@ -89,7 +126,7 @@ const publicBookingRoutes: FastifyPluginAsync = async (fastify) => {
   }, getBookingConfirmationHandler);
 
   fastify.post("/:slug/requests/:ref/slot-hold", {
-    preHandler: bookingRateLimit,
+    preHandler: [bookingRateLimit, bookingSlotHoldReferenceRateLimit],
     preValidation: [publicHoldBookingSlotValidation],
     schema: publicSlotHoldRouteSchema
   }, holdPublicBookingSlotHandler);
