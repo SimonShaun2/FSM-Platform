@@ -38,6 +38,20 @@ describe("middleware legacy GET /estimates/:token recovery (FS-36)", () => {
     expect(response.headers.get("location")).toBe("http://localhost:3000/login");
   });
 
+  it("HEAD link previews get the same 307 to /approve as GET when validation succeeds", async () => {
+    process.env.NEXT_PUBLIC_API_URL = "http://localhost:3001";
+    vi.stubGlobal(
+      "fetch",
+      vi.fn().mockResolvedValue(new Response(JSON.stringify({ estimate: {} }), { status: 200 }))
+    );
+
+    const request = new NextRequest(`http://localhost:3000/estimates/${LEGACY_TOKEN}`, { method: "HEAD" });
+    const response = await middleware(request);
+
+    expect(response.status).toBe(307);
+    expect(response.headers.get("location")).toBe(`http://localhost:3000/approve/${LEGACY_TOKEN}`);
+  });
+
   it("returns 404 for malformed legacy segments without public API call", async () => {
     const fetchMock = vi.fn();
     vi.stubGlobal("fetch", fetchMock);
