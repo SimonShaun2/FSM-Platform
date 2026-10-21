@@ -56,7 +56,7 @@ The implementer cannot approve their own work as QA, peer reviewer, Security, or
 
 ## 4. Branches, CI and release
 
-No direct push to **`dev`** or **`main`**; no rebase or force-push of reviewed heads. Feature branches and **draft PRs** are traceable to the board ticket. **`dev`** is the protected integration branch; **E.. CoS** is the final merge approver into `dev`. **`main`** is promotion-only (Shaun). PR #1 may stay based on `main` until founder decision **F2** (retarget).
+No direct push to **`dev`** or **`main`**; no rebase or force-push of reviewed heads. Feature branches and **draft PRs** are traceable to the board ticket. **`dev`** is the protected integration branch; **E.. CoS** is the final merge approver into `dev`. **`main`** is promotion-only (Shaun). **F2 decided by Shaun 2026-10-21:** PR #1 base is **`dev`** @ `12b23226c0e0c199626940117fc7f0fa89f87375`.
 
 CI runs **only through approved batches** with enumerated membership, exact head SHA, one authorized run and recorded result. No standalone per-commit or per-PR CI, and local green tests are not CI. No merge or Done without the risk matrix and batch evidence. No deployment, public website or Vercel setup from this process. Stripe and live payment changes remain at the end of the roadmap and need separate founder authority.
 

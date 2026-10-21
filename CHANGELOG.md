@@ -4,6 +4,10 @@ All notable repository-level changes are recorded here.
 
 ## Unreleased
 
+### Changed
+
+- 2026-10-21: E.. CoS operating model — `dev` integration branch, `main` promotion-only, peer/QA/Security/batch CI then E.. CoS merge; retired Gayle gate language in controlling docs.
+
 ### Added
 
 - FSM-0001 repository reconciliation audit under `docs/audit/REPOSITORY-RECONCILIATION.md`.

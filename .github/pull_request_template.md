@@ -34,7 +34,7 @@
 - QA evidence URL:
 - Independent reviewer evidence URL:
 - Security and Design evidence URLs when required:
-- Gayle verdict/check URL:
+- E.. CoS merge approval evidence (after peer review, QA, Security, batch CI):
 - Approved batch CI run URL and conclusion:
 
 ## Risk and observability

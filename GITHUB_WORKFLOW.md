@@ -13,7 +13,7 @@ A ticket carries acceptance, dependencies, risk, pair ownership, split, contract
 | **`dev`** | Protected integration branch. Approved work merges here after gates. E.. CoS is the final merge approver into `dev`. |
 | **`main`** | Promotion-only. Shaun merges/releases from `dev`; not the day-to-day integration target. |
 
-`main` is not a direct-write workspace. PR #1 may remain based on `main` until founder decision **F2** (retarget); **integration merges still land on `dev`**. Feature/fix branches identify the board ticket and merge order. **No rebase, force-push,** or direct push to `dev` or `main`.
+`main` is not a direct-write workspace. **F2 decided by Shaun 2026-10-21: PR #1 → `dev`.** [PR #1](https://github.com/SimonShaun2/Renvani/pull/1) is based on `dev` @ `12b23226c0e0c199626940117fc7f0fa89f87375`. Feature/fix branches identify the board ticket and merge order. **No rebase, force-push,** or direct push to `dev` or `main`.
 
 ## 3. Tandem PR packet
 
