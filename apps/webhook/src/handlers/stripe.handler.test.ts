@@ -330,6 +330,7 @@ type StripeHandlerModule = typeof import("./stripe.handler.js");
 let stripeHandlerModule: StripeHandlerModule;
 
 beforeAll(async () => {
+  vi.resetModules();
   stripeHandlerModule = await import("./stripe.handler.js");
 });
 
