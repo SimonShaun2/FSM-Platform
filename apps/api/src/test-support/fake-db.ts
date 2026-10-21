@@ -38,7 +38,8 @@ type TableName =
   | "fileAttachments"
   | "onTheWayNotifications"
   | "bookingRequests"
-  | "bookingSettings";
+  | "bookingSettings"
+  | "agentActions";
 
 type UserRole = "owner" | "admin" | "dispatcher" | "office" | "technician";
 type TechnicianStatus = "active" | "inactive" | "on_leave";
@@ -913,6 +914,29 @@ export interface TestBookingSettingsRecord {
   deletedAt: Date | null;
 }
 
+export interface TestAgentActionRecord {
+  id: string;
+  companyId: string;
+  agentProduct: "revenue" | "scheduling" | "service" | "retention" | "owner";
+  actionType: string;
+  parameters: Record<string, unknown>;
+  target: Record<string, unknown>;
+  sourceEventIds: string[];
+  idempotencyKey: string;
+  payloadHash: string;
+  policyVersion: string;
+  requiresApproval: boolean;
+  state: string;
+  confidence: string | null;
+  reason: string | null;
+  expiresAt: Date;
+  reviewerId: string | null;
+  executionReceipt: Record<string, unknown> | null;
+  createdAt: Date;
+  updatedAt: Date;
+  deletedAt: Date | null;
+}
+
 type AnyTestRecord =
   | TestCompanyRecord
   | TestUserRecord
@@ -948,7 +972,8 @@ type AnyTestRecord =
   | TestFileAttachmentRecord
   | TestOnTheWayNotificationRecord
   | TestBookingRequestRecord
-  | TestBookingSettingsRecord;
+  | TestBookingSettingsRecord
+  | TestAgentActionRecord;
 
 type MockTable =
   | typeof companiesTable
@@ -985,7 +1010,8 @@ type MockTable =
   | typeof fileAttachmentsTable
   | typeof onTheWayNotificationsTable
   | typeof bookingRequestsTable
-  | typeof bookingSettingsTable;
+  | typeof bookingSettingsTable
+  | typeof agentActionsTable;
 
 interface TestState {
   companies: TestCompanyRecord[];
@@ -1023,6 +1049,7 @@ interface TestState {
   onTheWayNotifications: TestOnTheWayNotificationRecord[];
   bookingRequests: TestBookingRequestRecord[];
   bookingSettings: TestBookingSettingsRecord[];
+  agentActions: TestAgentActionRecord[];
 }
 
 interface OrderByDefinition {
@@ -1817,6 +1844,30 @@ const bookingRequestsTable = {
   deletedAt: "deletedAt"
 } as const;
 
+const agentActionsTable = {
+  __name: "agentActions",
+  id: "id",
+  companyId: "companyId",
+  agentProduct: "agentProduct",
+  actionType: "actionType",
+  parameters: "parameters",
+  target: "target",
+  sourceEventIds: "sourceEventIds",
+  idempotencyKey: "idempotencyKey",
+  payloadHash: "payloadHash",
+  policyVersion: "policyVersion",
+  requiresApproval: "requiresApproval",
+  state: "state",
+  confidence: "confidence",
+  reason: "reason",
+  expiresAt: "expiresAt",
+  reviewerId: "reviewerId",
+  executionReceipt: "executionReceipt",
+  createdAt: "createdAt",
+  updatedAt: "updatedAt",
+  deletedAt: "deletedAt"
+} as const;
+
 const bookingSettingsTable = {
   __name: "bookingSettings",
   id: "id",
@@ -1877,7 +1928,8 @@ const state: TestState = {
   fileAttachments: [],
   onTheWayNotifications: [],
   bookingRequests: [],
-  bookingSettings: []
+  bookingSettings: [],
+  agentActions: []
 };
 
 function nextId(): string {
@@ -1928,6 +1980,7 @@ function restoreState(snapshot: TestState): void {
   );
   state.bookingRequests.splice(0, state.bookingRequests.length, ...snapshot.bookingRequests);
   state.bookingSettings.splice(0, state.bookingSettings.length, ...snapshot.bookingSettings);
+  state.agentActions.splice(0, state.agentActions.length, ...snapshot.agentActions);
 }
 
 function getRows(tableName: TableName): AnyTestRecord[] {
@@ -2002,6 +2055,8 @@ function getRows(tableName: TableName): AnyTestRecord[] {
       return state.bookingRequests;
     case "bookingSettings":
       return state.bookingSettings;
+    case "agentActions":
+      return state.agentActions;
   }
 }
 
@@ -3049,6 +3104,39 @@ function createBookingSettingsRecord(
   };
 }
 
+function createAgentActionRecord(
+  values: Partial<TestAgentActionRecord> &
+    Pick<
+      TestAgentActionRecord,
+      "companyId" | "agentProduct" | "actionType" | "target" | "idempotencyKey" | "payloadHash" | "policyVersion"
+    >
+): TestAgentActionRecord {
+  const now = new Date();
+
+  return {
+    id: values.id ?? nextId(),
+    companyId: values.companyId,
+    agentProduct: values.agentProduct,
+    actionType: values.actionType,
+    parameters: values.parameters ?? {},
+    target: values.target,
+    sourceEventIds: values.sourceEventIds ?? [],
+    idempotencyKey: values.idempotencyKey,
+    payloadHash: values.payloadHash,
+    policyVersion: values.policyVersion,
+    requiresApproval: values.requiresApproval ?? true,
+    state: values.state ?? "awaiting_approval",
+    confidence: values.confidence ?? null,
+    reason: values.reason ?? null,
+    expiresAt: values.expiresAt ?? new Date(Date.now() + 72 * 60 * 60 * 1000),
+    reviewerId: values.reviewerId ?? null,
+    executionReceipt: values.executionReceipt ?? null,
+    createdAt: values.createdAt ?? now,
+    updatedAt: values.updatedAt ?? now,
+    deletedAt: values.deletedAt ?? null
+  };
+}
+
 function createRow(tableName: TableName, values: Record<string, unknown>): AnyTestRecord {
   switch (tableName) {
     case "companies":
@@ -3214,6 +3302,14 @@ function createRow(tableName: TableName, values: Record<string, unknown>): AnyTe
     case "bookingSettings":
       return createBookingSettingsRecord(
         values as Partial<TestBookingSettingsRecord> & Pick<TestBookingSettingsRecord, "companyId">
+      );
+    case "agentActions":
+      return createAgentActionRecord(
+        values as Partial<TestAgentActionRecord> &
+          Pick<
+            TestAgentActionRecord,
+            "companyId" | "agentProduct" | "actionType" | "target" | "idempotencyKey" | "payloadHash" | "policyVersion"
+          >
       );
   }
 }
@@ -3510,6 +3606,7 @@ export const fileAttachments = fileAttachmentsTable;
 export const onTheWayNotifications = onTheWayNotificationsTable;
 export const bookingRequests = bookingRequestsTable;
 export const bookingSettings = bookingSettingsTable;
+export const agentActions = agentActionsTable;
 
 export async function emitEvent(event: Omit<TestActivityEventRecord, "id" | "occurredAt"> & {
   occurredAt?: Date;
@@ -3857,6 +3954,7 @@ export function createDbModuleMock() {
     onTheWayNotifications,
     bookingRequests,
     bookingSettings,
+    agentActions,
     emitEvent,
     emitEventWithExecutor,
     markInvoiceOverdueIfNeeded,
@@ -3903,6 +4001,7 @@ export function resetTestState(): void {
   state.onTheWayNotifications.length = 0;
   state.bookingRequests.length = 0;
   state.bookingSettings.length = 0;
+  state.agentActions.length = 0;
 }
 
 export function seedCompany(
@@ -4217,6 +4316,18 @@ export function seedBookingSettings(
 ): TestBookingSettingsRecord {
   const record = createBookingSettingsRecord(values);
   state.bookingSettings.push(record);
+  return record;
+}
+
+export function seedAgentAction(
+  values: Partial<TestAgentActionRecord> &
+    Pick<
+      TestAgentActionRecord,
+      "companyId" | "agentProduct" | "actionType" | "target" | "idempotencyKey" | "payloadHash" | "policyVersion"
+    >
+): TestAgentActionRecord {
+  const record = createAgentActionRecord(values);
+  state.agentActions.push(record);
   return record;
 }
 
