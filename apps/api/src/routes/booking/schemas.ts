@@ -241,6 +241,8 @@ export const ConfirmBookingRequestSchema = z.object({
   scheduledEnd: z.string().datetime({ offset: true })
 }).strict();
 
+export const HoldBookingSlotSchema = ConfirmBookingRequestSchema;
+
 export const DeclineBookingRequestSchema = z.object({
   reason: z.string().trim().optional()
 }).strict();
@@ -300,6 +302,10 @@ export const bookingRequestIdValidation = withZodValidation({
 export const confirmBookingRequestValidation = withZodValidation({
   params: BookingRequestIdParamsSchema,
   body: ConfirmBookingRequestSchema
+});
+export const holdBookingSlotValidation = withZodValidation({
+  params: BookingRequestIdParamsSchema,
+  body: HoldBookingSlotSchema
 });
 export const declineBookingRequestValidation = withZodValidation({
   params: BookingRequestIdParamsSchema,
@@ -453,6 +459,37 @@ export const bookingRequestStatsRouteSchema = {
     },
     400: errorResponseSchema,
     401: errorResponseSchema
+  }
+} as const;
+
+const bookingSlotHoldViewSchema = {
+  type: "object",
+  additionalProperties: false,
+  required: ["technicianId", "scheduledStart", "scheduledEnd"],
+  properties: {
+    technicianId: { type: "string", format: "uuid" },
+    scheduledStart: { type: "string", format: "date-time" },
+    scheduledEnd: { type: "string", format: "date-time" }
+  }
+} as const;
+
+export const bookingSlotHoldRouteSchema = {
+  tags: ["booking"],
+  response: {
+    200: {
+      type: "object",
+      additionalProperties: false,
+      required: ["bookingRequest", "hold"],
+      properties: {
+        bookingRequest: bookingRequestResponseSchema,
+        hold: bookingSlotHoldViewSchema
+      }
+    },
+    400: errorResponseSchema,
+    401: errorResponseSchema,
+    403: errorResponseSchema,
+    404: errorResponseSchema,
+    409: errorResponseSchema
   }
 } as const;
 

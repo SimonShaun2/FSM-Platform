@@ -6,6 +6,7 @@ import {
   getBookingConfirmationHandler,
   getPublicAvailabilityHandler,
   getPublicBookingSettingsHandler,
+  holdPublicBookingSlotHandler,
   submitBookingRequestHandler
 } from "./handlers.js";
 import {
@@ -17,6 +18,8 @@ import {
   emailCaptureRouteSchema,
   emailCaptureValidation,
   publicBookingRouteSchema,
+  publicHoldBookingSlotValidation,
+  publicSlotHoldRouteSchema,
   submitBookingRouteSchema,
   submitBookingValidation,
   zipCheckRouteSchema,
@@ -84,6 +87,12 @@ const publicBookingRoutes: FastifyPluginAsync = async (fastify) => {
     preValidation: [bookingConfirmationValidation],
     schema: bookingConfirmationRouteSchema
   }, getBookingConfirmationHandler);
+
+  fastify.post("/:slug/requests/:ref/slot-hold", {
+    preHandler: bookingRateLimit,
+    preValidation: [publicHoldBookingSlotValidation],
+    schema: publicSlotHoldRouteSchema
+  }, holdPublicBookingSlotHandler);
 };
 
 export default publicBookingRoutes;

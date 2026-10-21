@@ -24,14 +24,18 @@ import {
   type BookingSettings,
   type CheckZipCoverageResult,
   type ConfirmBookingRequestInput,
+  type HoldBookingSlotInput,
+  type BookingSlotHoldView,
   type ListBookingRequestsQuery,
   type PublicBookingSettings,
   type SubmitBookingRequestInput,
   type UpdateBookingSettingsInput,
+  type BookingRequestStatus,
   ErrorCode
 } from "@fsm/types";
 
 import { generateJobNumber } from "../lib/job-number.js";
+import { assertNonTerminalBookingRequest } from "./booking-request-guards.js";
 import { invalidateDispatchCache } from "./dispatch.service.js";
 
 type BookingRequestRow = typeof bookingRequests.$inferSelect;
@@ -90,7 +94,7 @@ const BOOKING_SOURCE_VALUES = new Set([
   "qr_code"
 ]);
 const BOOKING_TIME_ZONE = "America/Chicago";
-const TERMINAL_BOOKING_STATUSES = new Set(["confirmed", "cancelled", "completed", "no_show"]);
+const BOOKING_SLOT_HOLD_NOTE_PREFIX = "booking_hold:";
 
 function normalizeOptionalString(value: string | null | undefined): string | null | undefined {
   if (value === undefined) {
@@ -854,6 +858,202 @@ export async function getBookingRequest(companyId: string, bookingRequestId: str
   return toBookingRequest(bookingRequest);
 }
 
+function buildBookingSlotHoldNote(bookingRequestId: string): string {
+  return `${BOOKING_SLOT_HOLD_NOTE_PREFIX}${bookingRequestId}`;
+}
+
+async function clearBookingSlotHolds(
+  companyId: string,
+  bookingRequestId: string,
+  executor: TransactionExecutor
+): Promise<void> {
+  const holdNote = buildBookingSlotHoldNote(bookingRequestId);
+  const existingHolds = await executor
+    .select()
+    .from(scheduleSlots)
+    .where(
+      and(
+        eq(scheduleSlots.companyId, companyId),
+        eq(scheduleSlots.notes, holdNote),
+        isNull(scheduleSlots.deletedAt)
+      )
+    );
+
+  const now = new Date();
+
+  for (const slot of existingHolds) {
+    await executor
+      .update(scheduleSlots)
+      .set({ deletedAt: now, updatedAt: now })
+      .where(eq(scheduleSlots.id, slot.id));
+  }
+}
+
+async function assertTechnicianScheduleSlotAvailable(
+  companyId: string,
+  technicianId: string,
+  scheduledStart: Date,
+  scheduledEnd: Date,
+  executor: TransactionExecutor,
+  ignoreBookingRequestId?: string
+): Promise<void> {
+  const companySlots = await executor
+    .select()
+    .from(scheduleSlots)
+    .where(
+      and(
+        eq(scheduleSlots.companyId, companyId),
+        eq(scheduleSlots.technicianId, technicianId),
+        isNull(scheduleSlots.deletedAt)
+      )
+    );
+
+  const ignoreNote = ignoreBookingRequestId ? buildBookingSlotHoldNote(ignoreBookingRequestId) : null;
+  const hasConflict = companySlots.some((slot) => {
+    if (ignoreNote && slot.notes === ignoreNote) {
+      return false;
+    }
+
+    return (
+      slot.startTime.getTime() < scheduledEnd.getTime() && slot.endTime.getTime() > scheduledStart.getTime()
+    );
+  });
+
+  if (hasConflict) {
+    throw new AppError(ErrorCode.CONFLICT, "Selected slot is no longer available");
+  }
+}
+
+async function holdBookingSlot(
+  companyId: string,
+  bookingRequestId: string,
+  input: HoldBookingSlotInput,
+  _actor: BookingActor
+): Promise<{ bookingRequest: BookingRequest; hold: BookingSlotHoldView }> {
+  const scheduledStart = parseIsoDateTime(input.scheduledStart, "scheduledStart");
+  const scheduledEnd = parseIsoDateTime(input.scheduledEnd, "scheduledEnd");
+
+  if (scheduledEnd.getTime() <= scheduledStart.getTime()) {
+    throw new AppError(ErrorCode.VALIDATION_ERROR, "scheduledEnd must be after scheduledStart");
+  }
+
+  return db.transaction(async (tx) => {
+    const bookingRequest = await getBookingRequestRecord(companyId, bookingRequestId, tx);
+    assertNonTerminalBookingRequest(bookingRequest.status as BookingRequestStatus, "held");
+
+    const [technician] = await tx
+      .select()
+      .from(technicians)
+      .where(
+        and(
+          eq(technicians.companyId, companyId),
+          eq(technicians.id, input.technicianId),
+          isNull(technicians.deletedAt)
+        )
+      )
+      .limit(1);
+
+    if (!technician) {
+      throw new AppError(ErrorCode.NOT_FOUND, "Technician not found");
+    }
+
+    await assertTechnicianScheduleSlotAvailable(
+      companyId,
+      input.technicianId,
+      scheduledStart,
+      scheduledEnd,
+      tx,
+      bookingRequestId
+    );
+
+    await clearBookingSlotHolds(companyId, bookingRequestId, tx);
+
+    await tx.insert(scheduleSlots).values({
+      companyId,
+      technicianId: input.technicianId,
+      jobId: null,
+      startTime: scheduledStart,
+      endTime: scheduledEnd,
+      isConfirmed: false,
+      notes: buildBookingSlotHoldNote(bookingRequestId)
+    });
+
+    const updatedRows = await tx
+      .update(bookingRequests)
+      .set({
+        assignedTechnicianId: input.technicianId,
+        preferredDate: formatDateOnly(scheduledStart),
+        updatedAt: new Date()
+      })
+      .where(
+        and(
+          eq(bookingRequests.companyId, companyId),
+          eq(bookingRequests.id, bookingRequest.id),
+          isNull(bookingRequests.deletedAt)
+        )
+      )
+      .returning();
+    const updatedRequest = updatedRows[0];
+
+    if (!updatedRequest) {
+      throw new AppError(ErrorCode.INTERNAL_ERROR, "Failed to hold booking slot");
+    }
+
+    return {
+      bookingRequest: toBookingRequest(updatedRequest),
+      hold: {
+        technicianId: input.technicianId,
+        scheduledStart: scheduledStart.toISOString(),
+        scheduledEnd: scheduledEnd.toISOString()
+      }
+    };
+  });
+}
+
+export async function holdPublicBookingSlot(
+  slug: string,
+  referenceNumber: string,
+  input: HoldBookingSlotInput
+): Promise<{ bookingRequest: BookingRequest; hold: BookingSlotHoldView }> {
+  const { settings } = await getCompanyByBookingSlug(slug, db);
+  const [bookingRequest] = await db
+    .select()
+    .from(bookingRequests)
+    .where(
+      and(
+        eq(bookingRequests.companyId, settings.companyId),
+        eq(bookingRequests.referenceNumber, referenceNumber),
+        isNull(bookingRequests.deletedAt)
+      )
+    )
+    .limit(1);
+
+  if (!bookingRequest) {
+    throw new AppError(ErrorCode.NOT_FOUND, "Booking request not found");
+  }
+
+  return holdBookingSlot(settings.companyId, bookingRequest.id, input, {
+    id: null,
+    type: "customer",
+    name: `${bookingRequest.firstName} ${bookingRequest.lastName}`.trim()
+  });
+}
+
+export async function holdBookingSlotForOperator(
+  companyId: string,
+  actorId: string,
+  bookingRequestId: string,
+  input: HoldBookingSlotInput
+): Promise<{ bookingRequest: BookingRequest; hold: BookingSlotHoldView }> {
+  const actorUser = await getActor(companyId, actorId, db);
+
+  return holdBookingSlot(companyId, bookingRequestId, input, {
+    id: actorUser.id,
+    type: "user",
+    name: buildActorName(actorUser.firstName, actorUser.lastName)
+  });
+}
+
 export async function getBookingSettings(companyId: string): Promise<BookingSettings> {
   return db.transaction(async (tx) => {
     const settings = await ensureBookingSettingsRow(companyId, tx);
@@ -1180,9 +1380,16 @@ export async function confirmBookingRequest(
     };
     const bookingRequest = await getBookingRequestRecord(companyId, bookingRequestId, tx);
 
-    if (TERMINAL_BOOKING_STATUSES.has(bookingRequest.status)) {
-      throw new AppError(ErrorCode.CONFLICT, "Only pending booking requests can be confirmed");
-    }
+    assertNonTerminalBookingRequest(bookingRequest.status as BookingRequestStatus, "confirmed");
+
+    await assertTechnicianScheduleSlotAvailable(
+      companyId,
+      input.technicianId,
+      scheduledStart,
+      scheduledEnd,
+      tx,
+      bookingRequestId
+    );
 
     const company = await getCompanyById(companyId, tx);
     const normalizedInput: NormalizedBookingInput = {
@@ -1215,6 +1422,8 @@ export async function confirmBookingRequest(
     const property =
       (await findPropertyForCustomer(companyId, customer.id, normalizedInput, tx)) ??
       (await createPropertyForBooking(companyId, customer.id, normalizedInput, tx, actor));
+    await clearBookingSlotHolds(companyId, bookingRequest.id, tx);
+
     const job = await createJobFromBooking(
       companyId,
       bookingRequest,

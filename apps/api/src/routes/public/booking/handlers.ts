@@ -1,6 +1,6 @@
 import type { FastifyReply, FastifyRequest } from "fastify";
 
-import type { SubmitBookingRequestInput } from "@fsm/types";
+import type { HoldBookingSlotInput, SubmitBookingRequestInput } from "@fsm/types";
 
 import {
   captureBookingInterest,
@@ -8,6 +8,7 @@ import {
   getBookingAvailability,
   getBookingConfirmation,
   getPublicBookingSettingsBySlug,
+  holdPublicBookingSlot,
   submitBookingRequest
 } from "../../../services/booking.service.js";
 import type {
@@ -92,5 +93,27 @@ export async function getBookingConfirmationHandler(
 
   return reply.send({
     confirmation
+  });
+}
+
+export async function holdPublicBookingSlotHandler(
+  request: FastifyRequest,
+  reply: FastifyReply
+): Promise<FastifyReply> {
+  const params = request.params as BookingConfirmationParams;
+  const result = await holdPublicBookingSlot(
+    params.slug,
+    params.ref,
+    request.body as HoldBookingSlotInput
+  );
+
+  return reply.send({
+    bookingRequest: {
+      id: result.bookingRequest.id,
+      referenceNumber: result.bookingRequest.referenceNumber,
+      status: result.bookingRequest.status,
+      assignedTechnicianId: result.bookingRequest.assignedTechnicianId
+    },
+    hold: result.hold
   });
 }
