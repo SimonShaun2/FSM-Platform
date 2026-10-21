@@ -1,6 +1,6 @@
 # Renvani (FSM Platform)
 
-Renvani is the **Owner.com of home and field services**—a growth platform that helps businesses attract customers through their own channels, turn inquiries into booked jobs, and earn repeat revenue ([Owner.com](https://www.owner.com/) as the model). **Growth outcomes lead;** AI powers the workflows behind the five outcome areas (get found, win jobs, run work, earn repeat, manage the business). **FSM modules in this monorepo are the supporting system-of-record layer** on standalone Renvani SoR (legacy import-only), with human approval and policy where required. Build tickets, schema, and phase history: [`docs/README.md`](docs/README.md).
+Renvani aims to be the **Owner.com of home and field services**—a growth platform for one vertical ([Owner.com](https://www.owner.com/) as aspirational guide, not a literal product/pricing/app blueprint). **Growth outcomes lead;** AI powers workflows behind the five areas (get found, win jobs, run work, earn repeat, manage the business)—not an “agent company” pitch. **FSM modules in this monorepo are the supporting system-of-record layer** on standalone Renvani SoR (legacy import-only), with human approval and policy where required. Build tickets, schema, and phase history: [`docs/README.md`](docs/README.md).
 
 ## Prerequisites
 
