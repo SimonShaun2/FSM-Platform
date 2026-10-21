@@ -18,6 +18,7 @@ export * from "./job-source-reporting.types.js";
 export * from "./job-product.types.js";
 export * from "./job-task.types.js";
 export * from "./booking-request.types.js";
+export * from "./growth-check/index.js";
 export * from "./booking-settings.types.js";
 export * from "./product.types.js";
 export * from "./review-request.types.js";
