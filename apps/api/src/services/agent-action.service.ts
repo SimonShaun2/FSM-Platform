@@ -16,6 +16,7 @@ import {
   assertPolicyVersion,
   requiresHumanApproval
 } from "./agent-action.policy.js";
+import { authorizeAgentActionExecution } from "./outbound-policy-engine.service.js";
 import { resolveEntityRef } from "./tenant-context.service.js";
 
 const DEFAULT_TTL_MS = 72 * 60 * 60 * 1000;
@@ -279,12 +280,43 @@ export async function executeAgentAction(companyId: string, actionId: string, ac
       throw new AppError(ErrorCode.CONFLICT, "Target recordVersion is stale; re-resolve context");
     }
 
+    let authorizationDecision: Awaited<ReturnType<typeof authorizeAgentActionExecution>> | null =
+      null;
+
+    if (row.actionType === "message.send_proposed") {
+      authorizationDecision = await authorizeAgentActionExecution({
+        companyId,
+        actorId,
+        actorType: "user",
+        actionType: row.actionType,
+        parameters: row.parameters as Record<string, unknown>,
+        target,
+        requiresApproval: row.requiresApproval,
+        state: row.state as AgentActionState
+      });
+
+      if (!authorizationDecision.allowed) {
+        throw new AppError(
+          authorizationDecision.errorCode ?? ErrorCode.POLICY_DENIED,
+          authorizationDecision.reason
+        );
+      }
+    }
+
     await tx.update(agentActions).set({ state: "executing", updatedAt: new Date() }).where(eq(agentActions.id, actionId));
 
     const receipt = {
       outcome: "succeeded" as const,
       emittedEventIds: [] as string[],
-      note: "No outbound provider send in Batch 2 slice"
+      note: "No outbound provider send in Batch 2 slice",
+      ...(authorizationDecision
+        ? {
+            authorizationDecision: {
+              policyVersion: authorizationDecision.policyVersion,
+              reason: authorizationDecision.reason
+            }
+          }
+        : {})
     };
 
     const updatedRows = await tx

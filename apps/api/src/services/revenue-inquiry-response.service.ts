@@ -80,6 +80,16 @@ export async function createInquiryResponseProposal(
     reason: qualification.suggestedNextStep,
     parameters: {
       workflow: "revenue.inquiry_response",
+      consentScope: "appointment",
+      consentSnapshot: {
+        consentScope: "appointment",
+        capturedAt: row.createdAt.toISOString(),
+        consentVersion: 1,
+        currentConsentVersion: 1,
+        appointmentOptIn: row.smsConsentAppointments ?? false,
+        marketingOptIn: row.smsConsentMarketing ?? false,
+        revokedAt: null
+      },
       draftType: draft.draftType,
       channel: draft.channel,
       subject: draft.subject ?? null,
