@@ -127,6 +127,13 @@
       "when": 1777620000000,
       "tag": "0017_agent_control_plane",
       "breakpoints": true
+    },
+    {
+      "idx": 18,
+      "version": "7",
+      "when": 1792610524767,
+      "tag": "0021_agent_action_approved_parameters",
+      "breakpoints": true
     }
   ]
 }
