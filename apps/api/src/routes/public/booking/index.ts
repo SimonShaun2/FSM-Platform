@@ -26,11 +26,15 @@ import {
   zipCheckValidation
 } from "./schemas.js";
 
+import {
+  bookingRequestTimesByIp,
+  getRateLimitWindowMs,
+  slotHoldTimesByReference
+} from "./rate-limit-state.js";
+
 const RATE_LIMIT = 10;
 const SLOT_HOLD_REF_RATE_LIMIT = 15;
-const RATE_LIMIT_WINDOW_MS = 60 * 60 * 1000;
-const bookingRequestTimesByIp = new Map<string, number[]>();
-const slotHoldTimesByReference = new Map<string, number[]>();
+const RATE_LIMIT_WINDOW_MS = getRateLimitWindowMs();
 
 async function bookingRateLimit(request: FastifyRequest, reply: FastifyReply): Promise<void> {
   if (request.method !== "POST") {
@@ -126,8 +130,7 @@ const publicBookingRoutes: FastifyPluginAsync = async (fastify) => {
   }, getBookingConfirmationHandler);
 
   fastify.post("/:slug/requests/:ref/slot-hold", {
-    preHandler: [bookingRateLimit, bookingSlotHoldReferenceRateLimit],
-    preValidation: [publicHoldBookingSlotValidation],
+    preValidation: [bookingSlotHoldReferenceRateLimit, publicHoldBookingSlotValidation],
     schema: publicSlotHoldRouteSchema
   }, holdPublicBookingSlotHandler);
 };

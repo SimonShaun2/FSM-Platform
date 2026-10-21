@@ -481,7 +481,7 @@ export const bookingSlotHoldRouteSchema = {
       additionalProperties: false,
       required: ["bookingRequest", "hold"],
       properties: {
-        bookingRequest: bookingRequestResponseSchema,
+        bookingRequest: bookingRequestSchema,
         hold: bookingSlotHoldViewSchema
       }
     },

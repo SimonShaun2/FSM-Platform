@@ -72,7 +72,13 @@ describe("booking in-platform slot hold and confirm (FS-21)", () => {
       lastName: "Stone",
       role: "owner"
     });
-    const technician = fakeDb.seedTechnician({ companyId: company.id, userId: actor.id });
+    const technician = fakeDb.seedTechnician({
+      companyId: company.id,
+      userId: actor.id,
+      firstName: "Ava",
+      lastName: "Stone",
+      phone: "555-0102"
+    });
     const booking = seedPendingBooking(company.id);
 
     const result = await bookingService.holdBookingSlotForOperator(company.id, actor.id, booking.id, {
@@ -100,7 +106,13 @@ describe("booking in-platform slot hold and confirm (FS-21)", () => {
       lastName: "Patch",
       role: "dispatcher"
     });
-    const technician = fakeDb.seedTechnician({ companyId: company.id, userId: actor.id });
+    const technician = fakeDb.seedTechnician({
+      companyId: company.id,
+      userId: actor.id,
+      firstName: "Dee",
+      lastName: "Patch",
+      phone: "555-0103"
+    });
     const booking = seedPendingBooking(company.id);
 
     const confirmed = await bookingService.confirmBookingRequest(company.id, actor.id, booking.id, {
@@ -120,9 +132,17 @@ describe("booking in-platform slot hold and confirm (FS-21)", () => {
     const actor = fakeDb.seedUser({
       companyId: company.id,
       email: "owner@example.com",
+      firstName: "Own",
+      lastName: "Er",
       role: "owner"
     });
-    const technician = fakeDb.seedTechnician({ companyId: company.id, userId: actor.id });
+    const technician = fakeDb.seedTechnician({
+      companyId: company.id,
+      userId: actor.id,
+      firstName: "Own",
+      lastName: "Er",
+      phone: "555-0104"
+    });
     const booking = fakeDb.seedBookingRequest({
       companyId: company.id,
       firstName: "Pat",
@@ -149,9 +169,17 @@ describe("booking in-platform slot hold and confirm (FS-21)", () => {
     const actor = fakeDb.seedUser({
       companyId: company.id,
       email: "owner@example.com",
+      firstName: "Own",
+      lastName: "Er",
       role: "owner"
     });
-    const technician = fakeDb.seedTechnician({ companyId: company.id, userId: actor.id });
+    const technician = fakeDb.seedTechnician({
+      companyId: company.id,
+      userId: actor.id,
+      firstName: "Own",
+      lastName: "Er",
+      phone: "555-0105"
+    });
     const booking = seedPendingBooking(company.id);
 
     fakeDb.seedScheduleSlot({
