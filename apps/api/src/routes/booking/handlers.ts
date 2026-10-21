@@ -3,6 +3,7 @@ import type { FastifyReply, FastifyRequest } from "fastify";
 import type {
   ConfirmBookingRequestInput,
   DeclineBookingRequestInput,
+  HoldBookingSlotInput,
   ListBookingRequestsQuery,
   UpdateBookingSettingsInput
 } from "@fsm/types";
@@ -11,6 +12,7 @@ import {
   checkBookingSlugAvailability,
   confirmBookingRequest,
   declineBookingRequest,
+  holdBookingSlotForOperator,
   getBookingDemandByZip,
   getBookingRequest,
   getBookingRequestStats,
@@ -141,6 +143,24 @@ export async function confirmBookingRequestHandler(
 
   return reply.send({
     bookingRequest: toBookingRequestResponse(bookingRequest)
+  });
+}
+
+export async function holdBookingSlotHandler(
+  request: FastifyRequest,
+  reply: FastifyReply
+): Promise<FastifyReply> {
+  const params = request.params as BookingRequestIdParams;
+  const result = await holdBookingSlotForOperator(
+    request.company.id,
+    request.user.id,
+    params.id,
+    request.body as HoldBookingSlotInput
+  );
+
+  return reply.code(200).send({
+    bookingRequest: toBookingRequestResponse(result.bookingRequest),
+    hold: result.hold
   });
 }
 

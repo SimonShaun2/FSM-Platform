@@ -34,6 +34,14 @@ export const BookingConfirmationParamsSchema = z.object({
   ref: z.string().trim().min(1)
 }).strict();
 
+const uuidSchema = z.string().uuid();
+
+export const PublicHoldBookingSlotSchema = z.object({
+  technicianId: uuidSchema,
+  scheduledStart: z.string().datetime({ offset: true }),
+  scheduledEnd: z.string().datetime({ offset: true })
+}).strict();
+
 export const ZipCheckSchema = z.object({
   zip: z.string().trim().min(1)
 }).strict();
@@ -103,6 +111,10 @@ export const submitBookingValidation = withZodValidation({
   params: BookingSlugParamsSchema,
   query: BookingSubmitQuerySchema,
   body: SubmitBookingRequestSchema
+});
+export const publicHoldBookingSlotValidation = withZodValidation({
+  params: BookingConfirmationParamsSchema,
+  body: PublicHoldBookingSlotSchema
 });
 
 export const publicBookingRouteSchema = {
@@ -282,5 +294,43 @@ export const bookingConfirmationRouteSchema = {
       }
     },
     404: errorResponseSchema
+  }
+} as const;
+
+export const publicSlotHoldRouteSchema = {
+  tags: ["public-booking"],
+  response: {
+    200: {
+      type: "object",
+      additionalProperties: false,
+      required: ["bookingRequest", "hold"],
+      properties: {
+        bookingRequest: {
+          type: "object",
+          additionalProperties: false,
+          required: ["id", "referenceNumber", "status", "assignedTechnicianId"],
+          properties: {
+            id: { type: "string" },
+            referenceNumber: nullableStringSchema,
+            status: { type: "string" },
+            assignedTechnicianId: { anyOf: [{ type: "string", format: "uuid" }, { type: "null" }] }
+          }
+        },
+        hold: {
+          type: "object",
+          additionalProperties: false,
+          required: ["technicianId", "scheduledStart", "scheduledEnd"],
+          properties: {
+            technicianId: { type: "string", format: "uuid" },
+            scheduledStart: { type: "string", format: "date-time" },
+            scheduledEnd: { type: "string", format: "date-time" }
+          }
+        }
+      }
+    },
+    400: errorResponseSchema,
+    404: errorResponseSchema,
+    409: errorResponseSchema,
+    429: errorResponseSchema
   }
 } as const;
