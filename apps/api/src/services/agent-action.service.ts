@@ -7,8 +7,19 @@ import {
   AppError,
   ErrorCode,
   type CanonicalEntityRefV1,
+  assertAgentActionApprovable,
+  assertAgentActionExecutable,
+  assertAgentActionRejectable,
+  assertAgentActionTenantScope,
+  assertActionTypeMatchesToolName,
+  agentActionExpiredError,
+  agentActionStaleTargetError,
+  AgentToolNameV1Schema,
   assertIdempotencyPayloadMatches,
-  isStaleRecordVersion
+  evaluateAgentActionPolicyDecision,
+  isAgentActionExpired,
+  isStaleRecordVersion,
+  type AgentToolNameV1
 } from "@fsm/types";
 
 import {
@@ -19,6 +30,16 @@ import {
 import { resolveEntityRef } from "./tenant-context.service.js";
 
 const DEFAULT_TTL_MS = 72 * 60 * 60 * 1000;
+
+type SelectExecutor = Pick<typeof db, "select">;
+type AgentActionWriteExecutor = Pick<typeof db, "select" | "insert">;
+export function agentActionScopedWhere(companyId: string, actionId: string) {
+  return and(
+    eq(agentActions.id, actionId),
+    eq(agentActions.companyId, companyId),
+    isNull(agentActions.deletedAt)
+  );
+}
 
 export type AgentActionState =
   | "proposed"
@@ -75,23 +96,63 @@ function mapRow(row: typeof agentActions.$inferSelect) {
   };
 }
 
-async function getActionRow(companyId: string, actionId: string) {
-  const [row] = await db
+function toLifecycleSlice(row: typeof agentActions.$inferSelect) {
+  return {
+    companyId: row.companyId,
+    state: row.state as AgentActionState,
+    actionType: row.actionType,
+    requiresApproval: row.requiresApproval,
+    expiresAt: row.expiresAt
+  };
+}
+
+async function getActionRow(companyId: string, actionId: string, executor: SelectExecutor = db) {
+  const [row] = await executor
     .select()
     .from(agentActions)
-    .where(
-      and(eq(agentActions.id, actionId), eq(agentActions.companyId, companyId), isNull(agentActions.deletedAt))
-    )
+    .where(agentActionScopedWhere(companyId, actionId))
     .limit(1);
 
   if (!row) {
     throw new AppError(ErrorCode.NOT_FOUND, "Agent action not found");
   }
 
+  assertAgentActionTenantScope(companyId, row.companyId);
+
   return row;
 }
 
-export async function createAgentActionProposal(input: CreateAgentActionInput) {
+async function persistTerminalExpiredState(companyId: string, actionId: string): Promise<void> {
+  await db
+    .update(agentActions)
+    .set({ state: "expired", updatedAt: new Date() })
+    .where(agentActionScopedWhere(companyId, actionId));
+}
+
+function resolveProposalPolicy(input: CreateAgentActionInput) {
+  if (AgentToolNameV1Schema.safeParse(input.actionType).success) {
+    assertActionTypeMatchesToolName(input.actionType as AgentToolNameV1, input.parameters);
+    return evaluateAgentActionPolicyDecision({
+      agentProduct: input.agentProduct,
+      actionType: input.actionType,
+      actorType: input.actorType,
+      policyVersion: input.policyVersion,
+      requiresApproval: requiresHumanApproval(input.actionType)
+    });
+  }
+
+  const needsApproval = requiresHumanApproval(input.actionType);
+  return {
+    initialState: (needsApproval ? "awaiting_approval" : "policy_evaluated") as AgentActionState,
+    requiresApproval: needsApproval,
+    allowsAutoExecute: false
+  };
+}
+
+async function createAgentActionProposalInTransaction(
+  tx: AgentActionWriteExecutor,
+  input: CreateAgentActionInput
+) {
   assertPolicyVersion(input.policyVersion);
   assertActionAllowedForProduct(input.agentProduct, input.actionType, input.actorType);
 
@@ -102,74 +163,81 @@ export async function createAgentActionProposal(input: CreateAgentActionInput) {
   });
 
   const expiresAt = input.expiresAt ?? new Date(Date.now() + DEFAULT_TTL_MS);
-  const needsApproval = requiresHumanApproval(input.actionType);
+  const policyDecision = resolveProposalPolicy(input);
 
-  return db.transaction(async (tx) => {
-    const [existing] = await tx
-      .select()
-      .from(agentActions)
-      .where(
-        and(
-          eq(agentActions.companyId, input.companyId),
-          eq(agentActions.idempotencyKey, input.idempotencyKey),
-          isNull(agentActions.deletedAt)
-        )
+  const [existing] = await tx
+    .select()
+    .from(agentActions)
+    .where(
+      and(
+        eq(agentActions.companyId, input.companyId),
+        eq(agentActions.idempotencyKey, input.idempotencyKey),
+        isNull(agentActions.deletedAt)
       )
-      .limit(1);
+    )
+    .limit(1);
 
-    if (existing) {
-      assertIdempotencyPayloadMatches(existing.payloadHash, {
-        companyId: input.companyId,
-        idempotencyKey: input.idempotencyKey,
-        payloadFingerprint: payloadHash
-      });
-      return mapRow(existing);
-    }
-
-    const initialState: AgentActionState = needsApproval ? "awaiting_approval" : "policy_evaluated";
-
-    const insertedRows = await tx
-      .insert(agentActions)
-      .values({
-        companyId: input.companyId,
-        agentProduct: input.agentProduct,
-        actionType: input.actionType,
-        parameters: input.parameters,
-        target: input.target,
-        sourceEventIds: input.sourceEventIds ?? [],
-        idempotencyKey: input.idempotencyKey,
-        payloadHash,
-        policyVersion: input.policyVersion,
-        requiresApproval: needsApproval,
-        state: initialState,
-        confidence: input.confidence?.toString(),
-        reason: input.reason,
-        expiresAt
-      })
-      .returning();
-
-    const inserted = insertedRows[0];
-    if (!inserted) {
-      throw new AppError(ErrorCode.INTERNAL_ERROR, "Failed to create agent action");
-    }
-
-    await emitEventWithExecutor(tx, {
+  if (existing) {
+    assertIdempotencyPayloadMatches(existing.payloadHash, {
       companyId: input.companyId,
-      eventType: "agent.proposal_created",
-      actorId: input.actorId,
-      actorType: input.actorType,
-      entityType: "agent_action",
-      entityId: inserted.id,
-      payload: {
-        actionType: input.actionType,
-        agentProduct: input.agentProduct,
-        state: inserted.state
-      },
-      summary: `Agent proposal created (${input.actionType})`
+      idempotencyKey: input.idempotencyKey,
+      payloadFingerprint: payloadHash
     });
+    return mapRow(existing);
+  }
 
-    return mapRow(inserted);
+  const insertedRows = await tx
+    .insert(agentActions)
+    .values({
+      companyId: input.companyId,
+      agentProduct: input.agentProduct,
+      actionType: input.actionType,
+      parameters: input.parameters,
+      target: input.target,
+      sourceEventIds: input.sourceEventIds ?? [],
+      idempotencyKey: input.idempotencyKey,
+      payloadHash,
+      policyVersion: input.policyVersion,
+      requiresApproval: policyDecision.requiresApproval,
+      state: policyDecision.initialState as AgentActionState,
+      confidence: input.confidence?.toString(),
+      reason: input.reason,
+      expiresAt
+    })
+    .returning();
+
+  const inserted = insertedRows[0];
+  if (!inserted) {
+    throw new AppError(ErrorCode.INTERNAL_ERROR, "Failed to create agent action");
+  }
+
+  await emitEventWithExecutor(tx, {
+    companyId: input.companyId,
+    eventType: "agent.proposal_created",
+    actorId: input.actorId,
+    actorType: input.actorType,
+    entityType: "agent_action",
+    entityId: inserted.id,
+    payload: {
+      actionType: input.actionType,
+      agentProduct: input.agentProduct,
+      state: inserted.state
+    },
+    summary: `Agent proposal created (${input.actionType})`
   });
+
+  return mapRow(inserted);
+}
+
+export async function createAgentActionProposal(
+  input: CreateAgentActionInput,
+  existingTx?: AgentActionWriteExecutor
+) {
+  if (existingTx) {
+    return createAgentActionProposalInTransaction(existingTx, input);
+  }
+
+  return db.transaction((tx) => createAgentActionProposalInTransaction(tx, input));
 }
 
 export async function listAgentActions(
@@ -189,16 +257,14 @@ export async function listAgentActions(
 
 export async function approveAgentAction(companyId: string, actionId: string, reviewerId: string) {
   return db.transaction(async (tx) => {
-    const row = await getActionRow(companyId, actionId);
+    const row = await getActionRow(companyId, actionId, tx);
 
-    if (row.state !== "awaiting_approval" && row.state !== "policy_evaluated") {
-      throw new AppError(ErrorCode.CONFLICT, "Agent action is not awaiting approval");
-    }
+    assertAgentActionApprovable(toLifecycleSlice(row));
 
     const updatedRows = await tx
       .update(agentActions)
       .set({ state: "approved", reviewerId, updatedAt: new Date() })
-      .where(eq(agentActions.id, actionId))
+      .where(agentActionScopedWhere(companyId, actionId))
       .returning();
 
     const updated = updatedRows[0];
@@ -222,16 +288,14 @@ export async function approveAgentAction(companyId: string, actionId: string, re
 
 export async function rejectAgentAction(companyId: string, actionId: string, reviewerId: string) {
   return db.transaction(async (tx) => {
-    const row = await getActionRow(companyId, actionId);
+    const row = await getActionRow(companyId, actionId, tx);
 
-    if (row.state !== "awaiting_approval" && row.state !== "policy_evaluated") {
-      throw new AppError(ErrorCode.CONFLICT, "Agent action is not awaiting approval");
-    }
+    assertAgentActionRejectable(toLifecycleSlice(row));
 
     const updatedRows = await tx
       .update(agentActions)
       .set({ state: "cancelled", reviewerId, updatedAt: new Date() })
-      .where(eq(agentActions.id, actionId))
+      .where(agentActionScopedWhere(companyId, actionId))
       .returning();
 
     const updated = updatedRows[0];
@@ -254,70 +318,73 @@ export async function rejectAgentAction(companyId: string, actionId: string, rev
 }
 
 export async function executeAgentAction(companyId: string, actionId: string, actorId: string) {
-  return db.transaction(async (tx) => {
-    const row = await getActionRow(companyId, actionId);
+  let persistExpiredAfterRollback = false;
 
-    if (row.expiresAt.getTime() < Date.now()) {
+  try {
+    return await db.transaction(async (tx) => {
+      const row = await getActionRow(companyId, actionId, tx);
+
+      if (isAgentActionExpired(row.expiresAt)) {
+        persistExpiredAfterRollback = true;
+        throw agentActionExpiredError();
+      }
+
+      assertAgentActionExecutable(toLifecycleSlice(row));
+
+      const target = row.target as CanonicalEntityRefV1;
+      const liveRef = await resolveEntityRef(companyId, target.entityType, target.entityId);
+      if (isStaleRecordVersion(target.recordVersion, liveRef.recordVersion)) {
+        throw agentActionStaleTargetError();
+      }
+
       await tx
         .update(agentActions)
-        .set({ state: "expired", updatedAt: new Date() })
-        .where(eq(agentActions.id, actionId));
-      throw new AppError(ErrorCode.CONFLICT, "Agent action has expired");
-    }
+        .set({ state: "executing", updatedAt: new Date() })
+        .where(agentActionScopedWhere(companyId, actionId));
 
-    if (row.requiresApproval && row.state !== "approved") {
-      throw new AppError(ErrorCode.CONFLICT, "Agent action requires approval before execution");
-    }
+      const receipt = {
+        outcome: "succeeded" as const,
+        emittedEventIds: [] as string[],
+        note: "No outbound provider send in Batch 2 slice"
+      };
 
-    if (!row.requiresApproval && row.state !== "policy_evaluated" && row.state !== "approved") {
-      throw new AppError(ErrorCode.CONFLICT, "Agent action is not executable");
-    }
+      const updatedRows = await tx
+        .update(agentActions)
+        .set({
+          state: "succeeded",
+          executionReceipt: receipt,
+          updatedAt: new Date()
+        })
+        .where(agentActionScopedWhere(companyId, actionId))
+        .returning();
 
-    const target = row.target as CanonicalEntityRefV1;
-    const liveRef = await resolveEntityRef(companyId, target.entityType, target.entityId);
-    if (isStaleRecordVersion(target.recordVersion, liveRef.recordVersion)) {
-      throw new AppError(ErrorCode.CONFLICT, "Target recordVersion is stale; re-resolve context");
-    }
+      const updated = updatedRows[0];
+      if (!updated) {
+        throw new AppError(ErrorCode.INTERNAL_ERROR, "Failed to execute agent action");
+      }
 
-    await tx.update(agentActions).set({ state: "executing", updatedAt: new Date() }).where(eq(agentActions.id, actionId));
+      await emitEventWithExecutor(tx, {
+        companyId,
+        eventType: "agent.execution_succeeded",
+        actorId,
+        actorType: "user",
+        entityType: "agent_action",
+        entityId: actionId,
+        payload: {
+          actionType: row.actionType,
+          receipt
+        },
+        summary: `Agent action executed (${row.actionType})`
+      });
 
-    const receipt = {
-      outcome: "succeeded" as const,
-      emittedEventIds: [] as string[],
-      note: "No outbound provider send in Batch 2 slice"
-    };
-
-    const updatedRows = await tx
-      .update(agentActions)
-      .set({
-        state: "succeeded",
-        executionReceipt: receipt,
-        updatedAt: new Date()
-      })
-      .where(eq(agentActions.id, actionId))
-      .returning();
-
-    const updated = updatedRows[0];
-    if (!updated) {
-      throw new AppError(ErrorCode.INTERNAL_ERROR, "Failed to execute agent action");
-    }
-
-    await emitEventWithExecutor(tx, {
-      companyId,
-      eventType: "agent.execution_succeeded",
-      actorId,
-      actorType: "user",
-      entityType: "agent_action",
-      entityId: actionId,
-      payload: {
-        actionType: row.actionType,
-        receipt
-      },
-      summary: `Agent action executed (${row.actionType})`
+      return mapRow(updated);
     });
-
-    return mapRow(updated);
-  });
+  } catch (error) {
+    if (persistExpiredAfterRollback) {
+      await persistTerminalExpiredState(companyId, actionId);
+    }
+    throw error;
+  }
 }
 
 export async function getAgentAction(companyId: string, actionId: string) {

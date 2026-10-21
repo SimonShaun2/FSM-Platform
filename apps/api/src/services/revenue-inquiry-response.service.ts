@@ -45,60 +45,64 @@ export async function createInquiryResponseProposal(
   actorId: string,
   idempotencyKey: string
 ): Promise<InquiryResponseProposalResult> {
-  const [row] = await db
-    .select()
-    .from(bookingRequests)
-    .where(
-      and(
-        eq(bookingRequests.id, bookingRequestId),
-        eq(bookingRequests.companyId, companyId),
-        isNull(bookingRequests.deletedAt)
-      )
-    )
-    .limit(1);
-
-  if (!row) {
-    throw new AppError(ErrorCode.NOT_FOUND, "Booking request not found");
-  }
-
-  const snapshot = toInquirySnapshot(row);
-  const qualification = qualifyInquiry(snapshot);
-  const draft = buildInquiryResponseDraft(snapshot, qualification);
   const anchor = await resolveInquiryGraphAnchor(companyId, bookingRequestId);
 
-  const proposal = await createAgentActionProposal({
-    companyId,
-    actorId,
-    actorType: "ai",
-    agentProduct: "revenue",
-    actionType: "message.send_proposed",
-    policyVersion: AGENT_POLICY_V1,
-    idempotencyKey,
-    target: anchor.bookingRequest,
-    sourceEventIds: [],
-    confidence: qualification.qualificationScore,
-    reason: qualification.suggestedNextStep,
-    parameters: {
-      workflow: "revenue.inquiry_response",
-      draftType: draft.draftType,
-      channel: draft.channel,
-      subject: draft.subject ?? null,
-      body: draft.body,
-      qualification,
-      groundedFacts: qualification.groundedFacts,
-      missingInputs: qualification.missingInputs,
-      pushTowardBooking: qualification.pushTowardBooking,
-      suggestedNextStep: qualification.suggestedNextStep,
-      recipient: {
-        firstName: snapshot.firstName,
-        lastName: snapshot.lastName,
-        phone: snapshot.phone,
-        email: snapshot.email
-      }
-    }
-  });
+  return db.transaction(async (tx) => {
+    const [row] = await tx
+      .select()
+      .from(bookingRequests)
+      .where(
+        and(
+          eq(bookingRequests.id, bookingRequestId),
+          eq(bookingRequests.companyId, companyId),
+          isNull(bookingRequests.deletedAt)
+        )
+      )
+      .limit(1);
 
-  await db.transaction(async (tx) => {
+    if (!row) {
+      throw new AppError(ErrorCode.NOT_FOUND, "Booking request not found");
+    }
+
+    const snapshot = toInquirySnapshot(row);
+    const qualification = qualifyInquiry(snapshot);
+    const draft = buildInquiryResponseDraft(snapshot, qualification);
+
+    const proposal = await createAgentActionProposal(
+      {
+        companyId,
+        actorId,
+        actorType: "ai",
+        agentProduct: "revenue",
+        actionType: "message.send_proposed",
+        policyVersion: AGENT_POLICY_V1,
+        idempotencyKey,
+        target: anchor.bookingRequest,
+        sourceEventIds: [],
+        confidence: qualification.qualificationScore,
+        reason: qualification.suggestedNextStep,
+        parameters: {
+          workflow: "revenue.inquiry_response",
+          draftType: draft.draftType,
+          channel: draft.channel,
+          subject: draft.subject ?? null,
+          body: draft.body,
+          qualification,
+          groundedFacts: qualification.groundedFacts,
+          missingInputs: qualification.missingInputs,
+          pushTowardBooking: qualification.pushTowardBooking,
+          suggestedNextStep: qualification.suggestedNextStep,
+          recipient: {
+            firstName: snapshot.firstName,
+            lastName: snapshot.lastName,
+            phone: snapshot.phone,
+            email: snapshot.email
+          }
+        }
+      },
+      tx
+    );
+
     await emitEventWithExecutor(tx, {
       companyId,
       eventType: "revenue.inquiry_qualified",
@@ -116,7 +120,7 @@ export async function createInquiryResponseProposal(
       },
       summary: "Revenue agent qualified inquiry for owner review"
     });
-  });
 
-  return { anchor, qualification, draft, proposal };
+    return { anchor, qualification, draft, proposal };
+  });
 }
