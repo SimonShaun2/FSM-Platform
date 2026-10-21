@@ -27,6 +27,7 @@ import {
   coerceColumnMappingForApi,
   coerceImportResults,
   downloadCsvFile,
+  downloadImportTemplateCsv,
   mergeServerMappings
 } from "@/src/lib/csv-import";
 import { ApiError } from "@/src/lib/api";
@@ -73,7 +74,12 @@ function buildErrorCsvRows(errors: ImportErrorRecord[]) {
   }));
 }
 
-export function CSVImportWizardClient() {
+interface CSVImportWizardClientProps {
+  /** FS-11 settings surface (Figma 12:4) vs legacy onboarding route */
+  presentation?: "onboarding" | "settings";
+}
+
+export function CSVImportWizardClient({ presentation = "onboarding" }: CSVImportWizardClientProps) {
   const companyQuery = useCompany();
   const authSession = useMemo(() => getStoredSession(), []);
   const createImportSession = useCreateImportSession();
@@ -347,21 +353,40 @@ export function CSVImportWizardClient() {
     );
   }
 
+  const isSettingsImport = presentation === "settings";
+  const pageTitle = isSettingsImport
+    ? "Bring your business over"
+    : "CSV Import Wizard";
+  const pageSubtitle = isSettingsImport
+    ? "One-time import — not a live connection. Renvani maps, cleans and dedupes it for you."
+    : "Bring customers over from your old system, map the columns with AI help, and launch your onboarding import.";
+
   return (
     <PageLayout
-      title="CSV Import Wizard"
-      subtitle="Bring customers over from your old system, map the columns with AI help, and launch your onboarding import."
+      title={pageTitle}
+      subtitle={pageSubtitle}
       actions={
-        currentStep < 6 ? (
-          <button
-            type="button"
-            onClick={handleCancelImport}
-            disabled={isCancelling}
-            className="inline-flex min-h-11 items-center rounded-full border border-neutral-200 px-5 text-sm font-semibold text-neutral-600 transition hover:border-neutral-300 hover:text-neutral-900 disabled:opacity-60"
-          >
-            Cancel Import
-          </button>
-        ) : null
+        <div className="flex flex-wrap items-center gap-3">
+          {isSettingsImport && currentStep === 1 ? (
+            <button
+              type="button"
+              onClick={() => downloadImportTemplateCsv()}
+              className="inline-flex min-h-11 items-center rounded-[10px] border border-[#e6dccb] bg-white px-[18px] text-sm font-semibold text-[#0f1530] transition hover:border-neutral-300"
+            >
+              Download template
+            </button>
+          ) : null}
+          {currentStep < 6 ? (
+            <button
+              type="button"
+              onClick={handleCancelImport}
+              disabled={isCancelling}
+              className="inline-flex min-h-11 items-center rounded-full border border-neutral-200 px-5 text-sm font-semibold text-neutral-600 transition hover:border-neutral-300 hover:text-neutral-900 disabled:opacity-60"
+            >
+              Cancel Import
+            </button>
+          ) : null}
+        </div>
       }
     >
       <div className="space-y-6">
