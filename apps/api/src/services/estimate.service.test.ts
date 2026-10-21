@@ -5,8 +5,10 @@ import { beforeAll, beforeEach, describe, expect, it, vi } from "vitest";
 import { ErrorCode } from "@fsm/types";
 
 import { setupTestEnv } from "../test-support/env-setup.js";
+import { usePinnedTestSystemTime } from "../test-support/pinned-test-time.js";
 
 setupTestEnv();
+usePinnedTestSystemTime();
 
 const { addAiQueueJob, addNotificationQueueJob } = vi.hoisted(() => ({
   addAiQueueJob: vi.fn(),
