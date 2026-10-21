@@ -26,6 +26,7 @@ import jobRoutes from "./routes/jobs/index.js";
 import messageLogRoutes from "./routes/message-logs/index.js";
 import publicRoutes from "./routes/public/index.js";
 import productRoutes from "./routes/products/index.js";
+import reportingRoutes from "./routes/reporting/index.js";
 import reviewRequestRoutes from "./routes/review-requests/index.js";
 import revenueInquiryRoutes from "./routes/revenue-inquiries/index.js";
 import tenantContextRoutes from "./routes/tenant-context/index.js";
@@ -62,6 +63,7 @@ export async function buildApp() {
   await app.register(dispatchRoutes, { prefix: "/api/v1" });
   await app.register(attachmentRoutes, { prefix: "/api/v1" });
   await app.register(bookingRoutes, { prefix: "/api/v1" });
+  await app.register(reportingRoutes, { prefix: "/api/v1" });
   await app.register(reviewRequestRoutes, { prefix: "/api/v1" });
   await app.register(jobRoutes, { prefix: "/api/v1/jobs" });
   await app.register(jobEngagementRoutes, { prefix: "/api/v1/jobs" });

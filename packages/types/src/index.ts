@@ -14,6 +14,7 @@ export * from "./data-import.contract.js";
 export * from "./spreadsheet-sanitize.js";
 export * from "./invoice.types.js";
 export * from "./job.types.js";
+export * from "./job-source-reporting.types.js";
 export * from "./job-product.types.js";
 export * from "./job-task.types.js";
 export * from "./booking-request.types.js";
