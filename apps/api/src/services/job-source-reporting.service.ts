@@ -17,6 +17,19 @@ type CustomerRow = Pick<typeof customers.$inferSelect, "id" | "leadSource" | "re
 
 export const JOB_ACTIVITY_TIMESTAMP = sql`COALESCE(${jobs.scheduledStart}, ${jobs.createdAt})`;
 
+/** Postgres `postgres` driver rejects Date binds beside SQL expressions — use ISO strings. */
+function jobActivityOnOrAfter(instant: Date) {
+  return gte(JOB_ACTIVITY_TIMESTAMP, instant.toISOString());
+}
+
+function jobActivityOnOrBefore(instant: Date) {
+  return lte(JOB_ACTIVITY_TIMESTAMP, instant.toISOString());
+}
+
+function jobActivityBefore(instant: Date) {
+  return lt(JOB_ACTIVITY_TIMESTAMP, instant.toISOString());
+}
+
 export const UNKNOWN_ATTRIBUTION_DEFINITION =
   "Booked jobs in the period with no job.leadSource, no customer.leadSource, and no customer.referredBy (importSessionId does not count as unknown).";
 
@@ -215,8 +228,8 @@ export async function getJobSourceReportingSummary(
         eq(jobs.companyId, companyId),
         isNull(jobs.deletedAt),
         inArray(jobs.status, BOOKED_JOB_STATUS_LIST),
-        gte(JOB_ACTIVITY_TIMESTAMP, period.start),
-        lte(JOB_ACTIVITY_TIMESTAMP, period.end)
+        jobActivityOnOrAfter(period.start),
+        jobActivityOnOrBefore(period.end)
       )
     );
 
@@ -232,7 +245,7 @@ export async function getJobSourceReportingSummary(
         eq(jobs.companyId, companyId),
         isNull(jobs.deletedAt),
         inArray(jobs.status, PRIOR_JOB_STATUS_LIST),
-        lt(JOB_ACTIVITY_TIMESTAMP, period.start)
+        jobActivityBefore(period.start)
       )
     );
 
