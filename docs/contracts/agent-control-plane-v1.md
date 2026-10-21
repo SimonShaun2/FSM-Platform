@@ -3,6 +3,7 @@
 **Status:** PROPOSED (Pair 1 — FS-37)  
 **Contract version:** `1.0.0` (`contractVersion: "1.0.0"` on every payload)  
 **Types module:** `packages/types/src/agent-control-plane/v1/`  
+**Zod:** exported `*Schema` parsers (e.g. `TenantContextV1Schema`, `AgentActionProposalV1Schema`) from `@fsm/types`  
 **Error mapping:** `docs/contracts/agent-control-plane-v1-errors.md`
 
 ## Tenancy

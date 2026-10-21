@@ -3,6 +3,7 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 
 import { api } from "@/src/lib/api";
+import { publicApi } from "@/src/lib/public-api";
 
 interface PaginatedResponse<TItem> {
   data: TItem[];
@@ -157,7 +158,7 @@ const bookingKeys = {
 export function usePublicBookingSettings(slug: string | null) {
   return useQuery({
     queryKey: slug ? bookingKeys.publicSettings(slug) : bookingKeys.publicSettings("pending"),
-    queryFn: () => api.get<PublicBookingResponse>(`/api/v1/public/booking/${slug}`),
+    queryFn: () => publicApi.get<PublicBookingResponse>(`/api/v1/public/booking/${slug}`),
     enabled: Boolean(slug)
   });
 }
@@ -165,14 +166,14 @@ export function usePublicBookingSettings(slug: string | null) {
 export function useCheckZipCoverage(slug: string) {
   return useMutation({
     mutationFn: (zip: string) =>
-      api.post<ZipCoverageRecord>(`/api/v1/public/booking/${slug}/check-zip`, { zip })
+      publicApi.post<ZipCoverageRecord>(`/api/v1/public/booking/${slug}/check-zip`, { zip })
   });
 }
 
 export function useCaptureBookingInterest(slug: string) {
   return useMutation({
     mutationFn: (input: { zip: string; email: string }) =>
-      api.post<{ success: boolean }>(`/api/v1/public/booking/${slug}/email-capture`, input)
+      publicApi.post<{ success: boolean }>(`/api/v1/public/booking/${slug}/email-capture`, input)
   });
 }
 
@@ -184,7 +185,8 @@ export function usePublicAvailability(slug: string | null, zip: string | null, d
 
   return useQuery({
     queryKey: slug && zip ? bookingKeys.publicAvailability(slug, zip, date) : bookingKeys.publicAvailability("pending", "pending", null),
-    queryFn: () => api.get<PublicAvailabilityResponse>(`/api/v1/public/booking/${slug}/availability?${queryString}`),
+    queryFn: () =>
+      publicApi.get<PublicAvailabilityResponse>(`/api/v1/public/booking/${slug}/availability?${queryString}`),
     enabled: Boolean(slug && zip)
   });
 }
@@ -192,7 +194,10 @@ export function usePublicAvailability(slug: string | null, zip: string | null, d
 export function useSubmitBookingRequest(slug: string) {
   return useMutation({
     mutationFn: ({ source, body }: { source?: string; body: Record<string, unknown> }) =>
-      api.post<SubmitBookingResponse>(`/api/v1/public/booking/${slug}/submit${source ? `?src=${encodeURIComponent(source)}` : ""}`, body)
+      publicApi.post<SubmitBookingResponse>(
+        `/api/v1/public/booking/${slug}/submit${source ? `?src=${encodeURIComponent(source)}` : ""}`,
+        body
+      )
   });
 }
 
@@ -202,7 +207,8 @@ export function useBookingConfirmation(slug: string | null, referenceNumber: str
       slug && referenceNumber
         ? bookingKeys.confirmation(slug, referenceNumber)
         : bookingKeys.confirmation("pending", "pending"),
-    queryFn: () => api.get<ConfirmationResponse>(`/api/v1/public/booking/${slug}/confirmation/${referenceNumber}`),
+    queryFn: () =>
+      publicApi.get<ConfirmationResponse>(`/api/v1/public/booking/${slug}/confirmation/${referenceNumber}`),
     enabled: Boolean(slug && referenceNumber)
   });
 }

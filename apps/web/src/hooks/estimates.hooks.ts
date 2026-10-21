@@ -136,6 +136,25 @@ export interface PublicEstimateTierRecord {
   }>;
 }
 
+export interface PublicEstimateSchedulingRecord {
+  companyName: string;
+  bookingSlug: string;
+  zip: string;
+  customer: {
+    firstName: string;
+    lastName: string;
+    phone: string;
+    email: string | null;
+  };
+  property: {
+    addressLine1: string;
+    addressLine2: string | null;
+    city: string;
+    state: string;
+    zip: string;
+  } | null;
+}
+
 export interface PublicEstimateRecord {
   estimateNumber: string;
   title: string | null;
@@ -201,6 +220,7 @@ interface EstimateItemResponse {
 
 interface PublicEstimateResponse {
   estimate: PublicEstimateRecord;
+  scheduling: PublicEstimateSchedulingRecord | null;
 }
 
 function buildQueryString(values: Record<string, string | number | undefined>) {

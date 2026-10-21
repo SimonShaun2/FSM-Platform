@@ -91,6 +91,20 @@ export interface ConfirmBookingRequestInput {
   scheduledEnd: string;
 }
 
+/** In-platform branded-site slot selection before final confirm (FS-21). */
+export type HoldBookingSlotInput = ConfirmBookingRequestInput;
+
+export interface BookingSlotHoldView {
+  technicianId: string;
+  scheduledStart: string;
+  scheduledEnd: string;
+}
+
+/** Public slot hold requires signed token from submit (FS-21 security). */
+export interface PublicHoldBookingSlotInput extends HoldBookingSlotInput {
+  holdToken: string;
+}
+
 export interface DeclineBookingRequestInput {
   reason?: string;
 }

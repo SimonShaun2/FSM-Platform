@@ -8,6 +8,8 @@ import { env } from "@fsm/config";
 import {
   activityEvents,
   automationRules,
+  bookingSettings,
+  companies,
   customers,
   db,
   emitEventWithExecutor,
@@ -29,6 +31,7 @@ import {
   type Job,
   type ListEstimatesQuery,
   type PaginatedResult,
+  type PublicEstimateSchedulingContext,
   type PublicEstimateView,
   type UpdateEstimateInput,
   type CreateEstimateInput
@@ -1331,6 +1334,100 @@ export async function getPublicEstimate(token: string): Promise<PublicEstimateVi
   }
 
   return buildPublicEstimateView(estimateForView, db);
+}
+
+async function buildPublicEstimateSchedulingContext(
+  estimate: EstimateRow,
+  executor: SelectExecutor
+): Promise<PublicEstimateSchedulingContext | null> {
+  const [companyRows, settingsRows, customerRows, propertyRow] = await Promise.all([
+    executor
+      .select()
+      .from(companies)
+      .where(and(eq(companies.id, estimate.companyId), isNull(companies.deletedAt)))
+      .limit(1),
+    executor
+      .select()
+      .from(bookingSettings)
+      .where(and(eq(bookingSettings.companyId, estimate.companyId), isNull(bookingSettings.deletedAt)))
+      .limit(1),
+    executor
+      .select()
+      .from(customers)
+      .where(
+        and(eq(customers.id, estimate.customerId), eq(customers.companyId, estimate.companyId), isNull(customers.deletedAt))
+      )
+      .limit(1),
+    estimate.propertyId
+      ? executor
+          .select()
+          .from(properties)
+          .where(
+            and(
+              eq(properties.id, estimate.propertyId),
+              eq(properties.companyId, estimate.companyId),
+              isNull(properties.deletedAt)
+            )
+          )
+          .limit(1)
+      : Promise.resolve([])
+  ]);
+
+  const company = companyRows[0];
+  const settings = settingsRows[0];
+  const customer = customerRows[0];
+  const property = propertyRow[0] ?? null;
+
+  if (!company || !settings || !settings.isEnabled || !customer) {
+    return null;
+  }
+
+  const bookingSlug = (settings.bookingSlug ?? company.slug).trim();
+  if (bookingSlug.length === 0) {
+    return null;
+  }
+
+  if (!property) {
+    return null;
+  }
+
+  const zip = property.zip.trim();
+  if (zip.length === 0) {
+    return null;
+  }
+
+  const phone = customer.phone?.trim() ?? "";
+  if (phone.length === 0) {
+    return null;
+  }
+
+  return {
+    companyName: company.name,
+    bookingSlug,
+    zip,
+    customer: {
+      firstName: customer.firstName,
+      lastName: customer.lastName,
+      phone,
+      email: customer.email
+    },
+    property: {
+      addressLine1: property.addressLine1,
+      addressLine2: property.addressLine2,
+      city: property.city,
+      state: property.state,
+      zip: property.zip
+    }
+  };
+}
+
+export async function getPublicEstimateSchedulingContext(
+  token: string,
+  executor: SelectExecutor = db
+): Promise<PublicEstimateSchedulingContext | null> {
+  const estimate = await getEstimateByToken(token, executor);
+  assertEstimateNotExpired(estimate);
+  return buildPublicEstimateSchedulingContext(estimate, executor);
 }
 
 export async function customerApproveEstimate(

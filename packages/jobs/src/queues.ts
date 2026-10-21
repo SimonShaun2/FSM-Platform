@@ -10,7 +10,8 @@ export const QUEUE_NAMES = {
   notifications: "notifications",
   invoices: "invoices",
   agreements: "agreements",
-  webhooks: "webhooks"
+  webhooks: "webhooks",
+  operator: "operator"
 } as const;
 
 export const queueBaseOptions = {
@@ -29,3 +30,5 @@ export const invoicesQueue = new Queue(QUEUE_NAMES.invoices, queueBaseOptions);
 export const agreementsQueue = new Queue(QUEUE_NAMES.agreements, queueBaseOptions);
 
 export const webhooksQueue = new Queue(QUEUE_NAMES.webhooks, queueBaseOptions);
+
+export const operatorQueue = new Queue(QUEUE_NAMES.operator, queueBaseOptions);

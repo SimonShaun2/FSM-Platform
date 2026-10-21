@@ -8,6 +8,7 @@ import authenticatePlugin from "./plugins/authenticate.js";
 import errorHandlerPlugin from "./plugins/error-handler.js";
 import requestLoggerPlugin from "./plugins/request-logger.js";
 import activityEventRoutes from "./routes/activity-events/index.js";
+import agentActionRoutes from "./routes/agent-actions/index.js";
 import aiRoutes from "./routes/ai/index.js";
 import automationRuleRoutes from "./routes/automation-rules/index.js";
 import attachmentRoutes from "./routes/attachments/index.js";
@@ -25,7 +26,10 @@ import jobRoutes from "./routes/jobs/index.js";
 import messageLogRoutes from "./routes/message-logs/index.js";
 import publicRoutes from "./routes/public/index.js";
 import productRoutes from "./routes/products/index.js";
+import reportingRoutes from "./routes/reporting/index.js";
 import reviewRequestRoutes from "./routes/review-requests/index.js";
+import revenueInquiryRoutes from "./routes/revenue-inquiries/index.js";
+import tenantContextRoutes from "./routes/tenant-context/index.js";
 import serviceAgreementRoutes from "./routes/service-agreements/index.js";
 import stripeRoutes from "./routes/stripe/index.js";
 import technicianExtensionRoutes from "./routes/technician-extensions/index.js";
@@ -47,6 +51,9 @@ export async function buildApp() {
   await app.register(fastifyMultipart);
 
   await app.register(activityEventRoutes, { prefix: "/api/v1" });
+  await app.register(agentActionRoutes, { prefix: "/api/v1" });
+  await app.register(tenantContextRoutes, { prefix: "/api/v1" });
+  await app.register(revenueInquiryRoutes, { prefix: "/api/v1" });
   await app.register(aiRoutes, { prefix: "/api/v1/ai" });
   await app.register(automationRuleRoutes, { prefix: "/api/v1" });
   await app.register(authRoutes, { prefix: "/api/v1/auth" });
@@ -56,6 +63,7 @@ export async function buildApp() {
   await app.register(dispatchRoutes, { prefix: "/api/v1" });
   await app.register(attachmentRoutes, { prefix: "/api/v1" });
   await app.register(bookingRoutes, { prefix: "/api/v1" });
+  await app.register(reportingRoutes, { prefix: "/api/v1" });
   await app.register(reviewRequestRoutes, { prefix: "/api/v1" });
   await app.register(jobRoutes, { prefix: "/api/v1/jobs" });
   await app.register(jobEngagementRoutes, { prefix: "/api/v1/jobs" });

@@ -21,6 +21,7 @@ const ROLE_ALLOWED_PREFIXES: Record<UserRole, string[]> = {
     "/review-requests",
     "/reporting",
     "/settings",
+    "/growth",
     "/mobile"
   ],
   admin: [
@@ -37,6 +38,7 @@ const ROLE_ALLOWED_PREFIXES: Record<UserRole, string[]> = {
     "/review-requests",
     "/reporting",
     "/settings",
+    "/growth",
     "/mobile"
   ],
   dispatcher: [
@@ -88,6 +90,10 @@ export function isPublicRoute(pathname: string): boolean {
   const segments = pathname.split("/").filter(Boolean);
 
   if (segments[0] === "book" && segments.length >= 2) {
+    return true;
+  }
+
+  if (segments[0] === "site" && segments.length >= 2) {
     return true;
   }
 

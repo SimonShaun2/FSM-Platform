@@ -1,4 +1,4 @@
-import { and, eq, isNull } from "drizzle-orm";
+import { and, eq, inArray, isNull } from "drizzle-orm";
 import pino from "pino";
 
 import {
@@ -14,7 +14,9 @@ import { importsQueue } from "@fsm/jobs";
 import {
   AppError,
   ErrorCode,
+  sanitizeSpreadsheetCell,
   type ColumnMapping,
+  type ImportCustomerUpdateSnapshotV1,
   type ImportEntityType,
   type ImportSession,
   type ImportSessionStatus,
@@ -101,6 +103,64 @@ function normalizeValidationErrors(value: unknown): ValidationError[] {
 
 function normalizeAiInferences(value: unknown): Record<string, unknown> {
   return isPlainObject(value) ? value : {};
+}
+
+function extractCustomerUpdateSnapshots(aiInferences: unknown): ImportCustomerUpdateSnapshotV1[] {
+  const root = normalizeAiInferences(aiInferences);
+  const rollbackSnapshots = root.rollbackSnapshots;
+
+  if (!isPlainObject(rollbackSnapshots)) {
+    return [];
+  }
+
+  const updates = rollbackSnapshots.customerUpdates;
+
+  if (!Array.isArray(updates)) {
+    return [];
+  }
+
+  const snapshots: ImportCustomerUpdateSnapshotV1[] = [];
+
+  for (const entry of updates) {
+    if (!isPlainObject(entry) || typeof entry.customerId !== "string") {
+      continue;
+    }
+
+    const before = entry.before;
+
+    if (!isPlainObject(before)) {
+      continue;
+    }
+
+    if (
+      typeof before.firstName !== "string" ||
+      typeof before.lastName !== "string" ||
+      !Array.isArray(before.tags)
+    ) {
+      continue;
+    }
+
+    const propertyIds = Array.isArray(entry.propertyIds)
+      ? entry.propertyIds.filter((id): id is string => typeof id === "string")
+      : [];
+
+    snapshots.push({
+      customerId: entry.customerId,
+      before: {
+        firstName: before.firstName,
+        lastName: before.lastName,
+        displayName: typeof before.displayName === "string" ? before.displayName : null,
+        email: typeof before.email === "string" ? before.email : null,
+        phone: typeof before.phone === "string" ? before.phone : null,
+        altPhone: typeof before.altPhone === "string" ? before.altPhone : null,
+        tags: before.tags.filter((tag): tag is string => typeof tag === "string"),
+        internalNotes: typeof before.internalNotes === "string" ? before.internalNotes : null
+      },
+      propertyIds
+    });
+  }
+
+  return snapshots;
 }
 
 function toImportSession(row: ImportSessionRow): ImportSession {
@@ -457,8 +517,50 @@ export async function rollbackImport(
     throw new AppError(ErrorCode.CONFLICT, "Only completed imports can be rolled back");
   }
 
+  const customerUpdateSnapshots = extractCustomerUpdateSnapshots(importSession.aiInferences);
+
   return db.transaction(async (tx) => {
     const now = new Date();
+
+    for (const snapshot of customerUpdateSnapshots) {
+      await tx
+        .update(customers)
+        .set({
+          firstName: snapshot.before.firstName,
+          lastName: snapshot.before.lastName,
+          displayName: snapshot.before.displayName,
+          email: snapshot.before.email,
+          phone: snapshot.before.phone,
+          altPhone: snapshot.before.altPhone,
+          tags: snapshot.before.tags,
+          internalNotes: snapshot.before.internalNotes,
+          importSessionId: null,
+          updatedAt: now
+        })
+        .where(
+          and(
+            eq(customers.companyId, companyId),
+            eq(customers.id, snapshot.customerId),
+            isNull(customers.deletedAt)
+          )
+        );
+
+      if (snapshot.propertyIds.length > 0) {
+        await tx
+          .update(properties)
+          .set({
+            deletedAt: now,
+            updatedAt: now
+          })
+          .where(
+            and(
+              eq(properties.companyId, companyId),
+              inArray(properties.id, snapshot.propertyIds),
+              isNull(properties.deletedAt)
+            )
+          );
+      }
+    }
 
     await tx
       .update(customers)
@@ -557,5 +659,8 @@ export async function getImportErrors(
   importSessionId: string
 ): Promise<ValidationError[]> {
   const importSession = await getImportSessionRow(companyId, importSessionId, db);
-  return normalizeValidationErrors(importSession.validationErrors);
+  return normalizeValidationErrors(importSession.validationErrors).map((entry) => ({
+    ...entry,
+    value: sanitizeSpreadsheetCell(entry.value)
+  }));
 }

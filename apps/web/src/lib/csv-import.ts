@@ -10,6 +10,41 @@ import type {
 
 export const CSV_IMPORT_FILE_SIZE_LIMIT_BYTES = 10 * 1024 * 1024;
 
+const IMPORT_TEMPLATE_HEADERS = [
+  "firstName",
+  "lastName",
+  "email",
+  "phone",
+  "addressLine1",
+  "city",
+  "state",
+  "zip",
+  "notes"
+];
+
+/** FS-11 — operator template (customers); one-way import only. */
+export function downloadImportTemplateCsv(): void {
+  const sampleRow = [
+    "Kim",
+    "Patel",
+    "kim@example.com",
+    "5550100",
+    "101 Main St",
+    "Tulsa",
+    "OK",
+    "74103",
+    "Imported from prior system"
+  ];
+  downloadCsvFile(
+    "renvani-customer-import-template.csv",
+    [
+      Object.fromEntries(
+        IMPORT_TEMPLATE_HEADERS.map((header, index) => [header, sampleRow[index] ?? ""])
+      )
+    ]
+  );
+}
+
 export const CSV_IMPORT_FIELD_OPTIONS = [
   { value: "firstName", label: "First Name" },
   { value: "lastName", label: "Last Name" },

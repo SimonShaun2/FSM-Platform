@@ -58,3 +58,18 @@ AI-native field service management monorepo for HVAC, plumbing, and home service
 
 - Generate a migration: `pnpm --filter @fsm/db db:generate`
 - Apply migrations: `pnpm --filter @fsm/db db:migrate`
+
+## QA: Branded site → booking (local)
+
+After migrations and `pnpm dev`, use a tenant with **Settings → Booking** enabled and a unique `booking_slug` (defaults to company slug).
+
+```bash
+BOOKING_SLUG=your-company-slug ./scripts/qa-branded-site-local.sh
+```
+
+Manual path:
+
+1. `http://localhost:3000/site/{slug}` — branded Growth storefront (FS-58)
+2. **Book a clean** / **Book this time** → `http://localhost:3000/book/{slug}?src=website` (public booking / FS-21 handoff)
+
+The script verifies `GET /api/v1/public/booking/{slug}` on the API host before you open the browser. In the browser, public booking calls use same-origin `/api/v1/public/*` (Next.js rewrite to the API).
