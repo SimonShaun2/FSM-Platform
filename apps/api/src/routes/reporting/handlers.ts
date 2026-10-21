@@ -9,7 +9,11 @@ export async function getJobSourceReportingHandler(
   reply: FastifyReply
 ): Promise<FastifyReply> {
   const query = request.query as JobSourceReportingQuery;
-  const summary = await getJobSourceReportingSummary(request.company.id, query);
+  const summary = await getJobSourceReportingSummary(
+    request.company.id,
+    request.company.timezone,
+    query
+  );
 
   return reply.send(summary);
 }

@@ -3335,11 +3335,58 @@ interface TestDb {
   };
 }
 
+function projectRows<T extends Record<string, unknown>>(
+  rows: T[],
+  projection?: Record<string, unknown>
+): Array<Record<string, unknown>> {
+  if (!projection) {
+    return rows;
+  }
+
+  return rows.map((row) => {
+    const projected: Record<string, unknown> = {};
+
+    for (const [alias, column] of Object.entries(projection)) {
+      const fieldKey = resolveFieldKey(column);
+      projected[alias] = row[fieldKey as keyof T];
+    }
+
+    return projected;
+  });
+}
+
 export const db: TestDb = {
-  select() {
+  select(projection?: Record<string, unknown>) {
     return {
       from(table: MockTable) {
-        return createSelectChain(getRows(table.__name) as unknown as Array<Record<string, unknown>>);
+        const chain = createSelectChain(getRows(table.__name) as unknown as Array<Record<string, unknown>>);
+
+        if (!projection) {
+          return chain;
+        }
+
+        const mapRows = (rows: Array<Record<string, unknown>>) => projectRows(rows, projection);
+
+        return {
+          where(predicate: Predicate<Record<string, unknown>>) {
+            const filteredChain = chain.where(predicate);
+
+            return {
+              then<TResult1 = Record<string, unknown>[], TResult2 = never>(
+                onfulfilled?: ((value: Record<string, unknown>[]) => TResult1 | PromiseLike<TResult1>) | null,
+                onrejected?: ((reason: unknown) => TResult2 | PromiseLike<TResult2>) | null
+              ) {
+                return filteredChain.then(mapRows).then(onfulfilled, onrejected);
+              }
+            };
+          },
+          then<TResult1 = Record<string, unknown>[], TResult2 = never>(
+            onfulfilled?: ((value: Record<string, unknown>[]) => TResult1 | PromiseLike<TResult1>) | null,
+            onrejected?: ((reason: unknown) => TResult2 | PromiseLike<TResult2>) | null
+          ) {
+            return chain.then(mapRows).then(onfulfilled, onrejected);
+          }
+        };
       }
     };
   },
@@ -3678,11 +3725,36 @@ export async function listActiveCompanyIdsForRevenueSummary(
   return orderedCompanyIds.slice(offset, offset + limit);
 }
 
+const JOB_ACTIVITY_AT_MARKER = { __jobActivityAt: true as const };
+
+function isJobActivityMarker(value: unknown): boolean {
+  return Boolean(value && typeof value === "object" && "__jobActivityAt" in value);
+}
+
+function getJobActivityAt(row: Record<string, unknown>): Date | null {
+  const activity = row.scheduledStart ?? row.createdAt;
+
+  if (!activity) {
+    return null;
+  }
+
+  return activity instanceof Date ? activity : new Date(String(activity));
+}
+
+function resolveFieldKey(field: unknown): string {
+  return typeof field === "string" ? field : String(field);
+}
+
 export function createDrizzleModuleMock() {
-  const sqlTag = (
-    _strings: TemplateStringsArray,
-    ..._values: unknown[]
-  ) => ({});
+  const sqlTag = (strings: TemplateStringsArray, ..._values: unknown[]) => {
+    const template = strings.join("");
+
+    if (template.includes("COALESCE")) {
+      return JOB_ACTIVITY_AT_MARKER;
+    }
+
+    return {};
+  };
 
   return {
     and: <T>(...predicates: Array<Predicate<T>>): Predicate<T> => (row: T) =>
@@ -3695,10 +3767,41 @@ export function createDrizzleModuleMock() {
       direction: "desc",
       field: String(field)
     }),
-    eq: <T>(field: keyof T, value: T[keyof T]): Predicate<T> => (row: T) => row[field] === value,
+    eq: <T>(field: keyof T, value: T[keyof T]): Predicate<T> => (row: T) =>
+      row[resolveFieldKey(field) as keyof T] === value,
     gt: <T>(field: keyof T, value: T[keyof T]): Predicate<T> => (row: T) =>
-      (row[field] as string | number | Date) > (value as string | number | Date),
-    isNull: <T>(field: keyof T): Predicate<T> => (row: T) => row[field] === null,
+      (row[resolveFieldKey(field) as keyof T] as string | number | Date) >
+      (value as string | number | Date),
+    gte: <T>(field: unknown, value: T[keyof T]): Predicate<T> => (row: T) => {
+      if (isJobActivityMarker(field)) {
+        const activity = getJobActivityAt(row as Record<string, unknown>);
+        return activity !== null && activity.getTime() >= new Date(value as Date).getTime();
+      }
+
+      const key = resolveFieldKey(field) as keyof T;
+      return (row[key] as string | number | Date) >= (value as string | number | Date);
+    },
+    lte: <T>(field: unknown, value: T[keyof T]): Predicate<T> => (row: T) => {
+      if (isJobActivityMarker(field)) {
+        const activity = getJobActivityAt(row as Record<string, unknown>);
+        return activity !== null && activity.getTime() <= new Date(value as Date).getTime();
+      }
+
+      const key = resolveFieldKey(field) as keyof T;
+      return (row[key] as string | number | Date) <= (value as string | number | Date);
+    },
+    lt: <T>(field: unknown, value: T[keyof T]): Predicate<T> => (row: T) => {
+      if (isJobActivityMarker(field)) {
+        const activity = getJobActivityAt(row as Record<string, unknown>);
+        return activity !== null && activity.getTime() < new Date(value as Date).getTime();
+      }
+
+      const key = resolveFieldKey(field) as keyof T;
+      return (row[key] as string | number | Date) < (value as string | number | Date);
+    },
+    inArray: <T>(field: unknown, values: Array<T[keyof T]>): Predicate<T> => (row: T) =>
+      values.includes(row[resolveFieldKey(field) as keyof T]),
+    isNull: <T>(field: keyof T): Predicate<T> => (row: T) => row[resolveFieldKey(field) as keyof T] === null,
     sql: sqlTag
   };
 }

@@ -97,6 +97,95 @@ describe("GET /api/v1/reporting/job-sources", () => {
     expect(response.body.totals.bookedJobCount).toBe(1);
     expect(response.body.totals.revenue).toBe("150.00");
     expect(response.body.channels).toHaveLength(5);
+    expect(response.body.period.dateInterpretation).toBe("company_local_days");
+    expect(response.body.totals.unknownAttributionDefinition).toContain("leadSource");
+    expect(response.body.channels[0]).not.toHaveProperty("jobIds");
+  });
+
+  it("returns 403 for technician users", async () => {
+    const company = fakeDb.seedCompany({ name: "Role Co", slug: "role-co" });
+    const technician = fakeDb.seedUser({
+      companyId: company.id,
+      email: "tech@role-co.test",
+      firstName: "Tech",
+      lastName: "User",
+      role: "technician"
+    });
+
+    const accessToken = tokens.generateAccessToken({
+      userId: technician.id,
+      companyId: company.id,
+      role: technician.role
+    });
+
+    const response = await request(app.server)
+      .get("/api/v1/reporting/job-sources")
+      .query({ startDate: "2026-10-01", endDate: "2026-10-31" })
+      .set("Authorization", `Bearer ${accessToken}`)
+      .expect(403);
+
+    expect(response.body.error).toBe("FORBIDDEN");
+  });
+
+  it("does not include another tenant's jobs in the summary", async () => {
+    const companyA = fakeDb.seedCompany({ name: "Iso A", slug: "iso-a" });
+    const companyB = fakeDb.seedCompany({ name: "Iso B", slug: "iso-b" });
+    const userB = fakeDb.seedUser({
+      companyId: companyB.id,
+      email: "owner@iso-b.test",
+      firstName: "Owner",
+      lastName: "B",
+      role: "owner"
+    });
+    const customerA = fakeDb.seedCustomer({
+      companyId: companyA.id,
+      firstName: "Other",
+      lastName: "Tenant",
+      leadSource: "website"
+    });
+    const customerB = fakeDb.seedCustomer({
+      companyId: companyB.id,
+      firstName: "Mine",
+      lastName: "Tenant",
+      leadSource: "website"
+    });
+
+    fakeDb.seedJob({
+      companyId: companyA.id,
+      customerId: customerA.id,
+      jobNumber: "JOB-OTHER",
+      title: "Other tenant job",
+      status: "completed",
+      leadSource: "website",
+      scheduledStart: new Date("2026-10-05T12:00:00.000Z"),
+      amountPaid: "999.00"
+    });
+
+    fakeDb.seedJob({
+      companyId: companyB.id,
+      customerId: customerB.id,
+      jobNumber: "JOB-MINE",
+      title: "My job",
+      status: "completed",
+      leadSource: "website",
+      scheduledStart: new Date("2026-10-05T12:00:00.000Z"),
+      amountPaid: "75.00"
+    });
+
+    const accessToken = tokens.generateAccessToken({
+      userId: userB.id,
+      companyId: companyB.id,
+      role: userB.role
+    });
+
+    const response = await request(app.server)
+      .get("/api/v1/reporting/job-sources")
+      .query({ startDate: "2026-10-01", endDate: "2026-10-31" })
+      .set("Authorization", `Bearer ${accessToken}`)
+      .expect(200);
+
+    expect(response.body.totals.bookedJobCount).toBe(1);
+    expect(response.body.totals.revenue).toBe("75.00");
   });
 
   it("rejects unauthenticated requests", async () => {

@@ -187,13 +187,16 @@ describe("getJobSourceReportingSummary", () => {
       scheduledStart: new Date("2026-10-11T09:00:00.000Z")
     });
 
-    const summary = await reporting.getJobSourceReportingSummary(company.id, {
+    const summary = await reporting.getJobSourceReportingSummary(company.id, company.timezone, {
       startDate: "2026-10-01",
       endDate: "2026-10-31"
     });
 
+    expect(summary.period.timeZone).toBe(company.timezone);
+    expect(summary.period.dateInterpretation).toBe("company_local_days");
     expect(summary.totals.bookedJobCount).toBe(4);
     expect(summary.totals.revenue).toBe("820.00");
+    expect(summary.totals.unknownAttributionDefinition).toBe(reporting.UNKNOWN_ATTRIBUTION_DEFINITION);
 
     const byChannel = new Map(summary.channels.map((channel) => [channel.channel, channel]));
 
@@ -202,5 +205,53 @@ describe("getJobSourceReportingSummary", () => {
     expect(byChannel.get("repeat_customers")?.bookedJobCount).toBe(1);
     expect(byChannel.get("imported_or_other")?.bookedJobCount).toBe(1);
     expect(summary.totals.unknownAttributionCount).toBe(0);
+    expect(byChannel.get("own_website")).not.toHaveProperty("jobIds");
+  });
+
+  it("omits other companies' jobs (tenant scope via SQL filters)", async () => {
+    const companyA = fakeDb.seedCompany({ name: "Tenant A", slug: "tenant-a" });
+    const companyB = fakeDb.seedCompany({ name: "Tenant B", slug: "tenant-b" });
+    const customerA = fakeDb.seedCustomer({
+      companyId: companyA.id,
+      firstName: "A",
+      lastName: "Customer",
+      leadSource: "website"
+    });
+    const customerB = fakeDb.seedCustomer({
+      companyId: companyB.id,
+      firstName: "B",
+      lastName: "Customer",
+      leadSource: "website"
+    });
+
+    fakeDb.seedJob({
+      companyId: companyA.id,
+      customerId: customerA.id,
+      jobNumber: "JOB-A1",
+      title: "A job",
+      status: "completed",
+      leadSource: "website",
+      scheduledStart: new Date("2026-10-10T12:00:00.000Z"),
+      amountPaid: "100.00"
+    });
+
+    fakeDb.seedJob({
+      companyId: companyB.id,
+      customerId: customerB.id,
+      jobNumber: "JOB-B1",
+      title: "B job",
+      status: "completed",
+      leadSource: "website",
+      scheduledStart: new Date("2026-10-10T12:00:00.000Z"),
+      amountPaid: "50.00"
+    });
+
+    const summaryB = await reporting.getJobSourceReportingSummary(companyB.id, companyB.timezone, {
+      startDate: "2026-10-01",
+      endDate: "2026-10-31"
+    });
+
+    expect(summaryB.totals.bookedJobCount).toBe(1);
+    expect(summaryB.totals.revenue).toBe("50.00");
   });
 });

@@ -1,4 +1,4 @@
-import { and, eq, isNull } from "drizzle-orm";
+import { and, eq, gte, inArray, isNull, lt, lte, sql } from "drizzle-orm";
 import { Decimal } from "decimal.js";
 
 import { customers, db, jobs } from "@fsm/db";
@@ -12,10 +12,19 @@ import {
   type JobStatus
 } from "@fsm/types";
 
-type JobRow = typeof jobs.$inferSelect;
-type CustomerRow = typeof customers.$inferSelect;
+import { resolveReportingPeriod } from "../lib/reporting-period.js";
 
-const BOOKED_JOB_STATUSES = new Set<JobStatus>([
+type JobRow = typeof jobs.$inferSelect;
+type CustomerRow = Pick<typeof customers.$inferSelect, "id" | "leadSource" | "referredBy">;
+
+export const JOB_ACTIVITY_TIMESTAMP = sql`COALESCE(${jobs.scheduledStart}, ${jobs.createdAt})`;
+
+export const UNKNOWN_ATTRIBUTION_DEFINITION =
+  "Booked jobs in the period with no job.leadSource, no customer.leadSource, and no customer.referredBy (importSessionId does not count as unknown).";
+
+export const MAX_JOB_IDS_PER_CHANNEL = 25;
+
+const BOOKED_JOB_STATUS_LIST: JobStatus[] = [
   "estimate_approved",
   "scheduled",
   "dispatched",
@@ -24,9 +33,9 @@ const BOOKED_JOB_STATUSES = new Set<JobStatus>([
   "completed",
   "invoiced",
   "paid"
-]);
+];
 
-const PRIOR_JOB_STATUSES_FOR_REPEAT = new Set<JobStatus>([
+const PRIOR_JOB_STATUS_LIST: JobStatus[] = [
   "estimate_approved",
   "scheduled",
   "dispatched",
@@ -36,7 +45,7 @@ const PRIOR_JOB_STATUSES_FOR_REPEAT = new Set<JobStatus>([
   "invoiced",
   "paid",
   "closed"
-]);
+];
 
 const CHANNEL_ORDER: JobGrowthChannel[] = [
   "own_website",
@@ -76,24 +85,6 @@ const OWN_WEBSITE_LEAD_SOURCES = new Set([
 
 const REFERRAL_LEAD_SOURCES = new Set(["referral", "referred", "word_of_mouth"]);
 
-function parseReportingDate(value: string, boundary: "start" | "end"): Date {
-  const trimmed = value.trim();
-
-  if (/^\d{4}-\d{2}-\d{2}$/u.test(trimmed)) {
-    return boundary === "start"
-      ? new Date(`${trimmed}T00:00:00.000Z`)
-      : new Date(`${trimmed}T23:59:59.999Z`);
-  }
-
-  const parsed = new Date(trimmed);
-
-  if (Number.isNaN(parsed.getTime())) {
-    throw new AppError(ErrorCode.VALIDATION_ERROR, "startDate and endDate must be valid ISO dates");
-  }
-
-  return parsed;
-}
-
 function normalizeLeadSource(value: string | null | undefined): string | null {
   if (!value) {
     return null;
@@ -101,10 +92,6 @@ function normalizeLeadSource(value: string | null | undefined): string | null {
 
   const normalized = value.trim().toLowerCase();
   return normalized.length > 0 ? normalized : null;
-}
-
-function getJobActivityDate(job: JobRow): Date {
-  return job.scheduledStart ?? job.createdAt;
 }
 
 function getJobRevenue(job: JobRow): Decimal {
@@ -168,7 +155,10 @@ export function classifyJobGrowthChannel(input: {
   return "imported_or_other";
 }
 
-function isUnknownAttribution(job: Pick<JobRow, "leadSource" | "importSessionId">, customer: CustomerRow | null): boolean {
+function isUnknownAttribution(
+  job: Pick<JobRow, "leadSource" | "importSessionId">,
+  customer: CustomerRow | null
+): boolean {
   if (job.importSessionId) {
     return false;
   }
@@ -179,58 +169,101 @@ function isUnknownAttribution(job: Pick<JobRow, "leadSource" | "importSessionId"
   return !jobSource && !customerSource && !customer?.referredBy;
 }
 
+function buildEmptySummary(
+  period: ReturnType<typeof resolveReportingPeriod>,
+  includeJobIds: boolean
+): JobSourceReportingSummary {
+  const channels: JobSourceChannelSummary[] = CHANNEL_ORDER.map((channel) => ({
+    channel,
+    label: CHANNEL_LABELS[channel],
+    bookedJobCount: 0,
+    revenue: "0.00",
+    shareOfBookedJobs: 0,
+    ...(includeJobIds ? { jobIds: [], jobIdsTruncated: false } : {})
+  }));
+
+  return {
+    period: {
+      startDate: period.start.toISOString(),
+      endDate: period.end.toISOString(),
+      timeZone: period.timeZone,
+      dateInterpretation: period.dateInterpretation
+    },
+    totals: {
+      bookedJobCount: 0,
+      revenue: "0.00",
+      unknownAttributionCount: 0,
+      unknownAttributionDefinition: UNKNOWN_ATTRIBUTION_DEFINITION
+    },
+    channels
+  };
+}
+
 export async function getJobSourceReportingSummary(
   companyId: string,
+  timeZone: string,
   query: JobSourceReportingQuery
 ): Promise<JobSourceReportingSummary> {
-  const start = parseReportingDate(query.startDate, "start");
-  const end = parseReportingDate(query.endDate, "end");
+  const period = resolveReportingPeriod(query.startDate, query.endDate, timeZone);
+  const includeJobIds = query.includeJobIds === true;
 
-  if (start > end) {
+  if (period.start > period.end) {
     throw new AppError(ErrorCode.VALIDATION_ERROR, "startDate must be on or before endDate");
   }
 
-  const jobRows = await db
+  const periodJobRows = await db
     .select()
     .from(jobs)
-    .where(and(eq(jobs.companyId, companyId), isNull(jobs.deletedAt)));
+    .where(
+      and(
+        eq(jobs.companyId, companyId),
+        isNull(jobs.deletedAt),
+        inArray(jobs.status, BOOKED_JOB_STATUS_LIST),
+        gte(JOB_ACTIVITY_TIMESTAMP, period.start),
+        lte(JOB_ACTIVITY_TIMESTAMP, period.end)
+      )
+    );
+
+  if (periodJobRows.length === 0) {
+    return buildEmptySummary(period, includeJobIds);
+  }
+
+  const priorCustomerRows = await db
+    .select({ customerId: jobs.customerId })
+    .from(jobs)
+    .where(
+      and(
+        eq(jobs.companyId, companyId),
+        isNull(jobs.deletedAt),
+        inArray(jobs.status, PRIOR_JOB_STATUS_LIST),
+        lt(JOB_ACTIVITY_TIMESTAMP, period.start)
+      )
+    );
+
+  const priorCustomerIds = new Set(priorCustomerRows.map((row) => row.customerId));
+
+  const customerIds = [...new Set(periodJobRows.map((job) => job.customerId))];
 
   const customerRows = await db
-    .select()
+    .select({
+      id: customers.id,
+      leadSource: customers.leadSource,
+      referredBy: customers.referredBy
+    })
     .from(customers)
-    .where(and(eq(customers.companyId, companyId), isNull(customers.deletedAt)));
+    .where(
+      and(
+        eq(customers.companyId, companyId),
+        isNull(customers.deletedAt),
+        inArray(customers.id, customerIds)
+      )
+    );
 
   const customerById = new Map(customerRows.map((customer) => [customer.id, customer]));
 
-  const priorBookedByCustomer = new Map<string, number>();
-
-  for (const job of jobRows) {
-    if (job.status === "cancelled" || job.createdAt >= start) {
-      continue;
-    }
-
-    if (!PRIOR_JOB_STATUSES_FOR_REPEAT.has(job.status as JobStatus)) {
-      continue;
-    }
-
-    priorBookedByCustomer.set(job.customerId, (priorBookedByCustomer.get(job.customerId) ?? 0) + 1);
-  }
-
-  const channelBuckets = new Map<JobGrowthChannel, { count: number; revenue: Decimal; jobIds: string[] }>(
-    CHANNEL_ORDER.map((channel) => [channel, { count: 0, revenue: new Decimal(0), jobIds: [] }])
-  );
-
   const bookedJobsByCustomer = new Map<string, JobRow[]>();
 
-  for (const job of jobRows) {
-    if (job.status === "cancelled") {
-      continue;
-    }
-
-    if (!BOOKED_JOB_STATUSES.has(job.status as JobStatus)) {
-      continue;
-    }
-
+  for (const job of periodJobRows) {
     const existing = bookedJobsByCustomer.get(job.customerId) ?? [];
     existing.push(job);
     bookedJobsByCustomer.set(job.customerId, existing);
@@ -240,30 +273,20 @@ export async function getJobSourceReportingSummary(
     customerJobs.sort((left, right) => left.createdAt.getTime() - right.createdAt.getTime());
   }
 
+  const channelBuckets = new Map<
+    JobGrowthChannel,
+    { count: number; revenue: Decimal; jobIds: string[] }
+  >(CHANNEL_ORDER.map((channel) => [channel, { count: 0, revenue: new Decimal(0), jobIds: [] }]));
+
   let bookedJobCount = 0;
   let totalRevenue = new Decimal(0);
   let unknownAttributionCount = 0;
 
-  for (const job of jobRows) {
-    if (job.status === "cancelled") {
-      continue;
-    }
-
-    const activityDate = getJobActivityDate(job);
-
-    if (activityDate < start || activityDate > end) {
-      continue;
-    }
-
-    if (!BOOKED_JOB_STATUSES.has(job.status as JobStatus)) {
-      continue;
-    }
-
+  for (const job of periodJobRows) {
     const customer = customerById.get(job.customerId) ?? null;
-    const priorCount = priorBookedByCustomer.get(job.customerId) ?? 0;
     const customerJobs = bookedJobsByCustomer.get(job.customerId) ?? [];
     const jobIndex = customerJobs.findIndex((candidate) => candidate.id === job.id);
-    const hasPriorBookedJob = priorCount > 0 || jobIndex > 0;
+    const hasPriorBookedJob = priorCustomerIds.has(job.customerId) || jobIndex > 0;
 
     const channel = classifyJobGrowthChannel({
       job,
@@ -295,25 +318,36 @@ export async function getJobSourceReportingSummary(
     const shareOfBookedJobs =
       bookedJobCount > 0 ? Math.round((bucket.count / bookedJobCount) * 10_000) / 100 : 0;
 
+    const jobIdsTruncated = bucket.jobIds.length > MAX_JOB_IDS_PER_CHANNEL;
+    const visibleJobIds = includeJobIds ? bucket.jobIds.slice(0, MAX_JOB_IDS_PER_CHANNEL) : undefined;
+
     return {
       channel,
       label: CHANNEL_LABELS[channel],
       bookedJobCount: bucket.count,
       revenue: formatMoney(bucket.revenue),
       shareOfBookedJobs,
-      jobIds: bucket.jobIds
+      ...(includeJobIds
+        ? {
+            jobIds: visibleJobIds ?? [],
+            jobIdsTruncated
+          }
+        : {})
     };
   });
 
   return {
     period: {
-      startDate: start.toISOString(),
-      endDate: end.toISOString()
+      startDate: period.start.toISOString(),
+      endDate: period.end.toISOString(),
+      timeZone: period.timeZone,
+      dateInterpretation: period.dateInterpretation
     },
     totals: {
       bookedJobCount,
       revenue: formatMoney(totalRevenue),
-      unknownAttributionCount
+      unknownAttributionCount,
+      unknownAttributionDefinition: UNKNOWN_ATTRIBUTION_DEFINITION
     },
     channels
   };

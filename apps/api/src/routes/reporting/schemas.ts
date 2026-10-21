@@ -12,7 +12,11 @@ const isoDateSchema = z
 
 export const jobSourceReportingQuerySchema = z.object({
   startDate: isoDateSchema,
-  endDate: isoDateSchema
+  endDate: isoDateSchema,
+  includeJobIds: z
+    .enum(["true", "false"])
+    .optional()
+    .transform((value) => value === "true")
 });
 
 export const jobSourceReportingValidation = withZodValidation({
@@ -22,7 +26,7 @@ export const jobSourceReportingValidation = withZodValidation({
 const channelSchema = {
   type: "object",
   additionalProperties: false,
-  required: ["channel", "label", "bookedJobCount", "revenue", "shareOfBookedJobs", "jobIds"],
+  required: ["channel", "label", "bookedJobCount", "revenue", "shareOfBookedJobs"],
   properties: {
     channel: {
       type: "string",
@@ -35,7 +39,8 @@ const channelSchema = {
     jobIds: {
       type: "array",
       items: { type: "string" }
-    }
+    },
+    jobIdsTruncated: { type: "boolean" }
   }
 } as const;
 
@@ -61,14 +66,20 @@ const errorResponseSchema = {
 
 export const jobSourceReportingRouteSchema = {
   tags: ["reporting"],
-  summary: "Job source reporting summary",
+  summary:
+    "Job source reporting summary. Calendar dates (YYYY-MM-DD) use the company IANA timezone; full ISO date-times are interpreted as UTC instants.",
   querystring: {
     type: "object",
     additionalProperties: false,
     required: ["startDate", "endDate"],
     properties: {
       startDate: { type: "string" },
-      endDate: { type: "string" }
+      endDate: { type: "string" },
+      includeJobIds: {
+        type: "string",
+        enum: ["true", "false"],
+        description: "When true, include up to 25 jobIds per channel for drill-down."
+      }
     }
   },
   response: {
@@ -80,20 +91,35 @@ export const jobSourceReportingRouteSchema = {
         period: {
           type: "object",
           additionalProperties: false,
-          required: ["startDate", "endDate"],
+          required: ["startDate", "endDate", "timeZone", "dateInterpretation"],
           properties: {
             startDate: { type: "string" },
-            endDate: { type: "string" }
+            endDate: { type: "string" },
+            timeZone: { type: "string" },
+            dateInterpretation: {
+              type: "string",
+              enum: ["company_local_days", "utc_instant"]
+            }
           }
         },
         totals: {
           type: "object",
           additionalProperties: false,
-          required: ["bookedJobCount", "revenue", "unknownAttributionCount"],
+          required: [
+            "bookedJobCount",
+            "revenue",
+            "unknownAttributionCount",
+            "unknownAttributionDefinition"
+          ],
           properties: {
             bookedJobCount: { type: "integer" },
             revenue: { type: "string" },
-            unknownAttributionCount: { type: "integer" }
+            unknownAttributionCount: {
+              type: "integer",
+              description:
+                "Count of booked jobs in the period with no attributable lead source on the job or customer."
+            },
+            unknownAttributionDefinition: { type: "string" }
           }
         },
         channels: {
@@ -103,6 +129,7 @@ export const jobSourceReportingRouteSchema = {
       }
     },
     400: errorResponseSchema,
-    401: errorResponseSchema
+    401: errorResponseSchema,
+    403: errorResponseSchema
   }
 } as const;
