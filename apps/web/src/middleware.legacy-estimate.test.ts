@@ -1,7 +1,7 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { NextRequest } from "next/server";
 
-import { middleware } from "./middleware";
+import { middleware } from "../middleware";
 
 const LEGACY_TOKEN = "abcdefghijklmnopqrstuvwxyz012345";
 const STAFF_UUID = "550e8400-e29b-41d4-a716-446655440000";
