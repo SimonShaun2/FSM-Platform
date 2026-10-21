@@ -31,8 +31,8 @@
 | --- | --- | --- | --- |
 | NT-01 | Execute without tenant context | 401/403 | Gap (no agent CP) |
 | NT-02 | Cross-tenant entity ref | `NOT_FOUND` | Gap |
-| NT-03 | Tool policy deny | `POLICY_DENIED` | Gap (U5 spec in ADR-FS-3; Security ACK pending) |
-| NT-04 | Idempotency key replay mismatch | `CONFLICT` | Gap |
+| NT-03 | Duplicate `idempotencyKey` replay (same tenant, same payload) | Same receipt; mismatch → `CONFLICT` | Gap |
+| NT-04 | Same `idempotencyKey` across tenants | Independent success; no cross-leak | Gap |
 | NT-05 | Stale idempotency payload | `CONFLICT` | Gap |
 | NT-06 | Stale `recordVersion` (`rv1:…`) | `CONFLICT` | Gap (U4 ADR proposed; PO + Security ACK pending) |
 | NT-07 | Policy evaluation deny | `POLICY_DENIED` | Gap (U5 spec; Security ACK pending) |
@@ -56,7 +56,7 @@ Requires fetchable branch; see FS-36 card SEC-1–6. CoS cannot execute without 
 
 `packages/types/src/errors.ts` on `main` has seven members. Contract adds:
 
-- `POLICY_DENIED` → HTTP 403 (NT-03, NT-07, NT-11)
-- `CONSENT_REQUIRED` → HTTP 422 (NT-08; no Twilio/SendGrid in FS-12 minimal slice)
+- `POLICY_DENIED` → HTTP 403 (NT-07, NT-11)
+- `CONSENT_REQUIRED` → HTTP 409 (NT-08; no Twilio/SendGrid in FS-12 minimal slice)
 
 Security sign-off = ACK on this mapping + executed negatives on FS-12 head (not enum merge alone).
