@@ -8,5 +8,6 @@ export {
   importsQueue,
   invoicesQueue,
   notificationsQueue,
-  webhooksQueue
+  webhooksQueue,
+  operatorQueue
 } from "./queues.js";
