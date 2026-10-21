@@ -51,6 +51,7 @@ function seedAwaitingAction(companyId: string) {
     policyVersion: AGENT_POLICY_V1,
     requiresApproval: true,
     state: "awaiting_approval",
+    expiresAt: new Date(Date.now() + 60 * 60 * 1000),
     target: {
       entityType: "booking_request",
       entityId: "booking-1",

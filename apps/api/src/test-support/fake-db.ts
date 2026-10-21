@@ -127,6 +127,19 @@ type BookingRequestStatus = "pending" | "confirmed" | "cancelled" | "completed" 
 type BookingSource = "google" | "facebook" | "instagram" | "yelp" | "direct" | "website" | "qr_code";
 type BookingUrgency = "emergency" | "this_week" | "flexible";
 type PreferredBookingWindow = "morning" | "afternoon" | "first_available";
+type AgentProduct = "revenue" | "scheduling" | "service" | "retention" | "owner";
+type AgentActionState =
+  | "proposed"
+  | "policy_evaluated"
+  | "awaiting_approval"
+  | "approved"
+  | "executing"
+  | "succeeded"
+  | "failed"
+  | "expired"
+  | "cancelled"
+  | "escalated"
+  | "reversed";
 
 export interface TestCompanyRecord {
   id: string;
@@ -888,6 +901,29 @@ export interface TestBookingRequestRecord {
   deletedAt: Date | null;
 }
 
+export interface TestAgentActionRecord {
+  id: string;
+  companyId: string;
+  agentProduct: AgentProduct;
+  actionType: string;
+  parameters: Record<string, unknown>;
+  target: Record<string, unknown>;
+  sourceEventIds: string[];
+  idempotencyKey: string;
+  payloadHash: string;
+  policyVersion: string;
+  requiresApproval: boolean;
+  state: AgentActionState;
+  confidence: string | null;
+  reason: string | null;
+  expiresAt: Date;
+  reviewerId: string | null;
+  executionReceipt: Record<string, unknown> | null;
+  createdAt: Date;
+  updatedAt: Date;
+  deletedAt: Date | null;
+}
+
 export interface TestBookingSettingsRecord {
   id: string;
   companyId: string;
@@ -909,29 +945,6 @@ export interface TestBookingSettingsRecord {
   balanceWorkload: boolean | null;
   notifyOnNewBooking: boolean | null;
   notificationEmail: string | null;
-  createdAt: Date;
-  updatedAt: Date;
-  deletedAt: Date | null;
-}
-
-export interface TestAgentActionRecord {
-  id: string;
-  companyId: string;
-  agentProduct: "revenue" | "scheduling" | "service" | "retention" | "owner";
-  actionType: string;
-  parameters: Record<string, unknown>;
-  target: Record<string, unknown>;
-  sourceEventIds: string[];
-  idempotencyKey: string;
-  payloadHash: string;
-  policyVersion: string;
-  requiresApproval: boolean;
-  state: string;
-  confidence: string | null;
-  reason: string | null;
-  expiresAt: Date;
-  reviewerId: string | null;
-  executionReceipt: Record<string, unknown> | null;
   createdAt: Date;
   updatedAt: Date;
   deletedAt: Date | null;
@@ -3072,6 +3085,48 @@ function createBookingRequestRecord(
   };
 }
 
+function createAgentActionRecord(
+  values: Partial<TestAgentActionRecord> &
+    Pick<
+      TestAgentActionRecord,
+      | "companyId"
+      | "agentProduct"
+      | "actionType"
+      | "target"
+      | "idempotencyKey"
+      | "payloadHash"
+      | "policyVersion"
+      | "requiresApproval"
+      | "state"
+      | "expiresAt"
+    >
+): TestAgentActionRecord {
+  const now = new Date();
+
+  return {
+    id: values.id ?? nextId(),
+    companyId: values.companyId,
+    agentProduct: values.agentProduct,
+    actionType: values.actionType,
+    parameters: values.parameters ?? {},
+    target: values.target,
+    sourceEventIds: values.sourceEventIds ?? [],
+    idempotencyKey: values.idempotencyKey,
+    payloadHash: values.payloadHash,
+    policyVersion: values.policyVersion,
+    requiresApproval: values.requiresApproval,
+    state: values.state,
+    confidence: values.confidence ?? null,
+    reason: values.reason ?? null,
+    expiresAt: values.expiresAt,
+    reviewerId: values.reviewerId ?? null,
+    executionReceipt: values.executionReceipt ?? null,
+    createdAt: values.createdAt ?? now,
+    updatedAt: values.updatedAt ?? now,
+    deletedAt: values.deletedAt ?? null
+  };
+}
+
 function createBookingSettingsRecord(
   values: Partial<TestBookingSettingsRecord> & Pick<TestBookingSettingsRecord, "companyId">
 ): TestBookingSettingsRecord {
@@ -3098,39 +3153,6 @@ function createBookingSettingsRecord(
     balanceWorkload: values.balanceWorkload ?? true,
     notifyOnNewBooking: values.notifyOnNewBooking ?? true,
     notificationEmail: values.notificationEmail ?? null,
-    createdAt: values.createdAt ?? now,
-    updatedAt: values.updatedAt ?? now,
-    deletedAt: values.deletedAt ?? null
-  };
-}
-
-function createAgentActionRecord(
-  values: Partial<TestAgentActionRecord> &
-    Pick<
-      TestAgentActionRecord,
-      "companyId" | "agentProduct" | "actionType" | "target" | "idempotencyKey" | "payloadHash" | "policyVersion"
-    >
-): TestAgentActionRecord {
-  const now = new Date();
-
-  return {
-    id: values.id ?? nextId(),
-    companyId: values.companyId,
-    agentProduct: values.agentProduct,
-    actionType: values.actionType,
-    parameters: values.parameters ?? {},
-    target: values.target,
-    sourceEventIds: values.sourceEventIds ?? [],
-    idempotencyKey: values.idempotencyKey,
-    payloadHash: values.payloadHash,
-    policyVersion: values.policyVersion,
-    requiresApproval: values.requiresApproval ?? true,
-    state: values.state ?? "awaiting_approval",
-    confidence: values.confidence ?? null,
-    reason: values.reason ?? null,
-    expiresAt: values.expiresAt ?? new Date(Date.now() + 72 * 60 * 60 * 1000),
-    reviewerId: values.reviewerId ?? null,
-    executionReceipt: values.executionReceipt ?? null,
     createdAt: values.createdAt ?? now,
     updatedAt: values.updatedAt ?? now,
     deletedAt: values.deletedAt ?? null
@@ -3308,7 +3330,16 @@ function createRow(tableName: TableName, values: Record<string, unknown>): AnyTe
         values as Partial<TestAgentActionRecord> &
           Pick<
             TestAgentActionRecord,
-            "companyId" | "agentProduct" | "actionType" | "target" | "idempotencyKey" | "payloadHash" | "policyVersion"
+            | "companyId"
+            | "agentProduct"
+            | "actionType"
+            | "target"
+            | "idempotencyKey"
+            | "payloadHash"
+            | "policyVersion"
+            | "requiresApproval"
+            | "state"
+            | "expiresAt"
           >
       );
   }
@@ -4323,7 +4354,16 @@ export function seedAgentAction(
   values: Partial<TestAgentActionRecord> &
     Pick<
       TestAgentActionRecord,
-      "companyId" | "agentProduct" | "actionType" | "target" | "idempotencyKey" | "payloadHash" | "policyVersion"
+      | "companyId"
+      | "agentProduct"
+      | "actionType"
+      | "target"
+      | "idempotencyKey"
+      | "payloadHash"
+      | "policyVersion"
+      | "requiresApproval"
+      | "state"
+      | "expiresAt"
     >
 ): TestAgentActionRecord {
   const record = createAgentActionRecord(values);

@@ -7,6 +7,9 @@ export const ContractVersionV1Schema = z.literal(AGENT_CONTROL_PLANE_VERSION);
 
 export const UuidSchema = z.string().uuid();
 
+/** Shared idempotency key bounds (proposals + inquiry response). */
+export const IdempotencyKeyV1Schema = z.string().min(1).max(256);
+
 export const IsoDateTimeSchema = z.string().datetime({ offset: true });
 
 /** ADR-FS-3 U4 — must parse via {@link parseRecordVersionV1}. */
