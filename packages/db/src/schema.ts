@@ -319,6 +319,13 @@ export const activityEventTypeEnum = pgEnum("activity_event_type", [
   "booking.confirmed",
   "booking.cancelled",
   "booking.completed",
+  // Agent control plane (FS-10/12)
+  "agent.proposal_created",
+  "agent.proposal_approved",
+  "agent.proposal_rejected",
+  "agent.execution_succeeded",
+  "agent.execution_failed",
+  "revenue.inquiry_qualified",
 ]);
 
 export const aiRecommendationTypeEnum = pgEnum("ai_recommendation_type", [
@@ -1459,6 +1466,58 @@ export const bookingRequests = pgTable("booking_requests", {
   sourceIdx: index("booking_requests_source_idx").on(t.source),
   phoneIdx: index("booking_requests_phone_idx").on(t.phone),
 }));
+
+export const agentActionStateEnum = pgEnum("agent_action_state", [
+  "proposed",
+  "policy_evaluated",
+  "awaiting_approval",
+  "approved",
+  "executing",
+  "succeeded",
+  "failed",
+  "expired",
+  "cancelled",
+  "escalated",
+]);
+
+export const agentProductEnum = pgEnum("agent_product", [
+  "revenue",
+  "scheduling",
+  "service",
+  "retention",
+  "owner",
+]);
+
+export const agentActions = pgTable(
+  "agent_actions",
+  {
+    id: id(),
+    companyId: companyId(),
+    agentProduct: agentProductEnum("agent_product").notNull(),
+    actionType: varchar("action_type", { length: 100 }).notNull(),
+    parameters: jsonb("parameters").notNull().default({}),
+    target: jsonb("target").notNull(),
+    sourceEventIds: jsonb("source_event_ids").$type<string[]>().notNull().default([]),
+    idempotencyKey: varchar("idempotency_key", { length: 128 }).notNull(),
+    payloadHash: varchar("payload_hash", { length: 128 }).notNull(),
+    policyVersion: varchar("policy_version", { length: 64 }).notNull(),
+    requiresApproval: boolean("requires_approval").notNull(),
+    state: agentActionStateEnum("state").notNull().default("proposed"),
+    confidence: decimal("confidence", { precision: 5, scale: 4 }),
+    reason: text("reason"),
+    expiresAt: timestamp("expires_at").notNull(),
+    reviewerId: uuid("reviewer_id"),
+    executionReceipt: jsonb("execution_receipt"),
+    ...timestamps,
+  },
+  (t) => ({
+    companyIdempotencyUnique: uniqueIndex("agent_actions_company_idempotency_idx").on(
+      t.companyId,
+      t.idempotencyKey
+    ),
+    companyStateIdx: index("agent_actions_company_state_idx").on(t.companyId, t.state),
+  })
+);
 
 export const bookingSettings = pgTable("booking_settings", {
   id: id(),
