@@ -2,10 +2,10 @@ import { and, desc, eq, isNull } from "drizzle-orm";
 
 import {
   db,
-  growthCheckAuditEvents,
-  growthCheckFindings,
-  growthCheckIdentityCandidates,
-  growthChecks
+  growthIntakeAuditEvents,
+  growthIntakeFindings,
+  growthIntakeIdentityCandidates,
+  growthIntakeChecks
 } from "@fsm/db";
 import {
   AppError,
@@ -19,11 +19,11 @@ import {
   type UpdateGrowthCheckInput
 } from "@fsm/types";
 
-type GrowthCheckRow = typeof growthChecks.$inferSelect;
-type IdentityCandidateRow = typeof growthCheckIdentityCandidates.$inferSelect;
-type FindingRow = typeof growthCheckFindings.$inferSelect;
-type AuditEntityType = typeof growthCheckAuditEvents.$inferInsert["entityType"];
-type AuditAction = typeof growthCheckAuditEvents.$inferInsert["action"];
+type GrowthCheckRow = typeof growthIntakeChecks.$inferSelect;
+type IdentityCandidateRow = typeof growthIntakeIdentityCandidates.$inferSelect;
+type FindingRow = typeof growthIntakeFindings.$inferSelect;
+type AuditEntityType = typeof growthIntakeAuditEvents.$inferInsert["entityType"];
+type AuditAction = typeof growthIntakeAuditEvents.$inferInsert["action"];
 type DbExecutor = Pick<typeof db, "select" | "insert" | "update">;
 
 function requireReturningRow<T>(rows: T[], message: string): T {
@@ -66,18 +66,18 @@ async function appendAuditEvent(
     companyId: string;
     entityType: AuditEntityType;
     entityId: string;
-    growthCheckId: string | null;
+    growthIntakeCheckId: string | null;
     action: AuditAction;
     actorId: string;
     beforeState: Record<string, unknown> | null;
     afterState: Record<string, unknown> | null;
   }
 ): Promise<void> {
-  await executor.insert(growthCheckAuditEvents).values({
+  await executor.insert(growthIntakeAuditEvents).values({
     companyId: input.companyId,
     entityType: input.entityType,
     entityId: input.entityId,
-    growthCheckId: input.growthCheckId,
+    growthIntakeCheckId: input.growthIntakeCheckId,
     action: input.action,
     actorId: input.actorId,
     beforeState: input.beforeState,
@@ -92,9 +92,9 @@ async function getGrowthCheckRecord(
 ): Promise<GrowthCheckRow> {
   const [row] = await executor
     .select()
-    .from(growthChecks)
+    .from(growthIntakeChecks)
     .where(
-      and(eq(growthChecks.companyId, companyId), eq(growthChecks.id, growthCheckId), isNull(growthChecks.deletedAt))
+      and(eq(growthIntakeChecks.companyId, companyId), eq(growthIntakeChecks.id, growthCheckId), isNull(growthIntakeChecks.deletedAt))
     )
     .limit(1);
 
@@ -113,13 +113,13 @@ async function getIdentityCandidateRecord(
 ): Promise<IdentityCandidateRow> {
   const [row] = await executor
     .select()
-    .from(growthCheckIdentityCandidates)
+    .from(growthIntakeIdentityCandidates)
     .where(
       and(
-        eq(growthCheckIdentityCandidates.companyId, companyId),
-        eq(growthCheckIdentityCandidates.growthCheckId, growthCheckId),
-        eq(growthCheckIdentityCandidates.id, candidateId),
-        isNull(growthCheckIdentityCandidates.deletedAt)
+        eq(growthIntakeIdentityCandidates.companyId, companyId),
+        eq(growthIntakeIdentityCandidates.growthIntakeCheckId, growthCheckId),
+        eq(growthIntakeIdentityCandidates.id, candidateId),
+        isNull(growthIntakeIdentityCandidates.deletedAt)
       )
     )
     .limit(1);
@@ -139,13 +139,13 @@ async function getFindingRecord(
 ): Promise<FindingRow> {
   const [row] = await executor
     .select()
-    .from(growthCheckFindings)
+    .from(growthIntakeFindings)
     .where(
       and(
-        eq(growthCheckFindings.companyId, companyId),
-        eq(growthCheckFindings.growthCheckId, growthCheckId),
-        eq(growthCheckFindings.id, findingId),
-        isNull(growthCheckFindings.deletedAt)
+        eq(growthIntakeFindings.companyId, companyId),
+        eq(growthIntakeFindings.growthIntakeCheckId, growthCheckId),
+        eq(growthIntakeFindings.id, findingId),
+        isNull(growthIntakeFindings.deletedAt)
       )
     )
     .limit(1);
@@ -161,25 +161,25 @@ export async function listGrowthCheckQueue(
   companyId: string,
   query: ListGrowthCheckQueueQuery
 ): Promise<GrowthCheckRow[]> {
-  const predicates = [eq(growthChecks.companyId, companyId), isNull(growthChecks.deletedAt)];
+  const predicates = [eq(growthIntakeChecks.companyId, companyId), isNull(growthIntakeChecks.deletedAt)];
 
   if (query.status) {
-    predicates.push(eq(growthChecks.status, query.status));
+    predicates.push(eq(growthIntakeChecks.status, query.status));
   }
 
   if (query.reviewNeeded !== undefined) {
-    predicates.push(eq(growthChecks.reviewNeeded, query.reviewNeeded));
+    predicates.push(eq(growthIntakeChecks.reviewNeeded, query.reviewNeeded));
   }
 
   if (query.ownerUserId) {
-    predicates.push(eq(growthChecks.ownerUserId, query.ownerUserId));
+    predicates.push(eq(growthIntakeChecks.ownerUserId, query.ownerUserId));
   }
 
   return db
     .select()
-    .from(growthChecks)
+    .from(growthIntakeChecks)
     .where(and(...predicates))
-    .orderBy(desc(growthChecks.updatedAt));
+    .orderBy(desc(growthIntakeChecks.updatedAt));
 }
 
 export async function getGrowthCheckById(companyId: string, growthCheckId: string): Promise<{
@@ -191,27 +191,27 @@ export async function getGrowthCheckById(companyId: string, growthCheckId: strin
 
   const identityCandidates = await db
     .select()
-    .from(growthCheckIdentityCandidates)
+    .from(growthIntakeIdentityCandidates)
     .where(
       and(
-        eq(growthCheckIdentityCandidates.companyId, companyId),
-        eq(growthCheckIdentityCandidates.growthCheckId, growthCheckId),
-        isNull(growthCheckIdentityCandidates.deletedAt)
+        eq(growthIntakeIdentityCandidates.companyId, companyId),
+        eq(growthIntakeIdentityCandidates.growthIntakeCheckId, growthCheckId),
+        isNull(growthIntakeIdentityCandidates.deletedAt)
       )
     )
-    .orderBy(desc(growthCheckIdentityCandidates.createdAt));
+    .orderBy(desc(growthIntakeIdentityCandidates.createdAt));
 
   const findings = await db
     .select()
-    .from(growthCheckFindings)
+    .from(growthIntakeFindings)
     .where(
       and(
-        eq(growthCheckFindings.companyId, companyId),
-        eq(growthCheckFindings.growthCheckId, growthCheckId),
-        isNull(growthCheckFindings.deletedAt)
+        eq(growthIntakeFindings.companyId, companyId),
+        eq(growthIntakeFindings.growthIntakeCheckId, growthCheckId),
+        isNull(growthIntakeFindings.deletedAt)
       )
     )
-    .orderBy(desc(growthCheckFindings.createdAt));
+    .orderBy(desc(growthIntakeFindings.createdAt));
 
   return { check, identityCandidates, findings };
 }
@@ -227,7 +227,7 @@ export async function createGrowthCheck(
 
     const created = requireReturningRow(
       await tx
-      .insert(growthChecks)
+      .insert(growthIntakeChecks)
       .values({
         companyId,
         status,
@@ -255,9 +255,9 @@ export async function createGrowthCheck(
 
     await appendAuditEvent(tx, {
       companyId,
-      entityType: "growth_check",
+      entityType: "growth_intake_check",
       entityId: created.id,
-      growthCheckId: created.id,
+      growthIntakeCheckId: created.id,
       action: "created",
       actorId,
       beforeState: null,
@@ -277,7 +277,7 @@ export async function updateGrowthCheck(
   return db.transaction(async (tx) => {
     const existing = await getGrowthCheckRecord(companyId, growthCheckId, tx);
 
-    const patch: Partial<typeof growthChecks.$inferInsert> = {
+    const patch: Partial<typeof growthIntakeChecks.$inferInsert> = {
       updatedAt: new Date()
     };
 
@@ -338,18 +338,18 @@ export async function updateGrowthCheck(
 
     const updated = requireReturningRow(
       await tx
-        .update(growthChecks)
+        .update(growthIntakeChecks)
         .set(patch)
-        .where(and(eq(growthChecks.companyId, companyId), eq(growthChecks.id, growthCheckId)))
+        .where(and(eq(growthIntakeChecks.companyId, companyId), eq(growthIntakeChecks.id, growthCheckId)))
         .returning(),
       "Failed to update growth check"
     );
 
     await appendAuditEvent(tx, {
       companyId,
-      entityType: "growth_check",
+      entityType: "growth_intake_check",
       entityId: updated.id,
-      growthCheckId: updated.id,
+      growthIntakeCheckId: updated.id,
       action: "updated",
       actorId,
       beforeState: serializeAuditState(existing as unknown as Record<string, unknown>),
@@ -371,18 +371,18 @@ export async function softDeleteGrowthCheck(
 
     const updated = requireReturningRow(
       await tx
-        .update(growthChecks)
+        .update(growthIntakeChecks)
         .set({ deletedAt, updatedAt: deletedAt })
-        .where(and(eq(growthChecks.companyId, companyId), eq(growthChecks.id, growthCheckId)))
+        .where(and(eq(growthIntakeChecks.companyId, companyId), eq(growthIntakeChecks.id, growthCheckId)))
         .returning(),
       "Failed to delete growth check"
     );
 
     await appendAuditEvent(tx, {
       companyId,
-      entityType: "growth_check",
+      entityType: "growth_intake_check",
       entityId: updated.id,
-      growthCheckId: updated.id,
+      growthIntakeCheckId: updated.id,
       action: "deleted",
       actorId,
       beforeState: serializeAuditState(existing as unknown as Record<string, unknown>),
@@ -404,10 +404,10 @@ export async function createGrowthCheckIdentityCandidate(
 
     const created = requireReturningRow(
       await tx
-        .insert(growthCheckIdentityCandidates)
+        .insert(growthIntakeIdentityCandidates)
         .values({
           companyId,
-          growthCheckId,
+          growthIntakeCheckId: growthCheckId,
           displayName: input.displayName.trim(),
           domain: normalizeOptionalString(input.domain),
           source: input.source ?? "manual",
@@ -424,9 +424,9 @@ export async function createGrowthCheckIdentityCandidate(
 
     await appendAuditEvent(tx, {
       companyId,
-      entityType: "growth_check_identity_candidate",
+      entityType: "growth_intake_identity_candidate",
       entityId: created.id,
-      growthCheckId,
+      growthIntakeCheckId: growthCheckId,
       action: "created",
       actorId,
       beforeState: null,
@@ -447,7 +447,7 @@ export async function updateGrowthCheckIdentityCandidate(
   return db.transaction(async (tx) => {
     const existing = await getIdentityCandidateRecord(companyId, growthCheckId, candidateId, tx);
 
-    const patch: Partial<typeof growthCheckIdentityCandidates.$inferInsert> = {
+    const patch: Partial<typeof growthIntakeIdentityCandidates.$inferInsert> = {
       updatedAt: new Date()
     };
 
@@ -473,12 +473,12 @@ export async function updateGrowthCheckIdentityCandidate(
 
     const updated = requireReturningRow(
       await tx
-        .update(growthCheckIdentityCandidates)
+        .update(growthIntakeIdentityCandidates)
         .set(patch)
         .where(
           and(
-            eq(growthCheckIdentityCandidates.companyId, companyId),
-            eq(growthCheckIdentityCandidates.id, candidateId)
+            eq(growthIntakeIdentityCandidates.companyId, companyId),
+            eq(growthIntakeIdentityCandidates.id, candidateId)
           )
         )
         .returning(),
@@ -487,9 +487,9 @@ export async function updateGrowthCheckIdentityCandidate(
 
     await appendAuditEvent(tx, {
       companyId,
-      entityType: "growth_check_identity_candidate",
+      entityType: "growth_intake_identity_candidate",
       entityId: updated.id,
-      growthCheckId,
+      growthIntakeCheckId: growthCheckId,
       action: "updated",
       actorId,
       beforeState: serializeAuditState(existing as unknown as Record<string, unknown>),
@@ -512,12 +512,12 @@ export async function softDeleteGrowthCheckIdentityCandidate(
 
     const updated = requireReturningRow(
       await tx
-        .update(growthCheckIdentityCandidates)
+        .update(growthIntakeIdentityCandidates)
         .set({ deletedAt, updatedAt: deletedAt })
         .where(
           and(
-            eq(growthCheckIdentityCandidates.companyId, companyId),
-            eq(growthCheckIdentityCandidates.id, candidateId)
+            eq(growthIntakeIdentityCandidates.companyId, companyId),
+            eq(growthIntakeIdentityCandidates.id, candidateId)
           )
         )
         .returning(),
@@ -526,9 +526,9 @@ export async function softDeleteGrowthCheckIdentityCandidate(
 
     await appendAuditEvent(tx, {
       companyId,
-      entityType: "growth_check_identity_candidate",
+      entityType: "growth_intake_identity_candidate",
       entityId: updated.id,
-      growthCheckId,
+      growthIntakeCheckId: growthCheckId,
       action: "deleted",
       actorId,
       beforeState: serializeAuditState(existing as unknown as Record<string, unknown>),
@@ -550,10 +550,10 @@ export async function createGrowthCheckFinding(
 
     const created = requireReturningRow(
       await tx
-        .insert(growthCheckFindings)
+        .insert(growthIntakeFindings)
         .values({
           companyId,
-          growthCheckId,
+          growthIntakeCheckId: growthCheckId,
           category: input.category.trim(),
           severity: input.severity ?? "info",
           status: input.status ?? "open",
@@ -568,9 +568,9 @@ export async function createGrowthCheckFinding(
 
     await appendAuditEvent(tx, {
       companyId,
-      entityType: "growth_check_finding",
+      entityType: "growth_intake_finding",
       entityId: created.id,
-      growthCheckId,
+      growthIntakeCheckId: growthCheckId,
       action: "created",
       actorId,
       beforeState: null,
@@ -591,7 +591,7 @@ export async function updateGrowthCheckFinding(
   return db.transaction(async (tx) => {
     const existing = await getFindingRecord(companyId, growthCheckId, findingId, tx);
 
-    const patch: Partial<typeof growthCheckFindings.$inferInsert> = {
+    const patch: Partial<typeof growthIntakeFindings.$inferInsert> = {
       updatedAt: new Date()
     };
 
@@ -619,18 +619,18 @@ export async function updateGrowthCheckFinding(
 
     const updated = requireReturningRow(
       await tx
-        .update(growthCheckFindings)
+        .update(growthIntakeFindings)
         .set(patch)
-        .where(and(eq(growthCheckFindings.companyId, companyId), eq(growthCheckFindings.id, findingId)))
+        .where(and(eq(growthIntakeFindings.companyId, companyId), eq(growthIntakeFindings.id, findingId)))
         .returning(),
       "Failed to update finding"
     );
 
     await appendAuditEvent(tx, {
       companyId,
-      entityType: "growth_check_finding",
+      entityType: "growth_intake_finding",
       entityId: updated.id,
-      growthCheckId,
+      growthIntakeCheckId: growthCheckId,
       action: "updated",
       actorId,
       beforeState: serializeAuditState(existing as unknown as Record<string, unknown>),
@@ -653,18 +653,18 @@ export async function softDeleteGrowthCheckFinding(
 
     const updated = requireReturningRow(
       await tx
-        .update(growthCheckFindings)
+        .update(growthIntakeFindings)
         .set({ deletedAt, updatedAt: deletedAt })
-        .where(and(eq(growthCheckFindings.companyId, companyId), eq(growthCheckFindings.id, findingId)))
+        .where(and(eq(growthIntakeFindings.companyId, companyId), eq(growthIntakeFindings.id, findingId)))
         .returning(),
       "Failed to delete finding"
     );
 
     await appendAuditEvent(tx, {
       companyId,
-      entityType: "growth_check_finding",
+      entityType: "growth_intake_finding",
       entityId: updated.id,
-      growthCheckId,
+      growthIntakeCheckId: growthCheckId,
       action: "deleted",
       actorId,
       beforeState: serializeAuditState(existing as unknown as Record<string, unknown>),
@@ -678,11 +678,11 @@ export async function softDeleteGrowthCheckFinding(
 export async function listGrowthCheckAuditEvents(
   companyId: string,
   growthCheckId: string
-): Promise<Array<typeof growthCheckAuditEvents.$inferSelect>> {
+): Promise<Array<typeof growthIntakeAuditEvents.$inferSelect>> {
   const [checkExists] = await db
-    .select({ id: growthChecks.id })
-    .from(growthChecks)
-    .where(and(eq(growthChecks.companyId, companyId), eq(growthChecks.id, growthCheckId)))
+    .select({ id: growthIntakeChecks.id })
+    .from(growthIntakeChecks)
+    .where(and(eq(growthIntakeChecks.companyId, companyId), eq(growthIntakeChecks.id, growthCheckId)))
     .limit(1);
 
   if (!checkExists) {
@@ -691,7 +691,7 @@ export async function listGrowthCheckAuditEvents(
 
   return db
     .select()
-    .from(growthCheckAuditEvents)
-    .where(and(eq(growthCheckAuditEvents.companyId, companyId), eq(growthCheckAuditEvents.growthCheckId, growthCheckId)))
-    .orderBy(desc(growthCheckAuditEvents.createdAt));
+    .from(growthIntakeAuditEvents)
+    .where(and(eq(growthIntakeAuditEvents.companyId, companyId), eq(growthIntakeAuditEvents.growthIntakeCheckId, growthCheckId)))
+    .orderBy(desc(growthIntakeAuditEvents.createdAt));
 }

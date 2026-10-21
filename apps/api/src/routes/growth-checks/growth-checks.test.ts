@@ -238,7 +238,7 @@ describe("growth check routes (FS-53)", () => {
       role: "admin"
     });
 
-    const foreignCheck = fakeDb.seedGrowthCheck({
+    const foreignCheck = fakeDb.seedGrowthIntakeCheck({
       companyId: otherCompany.id,
       ownerUserId: otherUser.id,
       createdById: otherUser.id,

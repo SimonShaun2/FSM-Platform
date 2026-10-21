@@ -1519,7 +1519,7 @@ export const agentActions = pgTable(
   })
 );
 
-export const growthCheckStatusEnum = pgEnum("growth_check_status", [
+export const growthIntakeCheckStatusEnum = pgEnum("growth_intake_check_status", [
   "intake_draft",
   "queued",
   "scanning",
@@ -1528,7 +1528,7 @@ export const growthCheckStatusEnum = pgEnum("growth_check_status", [
   "archived",
 ]);
 
-export const growthCheckIdentitySourceEnum = pgEnum("growth_check_identity_source", [
+export const growthIntakeIdentitySourceEnum = pgEnum("growth_intake_identity_source", [
   "manual",
   "website",
   "google_business",
@@ -1537,7 +1537,7 @@ export const growthCheckIdentitySourceEnum = pgEnum("growth_check_identity_sourc
   "ai",
 ]);
 
-export const growthCheckFindingSeverityEnum = pgEnum("growth_check_finding_severity", [
+export const growthIntakeFindingSeverityEnum = pgEnum("growth_intake_finding_severity", [
   "info",
   "low",
   "medium",
@@ -1545,31 +1545,31 @@ export const growthCheckFindingSeverityEnum = pgEnum("growth_check_finding_sever
   "critical",
 ]);
 
-export const growthCheckFindingStatusEnum = pgEnum("growth_check_finding_status", [
+export const growthIntakeFindingStatusEnum = pgEnum("growth_intake_finding_status", [
   "open",
   "acknowledged",
   "resolved",
   "dismissed",
 ]);
 
-export const growthCheckAuditEntityTypeEnum = pgEnum("growth_check_audit_entity_type", [
-  "growth_check",
-  "growth_check_identity_candidate",
-  "growth_check_finding",
+export const growthIntakeAuditEntityTypeEnum = pgEnum("growth_intake_audit_entity_type", [
+  "growth_intake_check",
+  "growth_intake_identity_candidate",
+  "growth_intake_finding",
 ]);
 
-export const growthCheckAuditActionEnum = pgEnum("growth_check_audit_action", [
+export const growthIntakeAuditActionEnum = pgEnum("growth_intake_audit_action", [
   "created",
   "updated",
   "deleted",
 ]);
 
-export const growthChecks = pgTable(
-  "growth_checks",
+export const growthIntakeChecks = pgTable(
+  "growth_intake_checks",
   {
     id: id(),
     companyId: companyId(),
-    status: growthCheckStatusEnum("status").notNull().default("queued"),
+    status: growthIntakeCheckStatusEnum("status").notNull().default("queued"),
     ownerUserId: uuid("owner_user_id")
       .notNull()
       .references(() => users.id, { onDelete: "restrict" }),
@@ -1595,48 +1595,48 @@ export const growthChecks = pgTable(
     ...timestamps,
   },
   (t) => ({
-    companyStatusIdx: index("growth_checks_company_status_idx").on(t.companyId, t.status),
-    companyOwnerIdx: index("growth_checks_company_owner_idx").on(t.companyId, t.ownerUserId),
-    companyReviewIdx: index("growth_checks_company_review_idx").on(t.companyId, t.reviewNeeded),
+    companyStatusIdx: index("growth_intake_checks_company_status_idx").on(t.companyId, t.status),
+    companyOwnerIdx: index("growth_intake_checks_company_owner_idx").on(t.companyId, t.ownerUserId),
+    companyReviewIdx: index("growth_intake_checks_company_review_idx").on(t.companyId, t.reviewNeeded),
   })
 );
 
-export const growthCheckIdentityCandidates = pgTable(
-  "growth_check_identity_candidates",
+export const growthIntakeIdentityCandidates = pgTable(
+  "growth_intake_identity_candidates",
   {
     id: id(),
     companyId: companyId(),
-    growthCheckId: uuid("growth_check_id")
+    growthIntakeCheckId: uuid("growth_intake_check_id")
       .notNull()
-      .references(() => growthChecks.id, { onDelete: "cascade" }),
+      .references(() => growthIntakeChecks.id, { onDelete: "cascade" }),
     displayName: varchar("display_name", { length: 255 }).notNull(),
     domain: varchar("domain", { length: 255 }),
-    source: growthCheckIdentitySourceEnum("source").notNull().default("manual"),
+    source: growthIntakeIdentitySourceEnum("source").notNull().default("manual"),
     confidenceScore: decimal("confidence_score", { precision: 5, scale: 4 }),
     isPrimary: boolean("is_primary").notNull().default(false),
     metadata: jsonb("metadata").notNull().default({}),
     ...timestamps,
   },
   (t) => ({
-    checkIdx: index("growth_check_identity_candidates_check_idx").on(t.growthCheckId),
-    companyCheckIdx: index("growth_check_identity_candidates_company_check_idx").on(
+    checkIdx: index("growth_intake_identity_candidates_check_idx").on(t.growthIntakeCheckId),
+    companyCheckIdx: index("growth_intake_identity_candidates_company_check_idx").on(
       t.companyId,
-      t.growthCheckId
+      t.growthIntakeCheckId
     ),
   })
 );
 
-export const growthCheckFindings = pgTable(
-  "growth_check_findings",
+export const growthIntakeFindings = pgTable(
+  "growth_intake_findings",
   {
     id: id(),
     companyId: companyId(),
-    growthCheckId: uuid("growth_check_id")
+    growthIntakeCheckId: uuid("growth_intake_check_id")
       .notNull()
-      .references(() => growthChecks.id, { onDelete: "cascade" }),
+      .references(() => growthIntakeChecks.id, { onDelete: "cascade" }),
     category: varchar("category", { length: 100 }).notNull(),
-    severity: growthCheckFindingSeverityEnum("severity").notNull().default("info"),
-    status: growthCheckFindingStatusEnum("status").notNull().default("open"),
+    severity: growthIntakeFindingSeverityEnum("severity").notNull().default("info"),
+    status: growthIntakeFindingStatusEnum("status").notNull().default("open"),
     title: varchar("title", { length: 255 }).notNull(),
     description: text("description"),
     recommendation: text("recommendation"),
@@ -1644,32 +1644,37 @@ export const growthCheckFindings = pgTable(
     ...timestamps,
   },
   (t) => ({
-    checkIdx: index("growth_check_findings_check_idx").on(t.growthCheckId),
-    companyCheckIdx: index("growth_check_findings_company_check_idx").on(t.companyId, t.growthCheckId),
+    checkIdx: index("growth_intake_findings_check_idx").on(t.growthIntakeCheckId),
+    companyCheckIdx: index("growth_intake_findings_company_check_idx").on(t.companyId, t.growthIntakeCheckId),
   })
 );
 
-export const growthCheckAuditEvents = pgTable(
-  "growth_check_audit_events",
+export const growthIntakeAuditEvents = pgTable(
+  "growth_intake_audit_events",
   {
     id: id(),
     companyId: companyId(),
-    entityType: growthCheckAuditEntityTypeEnum("entity_type").notNull(),
+    entityType: growthIntakeAuditEntityTypeEnum("entity_type").notNull(),
     entityId: uuid("entity_id").notNull(),
-    growthCheckId: uuid("growth_check_id").references(() => growthChecks.id, { onDelete: "set null" }),
-    action: growthCheckAuditActionEnum("action").notNull(),
+    growthIntakeCheckId: uuid("growth_intake_check_id").references(() => growthIntakeChecks.id, {
+      onDelete: "set null",
+    }),
+    action: growthIntakeAuditActionEnum("action").notNull(),
     actorId: uuid("actor_id").references(() => users.id, { onDelete: "set null" }),
     beforeState: jsonb("before_state"),
     afterState: jsonb("after_state"),
     createdAt: timestamp("created_at").notNull().defaultNow(),
   },
   (t) => ({
-    companyEntityIdx: index("growth_check_audit_events_company_entity_idx").on(
+    companyEntityIdx: index("growth_intake_audit_events_company_entity_idx").on(
       t.companyId,
       t.entityType,
       t.entityId
     ),
-    companyCheckIdx: index("growth_check_audit_events_company_check_idx").on(t.companyId, t.growthCheckId),
+    companyCheckIdx: index("growth_intake_audit_events_company_check_idx").on(
+      t.companyId,
+      t.growthIntakeCheckId
+    ),
   })
 );
 

@@ -69,7 +69,7 @@ function toIdentityCandidateResponse(
   return {
     id: candidate.id,
     companyId: candidate.companyId,
-    growthCheckId: candidate.growthCheckId,
+    growthCheckId: candidate.growthIntakeCheckId,
     displayName: candidate.displayName,
     domain: candidate.domain,
     source: candidate.source,
@@ -86,7 +86,7 @@ function toFindingResponse(finding: Awaited<ReturnType<typeof createGrowthCheckF
   return {
     id: finding.id,
     companyId: finding.companyId,
-    growthCheckId: finding.growthCheckId,
+    growthCheckId: finding.growthIntakeCheckId,
     category: finding.category,
     severity: finding.severity,
     status: finding.status,
@@ -185,7 +185,7 @@ export async function listGrowthCheckAuditHandler(
       companyId: event.companyId,
       entityType: event.entityType,
       entityId: event.entityId,
-      growthCheckId: event.growthCheckId,
+      growthCheckId: event.growthIntakeCheckId,
       action: event.action,
       actorId: event.actorId,
       beforeState: event.beforeState,

@@ -39,10 +39,10 @@ type TableName =
   | "onTheWayNotifications"
   | "bookingRequests"
   | "bookingSettings"
-  | "growthChecks"
-  | "growthCheckIdentityCandidates"
-  | "growthCheckFindings"
-  | "growthCheckAuditEvents";
+  | "growthIntakeChecks"
+  | "growthIntakeIdentityCandidates"
+  | "growthIntakeFindings"
+  | "growthIntakeAuditEvents";
 
 type UserRole = "owner" | "admin" | "dispatcher" | "office" | "technician";
 type TechnicianStatus = "active" | "inactive" | "on_leave";
@@ -901,10 +901,13 @@ type GrowthCheckStatus =
 type GrowthCheckIdentitySource = "manual" | "website" | "google_business" | "facebook" | "import" | "ai";
 type GrowthCheckFindingSeverity = "info" | "low" | "medium" | "high" | "critical";
 type GrowthCheckFindingStatus = "open" | "acknowledged" | "resolved" | "dismissed";
-type GrowthCheckAuditEntityType = "growth_check" | "growth_check_identity_candidate" | "growth_check_finding";
+type GrowthIntakeAuditEntityType =
+  | "growth_intake_check"
+  | "growth_intake_identity_candidate"
+  | "growth_intake_finding";
 type GrowthCheckAuditAction = "created" | "updated" | "deleted";
 
-export interface TestGrowthCheckRecord {
+export interface TestGrowthIntakeCheckRecord {
   id: string;
   companyId: string;
   status: GrowthCheckStatus;
@@ -931,10 +934,10 @@ export interface TestGrowthCheckRecord {
   deletedAt: Date | null;
 }
 
-export interface TestGrowthCheckIdentityCandidateRecord {
+export interface TestGrowthIntakeIdentityCandidateRecord {
   id: string;
   companyId: string;
-  growthCheckId: string;
+  growthIntakeCheckId: string;
   displayName: string;
   domain: string | null;
   source: GrowthCheckIdentitySource;
@@ -946,10 +949,10 @@ export interface TestGrowthCheckIdentityCandidateRecord {
   deletedAt: Date | null;
 }
 
-export interface TestGrowthCheckFindingRecord {
+export interface TestGrowthIntakeFindingRecord {
   id: string;
   companyId: string;
-  growthCheckId: string;
+  growthIntakeCheckId: string;
   category: string;
   severity: GrowthCheckFindingSeverity;
   status: GrowthCheckFindingStatus;
@@ -962,12 +965,12 @@ export interface TestGrowthCheckFindingRecord {
   deletedAt: Date | null;
 }
 
-export interface TestGrowthCheckAuditEventRecord {
+export interface TestGrowthIntakeAuditEventRecord {
   id: string;
   companyId: string;
-  entityType: GrowthCheckAuditEntityType;
+  entityType: GrowthIntakeAuditEntityType;
   entityId: string;
-  growthCheckId: string | null;
+  growthIntakeCheckId: string | null;
   action: GrowthCheckAuditAction;
   actorId: string | null;
   beforeState: Record<string, unknown> | null;
@@ -1037,10 +1040,10 @@ type AnyTestRecord =
   | TestOnTheWayNotificationRecord
   | TestBookingRequestRecord
   | TestBookingSettingsRecord
-  | TestGrowthCheckRecord
-  | TestGrowthCheckIdentityCandidateRecord
-  | TestGrowthCheckFindingRecord
-  | TestGrowthCheckAuditEventRecord;
+  | TestGrowthIntakeCheckRecord
+  | TestGrowthIntakeIdentityCandidateRecord
+  | TestGrowthIntakeFindingRecord
+  | TestGrowthIntakeAuditEventRecord;
 
 type MockTable =
   | typeof companiesTable
@@ -1078,10 +1081,10 @@ type MockTable =
   | typeof onTheWayNotificationsTable
   | typeof bookingRequestsTable
   | typeof bookingSettingsTable
-  | typeof growthChecksTable
-  | typeof growthCheckIdentityCandidatesTable
-  | typeof growthCheckFindingsTable
-  | typeof growthCheckAuditEventsTable;
+  | typeof growthIntakeChecksTable
+  | typeof growthIntakeIdentityCandidatesTable
+  | typeof growthIntakeFindingsTable
+  | typeof growthIntakeAuditEventsTable;
 
 interface TestState {
   companies: TestCompanyRecord[];
@@ -1119,10 +1122,10 @@ interface TestState {
   onTheWayNotifications: TestOnTheWayNotificationRecord[];
   bookingRequests: TestBookingRequestRecord[];
   bookingSettings: TestBookingSettingsRecord[];
-  growthChecks: TestGrowthCheckRecord[];
-  growthCheckIdentityCandidates: TestGrowthCheckIdentityCandidateRecord[];
-  growthCheckFindings: TestGrowthCheckFindingRecord[];
-  growthCheckAuditEvents: TestGrowthCheckAuditEventRecord[];
+  growthIntakeChecks: TestGrowthIntakeCheckRecord[];
+  growthIntakeIdentityCandidates: TestGrowthIntakeIdentityCandidateRecord[];
+  growthIntakeFindings: TestGrowthIntakeFindingRecord[];
+  growthIntakeAuditEvents: TestGrowthIntakeAuditEventRecord[];
 }
 
 interface OrderByDefinition {
@@ -1917,8 +1920,8 @@ const bookingRequestsTable = {
   deletedAt: "deletedAt"
 } as const;
 
-const growthChecksTable = {
-  __name: "growthChecks",
+const growthIntakeChecksTable = {
+  __name: "growthIntakeChecks",
   id: "id",
   companyId: "companyId",
   status: "status",
@@ -1945,11 +1948,11 @@ const growthChecksTable = {
   deletedAt: "deletedAt"
 } as const;
 
-const growthCheckIdentityCandidatesTable = {
-  __name: "growthCheckIdentityCandidates",
+const growthIntakeIdentityCandidatesTable = {
+  __name: "growthIntakeIdentityCandidates",
   id: "id",
   companyId: "companyId",
-  growthCheckId: "growthCheckId",
+  growthIntakeCheckId: "growthIntakeCheckId",
   displayName: "displayName",
   domain: "domain",
   source: "source",
@@ -1961,11 +1964,11 @@ const growthCheckIdentityCandidatesTable = {
   deletedAt: "deletedAt"
 } as const;
 
-const growthCheckFindingsTable = {
-  __name: "growthCheckFindings",
+const growthIntakeFindingsTable = {
+  __name: "growthIntakeFindings",
   id: "id",
   companyId: "companyId",
-  growthCheckId: "growthCheckId",
+  growthIntakeCheckId: "growthIntakeCheckId",
   category: "category",
   severity: "severity",
   status: "status",
@@ -1978,13 +1981,13 @@ const growthCheckFindingsTable = {
   deletedAt: "deletedAt"
 } as const;
 
-const growthCheckAuditEventsTable = {
-  __name: "growthCheckAuditEvents",
+const growthIntakeAuditEventsTable = {
+  __name: "growthIntakeAuditEvents",
   id: "id",
   companyId: "companyId",
   entityType: "entityType",
   entityId: "entityId",
-  growthCheckId: "growthCheckId",
+  growthIntakeCheckId: "growthIntakeCheckId",
   action: "action",
   actorId: "actorId",
   beforeState: "beforeState",
@@ -2053,10 +2056,10 @@ const state: TestState = {
   onTheWayNotifications: [],
   bookingRequests: [],
   bookingSettings: [],
-  growthChecks: [],
-  growthCheckIdentityCandidates: [],
-  growthCheckFindings: [],
-  growthCheckAuditEvents: []
+  growthIntakeChecks: [],
+  growthIntakeIdentityCandidates: [],
+  growthIntakeFindings: [],
+  growthIntakeAuditEvents: []
 };
 
 function nextId(): string {
@@ -2107,14 +2110,14 @@ function restoreState(snapshot: TestState): void {
   );
   state.bookingRequests.splice(0, state.bookingRequests.length, ...snapshot.bookingRequests);
   state.bookingSettings.splice(0, state.bookingSettings.length, ...snapshot.bookingSettings);
-  state.growthChecks.splice(0, state.growthChecks.length, ...snapshot.growthChecks);
-  state.growthCheckIdentityCandidates.splice(
+  state.growthIntakeChecks.splice(0, state.growthIntakeChecks.length, ...snapshot.growthIntakeChecks);
+  state.growthIntakeIdentityCandidates.splice(
     0,
-    state.growthCheckIdentityCandidates.length,
-    ...snapshot.growthCheckIdentityCandidates
+    state.growthIntakeIdentityCandidates.length,
+    ...snapshot.growthIntakeIdentityCandidates
   );
-  state.growthCheckFindings.splice(0, state.growthCheckFindings.length, ...snapshot.growthCheckFindings);
-  state.growthCheckAuditEvents.splice(0, state.growthCheckAuditEvents.length, ...snapshot.growthCheckAuditEvents);
+  state.growthIntakeFindings.splice(0, state.growthIntakeFindings.length, ...snapshot.growthIntakeFindings);
+  state.growthIntakeAuditEvents.splice(0, state.growthIntakeAuditEvents.length, ...snapshot.growthIntakeAuditEvents);
 }
 
 function getRows(tableName: TableName): AnyTestRecord[] {
@@ -2189,14 +2192,14 @@ function getRows(tableName: TableName): AnyTestRecord[] {
       return state.bookingRequests;
     case "bookingSettings":
       return state.bookingSettings;
-    case "growthChecks":
-      return state.growthChecks;
-    case "growthCheckIdentityCandidates":
-      return state.growthCheckIdentityCandidates;
-    case "growthCheckFindings":
-      return state.growthCheckFindings;
-    case "growthCheckAuditEvents":
-      return state.growthCheckAuditEvents;
+    case "growthIntakeChecks":
+      return state.growthIntakeChecks;
+    case "growthIntakeIdentityCandidates":
+      return state.growthIntakeIdentityCandidates;
+    case "growthIntakeFindings":
+      return state.growthIntakeFindings;
+    case "growthIntakeAuditEvents":
+      return state.growthIntakeAuditEvents;
   }
 }
 
@@ -3244,10 +3247,10 @@ function createBookingSettingsRecord(
   };
 }
 
-function createGrowthCheckRecord(
-  values: Partial<TestGrowthCheckRecord> &
-    Pick<TestGrowthCheckRecord, "companyId" | "ownerUserId" | "createdById" | "businessName">
-): TestGrowthCheckRecord {
+function createGrowthIntakeCheckRecord(
+  values: Partial<TestGrowthIntakeCheckRecord> &
+    Pick<TestGrowthIntakeCheckRecord, "companyId" | "ownerUserId" | "createdById" | "businessName">
+): TestGrowthIntakeCheckRecord {
   const now = new Date();
 
   return {
@@ -3278,16 +3281,16 @@ function createGrowthCheckRecord(
   };
 }
 
-function createGrowthCheckIdentityCandidateRecord(
-  values: Partial<TestGrowthCheckIdentityCandidateRecord> &
-    Pick<TestGrowthCheckIdentityCandidateRecord, "companyId" | "growthCheckId" | "displayName">
-): TestGrowthCheckIdentityCandidateRecord {
+function createGrowthIntakeIdentityCandidateRecord(
+  values: Partial<TestGrowthIntakeIdentityCandidateRecord> &
+    Pick<TestGrowthIntakeIdentityCandidateRecord, "companyId" | "growthIntakeCheckId" | "displayName">
+): TestGrowthIntakeIdentityCandidateRecord {
   const now = new Date();
 
   return {
     id: values.id ?? nextId(),
     companyId: values.companyId,
-    growthCheckId: values.growthCheckId,
+    growthIntakeCheckId: values.growthIntakeCheckId,
     displayName: values.displayName,
     domain: values.domain ?? null,
     source: values.source ?? "manual",
@@ -3300,16 +3303,16 @@ function createGrowthCheckIdentityCandidateRecord(
   };
 }
 
-function createGrowthCheckFindingRecord(
-  values: Partial<TestGrowthCheckFindingRecord> &
-    Pick<TestGrowthCheckFindingRecord, "companyId" | "growthCheckId" | "category" | "title">
-): TestGrowthCheckFindingRecord {
+function createGrowthIntakeFindingRecord(
+  values: Partial<TestGrowthIntakeFindingRecord> &
+    Pick<TestGrowthIntakeFindingRecord, "companyId" | "growthIntakeCheckId" | "category" | "title">
+): TestGrowthIntakeFindingRecord {
   const now = new Date();
 
   return {
     id: values.id ?? nextId(),
     companyId: values.companyId,
-    growthCheckId: values.growthCheckId,
+    growthIntakeCheckId: values.growthIntakeCheckId,
     category: values.category,
     severity: values.severity ?? "info",
     status: values.status ?? "open",
@@ -3323,13 +3326,13 @@ function createGrowthCheckFindingRecord(
   };
 }
 
-function createGrowthCheckAuditEventRecord(
-  values: Partial<TestGrowthCheckAuditEventRecord> &
+function createGrowthIntakeAuditEventRecord(
+  values: Partial<TestGrowthIntakeAuditEventRecord> &
     Pick<
-      TestGrowthCheckAuditEventRecord,
+      TestGrowthIntakeAuditEventRecord,
       "companyId" | "entityType" | "entityId" | "action"
     >
-): TestGrowthCheckAuditEventRecord {
+): TestGrowthIntakeAuditEventRecord {
   const now = new Date();
 
   return {
@@ -3337,7 +3340,7 @@ function createGrowthCheckAuditEventRecord(
     companyId: values.companyId,
     entityType: values.entityType,
     entityId: values.entityId,
-    growthCheckId: values.growthCheckId ?? null,
+    growthIntakeCheckId: values.growthIntakeCheckId ?? null,
     action: values.action,
     actorId: values.actorId ?? null,
     beforeState: values.beforeState ?? null,
@@ -3512,25 +3515,25 @@ function createRow(tableName: TableName, values: Record<string, unknown>): AnyTe
       return createBookingSettingsRecord(
         values as Partial<TestBookingSettingsRecord> & Pick<TestBookingSettingsRecord, "companyId">
       );
-    case "growthChecks":
-      return createGrowthCheckRecord(
-        values as Partial<TestGrowthCheckRecord> &
-          Pick<TestGrowthCheckRecord, "companyId" | "ownerUserId" | "createdById" | "businessName">
+    case "growthIntakeChecks":
+      return createGrowthIntakeCheckRecord(
+        values as Partial<TestGrowthIntakeCheckRecord> &
+          Pick<TestGrowthIntakeCheckRecord, "companyId" | "ownerUserId" | "createdById" | "businessName">
       );
-    case "growthCheckIdentityCandidates":
-      return createGrowthCheckIdentityCandidateRecord(
-        values as Partial<TestGrowthCheckIdentityCandidateRecord> &
-          Pick<TestGrowthCheckIdentityCandidateRecord, "companyId" | "growthCheckId" | "displayName">
+    case "growthIntakeIdentityCandidates":
+      return createGrowthIntakeIdentityCandidateRecord(
+        values as Partial<TestGrowthIntakeIdentityCandidateRecord> &
+          Pick<TestGrowthIntakeIdentityCandidateRecord, "companyId" | "growthIntakeCheckId" | "displayName">
       );
-    case "growthCheckFindings":
-      return createGrowthCheckFindingRecord(
-        values as Partial<TestGrowthCheckFindingRecord> &
-          Pick<TestGrowthCheckFindingRecord, "companyId" | "growthCheckId" | "category" | "title">
+    case "growthIntakeFindings":
+      return createGrowthIntakeFindingRecord(
+        values as Partial<TestGrowthIntakeFindingRecord> &
+          Pick<TestGrowthIntakeFindingRecord, "companyId" | "growthIntakeCheckId" | "category" | "title">
       );
-    case "growthCheckAuditEvents":
-      return createGrowthCheckAuditEventRecord(
-        values as Partial<TestGrowthCheckAuditEventRecord> &
-          Pick<TestGrowthCheckAuditEventRecord, "companyId" | "entityType" | "entityId" | "action">
+    case "growthIntakeAuditEvents":
+      return createGrowthIntakeAuditEventRecord(
+        values as Partial<TestGrowthIntakeAuditEventRecord> &
+          Pick<TestGrowthIntakeAuditEventRecord, "companyId" | "entityType" | "entityId" | "action">
       );
   }
 }
@@ -3827,10 +3830,10 @@ export const fileAttachments = fileAttachmentsTable;
 export const onTheWayNotifications = onTheWayNotificationsTable;
 export const bookingRequests = bookingRequestsTable;
 export const bookingSettings = bookingSettingsTable;
-export const growthChecks = growthChecksTable;
-export const growthCheckIdentityCandidates = growthCheckIdentityCandidatesTable;
-export const growthCheckFindings = growthCheckFindingsTable;
-export const growthCheckAuditEvents = growthCheckAuditEventsTable;
+export const growthIntakeChecks = growthIntakeChecksTable;
+export const growthIntakeIdentityCandidates = growthIntakeIdentityCandidatesTable;
+export const growthIntakeFindings = growthIntakeFindingsTable;
+export const growthIntakeAuditEvents = growthIntakeAuditEventsTable;
 
 export async function emitEvent(event: Omit<TestActivityEventRecord, "id" | "occurredAt"> & {
   occurredAt?: Date;
@@ -4178,10 +4181,10 @@ export function createDbModuleMock() {
     onTheWayNotifications,
     bookingRequests,
     bookingSettings,
-    growthChecks,
-    growthCheckIdentityCandidates,
-    growthCheckFindings,
-    growthCheckAuditEvents,
+    growthIntakeChecks,
+    growthIntakeIdentityCandidates,
+    growthIntakeFindings,
+    growthIntakeAuditEvents,
     emitEvent,
     emitEventWithExecutor,
     markInvoiceOverdueIfNeeded,
@@ -4228,10 +4231,10 @@ export function resetTestState(): void {
   state.onTheWayNotifications.length = 0;
   state.bookingRequests.length = 0;
   state.bookingSettings.length = 0;
-  state.growthChecks.length = 0;
-  state.growthCheckIdentityCandidates.length = 0;
-  state.growthCheckFindings.length = 0;
-  state.growthCheckAuditEvents.length = 0;
+  state.growthIntakeChecks.length = 0;
+  state.growthIntakeIdentityCandidates.length = 0;
+  state.growthIntakeFindings.length = 0;
+  state.growthIntakeAuditEvents.length = 0;
 }
 
 export const RENAVANI_INTERNAL_TEST_COMPANY_ID = "00000000-0000-4000-8000-000000000053";
@@ -4551,12 +4554,12 @@ export function seedBookingSettings(
   return record;
 }
 
-export function seedGrowthCheck(
-  values: Partial<TestGrowthCheckRecord> &
-    Pick<TestGrowthCheckRecord, "companyId" | "ownerUserId" | "createdById" | "businessName">
-): TestGrowthCheckRecord {
-  const record = createGrowthCheckRecord(values);
-  state.growthChecks.push(record);
+export function seedGrowthIntakeCheck(
+  values: Partial<TestGrowthIntakeCheckRecord> &
+    Pick<TestGrowthIntakeCheckRecord, "companyId" | "ownerUserId" | "createdById" | "businessName">
+): TestGrowthIntakeCheckRecord {
+  const record = createGrowthIntakeCheckRecord(values);
+  state.growthIntakeChecks.push(record);
   return record;
 }
 
