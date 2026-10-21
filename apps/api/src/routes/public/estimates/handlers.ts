@@ -36,10 +36,9 @@ export async function getPublicEstimateHandler(
   reply: FastifyReply
 ): Promise<FastifyReply> {
   const params = request.params as TokenParams;
-  const [estimate, scheduling] = await Promise.all([
-    getPublicEstimate(params.token),
-    getPublicEstimateSchedulingContext(params.token)
-  ]);
+  const estimate = await getPublicEstimate(params.token);
+  const scheduling =
+    estimate.status === "approved" ? await getPublicEstimateSchedulingContext(params.token) : null;
 
   return reply.send({
     estimate: toPublicEstimateResponse(estimate),

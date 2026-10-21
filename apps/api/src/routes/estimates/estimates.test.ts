@@ -527,6 +527,42 @@ describe("estimate routes", () => {
     expect(expiredResponse.status).toBe(409);
   });
 
+  it("GET /public/estimates/:token returns scheduling only when estimate is approved", async () => {
+    const auth = createAuthContext();
+    const { customer, property, job } = seedEstimateGraph(auth.company.id);
+    fakeDb.seedBookingSettings({
+      companyId: auth.company.id,
+      isEnabled: true,
+      bookingSlug: "sparkle-co"
+    });
+    const estimate = fakeDb.seedEstimate({
+      companyId: auth.company.id,
+      customerId: customer.id,
+      propertyId: property.id,
+      jobId: job.id,
+      status: "sent",
+      approvalToken: "p".repeat(32),
+      expiresAt: new Date("2026-05-28T00:00:00.000Z")
+    });
+
+    const beforeApprove = await request(app.server).get(`/api/v1/public/estimates/${estimate.approvalToken}`);
+    expect(beforeApprove.status).toBe(200);
+    expect(beforeApprove.body.scheduling).toBeNull();
+
+    const approveResponse = await request(app.server)
+      .post(`/api/v1/public/estimates/${estimate.approvalToken}/approve`)
+      .send({ approvedByName: "Jane Doe" });
+    expect(approveResponse.status).toBe(200);
+
+    const afterApprove = await request(app.server).get(`/api/v1/public/estimates/${estimate.approvalToken}`);
+    expect(afterApprove.status).toBe(200);
+    expect(afterApprove.body.scheduling).toMatchObject({
+      bookingSlug: "sparkle-co",
+      zip: property.zip
+    });
+    expect(afterApprove.body.scheduling.customer.firstName).toBe(customer.firstName);
+  });
+
   it("POST /public/estimates/:token/approve works without auth and rejects repeat approvals", async () => {
     const auth = createAuthContext();
     const { customer } = seedEstimateGraph(auth.company.id);
