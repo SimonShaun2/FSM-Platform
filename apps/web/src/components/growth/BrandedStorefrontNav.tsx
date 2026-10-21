@@ -1,8 +1,13 @@
 "use client";
 
-import { useState } from "react";
+import { useCallback, useEffect, useId, useRef, useState } from "react";
 import Link from "next/link";
 import { Menu, X } from "lucide-react";
+
+import {
+  getFocusableElements,
+  handleMobileNavKeydown
+} from "@/src/components/growth/branded-storefront-nav.a11y";
 
 interface BrandedStorefrontNavProps {
   bookHref: string;
@@ -18,8 +23,51 @@ const NAV_LINKS = [
 
 export function BrandedStorefrontNav({ bookHref, showReviewsLink, primaryClassName }: BrandedStorefrontNavProps) {
   const [mobileOpen, setMobileOpen] = useState(false);
+  const toggleRef = useRef<HTMLButtonElement>(null);
+  const panelRef = useRef<HTMLElement>(null);
+  const restoreFocusRef = useRef(false);
+  const mobileNavId = useId().replace(/:/g, "");
 
   const links = showReviewsLink ? [...NAV_LINKS, { href: "#reviews", label: "Reviews" }] : [...NAV_LINKS];
+
+  const closeMenu = useCallback((restoreFocus = true) => {
+    restoreFocusRef.current = restoreFocus;
+    setMobileOpen(false);
+  }, []);
+
+  const openMenu = useCallback(() => {
+    setMobileOpen(true);
+  }, []);
+
+  useEffect(() => {
+    if (!mobileOpen) {
+      if (restoreFocusRef.current) {
+        restoreFocusRef.current = false;
+        toggleRef.current?.focus();
+      }
+
+      return;
+    }
+
+    const panel = panelRef.current;
+
+    if (!panel) {
+      return;
+    }
+
+    const focusables = getFocusableElements(panel);
+    focusables[0]?.focus();
+
+    const onKeyDown = (event: KeyboardEvent) => {
+      handleMobileNavKeydown(event, panel, () => closeMenu(true));
+    };
+
+    document.addEventListener("keydown", onKeyDown);
+
+    return () => {
+      document.removeEventListener("keydown", onKeyDown);
+    };
+  }, [mobileOpen, closeMenu]);
 
   return (
     <>
@@ -32,11 +80,18 @@ export function BrandedStorefrontNav({ bookHref, showReviewsLink, primaryClassNa
       </nav>
 
       <button
+        ref={toggleRef}
         type="button"
         className="inline-flex size-11 items-center justify-center rounded-lg border border-[#e6dccb] bg-white text-[#2a3360] lg:hidden"
         aria-expanded={mobileOpen}
-        aria-controls="branded-site-mobile-nav"
-        onClick={() => setMobileOpen((open) => !open)}
+        aria-controls={mobileNavId}
+        onClick={() => {
+          if (mobileOpen) {
+            closeMenu(false);
+          } else {
+            openMenu();
+          }
+        }}
       >
         <span className="sr-only">{mobileOpen ? "Close menu" : "Open menu"}</span>
         {mobileOpen ? <X className="size-5" aria-hidden /> : <Menu className="size-5" aria-hidden />}
@@ -44,14 +99,15 @@ export function BrandedStorefrontNav({ bookHref, showReviewsLink, primaryClassNa
 
       {mobileOpen ? (
         <nav
-          id="branded-site-mobile-nav"
+          ref={panelRef}
+          id={mobileNavId}
           className="absolute left-0 right-0 top-full z-20 border-b border-[#e6dccb] bg-[#f7faf8] px-6 py-4 lg:hidden"
           aria-label="Mobile"
         >
           <ul className="flex flex-col gap-3 text-[15px] font-medium text-[#2a3360]">
             {links.map((link) => (
               <li key={link.href}>
-                <a href={link.href} onClick={() => setMobileOpen(false)}>
+                <a href={link.href} onClick={() => closeMenu(true)}>
                   {link.label}
                 </a>
               </li>
@@ -60,7 +116,7 @@ export function BrandedStorefrontNav({ bookHref, showReviewsLink, primaryClassNa
               <Link
                 href={bookHref}
                 className={`inline-flex h-11 w-full items-center justify-center rounded-[10px] text-sm font-semibold text-white ${primaryClassName}`}
-                onClick={() => setMobileOpen(false)}
+                onClick={() => closeMenu(true)}
               >
                 Book a clean
               </Link>
