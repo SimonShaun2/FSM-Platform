@@ -33,6 +33,11 @@ export function handleMobileNavKeydown(
   const last = focusables[focusables.length - 1];
   const active = document.activeElement;
 
+  if (!first || !last) {
+    event.preventDefault();
+    return;
+  }
+
   if (event.shiftKey && active === first) {
     event.preventDefault();
     last.focus();
