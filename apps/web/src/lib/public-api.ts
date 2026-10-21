@@ -2,6 +2,7 @@ import { publicEnv } from "@fsm/config";
 import type { ErrorCode } from "@fsm/types";
 
 import { ApiError, type ApiErrorPayload } from "@/src/lib/api";
+import { assertSafePublicApiRequestPath } from "@/src/lib/public-api-path-security";
 
 /**
  * Browser: same-origin `/api/v1/public/*` (Next.js rewrite → API).
@@ -29,6 +30,15 @@ async function parseError(response: Response): Promise<ApiErrorPayload> {
 }
 
 async function publicApiFetch<TResponse>(path: string, options: RequestInit = {}): Promise<TResponse> {
+  try {
+    assertSafePublicApiRequestPath(path);
+  } catch {
+    throw new ApiError(400, {
+      error: "VALIDATION_ERROR",
+      message: "Invalid public API path"
+    });
+  }
+
   const headers = new Headers(options.headers);
 
   if (!headers.has("Content-Type") && options.body) {

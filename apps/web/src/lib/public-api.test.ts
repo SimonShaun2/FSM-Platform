@@ -1,6 +1,7 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
 
-import { resolvePublicApiBase } from "@/src/lib/public-api";
+import { ApiError } from "@/src/lib/api";
+import { publicApi, resolvePublicApiBase } from "@/src/lib/public-api";
 
 describe("resolvePublicApiBase", () => {
   afterEach(() => {
@@ -18,5 +19,14 @@ describe("resolvePublicApiBase", () => {
     vi.stubEnv("API_URL", "http://api.internal:3001/");
 
     expect(resolvePublicApiBase()).toBe("http://api.internal:3001");
+  });
+});
+
+describe("publicApi path security", () => {
+  it("rejects traversal segments before fetch", async () => {
+    await expect(publicApi.get("/api/v1/public/booking/../secrets")).rejects.toMatchObject({
+      status: 400,
+      payload: { error: "VALIDATION_ERROR" }
+    } satisfies Partial<ApiError>);
   });
 });
