@@ -3,8 +3,6 @@ import { Decimal } from "decimal.js";
 
 import { customers, db, jobs } from "@fsm/db";
 import {
-  AppError,
-  ErrorCode,
   type JobGrowthChannel,
   type JobSourceChannelSummary,
   type JobSourceReportingQuery,
@@ -12,7 +10,7 @@ import {
   type JobStatus
 } from "@fsm/types";
 
-import { resolveReportingPeriod } from "../lib/reporting-period.js";
+import { assertJobSourceReportingPeriodAllowed, resolveReportingPeriod } from "../lib/reporting-period.js";
 
 type JobRow = typeof jobs.$inferSelect;
 type CustomerRow = Pick<typeof customers.$inferSelect, "id" | "leadSource" | "referredBy">;
@@ -207,9 +205,7 @@ export async function getJobSourceReportingSummary(
   const period = resolveReportingPeriod(query.startDate, query.endDate, timeZone);
   const includeJobIds = query.includeJobIds === true;
 
-  if (period.start > period.end) {
-    throw new AppError(ErrorCode.VALIDATION_ERROR, "startDate must be on or before endDate");
-  }
+  assertJobSourceReportingPeriodAllowed(period);
 
   const periodJobRows = await db
     .select()
