@@ -1,6 +1,6 @@
 # Renvani (FSM Platform)
 
-Renvani helps home service businesses attract more customers through their own channels, turn more inquiries into booked jobs, and bring customers back. This repository is the growth + operations platform monorepo for HVAC, plumbing, residential cleaning, and related trades—AI powers how the product works under human approval and policy. For build tickets, schema, and phase history, see [`docs/README.md`](docs/README.md).
+Renvani helps home service businesses attract more customers through their own channels, turn more inquiries into booked jobs, and bring customers back—the growth promise ([Owner.com](https://www.owner.com/) as the growth model). **Agent/AI workflow operations lead the product:** Revenue, Scheduling, Service, Retention, and Owner Agents run workflows across five outcome areas; **FSM modules in this monorepo are the supporting system-of-record layer** those agents operate on (standalone Renvani SoR; legacy import-only). AI powers how the work gets done under human approval and policy. Build tickets, schema, and phase history: [`docs/README.md`](docs/README.md).
 
 ## Prerequisites
 
