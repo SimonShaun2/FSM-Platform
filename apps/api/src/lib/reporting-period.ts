@@ -37,8 +37,21 @@ function getZonedParts(dateValue: Date, timeZone: string) {
   };
 }
 
+function parseDateOnlyParts(dateOnly: string): { year: number; month: number; day: number } {
+  const [yearPart, monthPart, dayPart] = dateOnly.split("-");
+  const year = Number.parseInt(yearPart ?? "", 10);
+  const month = Number.parseInt(monthPart ?? "", 10);
+  const day = Number.parseInt(dayPart ?? "", 10);
+
+  if (!year || !month || !day) {
+    throw new AppError(ErrorCode.VALIDATION_ERROR, "startDate and endDate must be valid ISO dates");
+  }
+
+  return { year, month, day };
+}
+
 function addDaysToDateOnly(dateOnly: string, days: number): string {
-  const [year, month, day] = dateOnly.split("-").map((value) => Number.parseInt(value, 10));
+  const { year, month, day } = parseDateOnlyParts(dateOnly);
   const utcDate = new Date(Date.UTC(year, month - 1, day + days));
 
   const y = utcDate.getUTCFullYear();
@@ -71,11 +84,7 @@ function zonedLocalTimeToUtc(
 }
 
 function zonedDayBoundary(dateOnly: string, timeZone: string, boundary: "start" | "end"): Date {
-  const [year, month, day] = dateOnly.split("-").map((value) => Number.parseInt(value, 10));
-
-  if (!year || !month || !day) {
-    throw new AppError(ErrorCode.VALIDATION_ERROR, "startDate and endDate must be valid ISO dates");
-  }
+  const { year, month, day } = parseDateOnlyParts(dateOnly);
 
   if (boundary === "start") {
     return zonedLocalTimeToUtc(year, month, day, 0, 0, 0, 0, timeZone);

@@ -3292,9 +3292,43 @@ const operators = {
   }
 };
 
+type SelectFromChain = ReturnType<typeof createSelectChain<Record<string, unknown>>>;
+
+function wrapSelectChainWithProjection<T extends Record<string, unknown>>(
+  chain: ReturnType<typeof createSelectChain<T>>,
+  projection: Record<string, unknown>
+): SelectFromChain {
+  const mapRows = (rows: T[]) => projectRows(rows, projection) as Array<Record<string, unknown>>;
+
+  const wrapped: SelectFromChain = {
+    where(predicate: Predicate<Record<string, unknown>>) {
+      chain.where(predicate as Predicate<T>);
+      return wrapped;
+    },
+    orderBy(definition: OrderByDefinition) {
+      return chain.orderBy(definition).then((rows) => mapRows(rows));
+    },
+    limit(limitCount: number) {
+      return chain.limit(limitCount).then((rows) => mapRows(rows));
+    },
+    for(_lockStrength: string) {
+      chain.for(_lockStrength);
+      return wrapped;
+    },
+    then<TResult1 = Record<string, unknown>[], TResult2 = never>(
+      onfulfilled?: ((value: Record<string, unknown>[]) => TResult1 | PromiseLike<TResult1>) | null,
+      onrejected?: ((reason: unknown) => TResult2 | PromiseLike<TResult2>) | null
+    ) {
+      return chain.then((rows) => mapRows(rows)).then(onfulfilled, onrejected);
+    }
+  };
+
+  return wrapped;
+}
+
 interface TestDb {
-  select(): {
-    from(table: MockTable): ReturnType<typeof createSelectChain<Record<string, unknown>>>;
+  select(projection?: Record<string, unknown>): {
+    from(table: MockTable): SelectFromChain;
   };
   insert(table: MockTable): ReturnType<typeof createInsertChain>;
   update(table: MockTable): ReturnType<typeof createUpdateChain<Record<string, unknown>>>;
@@ -3365,28 +3399,7 @@ export const db: TestDb = {
           return chain;
         }
 
-        const mapRows = (rows: Array<Record<string, unknown>>) => projectRows(rows, projection);
-
-        return {
-          where(predicate: Predicate<Record<string, unknown>>) {
-            const filteredChain = chain.where(predicate);
-
-            return {
-              then<TResult1 = Record<string, unknown>[], TResult2 = never>(
-                onfulfilled?: ((value: Record<string, unknown>[]) => TResult1 | PromiseLike<TResult1>) | null,
-                onrejected?: ((reason: unknown) => TResult2 | PromiseLike<TResult2>) | null
-              ) {
-                return filteredChain.then(mapRows).then(onfulfilled, onrejected);
-              }
-            };
-          },
-          then<TResult1 = Record<string, unknown>[], TResult2 = never>(
-            onfulfilled?: ((value: Record<string, unknown>[]) => TResult1 | PromiseLike<TResult1>) | null,
-            onrejected?: ((reason: unknown) => TResult2 | PromiseLike<TResult2>) | null
-          ) {
-            return chain.then(mapRows).then(onfulfilled, onrejected);
-          }
-        };
+        return wrapSelectChainWithProjection(chain, projection);
       }
     };
   },

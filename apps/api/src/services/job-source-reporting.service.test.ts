@@ -254,4 +254,40 @@ describe("getJobSourceReportingSummary", () => {
     expect(summaryB.totals.bookedJobCount).toBe(1);
     expect(summaryB.totals.revenue).toBe("50.00");
   });
+
+  it("caps includeJobIds at 25 per channel and sets jobIdsTruncated", async () => {
+    const company = fakeDb.seedCompany({ name: "Cap Co", slug: "cap-co" });
+
+    for (let index = 0; index < 26; index += 1) {
+      const customer = fakeDb.seedCustomer({
+        companyId: company.id,
+        firstName: "Web",
+        lastName: `Lead${index}`,
+        leadSource: "direct_web"
+      });
+
+      fakeDb.seedJob({
+        companyId: company.id,
+        customerId: customer.id,
+        jobNumber: `JOB-CAP-${index}`,
+        title: `Web job ${index}`,
+        status: "completed",
+        leadSource: "direct_web",
+        scheduledStart: new Date(`2026-10-${String(10 + (index % 10)).padStart(2, "0")}T12:00:00.000Z`),
+        amountPaid: "10.00"
+      });
+    }
+
+    const summary = await reporting.getJobSourceReportingSummary(company.id, company.timezone, {
+      startDate: "2026-10-01",
+      endDate: "2026-10-31",
+      includeJobIds: true
+    });
+
+    const ownWebsite = summary.channels.find((channel) => channel.channel === "own_website");
+
+    expect(ownWebsite?.bookedJobCount).toBe(26);
+    expect(ownWebsite?.jobIds).toHaveLength(reporting.MAX_JOB_IDS_PER_CHANNEL);
+    expect(ownWebsite?.jobIdsTruncated).toBe(true);
+  });
 });
