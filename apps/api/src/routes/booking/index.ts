@@ -4,6 +4,9 @@ import { requireRole } from "../../lib/authorize.js";
 import {
   confirmBookingRequestHandler,
   declineBookingRequestHandler,
+  getBookingHandoffHandler,
+  initiateBookingHandoffHandler,
+  reconcileBookingHandoffHandler,
   getBookingSlugAvailabilityHandler,
   getBookingDemandByZipHandler,
   getBookingRequestHandler,
@@ -25,6 +28,9 @@ import {
   bookingSettingsRouteSchema,
   confirmBookingRequestValidation,
   declineBookingRequestValidation,
+  bookingHandoffRouteSchema,
+  initiateBookingHandoffValidation,
+  reconcileBookingHandoffValidation,
   updateBookingSettingsValidation
 } from "./schemas.js";
 
@@ -54,6 +60,24 @@ const bookingRoutes: FastifyPluginAsync = async (fastify) => {
     preValidation: [declineBookingRequestValidation],
     schema: bookingRequestRouteSchema
   }, declineBookingRequestHandler);
+
+  fastify.get("/booking-requests/:id/handoff", {
+    preHandler: [fastify.authenticate, bookingAdminRoles],
+    preValidation: [bookingRequestIdValidation],
+    schema: bookingHandoffRouteSchema
+  }, getBookingHandoffHandler);
+
+  fastify.post("/booking-requests/:id/handoff", {
+    preHandler: [fastify.authenticate, bookingAdminRoles],
+    preValidation: [initiateBookingHandoffValidation],
+    schema: bookingHandoffRouteSchema
+  }, initiateBookingHandoffHandler);
+
+  fastify.post("/booking-requests/:id/handoff/:handoffId/reconcile", {
+    preHandler: [fastify.authenticate, bookingAdminRoles],
+    preValidation: [reconcileBookingHandoffValidation],
+    schema: bookingHandoffRouteSchema
+  }, reconcileBookingHandoffHandler);
 
   fastify.get("/booking-settings", {
     preHandler: [fastify.authenticate, bookingAdminRoles],

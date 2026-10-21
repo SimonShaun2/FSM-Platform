@@ -1,11 +1,20 @@
 import type { FastifyReply, FastifyRequest } from "fastify";
 
 import type {
+  BookingHandoff,
   ConfirmBookingRequestInput,
   DeclineBookingRequestInput,
+  InitiateBookingHandoffInput,
   ListBookingRequestsQuery,
+  ReconcileBookingHandoffInput,
   UpdateBookingSettingsInput
 } from "@fsm/types";
+
+import {
+  getLatestBookingHandoff,
+  initiateBookingHandoff,
+  reconcileBookingHandoff
+} from "../../services/booking-handoff.service.js";
 
 import {
   checkBookingSlugAvailability,
@@ -20,6 +29,7 @@ import {
 } from "../../services/booking.service.js";
 import type {
   BookingAnalyticsQuery,
+  BookingHandoffIdParams,
   BookingRequestIdParams,
   BookingSlugAvailabilityQuery
 } from "./schemas.js";
@@ -201,6 +211,80 @@ export async function getBookingRequestStatsHandler(
   const stats = await getBookingRequestStats(request.company.id, query.days);
 
   return reply.send({ stats });
+}
+
+function toBookingHandoffResponse(handoff: BookingHandoff) {
+  return {
+    id: handoff.id,
+    companyId: handoff.companyId,
+    bookingRequestId: handoff.bookingRequestId,
+    targetSystem: handoff.targetSystem,
+    status: handoff.status,
+    externalReference: handoff.externalReference,
+    failureReason: handoff.failureReason,
+    operatorNotes: handoff.operatorNotes,
+    initiatedById: handoff.initiatedById,
+    reconciledById: handoff.reconciledById,
+    reconciledAt: handoff.reconciledAt ? handoff.reconciledAt.toISOString() : null,
+    createdAt: handoff.createdAt.toISOString(),
+    updatedAt: handoff.updatedAt.toISOString(),
+    deletedAt: handoff.deletedAt ? handoff.deletedAt.toISOString() : null
+  };
+}
+
+export async function getBookingHandoffHandler(
+  request: FastifyRequest,
+  reply: FastifyReply
+): Promise<FastifyReply> {
+  const params = request.params as BookingRequestIdParams;
+  const handoff = await getLatestBookingHandoff(request.company.id, params.id);
+
+  if (!handoff) {
+    return reply.code(404).send({
+      error: "NOT_FOUND",
+      message: "No booking handoff found for this request",
+      requestId: request.id
+    });
+  }
+
+  return reply.send({
+    handoff: toBookingHandoffResponse(handoff)
+  });
+}
+
+export async function initiateBookingHandoffHandler(
+  request: FastifyRequest,
+  reply: FastifyReply
+): Promise<FastifyReply> {
+  const params = request.params as BookingRequestIdParams;
+  const handoff = await initiateBookingHandoff(
+    request.company.id,
+    request.user.id,
+    params.id,
+    request.body as InitiateBookingHandoffInput
+  );
+
+  return reply.code(201).send({
+    handoff: toBookingHandoffResponse(handoff)
+  });
+}
+
+export async function reconcileBookingHandoffHandler(
+  request: FastifyRequest,
+  reply: FastifyReply
+): Promise<FastifyReply> {
+  const params = request.params as BookingHandoffIdParams;
+  const handoff = await reconcileBookingHandoff(
+    request.company.id,
+    request.user.id,
+    params.id,
+    params.handoffId,
+    request.body as ReconcileBookingHandoffInput
+  );
+
+  return reply.send({
+    handoff: toBookingHandoffResponse(handoff)
+  });
 }
 
 export async function getBookingDemandByZipHandler(

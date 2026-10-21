@@ -245,6 +245,40 @@ export const DeclineBookingRequestSchema = z.object({
   reason: z.string().trim().optional()
 }).strict();
 
+export const InitiateBookingHandoffSchema = z.object({
+  targetSystem: z.string().trim().min(2).max(100),
+  operatorNotes: z.string().trim().max(2000).optional()
+}).strict();
+
+export const ReconcileBookingHandoffSchema = z
+  .object({
+    outcome: z.enum(["succeeded", "failed"]),
+    externalReference: z.string().trim().min(1).max(255).optional(),
+    failureReason: z.string().trim().min(1).max(2000).optional()
+  })
+  .strict()
+  .superRefine((input, ctx) => {
+    if (input.outcome === "succeeded" && !input.externalReference) {
+      ctx.addIssue({
+        code: z.ZodIssueCode.custom,
+        message: "externalReference is required when outcome is succeeded",
+        path: ["externalReference"]
+      });
+    }
+
+    if (input.outcome === "failed" && !input.failureReason) {
+      ctx.addIssue({
+        code: z.ZodIssueCode.custom,
+        message: "failureReason is required when outcome is failed",
+        path: ["failureReason"]
+      });
+    }
+  });
+
+export const BookingHandoffIdParamsSchema = BookingRequestIdParamsSchema.extend({
+  handoffId: uuidSchema
+});
+
 export const UpdateBookingSettingsSchema = buildUpdateSchema({
   isEnabled: z.boolean().optional(),
   bookingSlug: z
@@ -282,6 +316,7 @@ export const UpdateBookingSettingsSchema = buildUpdateSchema({
 });
 
 export type BookingRequestIdParams = z.infer<typeof BookingRequestIdParamsSchema>;
+export type BookingHandoffIdParams = z.infer<typeof BookingHandoffIdParamsSchema>;
 export type BookingAnalyticsQuery = z.infer<typeof BookingAnalyticsQuerySchema>;
 export type BookingSlugAvailabilityQuery = z.infer<typeof BookingSlugAvailabilityQuerySchema>;
 
@@ -307,6 +342,14 @@ export const declineBookingRequestValidation = withZodValidation({
 });
 export const updateBookingSettingsValidation = withZodValidation({
   body: UpdateBookingSettingsSchema
+});
+export const initiateBookingHandoffValidation = withZodValidation({
+  params: BookingRequestIdParamsSchema,
+  body: InitiateBookingHandoffSchema
+});
+export const reconcileBookingHandoffValidation = withZodValidation({
+  params: BookingHandoffIdParamsSchema,
+  body: ReconcileBookingHandoffSchema
 });
 
 export const bookingRequestListRouteSchema = {
@@ -453,6 +496,70 @@ export const bookingRequestStatsRouteSchema = {
     },
     400: errorResponseSchema,
     401: errorResponseSchema
+  }
+} as const;
+
+const bookingHandoffResponseSchema = {
+  type: "object",
+  additionalProperties: false,
+  required: [
+    "id",
+    "companyId",
+    "bookingRequestId",
+    "targetSystem",
+    "status",
+    "externalReference",
+    "failureReason",
+    "operatorNotes",
+    "initiatedById",
+    "reconciledById",
+    "reconciledAt",
+    "createdAt",
+    "updatedAt",
+    "deletedAt"
+  ],
+  properties: {
+    id: { type: "string", format: "uuid" },
+    companyId: { type: "string", format: "uuid" },
+    bookingRequestId: { type: "string", format: "uuid" },
+    targetSystem: { type: "string" },
+    status: { type: "string", enum: ["pending_external", "succeeded", "failed"] },
+    externalReference: nullableStringSchema,
+    failureReason: nullableStringSchema,
+    operatorNotes: nullableStringSchema,
+    initiatedById: { type: "string", format: "uuid" },
+    reconciledById: { anyOf: [{ type: "string", format: "uuid" }, { type: "null" }] },
+    reconciledAt: nullableDateTimeSchema,
+    createdAt: { type: "string", format: "date-time" },
+    updatedAt: { type: "string", format: "date-time" },
+    deletedAt: nullableDateTimeSchema
+  }
+} as const;
+
+export const bookingHandoffRouteSchema = {
+  tags: ["booking"],
+  response: {
+    201: {
+      type: "object",
+      additionalProperties: false,
+      required: ["handoff"],
+      properties: {
+        handoff: bookingHandoffResponseSchema
+      }
+    },
+    200: {
+      type: "object",
+      additionalProperties: false,
+      required: ["handoff"],
+      properties: {
+        handoff: bookingHandoffResponseSchema
+      }
+    },
+    400: errorResponseSchema,
+    401: errorResponseSchema,
+    403: errorResponseSchema,
+    404: errorResponseSchema,
+    409: errorResponseSchema
   }
 } as const;
 

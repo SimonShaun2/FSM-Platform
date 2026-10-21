@@ -38,7 +38,8 @@ type TableName =
   | "fileAttachments"
   | "onTheWayNotifications"
   | "bookingRequests"
-  | "bookingSettings";
+  | "bookingSettings"
+  | "bookingHandoffs";
 
 type UserRole = "owner" | "admin" | "dispatcher" | "office" | "technician";
 type TechnicianStatus = "active" | "inactive" | "on_leave";
@@ -887,6 +888,25 @@ export interface TestBookingRequestRecord {
   deletedAt: Date | null;
 }
 
+export type BookingHandoffStatus = "pending_external" | "succeeded" | "failed";
+
+export interface TestBookingHandoffRecord {
+  id: string;
+  companyId: string;
+  bookingRequestId: string;
+  targetSystem: string;
+  status: BookingHandoffStatus;
+  externalReference: string | null;
+  failureReason: string | null;
+  operatorNotes: string | null;
+  initiatedById: string;
+  reconciledById: string | null;
+  reconciledAt: Date | null;
+  createdAt: Date;
+  updatedAt: Date;
+  deletedAt: Date | null;
+}
+
 export interface TestBookingSettingsRecord {
   id: string;
   companyId: string;
@@ -948,7 +968,8 @@ type AnyTestRecord =
   | TestFileAttachmentRecord
   | TestOnTheWayNotificationRecord
   | TestBookingRequestRecord
-  | TestBookingSettingsRecord;
+  | TestBookingSettingsRecord
+  | TestBookingHandoffRecord;
 
 type MockTable =
   | typeof companiesTable
@@ -985,7 +1006,8 @@ type MockTable =
   | typeof fileAttachmentsTable
   | typeof onTheWayNotificationsTable
   | typeof bookingRequestsTable
-  | typeof bookingSettingsTable;
+  | typeof bookingSettingsTable
+  | typeof bookingHandoffsTable;
 
 interface TestState {
   companies: TestCompanyRecord[];
@@ -1023,6 +1045,7 @@ interface TestState {
   onTheWayNotifications: TestOnTheWayNotificationRecord[];
   bookingRequests: TestBookingRequestRecord[];
   bookingSettings: TestBookingSettingsRecord[];
+  bookingHandoffs: TestBookingHandoffRecord[];
 }
 
 interface OrderByDefinition {
@@ -1817,6 +1840,24 @@ const bookingRequestsTable = {
   deletedAt: "deletedAt"
 } as const;
 
+const bookingHandoffsTable = {
+  __name: "bookingHandoffs",
+  id: "id",
+  companyId: "companyId",
+  bookingRequestId: "bookingRequestId",
+  targetSystem: "targetSystem",
+  status: "status",
+  externalReference: "externalReference",
+  failureReason: "failureReason",
+  operatorNotes: "operatorNotes",
+  initiatedById: "initiatedById",
+  reconciledById: "reconciledById",
+  reconciledAt: "reconciledAt",
+  createdAt: "createdAt",
+  updatedAt: "updatedAt",
+  deletedAt: "deletedAt"
+} as const;
+
 const bookingSettingsTable = {
   __name: "bookingSettings",
   id: "id",
@@ -1877,7 +1918,8 @@ const state: TestState = {
   fileAttachments: [],
   onTheWayNotifications: [],
   bookingRequests: [],
-  bookingSettings: []
+  bookingSettings: [],
+  bookingHandoffs: []
 };
 
 function nextId(): string {
@@ -1928,6 +1970,7 @@ function restoreState(snapshot: TestState): void {
   );
   state.bookingRequests.splice(0, state.bookingRequests.length, ...snapshot.bookingRequests);
   state.bookingSettings.splice(0, state.bookingSettings.length, ...snapshot.bookingSettings);
+  state.bookingHandoffs.splice(0, state.bookingHandoffs.length, ...snapshot.bookingHandoffs);
 }
 
 function getRows(tableName: TableName): AnyTestRecord[] {
@@ -2002,6 +2045,8 @@ function getRows(tableName: TableName): AnyTestRecord[] {
       return state.bookingRequests;
     case "bookingSettings":
       return state.bookingSettings;
+    case "bookingHandoffs":
+      return state.bookingHandoffs;
   }
 }
 
@@ -3017,6 +3062,30 @@ function createBookingRequestRecord(
   };
 }
 
+function createBookingHandoffRecord(
+  values: Partial<TestBookingHandoffRecord> &
+    Pick<TestBookingHandoffRecord, "companyId" | "bookingRequestId" | "targetSystem" | "initiatedById">
+): TestBookingHandoffRecord {
+  const now = new Date();
+
+  return {
+    id: values.id ?? nextId(),
+    companyId: values.companyId,
+    bookingRequestId: values.bookingRequestId,
+    targetSystem: values.targetSystem,
+    status: values.status ?? "pending_external",
+    externalReference: values.externalReference ?? null,
+    failureReason: values.failureReason ?? null,
+    operatorNotes: values.operatorNotes ?? null,
+    initiatedById: values.initiatedById,
+    reconciledById: values.reconciledById ?? null,
+    reconciledAt: values.reconciledAt ?? null,
+    createdAt: values.createdAt ?? now,
+    updatedAt: values.updatedAt ?? now,
+    deletedAt: values.deletedAt ?? null
+  };
+}
+
 function createBookingSettingsRecord(
   values: Partial<TestBookingSettingsRecord> & Pick<TestBookingSettingsRecord, "companyId">
 ): TestBookingSettingsRecord {
@@ -3214,6 +3283,11 @@ function createRow(tableName: TableName, values: Record<string, unknown>): AnyTe
     case "bookingSettings":
       return createBookingSettingsRecord(
         values as Partial<TestBookingSettingsRecord> & Pick<TestBookingSettingsRecord, "companyId">
+      );
+    case "bookingHandoffs":
+      return createBookingHandoffRecord(
+        values as Partial<TestBookingHandoffRecord> &
+          Pick<TestBookingHandoffRecord, "companyId" | "bookingRequestId" | "targetSystem" | "initiatedById">
       );
   }
 }
@@ -3450,6 +3524,7 @@ export const fileAttachments = fileAttachmentsTable;
 export const onTheWayNotifications = onTheWayNotificationsTable;
 export const bookingRequests = bookingRequestsTable;
 export const bookingSettings = bookingSettingsTable;
+export const bookingHandoffs = bookingHandoffsTable;
 
 export async function emitEvent(event: Omit<TestActivityEventRecord, "id" | "occurredAt"> & {
   occurredAt?: Date;
@@ -3741,6 +3816,7 @@ export function createDbModuleMock() {
     onTheWayNotifications,
     bookingRequests,
     bookingSettings,
+    bookingHandoffs,
     emitEvent,
     emitEventWithExecutor,
     markInvoiceOverdueIfNeeded,
@@ -3787,6 +3863,7 @@ export function resetTestState(): void {
   state.onTheWayNotifications.length = 0;
   state.bookingRequests.length = 0;
   state.bookingSettings.length = 0;
+  state.bookingHandoffs.length = 0;
 }
 
 export function seedCompany(

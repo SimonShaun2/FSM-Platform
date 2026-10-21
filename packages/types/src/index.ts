@@ -13,6 +13,7 @@ export * from "./job.types.js";
 export * from "./job-product.types.js";
 export * from "./job-task.types.js";
 export * from "./booking-request.types.js";
+export * from "./booking-handoff.types.js";
 export * from "./booking-settings.types.js";
 export * from "./product.types.js";
 export * from "./review-request.types.js";

@@ -319,6 +319,8 @@ export const activityEventTypeEnum = pgEnum("activity_event_type", [
   "booking.confirmed",
   "booking.cancelled",
   "booking.completed",
+  "booking.handoff_initiated",
+  "booking.handoff_reconciled",
 ]);
 
 export const aiRecommendationTypeEnum = pgEnum("ai_recommendation_type", [
@@ -419,6 +421,12 @@ export const bookingSourceEnum = pgEnum("booking_source", [
   "direct",
   "website",
   "qr_code",
+]);
+
+export const bookingHandoffStatusEnum = pgEnum("booking_handoff_status", [
+  "pending_external",
+  "succeeded",
+  "failed",
 ]);
 
 // ─────────────────────────────────────────────
@@ -1458,6 +1466,27 @@ export const bookingRequests = pgTable("booking_requests", {
   zipIdx: index("booking_requests_zip_idx").on(t.zip),
   sourceIdx: index("booking_requests_source_idx").on(t.source),
   phoneIdx: index("booking_requests_phone_idx").on(t.phone),
+}));
+
+export const bookingHandoffs = pgTable("booking_handoffs", {
+  id: id(),
+  companyId: companyId(),
+  bookingRequestId: uuid("booking_request_id")
+    .notNull()
+    .references(() => bookingRequests.id),
+  targetSystem: varchar("target_system", { length: 100 }).notNull(),
+  status: bookingHandoffStatusEnum("status").notNull().default("pending_external"),
+  externalReference: varchar("external_reference", { length: 255 }),
+  failureReason: text("failure_reason"),
+  operatorNotes: text("operator_notes"),
+  initiatedById: uuid("initiated_by_id").notNull(),
+  reconciledById: uuid("reconciled_by_id"),
+  reconciledAt: timestamp("reconciled_at"),
+  ...timestamps,
+}, (t) => ({
+  companyIdx: index("booking_handoffs_company_idx").on(t.companyId),
+  bookingRequestIdx: index("booking_handoffs_booking_request_idx").on(t.bookingRequestId),
+  statusIdx: index("booking_handoffs_status_idx").on(t.status),
 }));
 
 export const bookingSettings = pgTable("booking_settings", {
