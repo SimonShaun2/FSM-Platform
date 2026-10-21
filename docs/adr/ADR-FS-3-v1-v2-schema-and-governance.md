@@ -1,6 +1,6 @@
 # ADR-FS-3: V1/V2 schema and governance baseline
 
-**Status:** Proposed (FS-3 In Progress — not Done; no merge to `main` without founder batch policy)
+**Status:** Proposed (FS-3 In Progress — not Done; merge to protected **`dev`** only per E.. CoS; **`main`** promotion by founder only)
 
 **Recorded:** 2026-10-21  
 **Base SHA:** `12b23226c0e0c199626940117fc7f0fa89f87375`  
@@ -50,7 +50,7 @@ recordVersion = "rv1:" + entityType + ":" + entityId + ":" + row.updatedAt.toISO
 - At execute: reload target row; recompute current `recordVersion`; if mismatch → `ErrorCode.CONFLICT` (409), no side effects (maps to FS37-NT-06).
 - Distinct from payload `contractVersion` `1.0.0`.
 
-- **Product Owner:** acknowledged 2026-10-21 (PR #19 comment); sub-second concurrent writes: accepted v1 limitation — reload at execute.
+- **Product Owner:** prior ACK 2026-10-21 superseded by commits after `8de32140`; re-ACK required at new head after Consequences alignment.
 - **Security:** pending acknowledgment; maps to FS37-NT-06 and `CONFLICT` with U5 error-code family.
 
 ### U5 — `ErrorCode` extension (spec closure; implementation gated)
@@ -75,7 +75,7 @@ Existing codes unchanged: cross-tenant → `NOT_FOUND` / `FORBIDDEN`; stale targ
 
 ## Consequences
 
-- **Agent-first:** P0–P1 adds control-plane DDL and contracts only; full FSM suite modules in `SPRINT_ROADMAP.md` stay deferred (Notion §02 five agent products: revenue, scheduling, service, retention, owner).
+- **Agent-first wedge (P0–P1):** Add control-plane DDL and contracts first; operators may adopt agents on incumbent systems without replacing their full stack. **Product scope (Notion §01):** Growth, Revenue, Operations, Retention, and Command Center plus **in-scope FSM facilitator modules** are delivered **in stages** — growth loop first, then inventory-led completion/improvement of existing repo capabilities — not excluded or permanently deferred.
 - **FSM substrate:** Existing `main` entities (`jobs`, `booking_request`, dispatch, `ai_recommendations`, invoices) remain the workflow/data layer agents read; no `lead` entity in v1 contract (use `job`).
 - Pair 1 (FS-37) may incorporate U4/U5 spec into `agent-control-plane@1.0.0` after PO + Security **ACK**; implementation stays blocked until FS-3 Ready.
 - Implementation cards FS-10/12/17+ stay gated until FS-3 In Review (dual ACK) and FS-8 negative evidence (see FS-8).
@@ -83,4 +83,4 @@ Existing codes unchanged: cross-tenant → `NOT_FOUND` / `FORBIDDEN`; stale targ
 ## Reviewers (required before FS-3 → In Review)
 
 1. **Security** — ADR + U5 closure on FS-8 / FS-37 (**pending**)
-2. **Product Owner** — agent-first wedge vs in-scope FSM portfolio (**ACK 2026-10-21**, PR #19)
+2. **Product Owner** — agent-first wedge vs in-scope FSM portfolio (**re-ACK pending** at PR head after Consequences fix)
