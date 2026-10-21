@@ -1,6 +1,5 @@
-import { publicEnv } from "@fsm/config";
-
 import type { PublicBookingSettingsRecord } from "@/src/hooks/booking.hooks";
+import { resolvePublicApiBase } from "@/src/lib/public-api";
 
 interface PublicBookingResponse {
   booking: PublicBookingSettingsRecord;
@@ -9,12 +8,14 @@ interface PublicBookingResponse {
 export async function fetchPublicBookingSettingsBySlug(
   slug: string
 ): Promise<PublicBookingSettingsRecord | null> {
-  const base = publicEnv.NEXT_PUBLIC_API_URL.replace(/\/$/, "");
-  const response = await fetch(`${base}/api/v1/public/booking/${encodeURIComponent(slug)}`, {
-    method: "GET",
-    headers: { Accept: "application/json" },
-    next: { revalidate: 60 }
-  });
+  const response = await fetch(
+    `${resolvePublicApiBase()}/api/v1/public/booking/${encodeURIComponent(slug)}`,
+    {
+      method: "GET",
+      headers: { Accept: "application/json" },
+      next: { revalidate: 60 }
+    }
+  );
 
   if (response.status === 404) {
     return null;
