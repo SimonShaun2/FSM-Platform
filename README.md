@@ -1,6 +1,6 @@
-# FSM Platform
+# Renvani (FSM Platform)
 
-AI-native field service management monorepo for HVAC, plumbing, and home service operators.
+Renvani helps home service businesses attract more customers through their own channels, turn more inquiries into booked jobs, and bring customers back. This repository is the growth + operations platform monorepo for HVAC, plumbing, residential cleaning, and related trades—AI powers how the product works under human approval and policy. For build tickets, schema, and phase history, see [`docs/README.md`](docs/README.md).
 
 ## Prerequisites
 
