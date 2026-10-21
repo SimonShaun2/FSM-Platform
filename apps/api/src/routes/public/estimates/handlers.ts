@@ -3,7 +3,8 @@ import type { FastifyReply, FastifyRequest } from "fastify";
 import {
   customerApproveEstimate,
   customerDeclineEstimate,
-  getPublicEstimate
+  getPublicEstimate,
+  getPublicEstimateSchedulingContext
 } from "../../../services/estimate.service.js";
 import type {
   CustomerApproveBody,
@@ -35,10 +36,14 @@ export async function getPublicEstimateHandler(
   reply: FastifyReply
 ): Promise<FastifyReply> {
   const params = request.params as TokenParams;
-  const estimate = await getPublicEstimate(params.token);
+  const [estimate, scheduling] = await Promise.all([
+    getPublicEstimate(params.token),
+    getPublicEstimateSchedulingContext(params.token)
+  ]);
 
   return reply.send({
-    estimate: toPublicEstimateResponse(estimate)
+    estimate: toPublicEstimateResponse(estimate),
+    scheduling
   });
 }
 

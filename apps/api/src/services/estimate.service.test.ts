@@ -578,6 +578,44 @@ describe("estimate.service", () => {
     });
   });
 
+  it("getPublicEstimateSchedulingContext returns booking context when online booking is enabled", async () => {
+    const { company } = createAdminContext();
+    const { customer, property, job } = seedEstimateGraph(company.id);
+    fakeDb.seedBookingSettings({
+      companyId: company.id,
+      isEnabled: true,
+      bookingSlug: "sparkle-co"
+    });
+    const estimate = fakeDb.seedEstimate({
+      companyId: company.id,
+      customerId: customer.id,
+      propertyId: property.id,
+      jobId: job.id,
+      status: "sent",
+      approvalToken: "s".repeat(32),
+      expiresAt: new Date("2026-05-28T00:00:00.000Z")
+    });
+
+    const scheduling = await estimateService.getPublicEstimateSchedulingContext(estimate.approvalToken ?? "");
+
+    expect(scheduling).toMatchObject({
+      companyName: company.name,
+      bookingSlug: "sparkle-co",
+      zip: property.zip,
+      customer: {
+        firstName: customer.firstName,
+        lastName: customer.lastName,
+        phone: customer.phone
+      },
+      property: {
+        addressLine1: property.addressLine1,
+        city: property.city,
+        state: property.state,
+        zip: property.zip
+      }
+    });
+  });
+
   it("getPublicEstimate returns a customer-safe view, marks viewedAt, and rejects expired tokens", async () => {
     const { company } = createAdminContext();
     const { customer, property, job } = seedEstimateGraph(company.id);

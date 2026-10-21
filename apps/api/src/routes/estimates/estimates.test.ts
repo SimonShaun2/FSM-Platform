@@ -508,6 +508,7 @@ describe("estimate routes", () => {
     const expiredResponse = await request(app.server).get(`/api/v1/public/estimates/${expiredEstimate.approvalToken}`);
 
     expect(successResponse.status).toBe(200);
+    expect(successResponse.body.scheduling).toBeNull();
     expect(successResponse.body.estimate.status).toBe("viewed");
     expect(successResponse.body.estimate.customer).toBeUndefined();
     expect(successResponse.body.estimate.property).toBeUndefined();
