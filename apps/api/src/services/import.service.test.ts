@@ -69,6 +69,25 @@ function createAuthContext() {
 }
 
 describe("import.service", () => {
+  it("FS-11-AC-07 createImportSession rejects CSV larger than 10MB", async () => {
+    const actualUpload = await vi.importActual<typeof import("./file-upload.service.js")>(
+      "./file-upload.service.js"
+    );
+    uploadCsvToR2Mock.mockImplementation(actualUpload.uploadCsvToR2);
+
+    const { company, actor } = createAuthContext();
+    const oversized = Buffer.alloc(10 * 1024 * 1024 + 1, 0x61);
+
+    await expect(
+      importService.createImportSession(company.id, actor.id, "huge.csv", oversized, {
+        mimeType: "text/csv"
+      })
+    ).rejects.toMatchObject({
+      code: ErrorCode.VALIDATION_ERROR
+    });
+    expect(addImportsQueueJob).not.toHaveBeenCalled();
+  });
+
   it("createImportSession uploads the file, creates a session, and enqueues AI mapping", async () => {
     const { company, actor } = createAuthContext();
 
@@ -145,6 +164,75 @@ describe("import.service", () => {
     expect(fakeDb.getTestState().assets.find((row) => row.id === asset.id)?.deletedAt).not.toBeNull();
     expect(fakeDb.getTestState().jobs.find((row) => row.id === job.id)?.deletedAt).not.toBeNull();
     expect(fakeDb.getTestState().activityEvents.at(-1)?.eventType).toBe("import.rolled_back");
+  });
+
+  it("rollbackImport restores update_existing customer snapshots before deleting tagged rows", async () => {
+    const { company, actor } = createAuthContext();
+    const importSession = fakeDb.seedImportSession({
+      companyId: company.id,
+      createdById: actor.id,
+      fileName: "customers.csv",
+      fileUrl: "https://r2.test/fsm-bucket/imports/company-1/customers.csv",
+      status: "completed",
+      aiInferences: {
+        rollbackSnapshots: {
+          customerUpdates: [
+            {
+              customerId: "cust-updated-1",
+              before: {
+                firstName: "Original",
+                lastName: "Name",
+                displayName: null,
+                email: "orig@example.com",
+                phone: null,
+                altPhone: null,
+                tags: ["vip"],
+                internalNotes: "keep me"
+              },
+              propertyIds: ["prop-new-1"]
+            }
+          ]
+        }
+      }
+    });
+    const updatedCustomer = fakeDb.seedCustomer({
+      id: "cust-updated-1",
+      companyId: company.id,
+      firstName: "Imported",
+      lastName: "Overwrite",
+      email: "new@example.com",
+      importSessionId: importSession.id
+    });
+    fakeDb.seedProperty({
+      id: "prop-new-1",
+      companyId: company.id,
+      customerId: updatedCustomer.id,
+      addressLine1: "9 New St",
+      city: "Tulsa",
+      state: "OK",
+      zip: "74103",
+      importSessionId: importSession.id
+    });
+    const insertedCustomer = fakeDb.seedCustomer({
+      companyId: company.id,
+      firstName: "Brand",
+      lastName: "New",
+      importSessionId: importSession.id
+    });
+
+    await importService.rollbackImport(company.id, actor.id, importSession.id);
+
+    const restored = fakeDb.getTestState().customers.find((row) => row.id === updatedCustomer.id);
+    expect(restored?.firstName).toBe("Original");
+    expect(restored?.email).toBe("orig@example.com");
+    expect(restored?.importSessionId).toBeNull();
+    expect(restored?.deletedAt).toBeNull();
+    expect(
+      fakeDb.getTestState().properties.find((row) => row.id === "prop-new-1")?.deletedAt
+    ).not.toBeNull();
+    expect(
+      fakeDb.getTestState().customers.find((row) => row.id === insertedCustomer.id)?.deletedAt
+    ).not.toBeNull();
   });
 
   it("rollbackImport throws CONFLICT when the session is not completed", async () => {

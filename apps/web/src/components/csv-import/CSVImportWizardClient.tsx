@@ -30,6 +30,8 @@ import {
   downloadImportTemplateCsv,
   mergeServerMappings
 } from "@/src/lib/csv-import";
+import { sanitizeSpreadsheetCell } from "@fsm/types";
+
 import { ApiError } from "@/src/lib/api";
 import { useCSVImportStore } from "@/src/stores/csv-import.store";
 import { showToast } from "@/src/stores/toast.store";
@@ -70,7 +72,7 @@ function buildErrorCsvRows(errors: ImportErrorRecord[]) {
     row: errorRecord.row,
     field: errorRecord.field,
     message: errorRecord.message,
-    value: errorRecord.value
+    value: sanitizeSpreadsheetCell(errorRecord.value)
   }));
 }
 
@@ -432,6 +434,7 @@ export function CSVImportWizardClient({ presentation = "onboarding" }: CSVImport
             fileName={fileName}
             isUploading={createImportSession.isPending}
             onSelectFile={handleSelectFile}
+            presentation={presentation}
           />
         ) : null}
 

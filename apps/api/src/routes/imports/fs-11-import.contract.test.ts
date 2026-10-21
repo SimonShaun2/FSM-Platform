@@ -207,4 +207,72 @@ describe("FS-11 data import contract", () => {
     expect(response.status).toBe(200);
     expect(response.body.importSession.status).toBe("importing");
   });
+
+  it("FS-11-AC-06 formula injection — GET /errors returns sanitized cell values", async () => {
+    const company = fakeDb.seedCompany({ name: "Sparkle", slug: "sparkle-6" });
+    const user = fakeDb.seedUser({
+      companyId: company.id,
+      email: "owner@sparkle.test",
+      firstName: "Maya",
+      lastName: "Ortiz",
+      role: "owner"
+    });
+    const session = fakeDb.seedImportSession({
+      companyId: company.id,
+      fileName: "customers.csv",
+      fileUrl: "https://r2.test/1",
+      status: "preview",
+      validationErrors: [
+        { row: 2, field: "email", message: "Suspicious", value: "=cmd|' /C calc'!A0" }
+      ]
+    });
+
+    const response = await request(app.server)
+      .get(`/api/v1/imports/${session.id}/errors`)
+      .set("Authorization", authFor(company.id, user.id));
+
+    expect(response.status).toBe(200);
+    expect(response.body.errors[0].value).toBe("'=cmd|' /C calc'!A0");
+  });
+
+  it("FS-11-AC-08 tenant isolation — rollback, errors, and start are NOT_FOUND cross-tenant", async () => {
+    const companyA = fakeDb.seedCompany({ name: "A", slug: "company-a-8" });
+    const companyB = fakeDb.seedCompany({ name: "B", slug: "company-b-8" });
+    const userB = fakeDb.seedUser({
+      companyId: companyB.id,
+      email: "owner@b.test",
+      firstName: "B",
+      lastName: "Owner",
+      role: "owner"
+    });
+    const sessionA = fakeDb.seedImportSession({
+      companyId: companyA.id,
+      fileName: "secret.csv",
+      fileUrl: "https://r2.test/a",
+      status: "completed",
+      validationErrors: [{ row: 1, field: "email", message: "x", value: "y" }]
+    });
+    const previewA = fakeDb.seedImportSession({
+      companyId: companyA.id,
+      fileName: "preview.csv",
+      fileUrl: "https://r2.test/p",
+      status: "preview"
+    });
+
+    const rollback = await request(app.server)
+      .post(`/api/v1/imports/${sessionA.id}/rollback`)
+      .set("Authorization", authFor(companyB.id, userB.id))
+      .send();
+    const errors = await request(app.server)
+      .get(`/api/v1/imports/${sessionA.id}/errors`)
+      .set("Authorization", authFor(companyB.id, userB.id));
+    const start = await request(app.server)
+      .post(`/api/v1/imports/${previewA.id}/start`)
+      .set("Authorization", authFor(companyB.id, userB.id))
+      .send({ duplicateActions: {} });
+
+    expect(rollback.status).toBe(404);
+    expect(errors.status).toBe(404);
+    expect(start.status).toBe(404);
+  });
 });
