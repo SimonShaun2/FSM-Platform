@@ -1,3 +1,5 @@
+import { fileURLToPath } from "node:url";
+
 import { defineConfig } from "vitest/config";
 
 export default defineConfig({
@@ -7,10 +9,14 @@ export default defineConfig({
     testTimeout: 30000,
     server: {
       deps: {
-        // Workspace packages must be transformed so vi.mock("@fsm/jobs") replaces
-        // notificationsQueue before stripe.handler.ts is loaded (avoids real BullMQ).
-        inline: ["@fsm/jobs", "@fsm/db", "@fsm/config"]
+        inline: ["@fsm/db", "@fsm/config"]
       }
+    }
+  },
+  resolve: {
+    alias: {
+      // Force tests to use the stub queue so `pnpm build` does not load dist/BullMQ.
+      "@fsm/jobs": fileURLToPath(new URL("./src/test-support/fsm-jobs.mock.ts", import.meta.url))
     }
   }
 });

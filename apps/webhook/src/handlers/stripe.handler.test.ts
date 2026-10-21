@@ -4,6 +4,8 @@ import type { FastifyReply, FastifyRequest } from "fastify";
 import type Stripe from "stripe";
 import { afterEach, beforeAll, beforeEach, describe, expect, it, vi } from "vitest";
 
+import { notificationsQueueAddMock } from "@fsm/jobs";
+
 import { setupTestEnv } from "../test-support/env-setup.js";
 
 setupTestEnv();
@@ -79,14 +81,12 @@ interface MockTransaction {
 }
 
 const {
-  notificationsQueueAddMock,
   forwardStripePaymentFailedMock,
   forwardStripePaymentSuccessMock,
   errorLogMock,
   infoLogMock,
   warnLogMock
 } = vi.hoisted(() => ({
-  notificationsQueueAddMock: vi.fn(),
   forwardStripePaymentFailedMock: vi.fn(),
   forwardStripePaymentSuccessMock: vi.fn(),
   errorLogMock: vi.fn(),
@@ -295,12 +295,6 @@ vi.mock("@fsm/db", () => ({
   }
 }));
 
-vi.mock("@fsm/jobs", () => ({
-  notificationsQueue: {
-    add: notificationsQueueAddMock
-  }
-}));
-
 vi.mock("../lib/invoice-service-bridge.js", () => ({
   forwardStripePaymentFailed: forwardStripePaymentFailedMock,
   forwardStripePaymentSuccess: forwardStripePaymentSuccessMock
@@ -330,15 +324,16 @@ type StripeHandlerModule = typeof import("./stripe.handler.js");
 let stripeHandlerModule: StripeHandlerModule;
 
 beforeAll(async () => {
-  vi.resetModules();
   stripeHandlerModule = await import("./stripe.handler.js");
 });
 
 beforeEach(() => {
-  vi.useFakeTimers();
+  // #45: pin renewal dates only — full fake timers break BullMQ if @fsm/jobs ever resolves to dist.
+  vi.useFakeTimers({ toFake: ["Date"] });
   vi.setSystemTime(FIXED_WEBHOOK_TEST_NOW);
   resetState();
   notificationsQueueAddMock.mockReset();
+  notificationsQueueAddMock.mockResolvedValue({ id: "mock-notification-job" });
   forwardStripePaymentFailedMock.mockReset();
   forwardStripePaymentSuccessMock.mockReset();
   errorLogMock.mockReset();
