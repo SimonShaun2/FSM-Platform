@@ -2,7 +2,7 @@
 
 **Ticket:** FSM-0001
 **Date:** 2026-08-21
-**Repository:** `SimonShaun2/FSM-Platform`
+**Repository:** `SimonShaun2/Renvani` (GitHub rename from `SimonShaun2/FSM-Platform`; verified 2026-10-21)
 **Prepared from:** direct inspection of the founder machine working tree and `origin/main`
 
 ---
@@ -20,7 +20,7 @@ memory.
 ### Remote
 
 - Remote name: `origin`
-- Remote URL: `https://github.com/SimonShaun2/FSM-Platform.git`
+- Remote URL: `https://github.com/SimonShaun2/Renvani.git` (redirects from former `FSM-Platform` slug)
 - Default branch under audit: `main`
 
 ### Baseline SHA
@@ -375,7 +375,7 @@ has since accumulated governance remediation commits. Measure with:
 
 `git rev-parse origin/main` and `git rev-parse origin/feature/FSM-0001-repository-reconciliation`
 
-PR #1: `https://github.com/SimonShaun2/FSM-Platform/pull/1` — keep draft until integration
+PR #1: `https://github.com/SimonShaun2/Renvani/pull/1` — keep draft until integration
 branch, protection required checks, and approved-batch CI are decided (`GITHUB_WORKFLOW.md` §2).
 
 Current dirty working tree measurement:

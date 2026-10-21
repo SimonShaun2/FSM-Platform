@@ -2,7 +2,7 @@
 **Status:** Ready to build
 **Backend:** Phase 1 complete (13 tickets, 234 tests)
 **Figma:** figma.com/design/LNTOsgJ7D4blaFaTepQt3J
-**Repo:** SimonShaun2/FSM-Platform
+**Repo:** SimonShaun2/Renvani (formerly FSM-Platform)
 
 ---
 

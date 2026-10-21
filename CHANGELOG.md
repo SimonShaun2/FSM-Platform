@@ -17,6 +17,6 @@ All notable repository-level changes are recorded here.
 
 ### Changed
 
-- FS-1 Reviewer 1 governance remediation: `tickets/INDEX.md`, `WORKFLOW.md`, `docs/audit/REPOSITORY-RECONCILIATION.md`, `docs/adr/README.md`, `docs/README.md`; added `docs/reference/WORKFLOW/reconciliation.md` and integration/batch CI decision packet for founder review.
+- FS-1 Reviewer 1 governance remediation: `tickets/INDEX.md`, `WORKFLOW.md`, audit/control docs, `docs/reference/WORKFLOW/*` (reconciliation register, repo canonical name `SimonShaun2/Renvani`, finalized integration/batch CI packet, proposed `BATCH-FS1-GOV-001` registry).
 - Updated `AGENTS.md` and `CODEX.md` to the FSM Platform V2 operating model.
 - Tightened `.gitignore` for local caches, environment files, generated artifacts, and build output.

@@ -7,9 +7,10 @@
 |---|---|
 | Board | [FS-1](https://app.notion.com/p/3ff317b92d1581479083cde6386370dd) |
 | Base (`main`) | `12b23226c0e0c199626940117fc7f0fa89f87375` |
-| PR | [#1](https://github.com/SimonShaun2/FSM-Platform/pull/1) |
+| Repository | [`SimonShaun2/Renvani`](https://github.com/SimonShaun2/Renvani) (`repo-canonical.md`) |
+| PR | [#1](https://github.com/SimonShaun2/Renvani/pull/1) |
 | Prior review head | `99bb96b54c21ee65c5904b0c1d70d98c63e1946e` |
-| Remediation head | `be0d2c406a15e722924abc0a863bcf651014c149` (`cursor/fs-1-pr1-remediation-0f37`, local, not pushed) |
+| Remediation head | `git rev-parse HEAD` on `cursor/fs-1-pr1-remediation-0f37` (local, not pushed) |
 
 ## Reviewer 1 doc findings — remediation status
 
@@ -20,8 +21,9 @@
 | R1-03 | `REPOSITORY-RECONCILIATION.md` stale control-doc rows / merge-to-`main` first | **Fixed** | §9/§10/§11/§13 aligned with integration TBD |
 | R1-04 | `docs/adr/README.md` TL-01 / QA-02 without subordination | **Fixed** | Historical banner + role-name mapping |
 | R1-05 | `docs/README.md` lists `WORKFLOW.md` as primary session context | **Fixed** | `TEAM.md` + `GITHUB_WORKFLOW.md`; WORKFLOW marked historical |
-| R1-06 | No `.github/workflows/`; batch CI not enforceable | **Open** | Founder decision packet — not code in this remediation |
-| R1-07 | Integration branch unset; PR #1 base still `main` | **Open** | Founder decision packet |
+| R1-06 | No `.github/workflows/`; batch CI not enforceable | **Open** | `integration-and-batch-ci-decision-packet.md` + `batch-registry-BATCH-FS1-GOV-001.md` (await founder approval) |
+| R1-07 | Integration branch unset; PR #1 base still `main` | **Open** | Packet recommends `integration` (A2) — founder approval pending |
+| R1-13 | Stale `FSM-Platform` slug in operative docs | **Fixed** | `repo-canonical.md`; links updated to `SimonShaun2/Renvani` |
 | R1-08 | `main` protection: no required status checks | **Open** | After FSM-0010 + batch registry + branch decision |
 | R1-09 | Baseline tests: 7 API failures on `main` | **Open** | FSM-0007 / FS-2 — out of governance-only scope |
 | R1-10 | Founder overlay not in repo | **Open** | Re-measure on founder machine per `docs/audit/LOCAL-WORKTREE-OVERLAY.md` |

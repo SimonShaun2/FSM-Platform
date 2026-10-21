@@ -1,7 +1,7 @@
 # ServiceRev — Production Deployment
 
 **Version:** v3.0.0
-**Repo:** SimonShaun2/FSM-Platform
+**Repo:** SimonShaun2/Renvani (formerly FSM-Platform)
 
 ---
 
@@ -46,7 +46,7 @@ Railway Dashboard → Add Service → Database → Redis
 ### Add API service
 
 Railway Dashboard → Add Service → GitHub Repo
-- Repo: `SimonShaun2/FSM-Platform`
+- Repo: `SimonShaun2/Renvani`
 - Root directory: `apps/api`
 - Build command: `pnpm --filter @fsm/api build`
 - Start command: `node dist/server.js`
@@ -134,7 +134,7 @@ openssl rand -hex 64
 ### Create Vercel project
 
 1. Go to vercel.com → New Project → Import Git Repository
-2. Repo: `SimonShaun2/FSM-Platform`
+2. Repo: `SimonShaun2/Renvani`
 3. Framework: Next.js
 4. Root directory: `apps/web`
 5. Build command: `pnpm --filter @fsm/web build`
