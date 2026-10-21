@@ -1,5 +1,7 @@
 import { z } from "zod";
 
+import { inboxInquiryIntakeInputSchema, staffInquiryIntakeInputSchema } from "@fsm/types";
+
 import { withZodValidation } from "../shared/validation.js";
 
 export const bookingRequestIdParamsSchema = z.object({
@@ -17,4 +19,20 @@ export const bookingRequestIdParamsValidation = withZodValidation({ params: book
 export const createInquiryResponseValidation = withZodValidation({
   params: bookingRequestIdParamsSchema,
   body: createInquiryResponseBodySchema
+});
+
+export const staffInquiryIntakeValidation = withZodValidation({
+  body: staffInquiryIntakeInputSchema
+});
+
+export const inboxInquiryIntakeValidation = withZodValidation({
+  body: inboxInquiryIntakeInputSchema
+});
+
+export const getInquiryIntakeParamsSchema = z.object({
+  bookingRequestId: z.string().uuid()
+});
+
+export const getInquiryIntakeValidation = withZodValidation({
+  params: getInquiryIntakeParamsSchema
 });

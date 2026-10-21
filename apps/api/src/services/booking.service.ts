@@ -748,6 +748,11 @@ function buildAvailabilityWindowsForDay(
   });
 }
 
+export async function resolvePublicBookingCompanyId(slug: string): Promise<string> {
+  const { settings } = await getCompanyByBookingSlug(slug, db);
+  return settings.companyId;
+}
+
 export async function getPublicBookingSettingsBySlug(slug: string): Promise<PublicBookingSettings> {
   const { company, settings } = await getCompanyByBookingSlug(slug, db);
   const companyTechnicians = await listCompanyTechnicians(settings.companyId, db);
@@ -1754,4 +1759,114 @@ export async function getBookingConfirmation(slug: string, referenceNumber: stri
     : [];
 
   return buildConfirmationView(company.name, bookingRequest, job ?? null);
+}
+
+export interface CompanyInquiryBookingInput {
+  firstName: string;
+  lastName: string;
+  phone: string;
+  email?: string | null;
+  addressLine1: string;
+  city: string;
+  state: string;
+  zip: string;
+  customerNotes: string | null;
+  source: BookingRequest["source"];
+  smsConsentAppointments?: boolean;
+  smsConsentMarketing?: boolean;
+}
+
+/** Staff/inbox inquiry intake — no zip gate, no outbound notification enqueue (FS-17). */
+export async function createCompanyScopedInquiryBooking(
+  companyId: string,
+  input: CompanyInquiryBookingInput,
+  actor: BookingActor
+): Promise<{ bookingRequest: BookingRequest; customerId: string }> {
+  const normalizedInput: NormalizedBookingInput = {
+    firstName: input.firstName.trim(),
+    lastName: input.lastName.trim(),
+    phone: normalizePhone(input.phone),
+    email: normalizeOptionalEmail(input.email) ?? null,
+    addressLine1: input.addressLine1.trim(),
+    addressLine2: null,
+    city: input.city.trim(),
+    state: input.state.trim(),
+    zip: input.zip.trim(),
+    propertyType: null,
+    serviceCategory: null,
+    serviceType: null,
+    serviceDetail: null,
+    urgency: "flexible",
+    customerNotes: normalizeOptionalString(input.customerNotes) ?? null,
+    preferredDate: null,
+    preferredWindow: "first_available",
+    isPropertyOwner: true,
+    smsConsentAppointments: input.smsConsentAppointments ?? false,
+    smsConsentMarketing: input.smsConsentMarketing ?? false
+  };
+
+  const result = await db.transaction(async (tx) => {
+    const existingCustomer = await findCustomerByContact(
+      companyId,
+      normalizedInput.phone,
+      normalizedInput.email,
+      tx
+    );
+    const customer =
+      existingCustomer ??
+      (await createCustomerForBooking(companyId, normalizedInput, tx, actor));
+    const property =
+      (await findPropertyForCustomer(companyId, customer.id, normalizedInput, tx)) ??
+      (await createPropertyForBooking(companyId, customer.id, normalizedInput, tx, actor));
+
+    const insertedRows = await tx
+      .insert(bookingRequests)
+      .values({
+        companyId,
+        customerId: customer.id,
+        firstName: normalizedInput.firstName,
+        lastName: normalizedInput.lastName,
+        phone: normalizedInput.phone,
+        email: normalizedInput.email,
+        addressLine1: normalizedInput.addressLine1,
+        addressLine2: normalizedInput.addressLine2,
+        city: normalizedInput.city,
+        state: normalizedInput.state,
+        zip: normalizedInput.zip,
+        customerNotes: normalizedInput.customerNotes,
+        status: "pending",
+        source: input.source,
+        referenceNumber: buildReferenceNumber(new Date()),
+        isPropertyOwner: true,
+        smsConsentAppointments: normalizedInput.smsConsentAppointments ?? false,
+        smsConsentMarketing: normalizedInput.smsConsentMarketing ?? false
+      })
+      .returning();
+    const bookingRequest = insertedRows[0];
+
+    if (!bookingRequest) {
+      throw new AppError(ErrorCode.INTERNAL_ERROR, "Failed to create inquiry booking request");
+    }
+
+    await emitEventWithExecutor(tx, {
+      companyId,
+      eventType: "booking.requested",
+      actorId: actor.id ?? undefined,
+      actorType: actor.type,
+      actorName: actor.name,
+      entityType: "booking_request",
+      entityId: bookingRequest.id,
+      customerId: customer.id,
+      payload: {
+        source: input.source,
+        zip: bookingRequest.zip,
+        intakePath: "direct_inquiry"
+      },
+      summary: `Inquiry ${bookingRequest.referenceNumber ?? bookingRequest.id} captured`
+    });
+
+    return { bookingRequest: toBookingRequest(bookingRequest), customerId: customer.id };
+  });
+
+  return result;
 }

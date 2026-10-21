@@ -326,6 +326,8 @@ export const activityEventTypeEnum = pgEnum("activity_event_type", [
   "agent.execution_succeeded",
   "agent.execution_failed",
   "revenue.inquiry_qualified",
+  "revenue.inquiry_received",
+  "revenue.inquiry_escalated",
 ]);
 
 export const aiRecommendationTypeEnum = pgEnum("ai_recommendation_type", [
@@ -1465,6 +1467,25 @@ export const bookingRequests = pgTable("booking_requests", {
   zipIdx: index("booking_requests_zip_idx").on(t.zip),
   sourceIdx: index("booking_requests_source_idx").on(t.source),
   phoneIdx: index("booking_requests_phone_idx").on(t.phone),
+}));
+
+export const inquirySubmitIdempotency = pgTable("inquiry_submit_idempotency", {
+  id: id(),
+  companyId: companyId(),
+  idempotencyKey: varchar("idempotency_key", { length: 128 }).notNull(),
+  payloadHash: varchar("payload_hash", { length: 64 }).notNull(),
+  bookingRequestId: uuid("booking_request_id")
+    .notNull()
+    .references(() => bookingRequests.id),
+  responseSnapshot: jsonb("response_snapshot").notNull(),
+  expiresAt: timestamp("expires_at").notNull(),
+  ...timestamps,
+}, (t) => ({
+  companyKeyUnique: uniqueIndex("inquiry_submit_idempotency_company_key_idx").on(
+    t.companyId,
+    t.idempotencyKey
+  ),
+  expiresIdx: index("inquiry_submit_idempotency_expires_idx").on(t.expiresAt)
 }));
 
 export const agentActionStateEnum = pgEnum("agent_action_state", [
