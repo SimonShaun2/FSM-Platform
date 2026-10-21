@@ -59,10 +59,10 @@ Security + Dev B own the enum diff in the FS-37 types PR **after FS-3 Ready** (n
 
 | Code | HTTP | FS37-NT | When emitted (v1) |
 | --- | --- | --- | --- |
-| `POLICY_DENIED` | 403 | NT-03, NT-07, NT-11 | Tool not allowlisted; AI money/state change without approval |
-| `CONSENT_REQUIRED` | 422 | NT-08 | Outbound channel blocked until consent guard (FS-8); FS-12 slice has no provider send |
+| `POLICY_DENIED` | 403 | NT-07, NT-11 | Tool not in policy allowlist; AI money/state change without approval |
+| `CONSENT_REQUIRED` | 409 | NT-08 | Outbound channel blocked until consent guard (FS-8); FS-12 slice has no provider send |
 
-Existing codes unchanged: cross-tenant → `NOT_FOUND` / `FORBIDDEN`; stale target / idempotency → `CONFLICT`.
+Existing codes unchanged: cross-tenant → `NOT_FOUND` / `FORBIDDEN`; stale target / idempotency (incl. **NT-03** duplicate `idempotencyKey` replay mismatch) → `CONFLICT`.
 
 **Proposed** until Security acknowledges mapping on FS-8 and FS-37 acceptance record.
 
