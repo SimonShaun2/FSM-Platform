@@ -1,6 +1,6 @@
 # ServiceRev — Build Documentation
 
-**Repo:** SimonShaun2/FSM-Platform
+**Repo:** SimonShaun2/Renvani (renamed from FSM-Platform)
 **Figma (App):** figma.com/design/LNTOsgJ7D4blaFaTepQt3J
 **Figma (Marketing):** figma.com/design/tAteqeUfdi4GCtZVeaF4DJ
 
