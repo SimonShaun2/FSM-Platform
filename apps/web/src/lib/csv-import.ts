@@ -2,6 +2,7 @@ import Papa from "papaparse";
 import type { ColumnMapping } from "@fsm/types";
 
 import type { CustomerListRecord } from "@/src/hooks/customers.hooks";
+import { sanitizeImportPreviewCell } from "@/src/lib/import-preview-sanitize";
 import type {
   DuplicateMatchRecord,
   ImportPreviewRow,
@@ -111,7 +112,8 @@ function parseCsvText(csvText: string): ParsedImportRow[] {
 
     for (const header of headers) {
       const rawValue = sourceRow?.[header];
-      values[header] = typeof rawValue === "string" ? rawValue.trim() : "";
+      values[header] =
+        typeof rawValue === "string" ? sanitizeImportPreviewCell(rawValue.trim()) : "";
     }
 
     return {
@@ -224,7 +226,9 @@ export function mergeServerMappings(
 }
 
 export function getSampleValueForHeader(header: string, sampleRows: ParsedImportRow[]) {
-  return sampleRows.find((row) => normalizeTextValue(row.values[header]) !== null)?.values[header] ?? "Empty";
+  const raw =
+    sampleRows.find((row) => normalizeTextValue(row.values[header]) !== null)?.values[header] ?? "Empty";
+  return raw === "Empty" ? raw : sanitizeImportPreviewCell(raw);
 }
 
 export function buildPreviewRows(rows: ParsedImportRow[], mappings: ColumnMapping): ImportPreviewRow[] {
@@ -235,7 +239,10 @@ export function buildPreviewRows(rows: ParsedImportRow[], mappings: ColumnMappin
   return rows.slice(0, 5).map((row) => ({
     rowNumber: row.rowNumber,
     mappedValues: Object.fromEntries(
-      activeMappings.map(([header, fieldName]) => [getImportFieldLabel(fieldName), row.values[header] ?? ""])
+      activeMappings.map(([header, fieldName]) => [
+        getImportFieldLabel(fieldName),
+        sanitizeImportPreviewCell(row.values[header] ?? "")
+      ])
     )
   }));
 }

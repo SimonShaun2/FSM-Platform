@@ -1,4 +1,3 @@
-import fastifyMultipart from "@fastify/multipart";
 import Fastify from "fastify";
 import pino from "pino";
 
@@ -48,7 +47,6 @@ export async function buildApp() {
   await app.register(requestLoggerPlugin);
   await app.register(errorHandlerPlugin);
   await app.register(authenticatePlugin);
-  await app.register(fastifyMultipart);
 
   await app.register(activityEventRoutes, { prefix: "/api/v1" });
   await app.register(agentActionRoutes, { prefix: "/api/v1" });
