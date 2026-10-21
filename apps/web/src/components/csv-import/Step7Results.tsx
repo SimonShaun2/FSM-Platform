@@ -40,7 +40,7 @@ export function Step7Results({
             <p className="text-xs font-semibold uppercase tracking-[0.18em] text-brand-accent">Step 7</p>
             <h3 className="mt-2 text-xl font-semibold text-neutral-900">{statusTitle}</h3>
             <p className="mt-2 max-w-2xl text-sm leading-6 text-neutral-500">
-              Imported rows are now available in ServiceRev. Any skipped or failed rows are summarized below.
+              Imported rows are now in Renvani. Nothing was sent to customers. Fix flagged rows below or import another file.
             </p>
           </div>
         </div>
@@ -142,6 +142,10 @@ export function Step7Results({
           ) : null}
         </dl>
       </aside>
+
+      <div className="xl:col-span-2 rounded-[14px] bg-[#e4f1e8] px-4 py-4 text-sm font-medium text-[#2f7d4f]">
+        Consent from your old records was kept as-is. Imported customers get no marketing until they opt in.
+      </div>
     </div>
   );
 }

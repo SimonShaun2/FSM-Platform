@@ -9,6 +9,8 @@ interface Step1UploadProps {
   fileName: string | null;
   isUploading: boolean;
   onSelectFile: (file: File) => void | Promise<void>;
+  /** Settings import (Figma 12:4) — no onboarding chrome */
+  presentation?: "onboarding" | "settings";
 }
 
 const DROPZONE_TEXT = "Drag and drop your CSV or spreadsheet here";
@@ -18,10 +20,12 @@ export function Step1Upload({
   workEmail,
   fileName,
   isUploading,
-  onSelectFile
+  onSelectFile,
+  presentation = "onboarding"
 }: Step1UploadProps) {
   const inputRef = useRef<HTMLInputElement | null>(null);
   const [isDragActive, setIsDragActive] = useState(false);
+  const isSettings = presentation === "settings";
 
   const helperText = useMemo(() => {
     if (isUploading) {
@@ -53,6 +57,59 @@ export function Step1Upload({
     if (file) {
       void onSelectFile(file);
     }
+  }
+
+  const dropzoneButton = (
+    <button
+      type="button"
+      onClick={() => inputRef.current?.click()}
+      onDragOver={handleDragOver}
+      onDragLeave={handleDragLeave}
+      onDrop={handleDrop}
+      disabled={isUploading}
+      className={[
+        "flex w-full flex-col items-center justify-center rounded-[30px] border-2 border-dashed px-6 py-8 text-center transition",
+        isSettings ? "min-h-[320px]" : "mt-6 min-h-[280px]",
+        isDragActive
+          ? "border-brand-accent bg-brand-accent-light/50"
+          : "border-neutral-200 bg-neutral-50/70 hover:border-brand-accent/50 hover:bg-brand-accent-light/30",
+        isUploading ? "cursor-wait opacity-75" : "cursor-pointer"
+      ].join(" ")}
+    >
+      <div className="flex h-16 w-16 items-center justify-center rounded-[24px] bg-white text-brand-accent shadow-sm">
+        {isUploading ? <UploadCloud className="h-7 w-7 animate-bounce" /> : <FileSpreadsheet className="h-7 w-7" />}
+      </div>
+      <h4 className="mt-5 text-lg font-semibold text-neutral-900">{DROPZONE_TEXT}</h4>
+      <p className="mt-3 max-w-xl text-sm leading-6 text-neutral-500">{helperText}</p>
+      <span className="mt-6 inline-flex min-h-11 items-center rounded-full bg-brand-accent px-5 text-sm font-semibold text-white">
+        {isUploading ? "Uploading..." : "Browse Files"}
+      </span>
+    </button>
+  );
+
+  const fileInput = (
+    <input
+      ref={inputRef}
+      type="file"
+      accept=".csv,.xlsx,.xls"
+      className="hidden"
+      onChange={(event) => {
+        const file = event.target.files?.[0];
+        if (file) {
+          void onSelectFile(file);
+        }
+        event.currentTarget.value = "";
+      }}
+    />
+  );
+
+  if (isSettings) {
+    return (
+      <section className="rounded-[30px] border border-neutral-200 bg-white px-6 py-6 shadow-sm">
+        {dropzoneButton}
+        {fileInput}
+      </section>
+    );
   }
 
   return (
@@ -89,44 +146,8 @@ export function Step1Upload({
             </div>
           </div>
 
-          <button
-            type="button"
-            onClick={() => inputRef.current?.click()}
-            onDragOver={handleDragOver}
-            onDragLeave={handleDragLeave}
-            onDrop={handleDrop}
-            disabled={isUploading}
-            className={[
-              "mt-6 flex min-h-[280px] w-full flex-col items-center justify-center rounded-[30px] border-2 border-dashed px-6 py-8 text-center transition",
-              isDragActive
-                ? "border-brand-accent bg-brand-accent-light/50"
-                : "border-neutral-200 bg-neutral-50/70 hover:border-brand-accent/50 hover:bg-brand-accent-light/30",
-              isUploading ? "cursor-wait opacity-75" : "cursor-pointer"
-            ].join(" ")}
-          >
-            <div className="flex h-16 w-16 items-center justify-center rounded-[24px] bg-white text-brand-accent shadow-sm">
-              {isUploading ? <UploadCloud className="h-7 w-7 animate-bounce" /> : <FileSpreadsheet className="h-7 w-7" />}
-            </div>
-            <h4 className="mt-5 text-lg font-semibold text-neutral-900">{DROPZONE_TEXT}</h4>
-            <p className="mt-3 max-w-xl text-sm leading-6 text-neutral-500">{helperText}</p>
-            <span className="mt-6 inline-flex min-h-11 items-center rounded-full bg-brand-accent px-5 text-sm font-semibold text-white">
-              {isUploading ? "Uploading..." : "Browse Files"}
-            </span>
-          </button>
-
-          <input
-            ref={inputRef}
-            type="file"
-            accept=".csv,.xlsx,.xls"
-            className="hidden"
-            onChange={(event) => {
-              const file = event.target.files?.[0];
-              if (file) {
-                void onSelectFile(file);
-              }
-              event.currentTarget.value = "";
-            }}
-          />
+          {dropzoneButton}
+          {fileInput}
         </div>
       </section>
 
