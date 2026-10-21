@@ -7,6 +7,10 @@ describe("isPublicRoute", () => {
     expect(isPublicRoute("/approve/some-approval-token")).toBe(true);
   });
 
+  it("treats branded growth storefront paths as public", () => {
+    expect(isPublicRoute("/site/sparkle-co")).toBe(true);
+  });
+
   it("does not treat authenticated estimate detail paths as public", () => {
     expect(isPublicRoute("/estimates/550e8400-e29b-41d4-a716-446655440000")).toBe(false);
     expect(isPublicRoute("/estimates/new")).toBe(false);

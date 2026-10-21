@@ -3,6 +3,10 @@ import { NextResponse } from "next/server";
 
 import { AUTH_TOKEN_COOKIE_NAME } from "@/src/lib/auth";
 import { getPublicApiBaseUrl, resolveLegacyEstimateGetRecovery } from "@/src/lib/legacy-estimate-route";
+import {
+  hasPublicApiPathTraversalInRequest,
+  isPublicApiProxyPath
+} from "@/src/lib/public-api-path-security";
 import { canRoleAccessPath, getDefaultRouteForRole, isPublicRoute, normalizeUserRole } from "@/src/lib/route-access";
 
 interface TokenPayload {
@@ -62,6 +66,14 @@ export async function middleware(request: NextRequest) {
     if (legacyRecovery.action === "not-found") {
       return new NextResponse(null, { status: 404 });
     }
+  }
+
+  if (isPublicApiProxyPath(pathname)) {
+    if (hasPublicApiPathTraversalInRequest(request.url, pathname)) {
+      return new NextResponse(null, { status: 400 });
+    }
+
+    return NextResponse.next();
   }
 
   const token = request.cookies.get(AUTH_TOKEN_COOKIE_NAME)?.value;
