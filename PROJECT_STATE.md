@@ -1,7 +1,8 @@
 # PROJECT_STATE.md
 
-**Repository:** `SimonShaun2/Renvani` (GitHub rename from `SimonShaun2/FSM-Platform`; remote may still redirect; use Renvani in links and evidence)
+**Repository:** [`SimonShaun2/Renvani`](https://github.com/SimonShaun2/Renvani) (formerly `FSM-Platform`; see `docs/reference/WORKFLOW/repo-canonical.md`)
 **Status:** Historical repository baseline and V2 audit snapshot as of 2026-08-21, with 2026-10-20 governance and 2026-10-21 rename annotations. The referenced `MASTER_PRODUCT_SPEC.md` is not present at the verified head.
+**Integration branch (operative):** `dev` (protected). **`main`:** founder promotion-only (Shaun).
 **Current execution:** Agent-first FS-* [Notion build board](https://app.notion.com/p/74b3a1145d3f49d586ac6cdbf174ceb2) and `TEAM.md` (26 roles). Historical FSM-NNNN statuses and owner IDs below are not current assignments. Map them explicitly before use.
 **State owner:** Chief of Staff with Product Owner and Technical Lead.
 
@@ -211,7 +212,7 @@ be corrected under FSM-0002.
 |---|---|
 | "Thinner system, smarter brain" north star | "Complete when needed. Simple by default." |
 | Agent 1 / Agent 2 / Agent 3 / Agent 4 model | 26 permanent roles, ten senior developers in five pairs, `TEAM.md` |
-| Agent 4 sole-approval gate | Exact-head risk matrix and Gayle gate, `TEAM.md` §3 |
+| Agent 4 sole-approval gate | Exact-head peer review, QA, Security, batch CI, E.. CoS merge to `dev`, `TEAM.md` §3 |
 | Phase 1A / 1B / 1C / Phase 2 / Phase 3 roadmap | Current agent-first FS board; historical full-suite plan deferred |
 | `TICKET-NNN` identifiers | Current FS-* board IDs; historical FSM-NNNN issues require mapping |
 | "v1 / v2 deferral" scope language | Sprint assignment and progressive disclosure |

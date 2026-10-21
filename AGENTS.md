@@ -17,7 +17,7 @@ If you have prior context on this repository, the following is **retired**. Do n
 |---|---|
 | "Thinner system, smarter brain" | **"Complete when needed. Simple by default."** |
 | Agent 1 / 2 / 3 / 4 model | 26 permanent role-named agents; ten senior developers in five pairs — `TEAM.md` |
-| Agent 4 sole-approval gate | Exact-head independent QA, review, Security-by-risk and Gayle batch gate — `TEAM.md` §3 |
+| Agent 4 sole-approval gate | Exact-head peer review, QA, Security-by-risk, approved batch CI, E.. CoS merge approval into `dev` — `TEAM.md` §3 |
 | Phase 1A / 1B / 1C / 2 / 3 | Agent-first FS board now; historical full-suite sprints are deferred |
 | `TICKET-NNN` | FS-* board tickets now; legacy `FSM-NNNN` issues require explicit mapping |
 | "That's v2" as a scope refusal | Product Owner sequences the current agent-first loop and later suite by evidence |
@@ -314,4 +314,4 @@ Diagnosing a production problem must not require guessing.
 
 ## 14. How Work Flows
 
-Read `TEAM.md` for the 26-role roster, tandem process, WIP and exact-head approval matrix. The Notion Field Service Build Board governs current agent-first priority and dependencies; `SPRINT_ROADMAP.md` and `tickets/INDEX.md` are legacy V2 scope references pending reconciliation. Read `CODEX.md` for implementation patterns and `PROJECT_STATE.md` for verified repository facts. A draft PR remains In Progress. CI only runs in an approved batch; never merge or mark Done without the gates. Founder retains production promotion.
+Read `TEAM.md` for roles, tandem process, WIP and exact-head gates. The Notion Field Service Build Board governs FS-* priority; `SPRINT_ROADMAP.md` and `tickets/INDEX.md` are legacy references. Integration branch: **`dev`** (E.. CoS final merge approver). **`main`:** Shaun promotion-only. Every change on a draft PR; CI only in an approved batch; a new commit invalidates sign-offs. Never merge to `dev` or mark Done without peer review, QA, Security-as-risk, batch CI, and E.. CoS approval.

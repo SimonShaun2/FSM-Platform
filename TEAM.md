@@ -8,7 +8,7 @@ Role names describe durable responsibility, not the current ticket. Assignments 
 
 | Role | Durable responsibility | Current pairing |
 |---|---|---|
-| Chief of Staff (E.CoS) | Board, WIP, dependencies, evidence ledger | Leadership |
+| E.. CoS (Grok Bot) — PM | Board, WIP, dependencies, evidence; **final merge approver into `dev`** | Leadership |
 | Product Owner | Acceptance, scope and direct-job outcomes | Leadership |
 | Technical Lead | Architecture, contracts and safe sequencing | Leadership |
 | Senior Dev A — Agent Backend | Tenant and agent control plane | Pair 1 with B |
@@ -33,9 +33,7 @@ Role names describe durable responsibility, not the current ticket. Assignments 
 | Platform 1 — CI & Environments | Batch CI and local environment | Platform |
 | Platform 2 — Reliability & Observability | Monitoring and recovery | Platform |
 | Security | Tenant, consent, auth and agent authority | Security |
-| Gayle — Merge Gate | Independent exact-head verdict | Gate |
-
-Totals: 3 leadership, 10 senior developers in five pairs, 2 designers, 3 reviewers, 4 QA, 2 platform, 1 Security, 1 Gayle = **26**. Founder retains production promotion and exceptional live-money, legal and destructive operations.
+Totals: 3 leadership, 10 senior developers in five pairs, 2 designers, 3 reviewers, 4 QA, 2 platform, 1 Security = **25** active gate roles (+ founder). **Retired:** Gayle merge gate, Cursor Chief of Staff — superseded by **E.. CoS** final approval. Founder (Shaun) retains **`main`** promotion and exceptional live-money, legal and destructive operations.
 
 ## 2. Ticket and tandem process
 
@@ -45,25 +43,25 @@ The five active P0 pair tickets are FS-37, FS-38, FS-36, FS-39 and FS-40 respect
 
 ## 3. Risk and approval matrix
 
-| Change | Required evidence before Gayle PASS |
+| Change | Required evidence before E.. CoS merge into `dev` |
 |---|---|
-| Standard | Pair self-review and cross-review, distinct independent reviewer, assigned QA, local evidence, approved batch CI at exact head |
+| Standard | Pair self-review and cross-review, distinct peer reviewer, assigned QA, approved batch CI at exact head |
 | UX | Above, plus relevant design acceptance and accessibility checks |
-| Architecture or shared contract | Above, plus Technical Lead decision, versioned contract and consumer/migration evidence |
+| Architecture or shared contract | Above, plus Technical Lead contract decision and consumer/migration evidence |
 | Tenant, consent, auth, agent authority or sensitive data | Above, plus Security and QA negatives at exact head |
 | Platform/CI | Second platform or Technical Lead review, Security for gate authority, QA where behavior changes |
-| Release | Technical Lead, QA 4, Platform, Security by risk, Gayle and founder production promotion |
+| Release | QA 4, Platform, Security by risk; then founder promotion **`main`** from `dev` |
 
-The implementer cannot approve their own work as QA, independent reviewer, Security or Gayle. A changed PR head invalidates affected sign-offs. A failed gate returns a bounded fix card to the original pair and requires fresh evidence. Gayle derives a PASS from machine-verifiable exact-head artifacts and records a verdict; a comment or role label alone is not the gate.
+The implementer cannot approve their own work as QA, peer reviewer, Security, or E.. CoS merge. A changed PR head invalidates affected sign-offs. A failed gate returns a bounded fix card to the original pair and requires fresh evidence.
 
 ## 4. Branches, CI and release
 
-No direct push to an integration or production branch; no rebase or force-push of reviewed heads. Feature branches and draft PRs are traceable to the board ticket. The official FSM integration branch and migration of this existing PR #1 (currently based on `main`) require an explicit Technical Lead/Chief of Staff decision and branch protection before merge. Do not treat `main` as the team's ordinary integration branch by default.
+No direct push to **`dev`** or **`main`**; no rebase or force-push of reviewed heads. Feature branches and **draft PRs** are traceable to the board ticket. **`dev`** is the protected integration branch; **E.. CoS** is the final merge approver into `dev`. **`main`** is promotion-only (Shaun). PR #1 may stay based on `main` until founder decision **F2** (retarget).
 
 CI runs **only through approved batches** with enumerated membership, exact head SHA, one authorized run and recorded result. No standalone per-commit or per-PR CI, and local green tests are not CI. No merge or Done without the risk matrix and batch evidence. No deployment, public website or Vercel setup from this process. Stripe and live payment changes remain at the end of the roadmap and need separate founder authority.
 
 ## 5. Operating loop and sources
 
-CoS maintains the Notion build board, reconciles observed Cursor and GitHub evidence, assigns the next dependency-cleared ticket within WIP, and keeps reviewer, QA, Security, Design and Platform work ahead of the pairs. Product Owner and Technical Lead decide acceptance and architecture. The founder's current product direction and Notion board outrank stale V2 sprint prose in this unmerged draft until the repository roadmap is reconciled in a separate reviewable change.
+**E.. CoS** maintains the Notion build board, sets Ready, reconciles Cursor and GitHub evidence, assigns dependency-cleared tickets within WIP, and approves merges into `dev` after gates. Product Owner and Technical Lead decide acceptance and architecture. The founder's current product direction and Notion board outrank stale V2 sprint prose in this unmerged draft until reconciled in a separate change.
 
 Adapted process sources from the paused TrayLoop project: [team README](https://github.com/SimonShaun2/SimonShaun2/blob/dev/trayloop/docs/team/README.md), [tandem process](https://github.com/SimonShaun2/SimonShaun2/blob/dev/trayloop/docs/team/process.md), [ticket template](https://github.com/SimonShaun2/SimonShaun2/blob/dev/trayloop/docs/team/ticket-template.md), [split plan](https://github.com/SimonShaun2/SimonShaun2/blob/dev/trayloop/docs/team/split-plan-template.md). Copy the process, not TrayLoop-specific labels, prices, Stripe implementation or branch names.

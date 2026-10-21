@@ -290,7 +290,7 @@ metrics in `AGENTS.md` §3, stability hardening.
 
 ## Sprint 22 — Production Release
 
-If later authorized: release certification by Technical Lead, QA 4 and Platform with Security by risk, approved batch gates, Gayle exact-head verdict and founder production promotion. Runbook execution
+If later authorized: release certification by QA 4 and Platform with Security by risk, approved batch gates, E.. CoS integration evidence on `dev`, and founder production promotion to `main`. Runbook execution
 per `RELEASE_RUNBOOK.md`. General availability.
 
 ---

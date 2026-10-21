@@ -209,7 +209,7 @@ with `FastifyRequest` / `FastifyReply` · row types via `typeof table.$inferSele
 
 ## 6. Review and Merge
 
-Approval follows the risk matrix in `TEAM.md` §3. The V1 "Agent 4 APPROVED" gate is retired. Pair cross-review does not replace an independent reviewer, QA, Security by risk, or Gayle's exact-head verdict. A changed head invalidates affected sign-offs.
+Approval follows the risk matrix in `TEAM.md` §3. The V1 "Agent 4 APPROVED" gate is retired. Pair cross-review does not replace peer review, QA, Security by risk, approved batch CI, or E.. CoS merge approval into `dev`. A changed head invalidates affected sign-offs.
 
 **Self-review is required before requesting peer review.** Confirm:
 
@@ -233,7 +233,7 @@ contracts, webhook handling, integration boundaries and downstream risk.
 **QA** verifies against ticket acceptance criteria and required tests. You may not mark your
 own work QA-approved. A QA failure blocks the ticket; engineering remediates.
 
-If a fix changes the reviewed head, collect fresh affected QA, independent reviewer, Security and Gayle evidence. A failed gate returns a bounded fix card to the original pair. CI is approved-batch only; local tests are not CI. Keep open drafts In Progress and do not merge or mark Done without every gate.
+If a fix changes the reviewed head, collect fresh QA, peer reviewer, Security, and batch CI evidence before E.. CoS merge. A failed gate returns a bounded fix card to the original pair. CI is approved-batch only; local tests are not CI. Keep open drafts In Progress; do not merge to `dev` or mark Done without every gate.
 
 ---
 

@@ -14,7 +14,7 @@ The project is being restarted as FSM Platform V2, but the existing repository a
 
 ## Current Approach
 
-The existing repository `SimonShaun2/FSM-Platform` remains the only repository with the committed Phase 1 through Phase 3 work. The local founder-machine working tree also contains uncommitted and unrelated material that must be reconciled during Sprint 0.
+The existing repository `SimonShaun2/Renvani` (formerly `SimonShaun2/FSM-Platform`) remains the only repository with the committed Phase 1 through Phase 3 work. The local founder-machine working tree also contains uncommitted and unrelated material that must be reconciled during Sprint 0.
 
 ## Proposed Approach
 
@@ -43,7 +43,7 @@ Repository history and local working-tree files must be scanned for credentials,
 
 ## Decision
 
-FSM Platform V2 restarts on the existing `SimonShaun2/FSM-Platform` repository. Git history is preserved. Sprint 0 is mandatory and blocks new V2 feature work. The prior four-agent model and "thinner system, smarter brain" product boundary are retired in favor of the permanent team model and "Complete when needed. Simple by default."
+FSM Platform V2 restarts on the existing `SimonShaun2/Renvani` repository (same history as `FSM-Platform`). Git history is preserved. Sprint 0 is mandatory and blocks new V2 feature work. The prior four-agent model and "thinner system, smarter brain" product boundary are retired in favor of the permanent team model and "Complete when needed. Simple by default."
 
 ## Consequences
 

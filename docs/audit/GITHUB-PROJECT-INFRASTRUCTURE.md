@@ -2,7 +2,7 @@
 
 **Ticket:** FSM-0013
 **Date:** 2026-08-21
-**Repository:** `SimonShaun2/FSM-Platform`
+**Repository:** `SimonShaun2/Renvani` (formerly `FSM-Platform`)
 **Project:** [FSM Platform V2 Execution](https://github.com/users/SimonShaun2/projects/2)
 
 ---
@@ -37,7 +37,7 @@ artifacts rather than chat memory.
 ## Verification
 
 - `gh issue list` confirms 14 Sprint 0 issues exist with Sprint 0 milestone and status labels.
-- `gh api repos/SimonShaun2/FSM-Platform/milestones --paginate` confirms 23 open milestones.
+- `gh api repos/SimonShaun2/Renvani/milestones --paginate` confirms 23 open milestones.
 - `gh project item-list 2 --owner SimonShaun2` confirms 14 project items with `Workflow Status`.
 - GraphQL project view query confirms ten saved views with filters.
 

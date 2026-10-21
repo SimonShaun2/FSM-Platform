@@ -5,11 +5,14 @@ This file describes the earlier V1/Phase 2 product workflow and is not a current
 ---
 
 # ServiceRev — Full Product Workflow
-**Version:** Phase 2 (Final)
-**Principle:** Thinner system, smarter brain.
+**Version:** Phase 2 (Final) — **retired product boundary**
+**Principle:** Thinner system, smarter brain. *(Retired; see `AGENTS.md` §0.)*
 
-This document is the source of truth for how ServiceRev works end-to-end.
-All agents read this before building any frontend or backend feature.
+~~This document is the source of truth for how ServiceRev works end-to-end.~~
+~~All agents read this before building any frontend or backend feature.~~
+
+The body below is a **historical product-flow inventory** only. For build, merge, CI and
+release instructions use `AGENTS.md`, `TEAM.md`, and `GITHUB_WORKFLOW.md`.
 
 ---
 

@@ -1,16 +1,18 @@
 # Ticket Index
 
+**Historical Sprint 0 snapshot — not operative for current FS-* execution.** The [Field Service Build Board](https://app.notion.com/p/74b3a1145d3f49d586ac6cdbf174ceb2) and `GITHUB_WORKFLOW.md` §1 govern readiness, WIP and dependencies today. Owner/reviewer IDs below (`DO-01`, `TL-01`, etc.) are legacy labels from this unmerged draft; map them to current role names in `TEAM.md` before use.
+
 **Identifier format:** `FSM-NNNN` · **Standard:** Master Directive §54 · **Owner:** Claude (PM)
 
 The legacy `TICKET-NNN` series is retired. Historical tickets remain under `docs/legacy/`
 for reference only and must not be executed.
 
-Status values: `Ready` (dependencies clear) · `Blocked` · `In Progress` · `Design Review` ·
-`Peer Review` · `QA` · `Ready to Merge` · `Done`.
+Status values in the table below are **historical Sprint 0 labels**, not live board state.
 
-Readiness is computed from dependencies, not assigned. When a ticket merges, every ticket
-whose dependencies are now satisfied becomes `Ready` automatically and is picked up without
-founder approval, per `TEAM.md` §6.
+**Current readiness:** E.. CoS sets **Ready** on the Notion FS board when dependencies and
+acceptance are clear (`GITHUB_WORKFLOW.md` §1). **No automatic Ready** when another ticket
+merges. **Merge gates:** peer review, QA, Security-by-risk at exact head, approved batch CI,
+then E.. CoS final approval into **`dev`** (`main` is promotion-only).
 
 ---
 
@@ -81,8 +83,8 @@ Expected clusters, subject to audit outcome:
 
 ## Sprints 2–22
 
-Scope is defined in `SPRINT_ROADMAP.md`. Tickets are generated sprint by sprint as
-dependencies clear, following the operating loop in `TEAM.md` §6. Each major module is
+Scope is defined in `SPRINT_ROADMAP.md` (deferred full-suite reference). Tickets were
+planned sprint by sprint per the operating loop in `TEAM.md` §5. Each major module was
 preceded by a competitor research update per master directive §69.
 
 ---

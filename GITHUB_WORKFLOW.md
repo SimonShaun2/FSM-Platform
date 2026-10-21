@@ -1,27 +1,32 @@
 # GITHUB_WORKFLOW.md
 
-**Authority:** Founder FSM direction, TEAM.md and the [Field Service Build Board](https://app.notion.com/p/74b3a1145d3f49d586ac6cdbf174ceb2). **Owner:** Platform 1 with Technical Lead and Gayle. This replaces the unmerged draft's automatic per-commit/per-PR CI and auto-merge provisions.
+**Authority:** Founder FSM direction, E.. CoS (PM), `TEAM.md`, and the [Field Service Build Board](https://app.notion.com/p/74b3a1145d3f49d586ac6cdbf174ceb2). **Owner:** Platform with E.. CoS.
 
 ## 1. Traceability and readiness
 
-A ticket carries acceptance, dependencies, risk, pair ownership, split, contract/consumers, evidence, PR, exact head, batch, gate verdict and next action. The current Notion board is the execution queue; legacy FSM-NNNN GitHub issues and the older V2 sprint plan need explicit mapping rather than silent substitution. A dependency-cleared ticket becomes Ready after Product Owner and Technical Lead contract/risk acceptance, not merely because a status formula says Done. One In Progress ticket and at most two waiting PRs per pair; fixes first. Open drafts stay In Progress.
+A ticket carries acceptance, dependencies, risk, pair ownership, split, contract/consumers, evidence, PR, exact head, batch, and next action. The Notion board is the execution queue; legacy FSM-NNNN issues require explicit mapping. **Ready** is set by E.. CoS when dependencies and acceptance are clear — not by automatic progression on merge. One In Progress ticket and at most two waiting PRs per pair; fixes first. Every change stays on a **draft PR** until gates complete.
 
 ## 2. Branches
 
-Main is protected and is not a direct-write workspace. The official FSM integration branch, protection and how existing PR #1 (currently based on main) is retargeted are a pending governance decision. Until resolved, keep PR #1 draft and do not merge it into main. Do not infer a branch name from TrayLoop. Feature/fix branches identify the board ticket, branch point and merge order. No rebase, force-push or direct push to an integration or production branch.
+| Branch | Role |
+|---|---|
+| **`dev`** | Protected integration branch. Approved work merges here after gates. E.. CoS is the final merge approver into `dev`. |
+| **`main`** | Promotion-only. Shaun merges/releases from `dev`; not the day-to-day integration target. |
+
+`main` is not a direct-write workspace. PR #1 may remain based on `main` until founder decision **F2** (retarget); **integration merges still land on `dev`**. Feature/fix branches identify the board ticket and merge order. **No rebase, force-push,** or direct push to `dev` or `main`.
 
 ## 3. Tandem PR packet
 
-The Product Owner specifies acceptance and non-goals. Two senior developers on the same ticket agree a versioned contract, consumer list, file/section ownership, test ownership and merge order before code. Partners edit different files or meaningful test/oracle/docs slices, cross-review, and report combined local commands/results. Every PR states ticket, base/head SHA, shared contracts and migration, self-review, observability, independent reviewer, assigned QA, Security need and batch membership. A chat claim or a local artifact in an isolated Cursor VM is not a shared handoff. The reviewer cannot be an implementer.
+E.. CoS specifies acceptance and non-goals. Two senior developers on the same ticket agree contract, consumers, file ownership, test ownership, and merge order before code. Partners cross-review and report combined local commands/results. Every PR states ticket, base/head SHA, contracts/migrations, self-review, observability, independent peer reviewer, assigned QA, Security need, and batch membership. The peer reviewer cannot be an implementer.
 
 ## 4. CI batches and exact-head gate
 
-CI is only initiated through an **approved batch**. Before the single authorized run, record exact batch membership, PR heads, integration ancestry, expected commands, budget/time limit and owner. No standalone per-commit, per-PR or draft CI. Platform records the run URL and conclusion at that head. A local green test is not CI. Do not use an automated merge-on-green path.
+CI runs only through an **approved batch** recorded by Platform with E.. CoS authorization. No standalone per-commit, per-PR, or draft CI. Platform records run URL and conclusion at the exact head. Local green tests are not CI.
 
-QA posts reproducible commands, output and UI evidence against the exact head. The distinct reviewer covers code and shared contract. Security signs high-risk tenant, auth, consent, agent action, payment or gate authority changes. Design accepts material UX. Technical Lead accepts architecture contracts. Gayle issues a derived exact-head PASS only after all required evidence and approved batch CI. A new head invalidates affected sign-offs; a failed gate creates a bounded fix card for the original pair and fresh review. A comment labeled PASS cannot publish or substitute for a protected gate.
+At the **exact head**: independent **peer review**, assigned **QA** evidence, and **Security** sign-off for tenant/auth/consent/agent/payment/gate-risk changes. A new commit invalidates prior sign-offs. Failed gates return a bounded fix card to the original pair with fresh review.
 
 ## 5. Integration, completion and release
 
-After Gayle PASS, the authorized integration merge updates the board and repository state with exact merge SHA and evidence. Done means the approved implementation is merged to the integration branch and acceptance is met. Production is a separate founder promotion with release certification by Technical Lead, QA 4, Platform and Security by risk. No deployment, Vercel or public website setup from these tickets. Live payments and Stripe are deferred to the end and require separate founder authorization.
+After peer review, QA, Security-as-risk, and **approved batch CI** at the exact head, **E.. CoS** issues final merge approval into **`dev`**. Done means merged to `dev` with acceptance met. **Production** is separate: Shaun promotes from `dev` to `main`. No deployment, Vercel, public website, or live payments from these tickets without separate founder authorization.
 
-The Chief of Staff observes Cursor, GitHub and Notion evidence, fills the next dependency-cleared pair capacity, and maintains reviewer/QA/Design/Platform work. Do not claim a session is still executing merely because its chat exists.
+E.. CoS maintains board state from Cursor, GitHub, and Notion evidence. Do not claim a session is executing merely because its chat exists.
