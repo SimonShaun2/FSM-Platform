@@ -155,3 +155,35 @@ The diagnostic should reveal opportunities across the full product scope. The gr
 ## Design direction
 
 Design the internal workspace for fast, careful research by a small Renvani team. Make evidence and uncertainty easy to see. Keep the eventual owner-facing experience simple and calm. Use the supplied screenshots as workflow reference only; create a distinct Renvani information architecture, wording, visual language, and report presentation.
+
+
+## Detailed reference capture — Owner Grader report screenshot
+
+The latest supplied screenshot shows the report state behind the scan, with the full report partly obscured by a phone-verification overlay. Visible report details:
+
+- An overall **77/100** online-health grade labeled **Fair**.
+- Three category summaries: **Search Results, 33/40 (Good)**; **Guest Experience, 26/40 (Fair)**; **Local Listings, 18/20 (Good)**.
+- A dollarized headline: **“You could be losing ~$1,687/month due to 8 problems.”**
+- A competitor-ranking panel claiming the business is first among competitors.
+- Search-query rows with Google results, ranking/competitor labels, and organic/map-result status.
+- A centered **“Unlock your free report”** phone-verification overlay with phone-number input, send-code action, CAPTCHA/verification language, and Terms of Service/Privacy Policy consent text.
+
+### Renvani product implications
+
+1. **Internal report should be richer than the public preview.** The internal workspace needs category-level findings, query/source evidence, diagnostic severity, and a reviewable opportunity list. The owner-facing report can still open with one or two useful findings in plain language.
+2. **Keep scoring as an internal option, not the first public promise.** The screenshot demonstrates a simple aggregate grade plus category scores. Renvani may use an internal rubric to prioritize research, but any score must have a defined denominator, explainable checks, and evidence coverage. Do not display a numeric score until it is validated for cleaning businesses and understandable to operators.
+3. **Do not copy unsupported financial-loss claims.** The “losing $X/month” headline is not suitable for Renvani unless a transparent, validated calculation uses the business’s authorized data and clearly stated assumptions. Public-only observations cannot substantiate lost revenue.
+4. **Competitor comparisons are optional and sensitive.** The screenshot uses ranking against named competitors. Renvani should not make competitor rank or “who is beating you” a default hook. If a future research view includes local search comparisons, keep query, location, date, source, and limitations visible; require internal review and avoid implying causal or revenue conclusions.
+5. **Separate public scan from private validation.** The visible phone gate is a conversion mechanic in the reference. Renvani should not require phone verification before giving the promised useful preview. If contact details are collected for follow-up, explain the purpose and obtain consent. The internal report should label which findings need owner data.
+6. **Report structure should be evidence-first.** Each issue should expand to show what was checked, the source, the observation date, why it matters to a home-service customer, confidence/status, and a practical next step. Keep actionable issues distinct from category rollups.
+
+### Proposed report anatomy for Renvani
+
+- **Top summary:** business name, trade, service area, scan date, and a short plain-language readout.
+- **Journey sections:** Find the business; understand/request service; turn the inquiry into a booked job; deliver the work; earn the next job.
+- **Finding cards:** one observation per card, with evidence, status/confidence, customer impact stated carefully, and next action.
+- **Opportunity summary:** a small number of highest-priority actions, ordered by evidence strength and practical impact.
+- **Unknowns to validate:** internal operational questions that public research cannot answer, such as response speed, estimate conversion, capacity, repeat rate, and owner time.
+- **Optional category summary:** only after the rubric is tested; show what is included and do not convert the score into projected revenue loss.
+
+The screenshot therefore sharpens the target from a simple scan summary into a complete **internal grader and report-authoring product**, while preserving a deliberately simple public entry and a distinct Renvani report experience.
