@@ -1,6 +1,7 @@
 import Link from "next/link";
 
 import { BrandedPriceWidget } from "@/src/components/growth/BrandedPriceWidget";
+import { BrandedStorefrontNav } from "@/src/components/growth/BrandedStorefrontNav";
 import {
   buildBookPath,
   type BrandedStorefrontViewModel
@@ -15,6 +16,7 @@ const PRIMARY = "bg-[#2f7d4f] hover:bg-[#286b44]";
 
 export function BrandedStorefront({ model, previewBanner }: BrandedStorefrontProps) {
   const bookHref = buildBookPath(model.bookingSlug);
+  const showReviewsLink = model.reviewLinks.length > 0;
 
   return (
     <div className="min-h-screen bg-[#f7faf8] text-[#0f1530]">
@@ -24,8 +26,8 @@ export function BrandedStorefront({ model, previewBanner }: BrandedStorefrontPro
         </div>
       ) : null}
 
-      <header className="flex flex-wrap items-center gap-4 px-6 py-5 md:gap-7 md:px-16">
-        <div className="flex items-center gap-2.5">
+      <header className="relative flex flex-wrap items-center gap-4 px-6 py-5 md:gap-7 md:px-16">
+        <div className="flex flex-1 items-center gap-2.5">
           {model.logoUrl ? (
             <img src={model.logoUrl} alt="" className="size-8 rounded-[9px] object-cover" />
           ) : (
@@ -33,16 +35,16 @@ export function BrandedStorefront({ model, previewBanner }: BrandedStorefrontPro
           )}
           <p className="text-xl font-semibold">{model.companyName}</p>
         </div>
-        <div className="hidden flex-1 md:block" />
-        <nav className="hidden items-center gap-7 text-[15px] font-medium text-[#2a3360] lg:flex" aria-label="Primary">
-          <a href="#services">Services</a>
-          <a href="#pricing">Pricing</a>
-          <a href="#areas">Areas we serve</a>
-          <a href="#reviews">Reviews</a>
-        </nav>
+
+        <BrandedStorefrontNav
+          bookHref={bookHref}
+          showReviewsLink={showReviewsLink}
+          primaryClassName={PRIMARY}
+        />
+
         <Link
           href={bookHref}
-          className={`inline-flex h-11 items-center justify-center rounded-[10px] px-[18px] text-sm font-semibold text-white ${PRIMARY}`}
+          className={`hidden h-11 items-center justify-center rounded-[10px] px-[18px] text-sm font-semibold text-white lg:inline-flex ${PRIMARY}`}
         >
           Book a clean
         </Link>
@@ -51,7 +53,7 @@ export function BrandedStorefront({ model, previewBanner }: BrandedStorefrontPro
       <section className="flex flex-col gap-10 px-6 py-10 md:flex-row md:items-center md:gap-12 md:px-16 md:py-14">
         <div className="max-w-[620px] flex-1">
           <p className="font-mono text-xs font-medium uppercase tracking-[0.08em] text-[#2f7d4f]">
-            Local service · {model.trustLine}
+            {model.trustLine ? model.trustLine : "Local service"}
           </p>
           <h1 className="mt-5 text-4xl font-semibold leading-tight tracking-tight md:text-[56px] md:leading-[62px]">
             A spotless home, on your schedule.
@@ -92,9 +94,30 @@ export function BrandedStorefront({ model, previewBanner }: BrandedStorefrontPro
         </p>
       </section>
 
-      <section id="reviews" className="sr-only" aria-hidden>
-        Reviews
-      </section>
+      {showReviewsLink ? (
+        <section id="reviews" className="px-6 pb-10 md:px-16" aria-labelledby="reviews-heading">
+          <h2 id="reviews-heading" className="text-xl font-semibold text-[#0f1530]">
+            Reviews
+          </h2>
+          <p className="mt-2 text-sm text-[#5e6684]">
+            Read what customers have shared on these verified profiles.
+          </p>
+          <ul className="mt-4 flex flex-col gap-2 sm:flex-row sm:flex-wrap sm:gap-4">
+            {model.reviewLinks.map((link) => (
+              <li key={link.href}>
+                <a
+                  href={link.href}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="text-[15px] font-medium text-[#2f7d4f] underline-offset-2 hover:underline"
+                >
+                  {link.label}
+                </a>
+              </li>
+            ))}
+          </ul>
+        </section>
+      ) : null}
 
       <footer className="flex flex-col gap-2 px-6 py-7 text-[13px] text-[#5e6684] md:flex-row md:items-center md:justify-between md:px-16">
         <p>

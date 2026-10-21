@@ -19,26 +19,26 @@ export function BrandedPriceWidget({ bookingSlug, primaryClassName }: BrandedPri
         Continue to our secure booking flow for live availability and verified pricing.
       </p>
 
-      <div className="mt-4 space-y-4">
-        <label className="block">
-          <span className="text-[13px] font-medium text-[#2a3360]">Type of clean</span>
-          <div className="mt-1.5 flex h-12 items-center rounded-lg border border-[#e6dccb] px-3.5 text-[15px] text-[#0f1530]">
-            Recurring · every 2 weeks
-          </div>
-        </label>
-        <label className="block">
-          <span className="text-[13px] font-medium text-[#2a3360]">Home</span>
-          <div className="mt-1.5 flex h-12 items-center rounded-lg border border-[#e6dccb] px-3.5 text-[15px] text-[#0f1530]">
-            3 bed · 2 bath · pets
-          </div>
-        </label>
-        <label className="block">
-          <span className="text-[13px] font-medium text-[#2a3360]">ZIP</span>
-          <div className="mt-1.5 flex h-12 items-center rounded-lg border border-[#e6dccb] px-3.5 text-[15px] text-[#0f1530]">
+      <dl className="mt-4 space-y-4">
+        <div>
+          <dt className="text-[13px] font-medium text-[#2a3360]">Type of clean</dt>
+          <dd className="mt-1.5 flex h-12 items-center rounded-lg border border-[#e6dccb] px-3.5 text-[15px] text-[#0f1530]">
+            Selected in booking flow
+          </dd>
+        </div>
+        <div>
+          <dt className="text-[13px] font-medium text-[#2a3360]">Home</dt>
+          <dd className="mt-1.5 flex h-12 items-center rounded-lg border border-[#e6dccb] px-3.5 text-[15px] text-[#0f1530]">
+            Details collected in booking flow
+          </dd>
+        </div>
+        <div>
+          <dt className="text-[13px] font-medium text-[#2a3360]">ZIP</dt>
+          <dd className="mt-1.5 flex h-12 items-center rounded-lg border border-[#e6dccb] px-3.5 text-[15px] text-[#0f1530]">
             Enter in booking flow
-          </div>
-        </label>
-      </div>
+          </dd>
+        </div>
+      </dl>
 
       <div className="mt-4 flex items-center justify-between rounded-[10px] bg-[#e4f1e8] p-3.5 text-[#2f7d4f]">
         <p className="text-[22px] font-semibold">Price at checkout</p>

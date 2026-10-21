@@ -16,7 +16,7 @@ export default async function GrowthWebsitePreviewPage({ params }: { params: Pro
   }
 
   const model = buildBrandedStorefrontViewModel(settings, {
-    trustLineOverride: "Preview — claims require staff approval before publish"
+    staffPreviewLine: "Staff preview — not published"
   });
 
   return (

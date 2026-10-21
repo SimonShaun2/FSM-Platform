@@ -6,6 +6,11 @@ export interface BrandedServiceCard {
   subtitle: string;
 }
 
+export interface BrandedReviewLink {
+  label: string;
+  href: string;
+}
+
 export interface BrandedStorefrontViewModel {
   companyName: string;
   bookingSlug: string;
@@ -13,7 +18,9 @@ export interface BrandedStorefrontViewModel {
   phone: string | null;
   logoUrl: string | null;
   serviceCards: BrandedServiceCard[];
-  trustLine: string;
+  /** Staff preview status line only — never fabricated ratings on the public site. */
+  trustLine: string | null;
+  reviewLinks: BrandedReviewLink[];
 }
 
 const CLEANING_FALLBACK_CARDS: BrandedServiceCard[] = [
@@ -59,6 +66,28 @@ function readServiceSubtitle(service: Record<string, unknown>): string {
   return "Request a quote";
 }
 
+export function buildReviewLinks(settings: PublicBookingSettingsRecord): BrandedReviewLink[] {
+  const links: BrandedReviewLink[] = [];
+
+  if (settings.googleReviewUrl?.trim()) {
+    links.push({ label: "Google reviews", href: settings.googleReviewUrl.trim() });
+  }
+
+  if (settings.yelpReviewUrl?.trim()) {
+    links.push({ label: "Yelp reviews", href: settings.yelpReviewUrl.trim() });
+  }
+
+  if (settings.facebookReviewUrl?.trim()) {
+    links.push({ label: "Facebook reviews", href: settings.facebookReviewUrl.trim() });
+  }
+
+  if (settings.customReviewUrl?.trim()) {
+    links.push({ label: "Customer reviews", href: settings.customReviewUrl.trim() });
+  }
+
+  return links;
+}
+
 export function buildServiceCards(offeredServices: Array<Record<string, unknown>>): BrandedServiceCard[] {
   const cards: BrandedServiceCard[] = [];
 
@@ -85,7 +114,7 @@ export function buildServiceCards(offeredServices: Array<Record<string, unknown>
 
 export function buildBrandedStorefrontViewModel(
   settings: PublicBookingSettingsRecord,
-  options?: { trustLineOverride?: string }
+  options?: { staffPreviewLine?: string }
 ): BrandedStorefrontViewModel {
   const companyName = settings.companyName.trim() || "Your cleaning team";
   const tagline =
@@ -99,7 +128,8 @@ export function buildBrandedStorefrontViewModel(
     phone: settings.phone ?? null,
     logoUrl: settings.logoUrl ?? null,
     serviceCards: buildServiceCards(settings.offeredServices),
-    trustLine: options?.trustLineOverride ?? "4.9 ★ from verified reviews"
+    trustLine: options?.staffPreviewLine?.trim() || null,
+    reviewLinks: buildReviewLinks(settings)
   };
 }
 
