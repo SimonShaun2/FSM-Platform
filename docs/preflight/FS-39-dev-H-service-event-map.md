@@ -3,8 +3,10 @@
 **Parent artifact:** `FS-39-dev-H-service-workflows-handoff.md`  
 **Aligned with:** `operator-inbox-ui@0.1.0`, **`fsm.pair4.proposal-factory@0.1.2`** (Pair 4 joint locked)  
 **Base SHA:** `12b23226c0e0c199626940117fc7f0fa89f87375`  
-**Status:** **Preflight CLOSED** (spec only) — **no implementation** while FS-3, FS-8, FS-9 blocked  
-**Date:** 2026-10-20 (UTC); closure pass 2026-10-20 (UTC)
+**ADR-FS-3 alignment:** `095aef90ade8d3d8fa035295243af911831d409d` — **U5** error family (PO + Security ACK 2026-10-21); see §5.1  
+**PR #17 head (countersign baseline):** `c3e0ab7bf80256232f0855baebf07a1cf48dba3a` — `FS-39-pair4-countersign.md`  
+**Status:** **Preflight CLOSED** (spec only) — implementation gated **FS-8 + FS-9** (FS-3 schema ADR ACK’d at `095aef90`)  
+**Date:** 2026-10-20 (UTC); U5 alignment 2026-10-21 (UTC)
 
 ---
 
@@ -16,7 +18,7 @@
 |------|------|--------------|
 | H retention-gates enqueue | `prerequisiteProposalId` → row `kind=job_completion_confirm` AND `status=approved` (or execute-derived from it) | No queue job; optional `retention.follow_up.blocked` event |
 | G `proposal.create.customer_message` | Re-validate G-RET-1 + Zod metadata | No insert |
-| G approve/execute `customer_message` | Re-validate prerequisite still approved; job not reopened (**OPEN**) | 409 / no send |
+| G approve/execute `customer_message` | Re-validate prerequisite still approved; job not reopened (**OPEN**) | `CONFLICT` / `CONSENT_REQUIRED` (409) or `POLICY_DENIED` (403) per §5.1 — no send |
 
 See `FS-39-pair4-proposal-factory-v0.1.2.md` §1.
 
@@ -232,7 +234,24 @@ From `activityEventTypeEnum` (`schema.ts` ~L233–250):
 
 **H blocked path (no proposal row):** emit **`retention.follow_up.blocked`** (enum **OPEN** FS-3) with payload `{ jobId, customerId, touchpointKind, reasonCode, policyVersion }` — never enqueue `proposal.create.customer_message`.
 
-**Precheck vs execute:** H may soft-fail at precheck (no queue); G **must** hard-fail at execute (G1–G6).
+**Precheck vs execute:** H may soft-fail at precheck (no queue); G **must** hard-fail at execute (G1–G6) using **ADR-FS-3 U5** codes (§5.1).
+
+### 5.1 ADR-FS-3 U5 — Pair 4 error mapping (normative at `095aef90`)
+
+**Source:** `docs/adr/ADR-FS-3-v1-v2-schema-and-governance.md` @ `095aef90ade8d3d8fa035295243af911831d409d`. Enum lands in FS-37 types PR **after FS-3 Ready**; Pair 4 routes **must not** invent parallel string codes.
+
+| `ErrorCode` | HTTP | Pair 4 when (v1) | Layer |
+|-------------|------|------------------|-------|
+| `POLICY_DENIED` | 403 | Technician/dispatcher attempts approve or execute; tool/action not on policy allowlist; AI-initiated money/state change without approval path | G HTTP + execute |
+| `CONSENT_REQUIRED` | 409 | Outbound `customer_message` execute blocked: `doNotContact`, missing channel consent for `metadata.consentScope`, automation disabled at execute (**G7** re-check) | G execute |
+| `CONFLICT` | 409 | Stale `contentVersion` on execute; duplicate `idempotencyKey` replay mismatch (**NT-03**); job no longer in completed family; **U4** `recordVersion` mismatch on linked `jobs` / `customers` row at execute; G-RET-1 prerequisite no longer `approved`; `job.reopened` after prerequisite (**OPEN** O13) | G approve/execute; H completeJob duplicate |
+| `NOT_FOUND` / `FORBIDDEN` | 404 / 403 | Cross-tenant proposal/event/`sourceEventIds` (**G2**) | G factory + HTTP |
+
+**U4 `recordVersion` (same ADR):** On `proposal.execute.approved`, G reloads each `entityLinks` target (`jobId`, `customerId`, optional visit/plan) and compares `recordVersion = rv1:{entityType}:{entityId}:{updatedAt}`; mismatch → `CONFLICT`, no provider send.
+
+**H retention-gates:** Does not emit HTTP errors to customers; blocked precheck → optional `retention.follow_up.blocked` activity event with `reasonCode` mirroring U5 intent (`CONSENT_REQUIRED`, `POLICY_DENIED`, etc.) in payload — **OPEN** O3 enum.
+
+**Tenant scope:** `companyId` canonical (ADR); no `lead` entity in v1 contracts — retention anchors `jobId` only.
 
 ---
 
@@ -489,6 +508,8 @@ From `automation_rule_type` (`schema.ts` ~L1248–1254) + defaults (`automation-
 | O16 | Schema branch `fs-3-operator-schema` vs FS-10/12 | Pair 1 ADR | FS-3 | TL |
 | O17 | G formal **ACK `proposal-factory@0.1.2`** | Superset of 0.1.1 | PM | G |
 | O18 | Delayed retention: scheduler owner for `delayHours` | BullMQ delayed `fsm:operator` | Platform? | PM |
+| O19 | U5 enum in `@fsm/types` vs interim `error` strings in API | Use ADR table at FS-37 merge | FS-37 | Pair 1 |
+| O20 | Map `retention.follow_up.blocked.reasonCode` → U5 enum | Align payload with FS-8 catalog | FS-8 | Security |
 
 ---
 
