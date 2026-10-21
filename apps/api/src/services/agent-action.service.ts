@@ -69,6 +69,7 @@ function mapRow(row: typeof agentActions.$inferSelect) {
     reason: row.reason,
     expiresAt: row.expiresAt.toISOString(),
     reviewerId: row.reviewerId,
+    approvedParameters: (row.approvedParameters as Record<string, unknown> | null) ?? null,
     executionReceipt: row.executionReceipt as Record<string, unknown> | null,
     createdAt: row.createdAt.toISOString(),
     updatedAt: row.updatedAt.toISOString()
@@ -195,9 +196,24 @@ export async function approveAgentAction(companyId: string, actionId: string, re
       throw new AppError(ErrorCode.CONFLICT, "Agent action is not awaiting approval");
     }
 
+    if (row.expiresAt.getTime() < Date.now()) {
+      await tx
+        .update(agentActions)
+        .set({ state: "expired", updatedAt: new Date() })
+        .where(eq(agentActions.id, actionId));
+      throw new AppError(ErrorCode.CONFLICT, "Agent action has expired");
+    }
+
+    const approvedParameters = (row.parameters as Record<string, unknown>) ?? {};
+
     const updatedRows = await tx
       .update(agentActions)
-      .set({ state: "approved", reviewerId, updatedAt: new Date() })
+      .set({
+        state: "approved",
+        reviewerId,
+        approvedParameters,
+        updatedAt: new Date()
+      })
       .where(eq(agentActions.id, actionId))
       .returning();
 
@@ -253,6 +269,84 @@ export async function rejectAgentAction(companyId: string, actionId: string, rev
   });
 }
 
+function resolveExecutableParameters(row: typeof agentActions.$inferSelect): Record<string, unknown> {
+  if (row.requiresApproval) {
+    const approved = row.approvedParameters as Record<string, unknown> | null;
+    if (!approved) {
+      throw new AppError(ErrorCode.CONFLICT, "Approved parameters are missing");
+    }
+
+    return approved;
+  }
+
+  return (row.parameters as Record<string, unknown>) ?? {};
+}
+
+export async function editAgentActionParameters(
+  companyId: string,
+  actionId: string,
+  editorId: string,
+  patch: { channel?: "sms" | "email"; subject?: string | null; body: string }
+) {
+  return db.transaction(async (tx) => {
+    const row = await getActionRow(companyId, actionId);
+
+    if (row.state !== "awaiting_approval") {
+      throw new AppError(ErrorCode.CONFLICT, "Only awaiting-approval actions can be edited");
+    }
+
+    if (row.actionType !== "message.send_proposed" && row.actionType !== "message.draft") {
+      throw new AppError(ErrorCode.VALIDATION_ERROR, "This action type cannot be edited");
+    }
+
+    const current = (row.parameters as Record<string, unknown>) ?? {};
+    const nextParameters: Record<string, unknown> = {
+      ...current,
+      body: patch.body,
+      ...(patch.channel ? { channel: patch.channel } : {}),
+      ...(patch.subject !== undefined ? { subject: patch.subject } : {})
+    };
+
+    const payloadHash = hashPayload({
+      actionType: row.actionType,
+      parameters: nextParameters,
+      target: row.target as CanonicalEntityRefV1
+    });
+
+    const updatedRows = await tx
+      .update(agentActions)
+      .set({
+        parameters: nextParameters,
+        payloadHash,
+        approvedParameters: null,
+        updatedAt: new Date()
+      })
+      .where(eq(agentActions.id, actionId))
+      .returning();
+
+    const updated = updatedRows[0];
+    if (!updated) {
+      throw new AppError(ErrorCode.INTERNAL_ERROR, "Failed to edit agent action");
+    }
+
+    await emitEventWithExecutor(tx, {
+      companyId,
+      eventType: "agent.proposal_edited",
+      actorId: editorId,
+      actorType: "user",
+      entityType: "agent_action",
+      entityId: actionId,
+      payload: {
+        actionType: row.actionType,
+        channel: patch.channel ?? current.channel
+      },
+      summary: "Agent proposal edited by operator"
+    });
+
+    return mapRow(updated);
+  });
+}
+
 export async function executeAgentAction(companyId: string, actionId: string, actorId: string) {
   return db.transaction(async (tx) => {
     const row = await getActionRow(companyId, actionId);
@@ -279,12 +373,21 @@ export async function executeAgentAction(companyId: string, actionId: string, ac
       throw new AppError(ErrorCode.CONFLICT, "Target recordVersion is stale; re-resolve context");
     }
 
+    const executableParameters = resolveExecutableParameters(row);
+
     await tx.update(agentActions).set({ state: "executing", updatedAt: new Date() }).where(eq(agentActions.id, actionId));
 
     const receipt = {
       outcome: "succeeded" as const,
       emittedEventIds: [] as string[],
-      note: "No outbound provider send in Batch 2 slice"
+      note: "No outbound provider send in Batch 4 slice",
+      approvedParameters: executableParameters,
+      approvedParametersHash: hashPayload({
+        actionType: row.actionType,
+        parameters: executableParameters,
+        target: row.target as CanonicalEntityRefV1
+      }),
+      executedAt: new Date().toISOString()
     };
 
     const updatedRows = await tx

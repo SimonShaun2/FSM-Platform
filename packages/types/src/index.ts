@@ -29,3 +29,4 @@ export * from "./pair4/proposal-factory-v0_1_2.js";
 export * from "./pair4/operator-queue-jobs.js";
 export * from "./pair4/retention-gates.js";
 export * from "./pair4/retention-gates-eval.js";
+export * from "./operator-inbox.js";
