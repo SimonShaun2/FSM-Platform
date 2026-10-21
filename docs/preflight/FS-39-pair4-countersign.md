@@ -2,7 +2,7 @@
 
 **Repo:** [SimonShaun2/Renvani](https://github.com/SimonShaun2/Renvani)  
 **PR:** [#17](https://github.com/SimonShaun2/Renvani/pull/17) — P0 operator approval and service workflow preflight  
-**Exact head SHA (normative):** `8d3cd6efc26c061f44ba54e73287c9c9f78d71ba`
+**Exact head SHA (normative):** `7ad0c87c4c809923c35ff7853ac5df355dc5b2a8`
 
 ---
 
@@ -25,7 +25,7 @@
 ```
 Party:     Dev H (Service Workflows)
 Agent id:  bc-117b56ac-a5a6-49c1-a39a-380f2dc74a44
-SHA:       8d3cd6efc26c061f44ba54e73287c9c9f78d71ba
+SHA:       7ad0c87c4c809923c35ff7853ac5df355dc5b2a8
 Statement: ACCEPT operator-inbox-ui@0.1.0 + fsm.service-workflow@1.0.0-draft + fsm.pair4.proposal-factory@0.1.2 @ PR #17 head; event map §9–§15 CLOSED; U5 wording per reviewer-3 / ADR status doc.
 Date:      2026-10-21 (UTC)
 ```
@@ -34,12 +34,12 @@ Date:      2026-10-21 (UTC)
 
 ## Dev G — countersign required @ same head
 
-**Action for Dev G (`bc-1ad1357f-5b9d-4163-9c3b-67c8d9d6d307`):** Paste the block below in **PR #17** as a comment (and FS-39 Notion Evidence). Use the **same full SHA** as `8d3cd6efc26c061f44ba54e73287c9c9f78d71ba` in this file at PR head.
+**Action for Dev G (`bc-1ad1357f-5b9d-4163-9c3b-67c8d9d6d307`):** Paste the block below in **PR #17** as a comment (and FS-39 Notion Evidence). Use the **same full SHA** as `7ad0c87c4c809923c35ff7853ac5df355dc5b2a8` in this file at PR head.
 
 ```
 Party:     Dev G (Operator Experience)
 Agent id:  bc-1ad1357f-5b9d-4163-9c3b-67c8d9d6d307
-SHA:       8d3cd6efc26c061f44ba54e73287c9c9f78d71ba
+SHA:       7ad0c87c4c809923c35ff7853ac5df355dc5b2a8
 Statement: ACK fsm.pair4.proposal-factory@0.1.2 + operator-inbox-ui@0.1.0 @ PR #17 head (closes O17).
 Date:      YYYY-MM-DD (UTC)
 ```
@@ -49,4 +49,4 @@ Date:      YYYY-MM-DD (UTC)
 ## E.. CoS merge note
 
 - PR #17 remains **docs-only**; no CI batch unless grouped with FS-3 ADR merge to `dev`.
-- Countersign at **`8d3cd6efc26c061f44ba54e73287c9c9f78d71ba`** supersedes prior signatures at `c3e0ab7` / `931dce2`.
+- Countersign at **`7ad0c87c4c809923c35ff7853ac5df355dc5b2a8`** supersedes prior signatures at `c3e0ab7` / `931dce2`.
