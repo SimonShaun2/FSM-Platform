@@ -1,7 +1,7 @@
 # ServiceRev — Phase 3 Remaining Tickets (035–038)
 
 **Prerequisites:** Phase 2 complete (v2.0.0) · TICKET-033 approved · TICKET-034 approved
-**Repo:** SimonShaun2/FSM-Platform
+**Repo:** SimonShaun2/Renvani (formerly FSM-Platform)
 
 ---
 
