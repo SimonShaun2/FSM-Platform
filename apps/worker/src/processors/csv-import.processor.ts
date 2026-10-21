@@ -15,7 +15,12 @@ import {
   properties
 } from "@fsm/db";
 import { aiQueue } from "@fsm/jobs";
-import type { ColumnMapping, ValidationError } from "@fsm/types";
+import {
+  sanitizeSpreadsheetCell,
+  type ColumnMapping,
+  type ImportCustomerUpdateSnapshotV1,
+  type ValidationError
+} from "@fsm/types";
 
 type ImportSessionRow = typeof importSessions.$inferSelect;
 type CustomerRow = typeof customers.$inferSelect;
@@ -105,7 +110,7 @@ function normalizeValidationErrors(value: unknown): ValidationError[] {
         row: entry.row,
         field: entry.field,
         message: entry.message,
-        value: entry.value
+        value: sanitizeSpreadsheetCell(entry.value)
       });
     }
   }
@@ -142,7 +147,7 @@ function normalizeTextValue(value: string | null | undefined): string | null {
     return null;
   }
 
-  const trimmedValue = value.trim();
+  const trimmedValue = sanitizeSpreadsheetCell(value.trim());
   return trimmedValue.length > 0 ? trimmedValue : null;
 }
 
@@ -243,7 +248,12 @@ function findDuplicateCustomer(
   return null;
 }
 
-function buildCustomerUpdateValues(existingCustomer: CustomerRow, mappedRow: CustomerImportRow, now: Date) {
+function buildCustomerUpdateValues(
+  existingCustomer: CustomerRow,
+  mappedRow: CustomerImportRow,
+  importSessionId: string,
+  now: Date
+) {
   const mergedTags = Array.from(
     new Set([...(existingCustomer.tags ?? []), ...mappedRow.tags])
   );
@@ -276,6 +286,7 @@ function buildCustomerUpdateValues(existingCustomer: CustomerRow, mappedRow: Cus
       : {}),
     tags: mergedTags,
     internalNotes: mergedNotes,
+    importSessionId,
     updatedAt: now
   };
 }
@@ -295,7 +306,8 @@ function parseCsv(buffer: Buffer): { headers: string[]; rows: ParsedCsvRow[] } {
 
     for (const header of headers) {
       const rawValue = sourceRow?.[header];
-      normalizedRow[header] = typeof rawValue === "string" ? rawValue.trim() : "";
+      normalizedRow[header] =
+        typeof rawValue === "string" ? sanitizeSpreadsheetCell(rawValue.trim()) : "";
     }
 
     rows.push({
@@ -596,6 +608,7 @@ export async function handleExecuteImport(job: Job<Record<string, unknown>>): Pr
     let skippedRows = 0;
     let duplicateRows = 0;
     let processedRows = 0;
+    const customerUpdateSnapshots: ImportCustomerUpdateSnapshotV1[] = [];
 
     for (let startIndex = 0; startIndex < parsedCsv.rows.length; startIndex += IMPORT_BATCH_SIZE) {
       const batch = parsedCsv.rows.slice(startIndex, startIndex + IMPORT_BATCH_SIZE);
@@ -634,24 +647,39 @@ export async function handleExecuteImport(job: Job<Record<string, unknown>>): Pr
           }
 
           if (duplicateAction === "update_existing") {
+            const existingCustomer = duplicateMatch.customer;
+            const snapshotBefore: ImportCustomerUpdateSnapshotV1["before"] = {
+              firstName: existingCustomer.firstName,
+              lastName: existingCustomer.lastName,
+              displayName: existingCustomer.displayName,
+              email: existingCustomer.email,
+              phone: existingCustomer.phone,
+              altPhone: existingCustomer.altPhone,
+              tags: existingCustomer.tags ?? [],
+              internalNotes: existingCustomer.internalNotes
+            };
+            const newPropertyIds: string[] = [];
+
             await db.transaction(async (tx) => {
               await tx
                 .update(customers)
-                .set(buildCustomerUpdateValues(duplicateMatch.customer, mappedRow, new Date()))
+                .set(buildCustomerUpdateValues(existingCustomer, mappedRow, importSessionId, new Date()))
                 .where(
                   and(
                     eq(customers.companyId, companyId),
-                    eq(customers.id, duplicateMatch.customer.id),
+                    eq(customers.id, existingCustomer.id),
                     isNull(customers.deletedAt)
                   )
                 )
                 .returning();
 
               if (mappedRow.addressLine1 && mappedRow.city && mappedRow.state && mappedRow.zip) {
+                const propertyId = randomUUID();
+                newPropertyIds.push(propertyId);
                 await tx.insert(properties).values({
-                  id: randomUUID(),
+                  id: propertyId,
                   companyId,
-                  customerId: duplicateMatch.customer.id,
+                  customerId: existingCustomer.id,
                   addressLine1: mappedRow.addressLine1,
                   city: mappedRow.city,
                   state: mappedRow.state,
@@ -661,6 +689,12 @@ export async function handleExecuteImport(job: Job<Record<string, unknown>>): Pr
                   importSessionId
                 }).returning();
               }
+            });
+
+            customerUpdateSnapshots.push({
+              customerId: existingCustomer.id,
+              before: snapshotBefore,
+              propertyIds: newPropertyIds
             });
 
             importedRows += 1;
@@ -783,6 +817,8 @@ export async function handleExecuteImport(job: Job<Record<string, unknown>>): Pr
 
     const completedAt = new Date();
 
+    const priorInferences = normalizeAiInferences(importSession.aiInferences);
+
     await db.transaction(async (tx) => {
       await tx
         .update(importSessions)
@@ -793,6 +829,12 @@ export async function handleExecuteImport(job: Job<Record<string, unknown>>): Pr
           duplicateRows,
           completedAt,
           errorMessage: null,
+          aiInferences: {
+            ...priorInferences,
+            rollbackSnapshots: {
+              customerUpdates: customerUpdateSnapshots
+            }
+          },
           updatedAt: completedAt
         })
         .where(

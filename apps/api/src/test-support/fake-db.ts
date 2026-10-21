@@ -3289,6 +3289,10 @@ const operators = {
   },
   isNull<T>(field: keyof T): Predicate<T> {
     return (row: T) => row[field] === null;
+  },
+  inArray<T>(field: keyof T, values: Array<T[keyof T]>): Predicate<T> {
+    const allowed = new Set(values);
+    return (row: T) => allowed.has(row[field]);
   }
 };
 
@@ -3699,6 +3703,10 @@ export function createDrizzleModuleMock() {
     gt: <T>(field: keyof T, value: T[keyof T]): Predicate<T> => (row: T) =>
       (row[field] as string | number | Date) > (value as string | number | Date),
     isNull: <T>(field: keyof T): Predicate<T> => (row: T) => row[field] === null,
+    inArray: <T>(field: keyof T, values: Array<T[keyof T]>): Predicate<T> => {
+      const allowed = new Set(values);
+      return (row: T) => allowed.has(row[field]);
+    },
     sql: sqlTag
   };
 }

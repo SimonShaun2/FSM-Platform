@@ -22,3 +22,23 @@ export interface ImportSessionContractV1 {
 }
 
 export type ImportValidationErrorContractV1 = ValidationError;
+
+/** Prior customer row state captured when `update_existing` runs (FS-11 rollback). */
+export interface ImportCustomerUpdateSnapshotV1 {
+  customerId: string;
+  before: {
+    firstName: string;
+    lastName: string;
+    displayName: string | null;
+    email: string | null;
+    phone: string | null;
+    altPhone: string | null;
+    tags: string[];
+    internalNotes: string | null;
+  };
+  propertyIds: string[];
+}
+
+export interface ImportRollbackSnapshotsV1 {
+  customerUpdates: ImportCustomerUpdateSnapshotV1[];
+}
