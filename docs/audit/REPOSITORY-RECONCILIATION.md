@@ -5,7 +5,7 @@
 **Repository:** `SimonShaun2/Renvani` (GitHub rename from `SimonShaun2/FSM-Platform`; verified 2026-10-21)
 **Prepared from:** direct inspection of the founder machine working tree and `origin/main`
 
-> **2026-10-21 annotation:** GitHub renamed the repository to Renvani. Protected integration branch is **`dev`**; **`main`** is promotion-only (founder). PR #1 may remain based on `main` until founder decision **F2** (retarget). Merge gate: peer review, QA, Security-by-risk at exact head, approved batch CI, then **E.. CoS** final approval into `dev`.
+> **2026-10-21 annotation:** GitHub renamed the repository to Renvani. Protected integration branch is **`dev`**; **`main`** is promotion-only (founder). **F2 decided by Shaun 2026-10-21: PR #1 → `dev`.** Merge gate: peer review, QA, Security-by-risk at exact head, approved batch CI, then **E.. CoS** final approval into `dev`.
 
 ---
 
@@ -375,8 +375,7 @@ has since accumulated governance remediation commits. Measure with:
 
 `git rev-parse origin/main` and `git rev-parse origin/feature/FSM-0001-repository-reconciliation`
 
-PR #1: `https://github.com/SimonShaun2/Renvani/pull/1` — draft; base may stay `main` until **F2**.
-Integration merges target **`dev`** per `GITHUB_WORKFLOW.md` §2.
+PR #1: `https://github.com/SimonShaun2/Renvani/pull/1` — draft; base **`dev`** (F2, 2026-10-21).
 
 Current dirty working tree measurement:
 
