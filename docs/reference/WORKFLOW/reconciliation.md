@@ -22,7 +22,7 @@
 | R1-04 | `docs/adr/README.md` TL-01 / QA-02 without subordination | **Fixed** | Historical banner + role-name mapping |
 | R1-05 | `docs/README.md` lists `WORKFLOW.md` as primary session context | **Fixed** | `TEAM.md` + `GITHUB_WORKFLOW.md`; WORKFLOW marked historical |
 | R1-06 | No `.github/workflows/`; batch CI not enforceable | **Open** | `integration-and-batch-ci-decision-packet.md` + `batch-registry-BATCH-FS1-GOV-001.md` (await founder approval) |
-| R1-07 | Integration branch unset; PR #1 base still `main` | **Open** | Packet recommends `integration` (A2) — founder approval pending |
+| R1-07 | Integration branch unset; PR #1 base still `main` | **Fixed (F2)** | PR #1 base **`dev`** @ `12b2322…` per Shaun 2026-10-21; recorded in `GITHUB_WORKFLOW.md` |
 | R1-13 | Stale `FSM-Platform` slug in operative docs | **Fixed** | `repo-canonical.md`; links updated to `SimonShaun2/Renvani` |
 | R1-08 | `main` protection: no required status checks | **Open** | After FSM-0010 + batch registry + branch decision |
 | R1-09 | Baseline tests: 7 API failures on `main` | **Open** | FSM-0007 / FS-2 — out of governance-only scope |

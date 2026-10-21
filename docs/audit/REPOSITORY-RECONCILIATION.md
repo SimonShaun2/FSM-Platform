@@ -328,9 +328,10 @@ explicitly accepted and handed to FSM-0007, or the fix is performed under the co
 7. **A root `CHANGELOG.md` is on the PR branch but not merged to `origin/main`.**
    The initial reconciliation and Sprint 0 scaffolding events are recorded there.
 
-8. **Integration branch and batch CI are unset.**
-   PR #1 still targets `main`. `GITHUB_WORKFLOW.md` and `TEAM.md` require a CoS/Technical
-   Lead decision before merge or retarget. Approved-batch CI is policy-only (no workflows).
+8. **Approved-batch CI enforcement is not yet on `dev`.**
+   **F2 decided by Shaun 2026-10-21:** PR #1 targets **`dev`** @ `12b23226c0e0c199626940117fc7f0fa89f87375`
+   (`main` remains promotion-only). Required status checks and batch workflows remain unset
+   until FSM-0010 lands; merge still requires E.. CoS approval after gates.
 
 ---
 

@@ -28,6 +28,8 @@ output/
 outputs/
 .next/
 .turbo/
+*.tsbuildinfo
+apps/web/tsconfig.tsbuildinfo
 packages/*/src/*.js
 packages/*/src/*.js.map
 packages/*/src/*.d.ts
