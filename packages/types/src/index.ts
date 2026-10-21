@@ -25,6 +25,7 @@ export * from "./service-agreement.types.js";
 export * from "./stripe.types.js";
 export * from "./technician.types.js";
 export * from "./time-entry.types.js";
+export * from "./growth-check.types.js";
 export * from "./pair4/proposal-factory-v0_1_2.js";
 export * from "./pair4/operator-queue-jobs.js";
 export * from "./pair4/retention-gates.js";

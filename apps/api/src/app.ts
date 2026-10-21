@@ -18,6 +18,7 @@ import companyRoutes from "./routes/company/index.js";
 import campaignRoutes from "./routes/campaigns/index.js";
 import customerRoutes from "./routes/customers/index.js";
 import dispatchRoutes from "./routes/dispatch/index.js";
+import growthCheckRoutes from "./routes/growth-checks/index.js";
 import estimateRoutes from "./routes/estimates/index.js";
 import invoiceRoutes from "./routes/invoices/index.js";
 import importRoutes from "./routes/imports/index.js";
@@ -61,6 +62,7 @@ export async function buildApp() {
   await app.register(companyRoutes, { prefix: "/api/v1/company" });
   await app.register(customerRoutes, { prefix: "/api/v1/customers" });
   await app.register(dispatchRoutes, { prefix: "/api/v1" });
+  await app.register(growthCheckRoutes, { prefix: "/api/v1" });
   await app.register(attachmentRoutes, { prefix: "/api/v1" });
   await app.register(bookingRoutes, { prefix: "/api/v1" });
   await app.register(reportingRoutes, { prefix: "/api/v1" });

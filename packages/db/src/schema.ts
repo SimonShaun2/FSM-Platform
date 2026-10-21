@@ -1519,6 +1519,160 @@ export const agentActions = pgTable(
   })
 );
 
+export const growthCheckStatusEnum = pgEnum("growth_check_status", [
+  "intake_draft",
+  "queued",
+  "scanning",
+  "review_needed",
+  "completed",
+  "archived",
+]);
+
+export const growthCheckIdentitySourceEnum = pgEnum("growth_check_identity_source", [
+  "manual",
+  "website",
+  "google_business",
+  "facebook",
+  "import",
+  "ai",
+]);
+
+export const growthCheckFindingSeverityEnum = pgEnum("growth_check_finding_severity", [
+  "info",
+  "low",
+  "medium",
+  "high",
+  "critical",
+]);
+
+export const growthCheckFindingStatusEnum = pgEnum("growth_check_finding_status", [
+  "open",
+  "acknowledged",
+  "resolved",
+  "dismissed",
+]);
+
+export const growthCheckAuditEntityTypeEnum = pgEnum("growth_check_audit_entity_type", [
+  "growth_check",
+  "growth_check_identity_candidate",
+  "growth_check_finding",
+]);
+
+export const growthCheckAuditActionEnum = pgEnum("growth_check_audit_action", [
+  "created",
+  "updated",
+  "deleted",
+]);
+
+export const growthChecks = pgTable(
+  "growth_checks",
+  {
+    id: id(),
+    companyId: companyId(),
+    status: growthCheckStatusEnum("status").notNull().default("queued"),
+    ownerUserId: uuid("owner_user_id")
+      .notNull()
+      .references(() => users.id, { onDelete: "restrict" }),
+    createdById: uuid("created_by_id")
+      .notNull()
+      .references(() => users.id, { onDelete: "restrict" }),
+    reviewNeeded: boolean("review_needed").notNull().default(false),
+    lastScanAt: timestamp("last_scan_at"),
+    businessName: varchar("business_name", { length: 255 }).notNull(),
+    websiteUrl: varchar("website_url", { length: 500 }),
+    industry: varchar("industry", { length: 120 }),
+    trade: varchar("trade", { length: 120 }),
+    city: varchar("city", { length: 100 }),
+    state: varchar("state", { length: 50 }),
+    zip: varchar("zip", { length: 20 }),
+    contactName: varchar("contact_name", { length: 255 }),
+    contactEmail: varchar("contact_email", { length: 255 }),
+    contactPhone: varchar("contact_phone", { length: 30 }),
+    targetMarket: text("target_market"),
+    googleBusinessProfileUrl: varchar("google_business_profile_url", { length: 500 }),
+    facebookPageUrl: varchar("facebook_page_url", { length: 500 }),
+    intakeNotes: text("intake_notes"),
+    ...timestamps,
+  },
+  (t) => ({
+    companyStatusIdx: index("growth_checks_company_status_idx").on(t.companyId, t.status),
+    companyOwnerIdx: index("growth_checks_company_owner_idx").on(t.companyId, t.ownerUserId),
+    companyReviewIdx: index("growth_checks_company_review_idx").on(t.companyId, t.reviewNeeded),
+  })
+);
+
+export const growthCheckIdentityCandidates = pgTable(
+  "growth_check_identity_candidates",
+  {
+    id: id(),
+    companyId: companyId(),
+    growthCheckId: uuid("growth_check_id")
+      .notNull()
+      .references(() => growthChecks.id, { onDelete: "cascade" }),
+    displayName: varchar("display_name", { length: 255 }).notNull(),
+    domain: varchar("domain", { length: 255 }),
+    source: growthCheckIdentitySourceEnum("source").notNull().default("manual"),
+    confidenceScore: decimal("confidence_score", { precision: 5, scale: 4 }),
+    isPrimary: boolean("is_primary").notNull().default(false),
+    metadata: jsonb("metadata").notNull().default({}),
+    ...timestamps,
+  },
+  (t) => ({
+    checkIdx: index("growth_check_identity_candidates_check_idx").on(t.growthCheckId),
+    companyCheckIdx: index("growth_check_identity_candidates_company_check_idx").on(
+      t.companyId,
+      t.growthCheckId
+    ),
+  })
+);
+
+export const growthCheckFindings = pgTable(
+  "growth_check_findings",
+  {
+    id: id(),
+    companyId: companyId(),
+    growthCheckId: uuid("growth_check_id")
+      .notNull()
+      .references(() => growthChecks.id, { onDelete: "cascade" }),
+    category: varchar("category", { length: 100 }).notNull(),
+    severity: growthCheckFindingSeverityEnum("severity").notNull().default("info"),
+    status: growthCheckFindingStatusEnum("status").notNull().default("open"),
+    title: varchar("title", { length: 255 }).notNull(),
+    description: text("description"),
+    recommendation: text("recommendation"),
+    evidence: jsonb("evidence").notNull().default({}),
+    ...timestamps,
+  },
+  (t) => ({
+    checkIdx: index("growth_check_findings_check_idx").on(t.growthCheckId),
+    companyCheckIdx: index("growth_check_findings_company_check_idx").on(t.companyId, t.growthCheckId),
+  })
+);
+
+export const growthCheckAuditEvents = pgTable(
+  "growth_check_audit_events",
+  {
+    id: id(),
+    companyId: companyId(),
+    entityType: growthCheckAuditEntityTypeEnum("entity_type").notNull(),
+    entityId: uuid("entity_id").notNull(),
+    growthCheckId: uuid("growth_check_id").references(() => growthChecks.id, { onDelete: "set null" }),
+    action: growthCheckAuditActionEnum("action").notNull(),
+    actorId: uuid("actor_id").references(() => users.id, { onDelete: "set null" }),
+    beforeState: jsonb("before_state"),
+    afterState: jsonb("after_state"),
+    createdAt: timestamp("created_at").notNull().defaultNow(),
+  },
+  (t) => ({
+    companyEntityIdx: index("growth_check_audit_events_company_entity_idx").on(
+      t.companyId,
+      t.entityType,
+      t.entityId
+    ),
+    companyCheckIdx: index("growth_check_audit_events_company_check_idx").on(t.companyId, t.growthCheckId),
+  })
+);
+
 export const bookingSettings = pgTable("booking_settings", {
   id: id(),
   companyId: companyId(),

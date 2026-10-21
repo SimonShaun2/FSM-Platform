@@ -38,7 +38,11 @@ type TableName =
   | "fileAttachments"
   | "onTheWayNotifications"
   | "bookingRequests"
-  | "bookingSettings";
+  | "bookingSettings"
+  | "growthChecks"
+  | "growthCheckIdentityCandidates"
+  | "growthCheckFindings"
+  | "growthCheckAuditEvents";
 
 type UserRole = "owner" | "admin" | "dispatcher" | "office" | "technician";
 type TechnicianStatus = "active" | "inactive" | "on_leave";
@@ -887,6 +891,90 @@ export interface TestBookingRequestRecord {
   deletedAt: Date | null;
 }
 
+type GrowthCheckStatus =
+  | "intake_draft"
+  | "queued"
+  | "scanning"
+  | "review_needed"
+  | "completed"
+  | "archived";
+type GrowthCheckIdentitySource = "manual" | "website" | "google_business" | "facebook" | "import" | "ai";
+type GrowthCheckFindingSeverity = "info" | "low" | "medium" | "high" | "critical";
+type GrowthCheckFindingStatus = "open" | "acknowledged" | "resolved" | "dismissed";
+type GrowthCheckAuditEntityType = "growth_check" | "growth_check_identity_candidate" | "growth_check_finding";
+type GrowthCheckAuditAction = "created" | "updated" | "deleted";
+
+export interface TestGrowthCheckRecord {
+  id: string;
+  companyId: string;
+  status: GrowthCheckStatus;
+  ownerUserId: string;
+  createdById: string;
+  reviewNeeded: boolean;
+  lastScanAt: Date | null;
+  businessName: string;
+  websiteUrl: string | null;
+  industry: string | null;
+  trade: string | null;
+  city: string | null;
+  state: string | null;
+  zip: string | null;
+  contactName: string | null;
+  contactEmail: string | null;
+  contactPhone: string | null;
+  targetMarket: string | null;
+  googleBusinessProfileUrl: string | null;
+  facebookPageUrl: string | null;
+  intakeNotes: string | null;
+  createdAt: Date;
+  updatedAt: Date;
+  deletedAt: Date | null;
+}
+
+export interface TestGrowthCheckIdentityCandidateRecord {
+  id: string;
+  companyId: string;
+  growthCheckId: string;
+  displayName: string;
+  domain: string | null;
+  source: GrowthCheckIdentitySource;
+  confidenceScore: string | null;
+  isPrimary: boolean;
+  metadata: Record<string, unknown>;
+  createdAt: Date;
+  updatedAt: Date;
+  deletedAt: Date | null;
+}
+
+export interface TestGrowthCheckFindingRecord {
+  id: string;
+  companyId: string;
+  growthCheckId: string;
+  category: string;
+  severity: GrowthCheckFindingSeverity;
+  status: GrowthCheckFindingStatus;
+  title: string;
+  description: string | null;
+  recommendation: string | null;
+  evidence: Record<string, unknown>;
+  createdAt: Date;
+  updatedAt: Date;
+  deletedAt: Date | null;
+}
+
+export interface TestGrowthCheckAuditEventRecord {
+  id: string;
+  companyId: string;
+  entityType: GrowthCheckAuditEntityType;
+  entityId: string;
+  growthCheckId: string | null;
+  action: GrowthCheckAuditAction;
+  actorId: string | null;
+  beforeState: Record<string, unknown> | null;
+  afterState: Record<string, unknown> | null;
+  createdAt: Date;
+}
+
 export interface TestBookingSettingsRecord {
   id: string;
   companyId: string;
@@ -948,7 +1036,11 @@ type AnyTestRecord =
   | TestFileAttachmentRecord
   | TestOnTheWayNotificationRecord
   | TestBookingRequestRecord
-  | TestBookingSettingsRecord;
+  | TestBookingSettingsRecord
+  | TestGrowthCheckRecord
+  | TestGrowthCheckIdentityCandidateRecord
+  | TestGrowthCheckFindingRecord
+  | TestGrowthCheckAuditEventRecord;
 
 type MockTable =
   | typeof companiesTable
@@ -985,7 +1077,11 @@ type MockTable =
   | typeof fileAttachmentsTable
   | typeof onTheWayNotificationsTable
   | typeof bookingRequestsTable
-  | typeof bookingSettingsTable;
+  | typeof bookingSettingsTable
+  | typeof growthChecksTable
+  | typeof growthCheckIdentityCandidatesTable
+  | typeof growthCheckFindingsTable
+  | typeof growthCheckAuditEventsTable;
 
 interface TestState {
   companies: TestCompanyRecord[];
@@ -1023,6 +1119,10 @@ interface TestState {
   onTheWayNotifications: TestOnTheWayNotificationRecord[];
   bookingRequests: TestBookingRequestRecord[];
   bookingSettings: TestBookingSettingsRecord[];
+  growthChecks: TestGrowthCheckRecord[];
+  growthCheckIdentityCandidates: TestGrowthCheckIdentityCandidateRecord[];
+  growthCheckFindings: TestGrowthCheckFindingRecord[];
+  growthCheckAuditEvents: TestGrowthCheckAuditEventRecord[];
 }
 
 interface OrderByDefinition {
@@ -1817,6 +1917,81 @@ const bookingRequestsTable = {
   deletedAt: "deletedAt"
 } as const;
 
+const growthChecksTable = {
+  __name: "growthChecks",
+  id: "id",
+  companyId: "companyId",
+  status: "status",
+  ownerUserId: "ownerUserId",
+  createdById: "createdById",
+  reviewNeeded: "reviewNeeded",
+  lastScanAt: "lastScanAt",
+  businessName: "businessName",
+  websiteUrl: "websiteUrl",
+  industry: "industry",
+  trade: "trade",
+  city: "city",
+  state: "state",
+  zip: "zip",
+  contactName: "contactName",
+  contactEmail: "contactEmail",
+  contactPhone: "contactPhone",
+  targetMarket: "targetMarket",
+  googleBusinessProfileUrl: "googleBusinessProfileUrl",
+  facebookPageUrl: "facebookPageUrl",
+  intakeNotes: "intakeNotes",
+  createdAt: "createdAt",
+  updatedAt: "updatedAt",
+  deletedAt: "deletedAt"
+} as const;
+
+const growthCheckIdentityCandidatesTable = {
+  __name: "growthCheckIdentityCandidates",
+  id: "id",
+  companyId: "companyId",
+  growthCheckId: "growthCheckId",
+  displayName: "displayName",
+  domain: "domain",
+  source: "source",
+  confidenceScore: "confidenceScore",
+  isPrimary: "isPrimary",
+  metadata: "metadata",
+  createdAt: "createdAt",
+  updatedAt: "updatedAt",
+  deletedAt: "deletedAt"
+} as const;
+
+const growthCheckFindingsTable = {
+  __name: "growthCheckFindings",
+  id: "id",
+  companyId: "companyId",
+  growthCheckId: "growthCheckId",
+  category: "category",
+  severity: "severity",
+  status: "status",
+  title: "title",
+  description: "description",
+  recommendation: "recommendation",
+  evidence: "evidence",
+  createdAt: "createdAt",
+  updatedAt: "updatedAt",
+  deletedAt: "deletedAt"
+} as const;
+
+const growthCheckAuditEventsTable = {
+  __name: "growthCheckAuditEvents",
+  id: "id",
+  companyId: "companyId",
+  entityType: "entityType",
+  entityId: "entityId",
+  growthCheckId: "growthCheckId",
+  action: "action",
+  actorId: "actorId",
+  beforeState: "beforeState",
+  afterState: "afterState",
+  createdAt: "createdAt"
+} as const;
+
 const bookingSettingsTable = {
   __name: "bookingSettings",
   id: "id",
@@ -1877,7 +2052,11 @@ const state: TestState = {
   fileAttachments: [],
   onTheWayNotifications: [],
   bookingRequests: [],
-  bookingSettings: []
+  bookingSettings: [],
+  growthChecks: [],
+  growthCheckIdentityCandidates: [],
+  growthCheckFindings: [],
+  growthCheckAuditEvents: []
 };
 
 function nextId(): string {
@@ -1928,6 +2107,14 @@ function restoreState(snapshot: TestState): void {
   );
   state.bookingRequests.splice(0, state.bookingRequests.length, ...snapshot.bookingRequests);
   state.bookingSettings.splice(0, state.bookingSettings.length, ...snapshot.bookingSettings);
+  state.growthChecks.splice(0, state.growthChecks.length, ...snapshot.growthChecks);
+  state.growthCheckIdentityCandidates.splice(
+    0,
+    state.growthCheckIdentityCandidates.length,
+    ...snapshot.growthCheckIdentityCandidates
+  );
+  state.growthCheckFindings.splice(0, state.growthCheckFindings.length, ...snapshot.growthCheckFindings);
+  state.growthCheckAuditEvents.splice(0, state.growthCheckAuditEvents.length, ...snapshot.growthCheckAuditEvents);
 }
 
 function getRows(tableName: TableName): AnyTestRecord[] {
@@ -2002,6 +2189,14 @@ function getRows(tableName: TableName): AnyTestRecord[] {
       return state.bookingRequests;
     case "bookingSettings":
       return state.bookingSettings;
+    case "growthChecks":
+      return state.growthChecks;
+    case "growthCheckIdentityCandidates":
+      return state.growthCheckIdentityCandidates;
+    case "growthCheckFindings":
+      return state.growthCheckFindings;
+    case "growthCheckAuditEvents":
+      return state.growthCheckAuditEvents;
   }
 }
 
@@ -3049,6 +3244,108 @@ function createBookingSettingsRecord(
   };
 }
 
+function createGrowthCheckRecord(
+  values: Partial<TestGrowthCheckRecord> &
+    Pick<TestGrowthCheckRecord, "companyId" | "ownerUserId" | "createdById" | "businessName">
+): TestGrowthCheckRecord {
+  const now = new Date();
+
+  return {
+    id: values.id ?? nextId(),
+    companyId: values.companyId,
+    status: values.status ?? "queued",
+    ownerUserId: values.ownerUserId,
+    createdById: values.createdById,
+    reviewNeeded: values.reviewNeeded ?? false,
+    lastScanAt: values.lastScanAt ?? null,
+    businessName: values.businessName,
+    websiteUrl: values.websiteUrl ?? null,
+    industry: values.industry ?? null,
+    trade: values.trade ?? null,
+    city: values.city ?? null,
+    state: values.state ?? null,
+    zip: values.zip ?? null,
+    contactName: values.contactName ?? null,
+    contactEmail: values.contactEmail ?? null,
+    contactPhone: values.contactPhone ?? null,
+    targetMarket: values.targetMarket ?? null,
+    googleBusinessProfileUrl: values.googleBusinessProfileUrl ?? null,
+    facebookPageUrl: values.facebookPageUrl ?? null,
+    intakeNotes: values.intakeNotes ?? null,
+    createdAt: values.createdAt ?? now,
+    updatedAt: values.updatedAt ?? now,
+    deletedAt: values.deletedAt ?? null
+  };
+}
+
+function createGrowthCheckIdentityCandidateRecord(
+  values: Partial<TestGrowthCheckIdentityCandidateRecord> &
+    Pick<TestGrowthCheckIdentityCandidateRecord, "companyId" | "growthCheckId" | "displayName">
+): TestGrowthCheckIdentityCandidateRecord {
+  const now = new Date();
+
+  return {
+    id: values.id ?? nextId(),
+    companyId: values.companyId,
+    growthCheckId: values.growthCheckId,
+    displayName: values.displayName,
+    domain: values.domain ?? null,
+    source: values.source ?? "manual",
+    confidenceScore: values.confidenceScore ?? null,
+    isPrimary: values.isPrimary ?? false,
+    metadata: values.metadata ?? {},
+    createdAt: values.createdAt ?? now,
+    updatedAt: values.updatedAt ?? now,
+    deletedAt: values.deletedAt ?? null
+  };
+}
+
+function createGrowthCheckFindingRecord(
+  values: Partial<TestGrowthCheckFindingRecord> &
+    Pick<TestGrowthCheckFindingRecord, "companyId" | "growthCheckId" | "category" | "title">
+): TestGrowthCheckFindingRecord {
+  const now = new Date();
+
+  return {
+    id: values.id ?? nextId(),
+    companyId: values.companyId,
+    growthCheckId: values.growthCheckId,
+    category: values.category,
+    severity: values.severity ?? "info",
+    status: values.status ?? "open",
+    title: values.title,
+    description: values.description ?? null,
+    recommendation: values.recommendation ?? null,
+    evidence: values.evidence ?? {},
+    createdAt: values.createdAt ?? now,
+    updatedAt: values.updatedAt ?? now,
+    deletedAt: values.deletedAt ?? null
+  };
+}
+
+function createGrowthCheckAuditEventRecord(
+  values: Partial<TestGrowthCheckAuditEventRecord> &
+    Pick<
+      TestGrowthCheckAuditEventRecord,
+      "companyId" | "entityType" | "entityId" | "action"
+    >
+): TestGrowthCheckAuditEventRecord {
+  const now = new Date();
+
+  return {
+    id: values.id ?? nextId(),
+    companyId: values.companyId,
+    entityType: values.entityType,
+    entityId: values.entityId,
+    growthCheckId: values.growthCheckId ?? null,
+    action: values.action,
+    actorId: values.actorId ?? null,
+    beforeState: values.beforeState ?? null,
+    afterState: values.afterState ?? null,
+    createdAt: values.createdAt ?? now
+  };
+}
+
 function createRow(tableName: TableName, values: Record<string, unknown>): AnyTestRecord {
   switch (tableName) {
     case "companies":
@@ -3214,6 +3511,26 @@ function createRow(tableName: TableName, values: Record<string, unknown>): AnyTe
     case "bookingSettings":
       return createBookingSettingsRecord(
         values as Partial<TestBookingSettingsRecord> & Pick<TestBookingSettingsRecord, "companyId">
+      );
+    case "growthChecks":
+      return createGrowthCheckRecord(
+        values as Partial<TestGrowthCheckRecord> &
+          Pick<TestGrowthCheckRecord, "companyId" | "ownerUserId" | "createdById" | "businessName">
+      );
+    case "growthCheckIdentityCandidates":
+      return createGrowthCheckIdentityCandidateRecord(
+        values as Partial<TestGrowthCheckIdentityCandidateRecord> &
+          Pick<TestGrowthCheckIdentityCandidateRecord, "companyId" | "growthCheckId" | "displayName">
+      );
+    case "growthCheckFindings":
+      return createGrowthCheckFindingRecord(
+        values as Partial<TestGrowthCheckFindingRecord> &
+          Pick<TestGrowthCheckFindingRecord, "companyId" | "growthCheckId" | "category" | "title">
+      );
+    case "growthCheckAuditEvents":
+      return createGrowthCheckAuditEventRecord(
+        values as Partial<TestGrowthCheckAuditEventRecord> &
+          Pick<TestGrowthCheckAuditEventRecord, "companyId" | "entityType" | "entityId" | "action">
       );
   }
 }
@@ -3510,6 +3827,10 @@ export const fileAttachments = fileAttachmentsTable;
 export const onTheWayNotifications = onTheWayNotificationsTable;
 export const bookingRequests = bookingRequestsTable;
 export const bookingSettings = bookingSettingsTable;
+export const growthChecks = growthChecksTable;
+export const growthCheckIdentityCandidates = growthCheckIdentityCandidatesTable;
+export const growthCheckFindings = growthCheckFindingsTable;
+export const growthCheckAuditEvents = growthCheckAuditEventsTable;
 
 export async function emitEvent(event: Omit<TestActivityEventRecord, "id" | "occurredAt"> & {
   occurredAt?: Date;
@@ -3857,6 +4178,10 @@ export function createDbModuleMock() {
     onTheWayNotifications,
     bookingRequests,
     bookingSettings,
+    growthChecks,
+    growthCheckIdentityCandidates,
+    growthCheckFindings,
+    growthCheckAuditEvents,
     emitEvent,
     emitEventWithExecutor,
     markInvoiceOverdueIfNeeded,
@@ -3903,7 +4228,13 @@ export function resetTestState(): void {
   state.onTheWayNotifications.length = 0;
   state.bookingRequests.length = 0;
   state.bookingSettings.length = 0;
+  state.growthChecks.length = 0;
+  state.growthCheckIdentityCandidates.length = 0;
+  state.growthCheckFindings.length = 0;
+  state.growthCheckAuditEvents.length = 0;
 }
+
+export const RENAVANI_INTERNAL_TEST_COMPANY_ID = "00000000-0000-4000-8000-000000000053";
 
 export function seedCompany(
   values: Partial<TestCompanyRecord> & Pick<TestCompanyRecord, "name" | "slug">
@@ -4217,6 +4548,15 @@ export function seedBookingSettings(
 ): TestBookingSettingsRecord {
   const record = createBookingSettingsRecord(values);
   state.bookingSettings.push(record);
+  return record;
+}
+
+export function seedGrowthCheck(
+  values: Partial<TestGrowthCheckRecord> &
+    Pick<TestGrowthCheckRecord, "companyId" | "ownerUserId" | "createdById" | "businessName">
+): TestGrowthCheckRecord {
+  const record = createGrowthCheckRecord(values);
+  state.growthChecks.push(record);
   return record;
 }
 

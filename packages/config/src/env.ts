@@ -28,7 +28,11 @@ const envSchema = z.object({
   RESET_TOKEN_TTL_SECONDS: z.coerce.number().int().positive("RESET_TOKEN_TTL_SECONDS must be greater than zero"),
   ESTIMATE_EXPIRY_DAYS: z.coerce.number().int().positive("ESTIMATE_EXPIRY_DAYS must be greater than zero").default(30),
   INVOICE_DUE_DAYS: z.coerce.number().int().positive("INVOICE_DUE_DAYS must be greater than zero").default(30),
-  NEXT_PUBLIC_API_URL: z.string().url("NEXT_PUBLIC_API_URL must be a valid URL").default("http://localhost:3001")
+  NEXT_PUBLIC_API_URL: z.string().url("NEXT_PUBLIC_API_URL must be a valid URL").default("http://localhost:3001"),
+  RENVANI_INTERNAL_COMPANY_ID: z
+    .string()
+    .uuid("RENAVANI_INTERNAL_COMPANY_ID must be a valid UUID")
+    .default("00000000-0000-4000-8000-000000000053")
 });
 
 export type Env = z.infer<typeof envSchema>;
