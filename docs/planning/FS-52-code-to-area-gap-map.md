@@ -124,12 +124,12 @@ Grouped by URL intent (71 `page.tsx` files @ `7f1e632`).
 | `activity_events` | Foundation | Works | Emitted across services | Keep | AGENTS.md |
 | `import_sessions` | Foundation | Works | Import processor tests | Keep | TICKET-032 |
 | `message_logs` | Revenue | Works | Notification processor | Keep | TICKET-028 |
-| `form_templates`, `form_submissions` | Operations | Needs finishing | Schema present; thin product surface | Refactor | — |
+| `form_templates`, `form_submissions` | Operations | **Missing** | Drizzle tables + migrations @ `7f1e632`; no `apps/api` routes or web pages reference them (repo grep 2026-10-21). Out of growth-first v1 — optional field/checklist module deferred to Sprint 6 | Keep | **FS-50** (P5 Optional Suite audit) |
 | `product_catalog` | Operations | Works | Product catalog tests | Keep | TICKET-014a |
 | `file_attachments`, `on_the_way_notifications` | Operations | Works | Attachment / OTW flows | Keep | TICKET-031 |
 | `agent_actions` | Command Center | Needs finishing | FS-12 state machine incomplete | Refactor | **FS-12** |
 | `operator_proposals` | Command Center | **Missing** | Preflight only (**FS-3** ADR) | Replace (add) | **FS-3**, **FS-14** |
-| `growth_check_sessions` / grader persistence | Growth | **Missing** | Spec in Notion Growth Check; no SoR table | Replace (add) | **FS-45** (proposed) |
+| `growth_check_sessions` (Growth Check SoR) | Growth | **Missing** | [Growth Check internal spec](https://app.notion.com/p/400317b92d158135a8cbe09f0ce50e24); no `growth_check_*` tables in `schema.ts` @ `7f1e632` | Replace (add) | **FS-53** (epic **FS-45**) |
 
 ---
 
@@ -152,7 +152,7 @@ Grouped by URL intent (71 `page.tsx` files @ `7f1e632`).
 
 | Gap | Area | Proposed card |
 |-----|------|----------------|
-| Growth Check grader SoR + staff workflow | Growth | **FS-45** (existing Notion spec) — do not open duplicate |
+| Growth Check grader SoR + staff workflow | Growth | **FS-53** implements DDL/queue/intake under epic **FS-45** ([Growth Check spec](https://app.notion.com/p/400317b92d158135a8cbe09f0ce50e24)) — do not open duplicate |
 | Job-source / funnel date-range caps | Growth | **FS-22** (Batch 3 slot) |
 | Operator approval inbox + proposals DDL | Command Center | **FS-14** + **FS-3** |
 | Public estimate URL contract | Revenue | **FS-36** |
