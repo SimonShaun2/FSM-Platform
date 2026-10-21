@@ -91,7 +91,7 @@ export function isPublicRoute(pathname: string): boolean {
     return true;
   }
 
-  if (segments[0] === "estimates" && segments.length === 2) {
+  if (segments[0] === "approve" && segments.length === 2) {
     return true;
   }
 

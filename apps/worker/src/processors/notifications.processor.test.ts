@@ -119,7 +119,7 @@ describe("notifications.processor", () => {
       title: "Spring Tune-Up",
       total: "325.00",
       expiresAt: "2026-05-28T00:00:00.000Z",
-      approvalUrl: "http://localhost:3000/estimates/approval-token",
+      approvalUrl: "http://localhost:3000/approve/approval-token",
       companyName: "Acme HVAC"
     });
   });

@@ -1,4 +1,6 @@
 export * from "./errors.js";
+export * from "./error-http.js";
+export * from "./agent-control-plane/v1/index.js";
 export * from "./ai-revenue.types.js";
 export * from "./automation-rule.types.js";
 export * from "./campaign.types.js";

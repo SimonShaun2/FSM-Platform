@@ -14,6 +14,7 @@ import type {
   EstimateListRecord
 } from "@/src/hooks/estimates.hooks";
 import type { InvoiceItemRecord } from "@/src/hooks/invoices.hooks";
+import { ESTIMATE_PUBLIC_APPROVAL_PATH_PREFIX } from "@/src/lib/estimate-public-route.compat";
 
 export type RevenueLineItemType = EstimateItemType | InvoiceItemType;
 
@@ -332,7 +333,7 @@ export function buildEstimatePublicPath(token: string | null | undefined): strin
     return null;
   }
 
-  return `/estimates/${token}`;
+  return `${ESTIMATE_PUBLIC_APPROVAL_PATH_PREFIX}/${token}`;
 }
 
 export function buildInvoicePublicPath(token: string | null | undefined): string | null {

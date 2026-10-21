@@ -217,6 +217,9 @@ importers:
       typescript:
         specifier: ^5.9.2
         version: 5.9.3
+      vitest:
+        specifier: ^3.2.4
+        version: 3.2.4(@types/node@24.12.2)(jiti@1.21.7)(tsx@4.21.0)
 
   apps/webhook:
     dependencies:
@@ -391,9 +394,15 @@ importers:
 
   packages/types:
     devDependencies:
+      '@types/node':
+        specifier: ^24.3.0
+        version: 24.12.2
       typescript:
         specifier: ^5.9.2
         version: 5.9.3
+      vitest:
+        specifier: ^3.2.4
+        version: 3.2.4(@types/node@24.12.2)(jiti@1.21.7)(tsx@4.21.0)
 
 packages:
 

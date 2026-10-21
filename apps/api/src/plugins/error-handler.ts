@@ -2,24 +2,7 @@ import type { FastifyError } from "fastify";
 import fp from "fastify-plugin";
 import { ZodError } from "zod";
 
-import { AppError, ErrorCode } from "@fsm/types";
-
-function getStatusCode(errorCode: ErrorCode): number {
-  switch (errorCode) {
-    case ErrorCode.NOT_FOUND:
-      return 404;
-    case ErrorCode.UNAUTHORIZED:
-      return 401;
-    case ErrorCode.FORBIDDEN:
-      return 403;
-    case ErrorCode.VALIDATION_ERROR:
-      return 400;
-    case ErrorCode.CONFLICT:
-      return 409;
-    case ErrorCode.INTERNAL_ERROR:
-      return 500;
-  }
-}
+import { AppError, ErrorCode, getHttpStatusForErrorCode } from "@fsm/types";
 
 function mapZodFields(error: ZodError): Record<string, string> {
   const fields: Record<string, string> = {};
@@ -37,7 +20,7 @@ function mapZodFields(error: ZodError): Record<string, string> {
 const errorHandlerPlugin = fp(async (fastify) => {
   fastify.setErrorHandler((error: FastifyError | Error, request, reply) => {
     if (error instanceof AppError) {
-      return reply.status(getStatusCode(error.code)).send({
+      return reply.status(getHttpStatusForErrorCode(error.code)).send({
         error: error.code,
         message: error.message,
         requestId: request.id,

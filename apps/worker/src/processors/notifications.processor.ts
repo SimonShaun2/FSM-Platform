@@ -761,7 +761,7 @@ export async function handleSendEstimateEmail(
     title: context.title,
     total: context.total,
     expiresAt: context.expiresAt ? context.expiresAt.toISOString() : null,
-    approvalUrl: `${env.APP_URL.replace(/\/$/, "")}/estimates/${context.approvalToken}`,
+    approvalUrl: `${env.APP_URL.replace(/\/$/, "")}/approve/${context.approvalToken}`,
     companyName: context.company.name
   });
 

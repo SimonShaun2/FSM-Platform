@@ -1,6 +1,6 @@
 # ServiceRev — Build Documentation
 
-**Repo:** SimonShaun2/FSM-Platform
+**Repo:** [SimonShaun2/Renvani](https://github.com/SimonShaun2/Renvani) (formerly `FSM-Platform`)
 **Figma (App):** figma.com/design/LNTOsgJ7D4blaFaTepQt3J
 **Figma (Marketing):** figma.com/design/tAteqeUfdi4GCtZVeaF4DJ
 
@@ -9,12 +9,14 @@
 ## Context Files — Every Codex Session
 ```
 1. AGENTS.md
-2. CODEX.md
-3. WORKFLOW.md
-4. planning/PHASE2-MASTER-PLAN.md
-5. Ticket file (from tickets/)
-6. docs/fsm-schema.ts
-7. Figma PNGs (Agent 2 only)
+2. TEAM.md
+3. GITHUB_WORKFLOW.md
+4. CODEX.md
+5. WORKFLOW.md (historical product-flow reference only — not operative build instructions)
+6. planning/PHASE2-MASTER-PLAN.md (legacy planning)
+7. FS-* board ticket / mapped GitHub issue
+8. docs/fsm-schema.ts
+9. Figma PNGs (design sessions only)
 ```
 
 ---

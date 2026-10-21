@@ -4,6 +4,7 @@ import request from "supertest";
 import { afterEach, beforeAll, beforeEach, describe, expect, it, vi } from "vitest";
 
 import { setupTestEnv } from "../../test-support/env-setup.js";
+import { restoreTestSystemTime, pinTestSystemTime } from "../../test-support/pinned-test-time.js";
 
 setupTestEnv();
 
@@ -48,6 +49,7 @@ beforeAll(async () => {
 });
 
 beforeEach(async () => {
+  pinTestSystemTime();
   fakeDb.resetTestState();
   addAiQueueJob.mockReset();
   addNotificationQueueJob.mockReset();
@@ -57,6 +59,7 @@ beforeEach(async () => {
 
 afterEach(async () => {
   await app.close();
+  restoreTestSystemTime();
 });
 
 function createAuthContext() {

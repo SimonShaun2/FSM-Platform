@@ -2,6 +2,7 @@ import type { NextRequest } from "next/server";
 import { NextResponse } from "next/server";
 
 import { AUTH_TOKEN_COOKIE_NAME } from "@/src/lib/auth";
+import { getPublicApiBaseUrl, resolveLegacyEstimateGetRecovery } from "@/src/lib/legacy-estimate-route";
 import { canRoleAccessPath, getDefaultRouteForRole, isPublicRoute, normalizeUserRole } from "@/src/lib/route-access";
 
 interface TokenPayload {
@@ -40,8 +41,29 @@ function readTokenPayload(token: string): TokenPayload | null {
   }
 }
 
-export function middleware(request: NextRequest) {
+function isLegacyEstimateRecoveryMethod(method: string): boolean {
+  return method === "GET" || method === "HEAD";
+}
+
+export async function middleware(request: NextRequest) {
   const { pathname } = request.nextUrl;
+
+  if (isLegacyEstimateRecoveryMethod(request.method)) {
+    const legacyRecovery = await resolveLegacyEstimateGetRecovery(pathname, getPublicApiBaseUrl());
+
+    if (legacyRecovery.action === "redirect-approve") {
+      return NextResponse.redirect(new URL(`/approve/${legacyRecovery.token}`, request.url), 307);
+    }
+
+    if (legacyRecovery.action === "rewrite-approve") {
+      return NextResponse.rewrite(new URL(`/approve/${legacyRecovery.token}`, request.url));
+    }
+
+    if (legacyRecovery.action === "not-found") {
+      return new NextResponse(null, { status: 404 });
+    }
+  }
+
   const token = request.cookies.get(AUTH_TOKEN_COOKIE_NAME)?.value;
   const isRoutePublic = isPublicRoute(pathname);
 

@@ -2,7 +2,7 @@
 
 **Prerequisites:** Phase 2 complete (v2.0.0 · commit 96ee91c)
 **Figma:** figma.com/design/LNTOsgJ7D4blaFaTepQt3J
-**Repo:** SimonShaun2/FSM-Platform
+**Repo:** SimonShaun2/Renvani (formerly FSM-Platform)
 
 ---
 
