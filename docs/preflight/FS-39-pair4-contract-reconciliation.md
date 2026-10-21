@@ -22,13 +22,13 @@
 | 2 | Companion contract | — | **ACK** (retain) | `fsm.service-workflow@v1.0.0-draft` covers brief read model + retention preconditions only |
 | 3 | Proposal lifecycle §6.1 | `draft→pending_review→approved\|rejected\|escalated\|expired`; `approved→executing→succeeded\|failed` | **ACK** | H will not add parallel approval enums on job rows |
 | 4 | Review vs execution split (R2) | Approve ≠ send; worker executes | **ACK** | Matches Platform Architecture action contract |
-| 5 | `OperatorProposalKind` set | incl. `job_completion_confirm` | **ACK** | **Resolved** in `FS-39-pair4-proposal-worker-and-metadata.md`: FS-28 uses `customer_message` + `CustomerMessageTouchpointV1` (no `retention_follow_up` kind) |
+| 5 | `OperatorProposalKind` set | incl. `job_completion_confirm` | **ACK** | **Resolved** in `FS-39-pair4-proposal-factory-v0.1.2.md`: FS-28 uses `customer_message` + `CustomerMessageTouchpoint` (no `retention_follow_up` kind) |
 | 6 | HTTP `/api/v1/operator/*` | G owns FS-14 API | **ACK** | H will not add operator routes |
 | 7 | Auth `owner\|admin` | G §6.2 | **ACK** | Dispatcher read-only **DEFER** FS-9 |
 | 8 | §6.3 `job.completed` → `job_completion_confirm` | When checklist/evidence | **ACK with correction** | See §A below |
 | 9 | FS-28 blocked until staff-confirmed completion | G §6.3 / N8 | **ACK** | Retention/review SMS only after `job_completion_confirm` **approved** (+ consent at execute) |
 | 10 | H maps `sourceEventIds` | From activity events | **ACK with correction** | IDs must be `activity_events.id` UUIDs; H adds `activityEventId` on `job.completed` payload when FS-3 allows additive payload |
-| 11 | H workers call approve/send | Forbidden | **ACK** | **Resolved:** G owns `operator-proposals.processor.ts` + all `operator_proposals` inserts; H retention worker only enqueues `proposal.create.customer_message` (see addendum §2) |
+| 11 | H workers call approve/send | Forbidden | **ACK** | **Resolved:** G owns `operator-proposals.processor.ts` + all `operator_proposals` inserts; H retention worker only enqueues `proposal.create.customer_message` (see §D) |
 | 12 | `ai.recommendation_created` bridge | G creates proposal | **ACK** | H does not own AI inbox adapter (G branch 7) |
 | 13 | H `retention.follow_up.proposed` events | — | **CORRECT** | Drop as separate public contract; retention intents surface as **operator proposals** + optional `operator.proposal_*` activity events (G/FS-3) |
 | 14 | H `job.service_brief.*` events | — | **ACK** (H retains) | Internal/field prep audit; not a send gate unless escalated to inbox |
@@ -99,12 +99,24 @@
 - H: `docs/preflight/FS-39-dev-H-service-workflows-handoff.md`
 - G: `FS-39-dev-g-operator-inbox-preflight-handoff.md` (Cursor G run artifacts)
 - Joint: `docs/preflight/FS-39-pair4-contract-reconciliation.md` (this file)
-- Addendum: `docs/preflight/FS-39-pair4-proposal-worker-and-metadata.md` (`fsm.pair4.proposal-factory@0.1.1`)
+- Joint factory: `docs/preflight/FS-39-pair4-proposal-factory-v0.1.2.md` (`fsm.pair4.proposal-factory@0.1.2`)
+- Historical: `FS-39-pair4-proposal-worker-and-metadata.md` (superseded 0.1.1)
 
 **Posted to Notion FS-39 comment thread** (durable ack; not chat-only).
 
 ---
 
-## §D — See addendum (2026-10-20)
+## §D — Proposal factory `fsm.pair4.proposal-factory@0.1.2` (2026-10-21)
 
-Worker ownership and `customer_message` metadata: **`docs/preflight/FS-39-pair4-proposal-worker-and-metadata.md`**. Dev H **ACCEPT**; Dev G **PENDING ACK**.
+**Normative addendum:** `docs/preflight/FS-39-pair4-proposal-factory-v0.1.2.md` (supersedes 0.1.1 draft in `FS-39-pair4-proposal-worker-and-metadata.md`).
+
+| Topic | Locked in 0.1.2 |
+|-------|------------------|
+| G-RET-1 | No retention `customer_message` without approved `job_completion_confirm` |
+| Worker ownership | G: all `operator_proposals` inserts + `operator-proposals.processor` on **`fsm:operator` only** |
+| H retention | `retention-gates.processor` enqueue-only `proposal.create.customer_message` — no approve/send/notifications |
+| Metadata | `CustomerMessageProposalMetadata` @ `0.1.2`, `prerequisiteProposalId`, `attributionKey` = `retention:{companyId}:{jobId}:{touchpoint}` |
+| Idempotency | `proposal:create:…`, approve client UUID, `proposal:execute:…:v{version}` |
+| U5 errors | Preflight mapping in event map §5.1; ADR status per `FS-39-pair4-adr-u5-status.md` |
+
+**Partner acceptance:** Dev H **ACCEPT** `0.1.2` @ PR #17 head (see `FS-39-pair4-countersign.md`). Dev G **re-sign** @ same PR head after reviewer-3 fix (agent `bc-1ad1357f`).

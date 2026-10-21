@@ -3,9 +3,9 @@
 **Parent artifact:** `FS-39-dev-H-service-workflows-handoff.md`  
 **Aligned with:** `operator-inbox-ui@0.1.0`, **`fsm.pair4.proposal-factory@0.1.2`** (Pair 4 joint locked)  
 **Base SHA:** `12b23226c0e0c199626940117fc7f0fa89f87375`  
-**ADR-FS-3 alignment:** `095aef90ade8d3d8fa035295243af911831d409d` — **U5** error family (PO + Security ACK 2026-10-21); see §5.1  
-**PR #17 head (countersign baseline):** `c3e0ab7bf80256232f0855baebf07a1cf48dba3a` — `FS-39-pair4-countersign.md`  
-**Status:** **Preflight CLOSED** (spec only) — implementation gated **FS-8 + FS-9** (FS-3 schema ADR ACK’d at `095aef90`)  
+**ADR-FS-3 / U5:** See `FS-39-pair4-adr-u5-status.md` — PO (`bc-0da9c117`) + Security (`bc-3826ae19`) ACK'd **U5** in [PR #19 comments](https://github.com/SimonShaun2/Renvani/pull/19); ADR still **Proposed**, **FS-3 not merged**; Pair 4 uses U5 as preflight spec only (§5.1).  
+**Pair 4 countersign:** `FS-39-pair4-countersign.md` @ PR #17 head  
+**Status:** **Preflight CLOSED** (spec only) — implementation gated **FS-8 + FS-9** (+ FS-3 merge for DDL/types)  
 **Date:** 2026-10-20 (UTC); U5 alignment 2026-10-21 (UTC)
 
 ---
@@ -236,9 +236,9 @@ From `activityEventTypeEnum` (`schema.ts` ~L233–250):
 
 **Precheck vs execute:** H may soft-fail at precheck (no queue); G **must** hard-fail at execute (G1–G6) using **ADR-FS-3 U5** codes (§5.1).
 
-### 5.1 ADR-FS-3 U5 — Pair 4 error mapping (normative at `095aef90`)
+### 5.1 ADR-FS-3 U5 — Pair 4 error mapping (preflight spec; not ADR closure)
 
-**Source:** `docs/adr/ADR-FS-3-v1-v2-schema-and-governance.md` @ `095aef90ade8d3d8fa035295243af911831d409d`. Enum lands in FS-37 types PR **after FS-3 Ready**; Pair 4 routes **must not** invent parallel string codes.
+**Source text:** `docs/adr/ADR-FS-3-v1-v2-schema-and-governance.md` @ `095aef90ade8d3d8fa035295243af911831d409d` — file status remains **Proposed**; **FS-3 not merged** to `dev`. **U5 ACK:** PO agent `bc-0da9c117` and Security agent `bc-3826ae19` in [PR #19 review comments](https://github.com/SimonShaun2/Renvani/pull/19) (not ADR closure). Enum lands in FS-37 types PR **after FS-3 merges**; Pair 4 routes **must not** invent parallel string codes until then.
 
 | `ErrorCode` | HTTP | Pair 4 when (v1) | Layer |
 |-------------|------|------------------|-------|

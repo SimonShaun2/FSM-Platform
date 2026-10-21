@@ -313,7 +313,7 @@ Date / agent session: ___
 
 ## 10. Stop statement
 
-This packet satisfies FS-39 acceptance for **Dev H**: base SHA recorded, files/behavior/risks documented, versioned contract + consumers + negative matrix + branch/merge order proposed. **Service workflow event map is CLOSED** (`FS-39-dev-H-service-event-map.md` §9–§15). **No product code, CI PASS, deploy, customer messaging, or FS-14/25/28 implementation** — blocked until **FS-3 + FS-8 + FS-9** (dual Pair 4 ACK alone does not unblock).
+This packet satisfies FS-39 acceptance for **Dev H**: base SHA recorded, files/behavior/risks documented, versioned contract + consumers + negative matrix + branch/merge order proposed. **Service workflow event map is CLOSED** (`FS-39-dev-H-service-event-map.md` §9–§15). **No product code, CI PASS, deploy, customer messaging, or FS-14/25/28 implementation** — blocked until **FS-3 merge + FS-8 + FS-9** (U5 ACK in [PR #19](https://github.com/SimonShaun2/Renvani/pull/19) is not FS-3 Done — see `FS-39-pair4-adr-u5-status.md`).
 
 **Next:** G formal **ACK `fsm.pair4.proposal-factory@0.1.2`** (open **O17**); PM clears FS-3/8/9; then implementation per §8 and Pair 4 merge order in `FS-39-pair4-contract-reconciliation.md`.
 

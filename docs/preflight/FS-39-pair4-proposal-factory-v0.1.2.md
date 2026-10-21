@@ -3,8 +3,8 @@
 **Replaces:** `fsm.pair4.proposal-factory@0.1.1` (superseded by this document)  
 **Bundle:** `operator-inbox-ui@0.1.0` + `fsm.service-workflow@1.0.0-draft` + **`fsm.pair4.proposal-factory@0.1.2`**  
 **Base SHA:** `12b23226c0e0c199626940117fc7f0fa89f87375`  
-**Implementation:** **Blocked** — FS-8, FS-9 (FS-3 ADR PO+Security ACK @ `095aef90`). FS-14/25/28 **Backlog** until Ready.  
-**Errors:** ADR-FS-3 **U5** @ `095aef90` — see event map §5.1.
+**Implementation:** **Blocked** — FS-8, FS-9; FS-3 **not merged** (DDL/types). FS-14/25/28 **Backlog** until Ready.  
+**Errors:** U5 table — PO (`bc-0da9c117`) + Security (`bc-3826ae19`) ACK in [PR #19 comments](https://github.com/SimonShaun2/Renvani/pull/19); ADR still **Proposed** @ `095aef90` — see `FS-39-pair4-adr-u5-status.md` and event map §5.1.
 
 ---
 
