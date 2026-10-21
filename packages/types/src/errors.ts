@@ -4,6 +4,10 @@ export enum ErrorCode {
   FORBIDDEN = "FORBIDDEN",
   VALIDATION_ERROR = "VALIDATION_ERROR",
   CONFLICT = "CONFLICT",
+  /** FS37-NT-08 — outbound/channel consent not satisfied */
+  CONSENT_REQUIRED = "CONSENT_REQUIRED",
+  /** FS37-NT-07, FS37-NT-11 — tool or approval policy blocked */
+  POLICY_DENIED = "POLICY_DENIED",
   INTERNAL_ERROR = "INTERNAL_ERROR"
 }
 
