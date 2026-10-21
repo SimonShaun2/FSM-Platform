@@ -66,6 +66,45 @@ const publicEstimateTierSchema = {
   }
 } as const;
 
+const publicEstimateSchedulingSchema = {
+  type: "object",
+  additionalProperties: false,
+  required: ["companyName", "bookingSlug", "zip", "customer", "property"],
+  properties: {
+    companyName: { type: "string" },
+    bookingSlug: { type: "string" },
+    zip: { type: "string" },
+    customer: {
+      type: "object",
+      additionalProperties: false,
+      required: ["firstName", "lastName", "phone", "email"],
+      properties: {
+        firstName: { type: "string" },
+        lastName: { type: "string" },
+        phone: { type: "string" },
+        email: nullableStringSchema
+      }
+    },
+    property: {
+      anyOf: [
+        {
+          type: "object",
+          additionalProperties: false,
+          required: ["addressLine1", "addressLine2", "city", "state", "zip"],
+          properties: {
+            addressLine1: { type: "string" },
+            addressLine2: nullableStringSchema,
+            city: { type: "string" },
+            state: { type: "string" },
+            zip: { type: "string" }
+          }
+        },
+        { type: "null" }
+      ]
+    }
+  }
+} as const;
+
 const publicEstimateSchema = {
   type: "object",
   additionalProperties: false,
@@ -156,9 +195,12 @@ export const getPublicEstimateSchema = {
     200: {
       type: "object",
       additionalProperties: false,
-      required: ["estimate"],
+      required: ["estimate", "scheduling"],
       properties: {
-        estimate: publicEstimateSchema
+        estimate: publicEstimateSchema,
+        scheduling: {
+          anyOf: [publicEstimateSchedulingSchema, { type: "null" }]
+        }
       }
     },
     400: errorResponseSchema,

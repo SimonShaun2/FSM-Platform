@@ -151,6 +151,26 @@ export interface PublicEstimateView {
   }>;
 }
 
+/** Customer-safe scheduling context for post-approval in-platform booking (FS-21 web). */
+export interface PublicEstimateSchedulingContext {
+  companyName: string;
+  bookingSlug: string;
+  zip: string;
+  customer: {
+    firstName: string;
+    lastName: string;
+    phone: string;
+    email: string | null;
+  };
+  property: {
+    addressLine1: string;
+    addressLine2: string | null;
+    city: string;
+    state: string;
+    zip: string;
+  } | null;
+}
+
 export interface CreateEstimateInput {
   customerId: string;
   jobId?: string;
