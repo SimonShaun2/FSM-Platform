@@ -5,7 +5,10 @@
 import request from "supertest";
 import { afterEach, beforeAll, beforeEach, describe, expect, it, vi } from "vitest";
 
+import { ErrorCode } from "@fsm/types";
+
 import { setupTestEnv } from "../../test-support/env-setup.js";
+import { CSV_IMPORT_FILE_TOO_LARGE_MESSAGE } from "./upload-limits.js";
 
 setupTestEnv();
 
@@ -233,6 +236,32 @@ describe("FS-11 data import contract", () => {
 
     expect(response.status).toBe(200);
     expect(response.body.errors[0].value).toBe("'=cmd|' /C calc'!A0");
+  });
+
+  it("FS-11-AC-07 upload size — POST /imports returns 413 when CSV exceeds 10MB", async () => {
+    const company = fakeDb.seedCompany({ name: "Sparkle", slug: "sparkle-7" });
+    const user = fakeDb.seedUser({
+      companyId: company.id,
+      email: "owner@sparkle.test",
+      firstName: "Maya",
+      lastName: "Ortiz",
+      role: "owner"
+    });
+
+    const oversized = Buffer.alloc(10 * 1024 * 1024 + 1, 0x61);
+
+    const response = await request(app.server)
+      .post("/api/v1/imports")
+      .set("Authorization", authFor(company.id, user.id))
+      .attach("file", oversized, {
+        filename: "huge.csv",
+        contentType: "text/csv"
+      });
+
+    expect(response.status).toBe(413);
+    expect(response.body.error).toBe(ErrorCode.VALIDATION_ERROR);
+    expect(response.body.message).toBe(CSV_IMPORT_FILE_TOO_LARGE_MESSAGE);
+    expect(addImportsQueueJob).not.toHaveBeenCalled();
   });
 
   it("FS-11-AC-08 tenant isolation — rollback, errors, and start are NOT_FOUND cross-tenant", async () => {

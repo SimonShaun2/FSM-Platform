@@ -12,6 +12,10 @@ import {
   rollbackImport,
   startImport
 } from "../../services/import.service.js";
+import {
+  CSV_IMPORT_MAX_FILES,
+  CSV_IMPORT_TOO_MANY_FILES_MESSAGE
+} from "./upload-limits.js";
 import type {
   ConfirmMappingBody,
   ImportSessionIdParams,
@@ -42,7 +46,16 @@ export async function createImportHandler(
   request: FastifyRequest,
   reply: FastifyReply
 ): Promise<FastifyReply> {
-  const filePart = await request.file();
+  const fileParts: Awaited<ReturnType<FastifyRequest["file"]>>[] = [];
+
+  for await (const part of request.files()) {
+    fileParts.push(part);
+    if (fileParts.length > CSV_IMPORT_MAX_FILES) {
+      throw new AppError(ErrorCode.VALIDATION_ERROR, CSV_IMPORT_TOO_MANY_FILES_MESSAGE);
+    }
+  }
+
+  const filePart = fileParts[0];
 
   if (!filePart) {
     throw new AppError(ErrorCode.VALIDATION_ERROR, "A CSV file is required");
