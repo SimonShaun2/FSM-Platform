@@ -4350,6 +4350,32 @@ export function seedBookingSettings(
   return record;
 }
 
+export function seedAgentAction(
+  values: Partial<TestAgentActionRecord> & Pick<TestAgentActionRecord, "companyId">
+): TestAgentActionRecord {
+  const expiresAt = values.expiresAt ?? new Date(Date.now() + 24 * 60 * 60 * 1000);
+  const record = createAgentActionRecord({
+    agentProduct: "revenue",
+    actionType: "message.draft",
+    target: {
+      entityType: "customer",
+      entityId: randomUUID(),
+      recordVersion: "rv1:1"
+    },
+    idempotencyKey: values.idempotencyKey ?? `fs92-agent-${values.companyId.slice(0, 8)}`,
+    payloadHash: values.payloadHash ?? "fs92-test-payload-hash",
+    policyVersion: "agent-policy-v1",
+    requiresApproval: true,
+    state: "awaiting_approval",
+    expiresAt,
+    reason: "FS-92 synthetic agent action",
+    ...values,
+    companyId: values.companyId
+  });
+  state.agentActions.push(record);
+  return record;
+}
+
 export function getTestState(): TestState {
   return state;
 }

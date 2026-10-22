@@ -27,7 +27,11 @@ export interface TenantIsolationSeedBundle {
   automationRule: FakeDbModule.TestAutomationRuleRecord;
   bookingRequest: FakeDbModule.TestBookingRequestRecord;
   payment: FakeDbModule.TestPaymentRecord;
+  agentAction: FakeDbModule.TestAgentActionRecord;
 }
+
+/** Stable marker embedded in Org A list payloads for leakage assertions. */
+export const FS92_ORG_A_LIST_MARKER = "FS92-ORG-A-LIST-MARKER";
 
 function createTenant(
   fakeDb: typeof FakeDbModule,
@@ -79,7 +83,7 @@ export function seedTenantIsolationBundle(
   const customer = fakeDb.seedCustomer({
     companyId,
     firstName: "Synthetic",
-    lastName: "Customer",
+    lastName: FS92_ORG_A_LIST_MARKER,
     email: `customer-${companyId.slice(0, 8)}@fs-92.test`
   });
   const job = fakeDb.seedJob({
@@ -169,6 +173,11 @@ export function seedTenantIsolationBundle(
     amount: "25.00",
     status: "succeeded"
   });
+  const agentAction = fakeDb.seedAgentAction({
+    companyId,
+    reason: `${FS92_ORG_A_LIST_MARKER}-agent-action`,
+    state: "awaiting_approval"
+  });
 
   return {
     customer,
@@ -184,6 +193,27 @@ export function seedTenantIsolationBundle(
     fileAttachment,
     automationRule,
     bookingRequest,
-    payment
+    payment,
+    agentAction
   };
+}
+
+export function orgASecretIds(bundle: TenantIsolationSeedBundle): string[] {
+  return [
+    bundle.customer.id,
+    bundle.job.id,
+    bundle.estimate.id,
+    bundle.invoice.id,
+    bundle.technician.id,
+    bundle.product.id,
+    bundle.aiRecommendation.id,
+    bundle.campaign.id,
+    bundle.maintenancePlan.id,
+    bundle.importSession.id,
+    bundle.fileAttachment.id,
+    bundle.automationRule.id,
+    bundle.bookingRequest.id,
+    bundle.payment.id,
+    bundle.agentAction.id
+  ];
 }

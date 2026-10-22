@@ -9,6 +9,7 @@ import { afterEach, beforeAll, beforeEach, describe, expect, it, vi } from "vite
 
 import { setupTestEnv } from "../../test-support/env-setup.js";
 import {
+  orgASecretIds,
   seedSyntheticTenantPair,
   seedTenantIsolationBundle
 } from "../../test-support/synthetic-tenant-fixtures.js";
@@ -92,7 +93,44 @@ const UNAUTHENTICATED_READ_CASES: Array<{ id: string; method: "get"; path: strin
   { id: "FS92-UNAUTH-15", method: "get", path: "/api/v1/automation-rules" },
   { id: "FS92-UNAUTH-16", method: "get", path: "/api/v1/tenant-context" },
   { id: "FS92-UNAUTH-17", method: "get", path: "/api/v1/agent-actions" },
-  { id: "FS92-UNAUTH-18", method: "get", path: "/api/v1/payments" }
+  { id: "FS92-UNAUTH-18", method: "get", path: "/api/v1/payments" },
+  {
+    id: "FS92-UNAUTH-19",
+    method: "get",
+    path: `/api/v1/activity-events?customerId=${randomUUID()}&page=1&limit=25`
+  },
+  {
+    id: "FS92-UNAUTH-20",
+    method: "get",
+    path: `/api/v1/message-logs?customerId=${randomUUID()}&page=1&limit=25`
+  },
+  { id: "FS92-UNAUTH-21", method: "get", path: "/api/v1/message-logs/conversations?page=1&limit=25" },
+  { id: "FS92-UNAUTH-22", method: "get", path: "/api/v1/booking-requests?page=1&limit=25" },
+  { id: "FS92-UNAUTH-23", method: "get", path: "/api/v1/booking-settings" },
+  { id: "FS92-UNAUTH-24", method: "get", path: "/api/v1/review-requests?page=1&limit=25" },
+  { id: "FS92-UNAUTH-25", method: "get", path: "/api/v1/stripe/connect/status" },
+  { id: "FS92-UNAUTH-26", method: "get", path: "/api/v1/dispatch/workload?date=2026-10-15" },
+  { id: "FS92-UNAUTH-27", method: "get", path: "/api/v1/jobs/unscheduled" },
+  { id: "FS92-UNAUTH-28", method: "get", path: "/api/v1/estimates/approved-unconverted" },
+  { id: "FS92-UNAUTH-29", method: "get", path: "/api/v1/service-agreements/templates" },
+  { id: "FS92-UNAUTH-30", method: "get", path: "/api/v1/ai/revenue-summary" }
+];
+
+const COLLECTION_LIST_LEAK_CASES: Array<{ id: string; path: string }> = [
+  { id: "FS92-XT-LIST-01", path: "/api/v1/customers?page=1&limit=50" },
+  { id: "FS92-XT-LIST-02", path: "/api/v1/jobs?page=1&limit=50" },
+  { id: "FS92-XT-LIST-03", path: "/api/v1/estimates?page=1&limit=50" },
+  { id: "FS92-XT-LIST-04", path: "/api/v1/invoices?page=1&limit=50" },
+  { id: "FS92-XT-LIST-05", path: "/api/v1/technicians?page=1&limit=50" },
+  { id: "FS92-XT-LIST-06", path: "/api/v1/products?page=1&limit=50" },
+  { id: "FS92-XT-LIST-07", path: "/api/v1/campaigns?page=1&limit=50" },
+  { id: "FS92-XT-LIST-08", path: "/api/v1/imports?page=1&limit=50" },
+  { id: "FS92-XT-LIST-09", path: "/api/v1/payments?page=1&limit=50" },
+  { id: "FS92-XT-LIST-10", path: "/api/v1/agent-actions" },
+  { id: "FS92-XT-LIST-11", path: "/api/v1/ai/recommendations?page=1&limit=50" },
+  { id: "FS92-XT-LIST-12", path: "/api/v1/service-agreements?page=1&limit=50" },
+  { id: "FS92-XT-LIST-13", path: "/api/v1/automation-rules" },
+  { id: "FS92-XT-LIST-14", path: "/api/v1/booking-requests?page=1&limit=50" }
 ];
 
 type IsolationResourceKey =
@@ -204,6 +242,25 @@ function assertNoCrossTenantLeak(body: unknown, secretMarker: string) {
   const serialized = JSON.stringify(body);
   expect(serialized).not.toContain(secretMarker);
   expect(serialized).not.toContain("fs-92-secret");
+}
+
+function assertBodyExcludesOrgAIds(body: unknown, bundleA: ReturnType<typeof seedTenantIsolationBundle>) {
+  const serialized = JSON.stringify(body);
+  for (const id of orgASecretIds(bundleA)) {
+    expect(serialized).not.toContain(id);
+  }
+}
+
+function assertListRowsScopedToCompany(
+  body: { data?: Array<{ companyId?: string }>; items?: Array<{ companyId?: string }> },
+  companyId: string
+) {
+  const rows = body.data ?? body.items ?? [];
+  for (const row of rows) {
+    if (row.companyId !== undefined) {
+      expect(row.companyId).toBe(companyId);
+    }
+  }
 }
 
 describe("FS-92 tenant isolation (API boundary)", () => {
@@ -384,6 +441,123 @@ describe("FS-92 tenant isolation (API boundary)", () => {
 
     expect(response.status).toBe(401);
     expect(response.body.error).toBe("UNAUTHORIZED");
+  });
+
+  it("FS92-UNAUTH-31 POST /tenant-context/resolve without auth returns 401", async () => {
+    const response = await request(app.server)
+      .post("/api/v1/tenant-context/resolve")
+      .send({
+        entityType: "customer",
+        entityId: randomUUID()
+      });
+
+    expect(response.status).toBe(401);
+    expect(response.body.error).toBe("UNAUTHORIZED");
+  });
+
+  it("FS92-UNAUTH-32 PATCH /time/:entryId without auth returns 401", async () => {
+    const response = await request(app.server)
+      .patch(`/api/v1/time/${randomUUID()}`)
+      .send({ endedAt: "2026-10-15T12:00:00.000Z" });
+
+    expect(response.status).toBe(401);
+    expect(response.body.error).toBe("UNAUTHORIZED");
+  });
+
+  describe.each(COLLECTION_LIST_LEAK_CASES)("$id Org B list excludes Org A ids", ({ path }) => {
+    it("does not return another tenant's record identifiers", async () => {
+      const { tenantA, tenantB } = seedSyntheticTenantPair(fakeDb, tokens, "list");
+      const bundleA = seedTenantIsolationBundle(fakeDb, tenantA.company.id, tenantA.owner.id);
+      seedTenantIsolationBundle(fakeDb, tenantB.company.id, tenantB.owner.id);
+
+      const response = await request(app.server).get(path).set("Authorization", tenantB.authorization);
+
+      expect(response.status).toBe(200);
+      assertBodyExcludesOrgAIds(response.body, bundleA);
+      assertListRowsScopedToCompany(response.body, tenantB.company.id);
+    });
+  });
+
+  it("FS92-XT-READ-14 cross-tenant GET invoice payments denied", async () => {
+    const { tenantA, tenantB } = seedSyntheticTenantPair(fakeDb, tokens, "pay-read");
+    const bundleA = seedTenantIsolationBundle(fakeDb, tenantA.company.id, tenantA.owner.id);
+
+    const response = await request(app.server)
+      .get(`/api/v1/invoices/${bundleA.invoice.id}/payments`)
+      .set("Authorization", tenantB.authorization);
+
+    expect(response.status).toBe(404);
+    expect(response.body.error).toBe("NOT_FOUND");
+    assertBodyExcludesOrgAIds(response.body, bundleA);
+  });
+
+  it("FS92-XT-READ-15 cross-tenant payment id absent from Org B payment list", async () => {
+    const { tenantA, tenantB } = seedSyntheticTenantPair(fakeDb, tokens, "pay-list");
+    const bundleA = seedTenantIsolationBundle(fakeDb, tenantA.company.id, tenantA.owner.id);
+    seedTenantIsolationBundle(fakeDb, tenantB.company.id, tenantB.owner.id);
+
+    const response = await request(app.server)
+      .get("/api/v1/payments?page=1&limit=50")
+      .set("Authorization", tenantB.authorization);
+
+    expect(response.status).toBe(200);
+    const serialized = JSON.stringify(response.body);
+    expect(serialized).not.toContain(bundleA.payment.id);
+    expect(serialized).not.toContain(bundleA.invoice.id);
+  });
+
+  describe("FS92-XT agent-actions cross-tenant", () => {
+    it("FS92-XT-AGENT-01 GET /agent-actions/:id returns NOT_FOUND", async () => {
+      const { tenantA, tenantB } = seedSyntheticTenantPair(fakeDb, tokens, "agent-get");
+      const bundleA = seedTenantIsolationBundle(fakeDb, tenantA.company.id, tenantA.owner.id);
+
+      const response = await request(app.server)
+        .get(`/api/v1/agent-actions/${bundleA.agentAction.id}`)
+        .set("Authorization", tenantB.authorization);
+
+      expect(response.status).toBe(404);
+      expect(response.body.error).toBe("NOT_FOUND");
+      assertNoCrossTenantLeak(response.body, bundleA.agentAction.reason ?? "");
+    });
+
+    it("FS92-XT-AGENT-02 POST approve denied for Org A action", async () => {
+      const { tenantA, tenantB } = seedSyntheticTenantPair(fakeDb, tokens, "agent-approve");
+      const bundleA = seedTenantIsolationBundle(fakeDb, tenantA.company.id, tenantA.owner.id);
+
+      const response = await request(app.server)
+        .post(`/api/v1/agent-actions/${bundleA.agentAction.id}/approve`)
+        .set("Authorization", tenantB.authorization)
+        .send();
+
+      expect(response.status).toBe(404);
+      expect(response.body.error).toBe("NOT_FOUND");
+    });
+
+    it("FS92-XT-AGENT-03 POST reject denied for Org A action", async () => {
+      const { tenantA, tenantB } = seedSyntheticTenantPair(fakeDb, tokens, "agent-reject");
+      const bundleA = seedTenantIsolationBundle(fakeDb, tenantA.company.id, tenantA.owner.id);
+
+      const response = await request(app.server)
+        .post(`/api/v1/agent-actions/${bundleA.agentAction.id}/reject`)
+        .set("Authorization", tenantB.authorization)
+        .send();
+
+      expect(response.status).toBe(404);
+      expect(response.body.error).toBe("NOT_FOUND");
+    });
+
+    it("FS92-XT-AGENT-04 POST execute denied for Org A action", async () => {
+      const { tenantA, tenantB } = seedSyntheticTenantPair(fakeDb, tokens, "agent-exec");
+      const bundleA = seedTenantIsolationBundle(fakeDb, tenantA.company.id, tenantA.owner.id);
+
+      const response = await request(app.server)
+        .post(`/api/v1/agent-actions/${bundleA.agentAction.id}/execute`)
+        .set("Authorization", tenantB.authorization)
+        .send();
+
+      expect(response.status).toBe(404);
+      expect(response.body.error).toBe("NOT_FOUND");
+    });
   });
 });
 
