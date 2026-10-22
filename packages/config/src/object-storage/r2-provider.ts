@@ -1,6 +1,7 @@
 import {
   DeleteObjectCommand,
   GetObjectCommand,
+  HeadBucketCommand,
   PutObjectCommand,
   S3Client
 } from "@aws-sdk/client-s3";
@@ -103,6 +104,14 @@ export class R2ObjectStorageProvider implements ObjectStorageProvider {
     }
 
     return decodeURIComponent(url.pathname.slice(prefix.length));
+  }
+
+  async pingBucket(): Promise<void> {
+    await this.client.send(
+      new HeadBucketCommand({
+        Bucket: env.R2_BUCKET_NAME
+      })
+    );
   }
 
   async downloadObject(objectKey: string): Promise<Buffer> {

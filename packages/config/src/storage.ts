@@ -49,3 +49,13 @@ export async function createSignedUploadUrl(
 export function getFileKeyFromUrl(fileUrl: string): string {
   return getObjectStorageProvider().resolveObjectKey(fileUrl);
 }
+
+/** FS-79: lightweight bucket reachability check for staging health probes. */
+export async function pingObjectStorageBucket(): Promise<void> {
+  const provider = getObjectStorageProvider();
+  if (!(provider instanceof R2ObjectStorageProvider)) {
+    throw new Error("pingObjectStorageBucket is only supported for the R2 object storage provider");
+  }
+
+  await provider.pingBucket();
+}

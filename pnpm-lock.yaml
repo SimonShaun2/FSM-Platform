@@ -32,6 +32,9 @@ importers:
       '@aws-sdk/client-s3':
         specifier: ^3.931.0
         version: 3.1038.0
+      '@fastify/cors':
+        specifier: 11.0.0
+        version: 11.0.0
       '@fastify/jwt':
         specifier: ^9.0.0
         version: 9.1.0
@@ -359,6 +362,9 @@ importers:
       typescript:
         specifier: ^5.9.2
         version: 5.9.3
+      vitest:
+        specifier: ^3.2.4
+        version: 3.2.4(@types/node@24.12.2)(happy-dom@21.0.4)(jiti@1.21.7)(tsx@4.21.0)
 
   packages/db:
     dependencies:
@@ -384,12 +390,18 @@ importers:
       typescript:
         specifier: ^5.9.2
         version: 5.9.3
+      vitest:
+        specifier: ^3.2.4
+        version: 3.2.4(@types/node@24.12.2)(happy-dom@21.0.4)(jiti@1.21.7)(tsx@4.21.0)
 
   packages/jobs:
     dependencies:
       '@fsm/config':
         specifier: workspace:*
         version: link:../config
+      '@fsm/types':
+        specifier: workspace:*
+        version: link:../types
       bullmq:
         specifier: ^5.0.0
         version: 5.76.2
@@ -403,6 +415,9 @@ importers:
       typescript:
         specifier: ^5.9.2
         version: 5.9.3
+      vitest:
+        specifier: ^3.2.4
+        version: 3.2.4(@types/node@24.12.2)(happy-dom@21.0.4)(jiti@1.21.7)(tsx@4.21.0)
 
   packages/types:
     dependencies:
@@ -1128,6 +1143,9 @@ packages:
 
   '@fastify/busboy@3.2.0':
     resolution: {integrity: sha512-m9FVDXU3GT2ITSe0UaMA5rU3QkfC/UXtCU8y0gSN/GugTqtVldOBWIB5V6V3sbmenVZUIpU6f+mPEO2+m5iTaA==}
+
+  '@fastify/cors@11.0.0':
+    resolution: {integrity: sha512-41Bx0LVGr2a6DnnhDN/SgfDlTRNZtEs8niPxyoymV6Hw09AIdz/9Rn/0Fpu+pBOs6kviwS44JY2mB8NcU2qSAA==}
 
   '@fastify/deepmerge@3.2.1':
     resolution: {integrity: sha512-N5Oqvltoa2r9z1tbx4xjky0oRR60v+T47Ic4J1ukoVQcptLOrIdRnCSdTGmOmajZuHVKlTnfcmrjyqsGEW1ztA==}
@@ -3030,6 +3048,9 @@ packages:
     resolution: {integrity: sha512-OBwBN9AL4dqmETlpS2zasx+vTeWclWzkblfZk7KTA5j3jeOONz/tRCnZomUyvNg83wL5Zv9Ss6HMJXAgL8R2Yg==}
     engines: {node: '>=16 || 14 >=14.17'}
 
+  mnemonist@0.40.0:
+    resolution: {integrity: sha512-kdd8AFNig2AD5Rkih7EPCXhu/iMvwevQFX/uEiGhZyPZi7fHqOoF4V4kHLpCfysxXMgQ4B52kdPMCwARshKvEg==}
+
   mnemonist@0.40.3:
     resolution: {integrity: sha512-Vjyr90sJ23CKKH/qPAgUKicw/v6pRoamxIEDFOF8uSgFME7DqPRpHgRTejWVjkdGg5dXj0/NyxZHZ9bcjH+2uQ==}
 
@@ -4634,6 +4655,11 @@ snapshots:
       fast-uri: 3.1.0
 
   '@fastify/busboy@3.2.0': {}
+
+  '@fastify/cors@11.0.0':
+    dependencies:
+      fastify-plugin: 5.1.0
+      mnemonist: 0.40.0
 
   '@fastify/deepmerge@3.2.1': {}
 
@@ -6559,6 +6585,10 @@ snapshots:
   minimatch@9.0.9:
     dependencies:
       brace-expansion: 2.1.0
+
+  mnemonist@0.40.0:
+    dependencies:
+      obliterator: 2.0.5
 
   mnemonist@0.40.3:
     dependencies:

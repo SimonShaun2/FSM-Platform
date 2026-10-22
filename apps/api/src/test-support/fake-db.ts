@@ -39,7 +39,9 @@ type TableName =
   | "onTheWayNotifications"
   | "bookingRequests"
   | "bookingSettings"
-  | "agentActions";
+  | "agentActions"
+  | "fieldSyncBatches"
+  | "fieldSyncOperations";
 
 type UserRole = "owner" | "admin" | "dispatcher" | "office" | "technician";
 type TechnicianStatus = "active" | "inactive" | "on_leave";
@@ -901,6 +903,39 @@ export interface TestBookingRequestRecord {
   deletedAt: Date | null;
 }
 
+type FieldSyncBatchStatus = "open" | "completed";
+type FieldSyncOperationOutcome = "applied" | "duplicate" | "conflict" | "rejected";
+
+export interface TestFieldSyncBatchRecord {
+  id: string;
+  companyId: string;
+  userId: string;
+  deviceId: string;
+  batchClientId: string;
+  status: FieldSyncBatchStatus;
+  lastAcknowledgedSequence: number;
+  createdAt: Date;
+  updatedAt: Date;
+  deletedAt: Date | null;
+}
+
+export interface TestFieldSyncOperationRecord {
+  id: string;
+  companyId: string;
+  batchId: string;
+  sequence: number;
+  clientOperationId: string;
+  jobId: string;
+  operationType: string;
+  requestPayload: Record<string, unknown>;
+  outcome: FieldSyncOperationOutcome;
+  resultPayload: Record<string, unknown>;
+  payloadHash: string;
+  createdAt: Date;
+  updatedAt: Date;
+  deletedAt: Date | null;
+}
+
 export interface TestAgentActionRecord {
   id: string;
   companyId: string;
@@ -986,7 +1021,9 @@ type AnyTestRecord =
   | TestOnTheWayNotificationRecord
   | TestBookingRequestRecord
   | TestBookingSettingsRecord
-  | TestAgentActionRecord;
+  | TestAgentActionRecord
+  | TestFieldSyncBatchRecord
+  | TestFieldSyncOperationRecord;
 
 type MockTable =
   | typeof companiesTable
@@ -1024,7 +1061,9 @@ type MockTable =
   | typeof onTheWayNotificationsTable
   | typeof bookingRequestsTable
   | typeof bookingSettingsTable
-  | typeof agentActionsTable;
+  | typeof agentActionsTable
+  | typeof fieldSyncBatchesTable
+  | typeof fieldSyncOperationsTable;
 
 interface TestState {
   companies: TestCompanyRecord[];
@@ -1063,6 +1102,8 @@ interface TestState {
   bookingRequests: TestBookingRequestRecord[];
   bookingSettings: TestBookingSettingsRecord[];
   agentActions: TestAgentActionRecord[];
+  fieldSyncBatches: TestFieldSyncBatchRecord[];
+  fieldSyncOperations: TestFieldSyncOperationRecord[];
 }
 
 interface OrderByDefinition {
@@ -1857,6 +1898,38 @@ const bookingRequestsTable = {
   deletedAt: "deletedAt"
 } as const;
 
+const fieldSyncBatchesTable = {
+  __name: "fieldSyncBatches",
+  id: "id",
+  companyId: "companyId",
+  userId: "userId",
+  deviceId: "deviceId",
+  batchClientId: "batchClientId",
+  status: "status",
+  lastAcknowledgedSequence: "lastAcknowledgedSequence",
+  createdAt: "createdAt",
+  updatedAt: "updatedAt",
+  deletedAt: "deletedAt"
+} as const;
+
+const fieldSyncOperationsTable = {
+  __name: "fieldSyncOperations",
+  id: "id",
+  companyId: "companyId",
+  batchId: "batchId",
+  sequence: "sequence",
+  clientOperationId: "clientOperationId",
+  jobId: "jobId",
+  operationType: "operationType",
+  requestPayload: "requestPayload",
+  outcome: "outcome",
+  resultPayload: "resultPayload",
+  payloadHash: "payloadHash",
+  createdAt: "createdAt",
+  updatedAt: "updatedAt",
+  deletedAt: "deletedAt"
+} as const;
+
 const agentActionsTable = {
   __name: "agentActions",
   id: "id",
@@ -1942,7 +2015,9 @@ const state: TestState = {
   onTheWayNotifications: [],
   bookingRequests: [],
   bookingSettings: [],
-  agentActions: []
+  agentActions: [],
+  fieldSyncBatches: [],
+  fieldSyncOperations: []
 };
 
 function nextId(): string {
@@ -1994,6 +2069,8 @@ function restoreState(snapshot: TestState): void {
   state.bookingRequests.splice(0, state.bookingRequests.length, ...snapshot.bookingRequests);
   state.bookingSettings.splice(0, state.bookingSettings.length, ...snapshot.bookingSettings);
   state.agentActions.splice(0, state.agentActions.length, ...snapshot.agentActions);
+  state.fieldSyncBatches.splice(0, state.fieldSyncBatches.length, ...snapshot.fieldSyncBatches);
+  state.fieldSyncOperations.splice(0, state.fieldSyncOperations.length, ...snapshot.fieldSyncOperations);
 }
 
 function getRows(tableName: TableName): AnyTestRecord[] {
@@ -2070,6 +2147,10 @@ function getRows(tableName: TableName): AnyTestRecord[] {
       return state.bookingSettings;
     case "agentActions":
       return state.agentActions;
+    case "fieldSyncBatches":
+      return state.fieldSyncBatches;
+    case "fieldSyncOperations":
+      return state.fieldSyncOperations;
   }
 }
 
@@ -3085,6 +3166,61 @@ function createBookingRequestRecord(
   };
 }
 
+function createFieldSyncBatchRecord(
+  values: Partial<TestFieldSyncBatchRecord> &
+    Pick<TestFieldSyncBatchRecord, "companyId" | "userId" | "deviceId" | "batchClientId">
+): TestFieldSyncBatchRecord {
+  const now = new Date();
+
+  return {
+    id: values.id ?? nextId(),
+    companyId: values.companyId,
+    userId: values.userId,
+    deviceId: values.deviceId,
+    batchClientId: values.batchClientId,
+    status: values.status ?? "open",
+    lastAcknowledgedSequence: values.lastAcknowledgedSequence ?? 0,
+    createdAt: values.createdAt ?? now,
+    updatedAt: values.updatedAt ?? now,
+    deletedAt: values.deletedAt ?? null
+  };
+}
+
+function createFieldSyncOperationRecord(
+  values: Partial<TestFieldSyncOperationRecord> &
+    Pick<
+      TestFieldSyncOperationRecord,
+      | "companyId"
+      | "batchId"
+      | "sequence"
+      | "clientOperationId"
+      | "jobId"
+      | "operationType"
+      | "requestPayload"
+      | "outcome"
+      | "payloadHash"
+    >
+): TestFieldSyncOperationRecord {
+  const now = new Date();
+
+  return {
+    id: values.id ?? nextId(),
+    companyId: values.companyId,
+    batchId: values.batchId,
+    sequence: values.sequence,
+    clientOperationId: values.clientOperationId,
+    jobId: values.jobId,
+    operationType: values.operationType,
+    requestPayload: values.requestPayload,
+    outcome: values.outcome,
+    resultPayload: values.resultPayload ?? {},
+    payloadHash: values.payloadHash,
+    createdAt: values.createdAt ?? now,
+    updatedAt: values.updatedAt ?? now,
+    deletedAt: values.deletedAt ?? null
+  };
+}
+
 function createAgentActionRecord(
   values: Partial<TestAgentActionRecord> &
     Pick<
@@ -3340,6 +3476,27 @@ function createRow(tableName: TableName, values: Record<string, unknown>): AnyTe
             | "requiresApproval"
             | "state"
             | "expiresAt"
+          >
+      );
+    case "fieldSyncBatches":
+      return createFieldSyncBatchRecord(
+        values as Partial<TestFieldSyncBatchRecord> &
+          Pick<TestFieldSyncBatchRecord, "companyId" | "userId" | "deviceId" | "batchClientId">
+      );
+    case "fieldSyncOperations":
+      return createFieldSyncOperationRecord(
+        values as Partial<TestFieldSyncOperationRecord> &
+          Pick<
+            TestFieldSyncOperationRecord,
+            | "companyId"
+            | "batchId"
+            | "sequence"
+            | "clientOperationId"
+            | "jobId"
+            | "operationType"
+            | "requestPayload"
+            | "outcome"
+            | "payloadHash"
           >
       );
   }
@@ -3638,6 +3795,8 @@ export const onTheWayNotifications = onTheWayNotificationsTable;
 export const bookingRequests = bookingRequestsTable;
 export const bookingSettings = bookingSettingsTable;
 export const agentActions = agentActionsTable;
+export const fieldSyncBatches = fieldSyncBatchesTable;
+export const fieldSyncOperations = fieldSyncOperationsTable;
 
 export async function emitEvent(event: Omit<TestActivityEventRecord, "id" | "occurredAt"> & {
   occurredAt?: Date;
@@ -3986,6 +4145,8 @@ export function createDbModuleMock() {
     bookingRequests,
     bookingSettings,
     agentActions,
+    fieldSyncBatches,
+    fieldSyncOperations,
     emitEvent,
     emitEventWithExecutor,
     markInvoiceOverdueIfNeeded,
@@ -4033,6 +4194,8 @@ export function resetTestState(): void {
   state.bookingRequests.length = 0;
   state.bookingSettings.length = 0;
   state.agentActions.length = 0;
+  state.fieldSyncBatches.length = 0;
+  state.fieldSyncOperations.length = 0;
 }
 
 export function seedCompany(
