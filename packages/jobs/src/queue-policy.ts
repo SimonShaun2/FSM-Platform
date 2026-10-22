@@ -1,32 +1,39 @@
 import type { BackoffOptions, JobsOptions, WorkerOptions } from "bullmq";
 
+import { QUEUE_PLATFORM_CONTRACT_VERSION } from "@fsm/types";
+
+import {
+  platformDefaultJobOptions,
+  resolvePlatformQueueRetryPolicy
+} from "./queue-retry-policy.js";
 import { queueBaseOptions } from "./queues.js";
 
-/** FS-81 v0.1 — bounded retries; failed jobs retained for operator replay (BullMQ `removeOnFail: false`). */
-export const FSM_QUEUE_RETRY_POLICY_VERSION = "0.1.0";
+/** FS-81 v0.1 — aligned with `PlatformQueueRetryPolicyV1` (single enqueue default). */
+export const FSM_QUEUE_RETRY_POLICY_VERSION = QUEUE_PLATFORM_CONTRACT_VERSION;
 
-export const fsmDefaultJobAttempts = 5;
+const defaultPolicy = resolvePlatformQueueRetryPolicy();
+
+export const fsmDefaultJobAttempts = defaultPolicy.attempts;
 
 export const fsmDefaultJobBackoff: BackoffOptions = {
-  type: "exponential",
-  delay: 5000
+  type: defaultPolicy.backoffType,
+  delay: defaultPolicy.backoffDelayMs
 };
 
-/** Keep failed jobs in Redis for dead-letter inspection and controlled replay. */
-export const fsmRetainFailedJobsForDlq = true;
+/** Failed jobs stay on the source queue for replay; exhausted jobs also forward to `{queue}-dlq`. */
+export const fsmRetainFailedJobsForDlq = defaultPolicy.removeOnFail === false;
 
 export const fsmDefaultWorkerConcurrency = 5;
 
+/** Same defaults as platform queues (`createPlatformQueue` → `platformDefaultJobOptions`). */
 export function buildDefaultEnqueueJobOptions(overrides: Partial<JobsOptions> = {}): JobsOptions {
-  const attempts = overrides.attempts ?? fsmDefaultJobAttempts;
-  const backoff = overrides.backoff ?? fsmDefaultJobBackoff;
-  const removeOnFail = overrides.removeOnFail ?? (fsmRetainFailedJobsForDlq ? false : { count: 250 });
+  const base = platformDefaultJobOptions();
+  const removeOnFail = overrides.removeOnFail ?? base.removeOnFail;
 
   return {
+    ...base,
     ...overrides,
-    attempts,
-    backoff,
-    removeOnFail
+    ...(removeOnFail !== undefined ? { removeOnFail } : {})
   };
 }
 

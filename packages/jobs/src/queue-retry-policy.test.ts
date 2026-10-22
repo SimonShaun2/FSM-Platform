@@ -12,5 +12,6 @@ describe("queue-retry-policy", () => {
       type: policy.backoffType,
       delay: policy.backoffDelayMs
     });
+    expect(options.removeOnFail).toBe(false);
   });
 });

@@ -12,6 +12,7 @@ describe("queue-platform v0.1", () => {
   it("parses default retry policy", () => {
     const parsed = PlatformQueueRetryPolicyV1Schema.parse(DEFAULT_PLATFORM_QUEUE_RETRY_POLICY_V1);
     expect(parsed.attempts).toBe(5);
+    expect(parsed.removeOnFail).toBe(false);
   });
 
   it("classifies validation failures as permanent", () => {

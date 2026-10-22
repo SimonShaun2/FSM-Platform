@@ -29,7 +29,8 @@ export const DEFAULT_PLATFORM_QUEUE_RETRY_POLICY_V1: PlatformQueueRetryPolicyV1 
   backoffType: "exponential",
   backoffDelayMs: 5_000,
   removeOnComplete: 1_000,
-  removeOnFail: 5_000
+  /** Retain failed jobs on the source queue for operator replay (`replayFailedJobById`). */
+  removeOnFail: false
 };
 
 export function classifyJobFailureV1(error: unknown): JobFailureClassV1 {

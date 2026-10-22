@@ -1,6 +1,7 @@
 import type { Job } from "bullmq";
 
-import { forwardJobToDeadLetter, isJobExhausted } from "./dead-letter-queue.js";
+import { isJobExhausted } from "./dead-letter-job.js";
+import { forwardJobToDeadLetter } from "./dead-letter-queue.js";
 
 export async function handleWorkerJobFailed(
   sourceQueueName: string,
