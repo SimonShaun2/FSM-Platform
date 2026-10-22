@@ -1,5 +1,7 @@
 import { describe, expect, it } from "vitest";
 
+import { defaultRetentionCustomerPrefs } from "@fsm/types";
+
 import {
   buildProposalCreateCustomerMessageJob,
   evaluateRetentionGates
@@ -13,13 +15,7 @@ const baseInput = {
   prerequisiteProposalId: "prop-confirm-1",
   prerequisiteStatus: "approved" as const,
   jobCompletedActivityEventId: "evt-job-completed-1",
-  customer: {
-    prefersSms: true,
-    prefersEmail: false,
-    doNotContact: false,
-    marketingOptIn: true,
-    appointmentOptIn: true
-  },
+  customer: defaultRetentionCustomerPrefs(),
   automationRules: [
     { id: "rule-follow", ruleType: "job_follow_up" as const, isEnabled: true },
     { id: "rule-review", ruleType: "review_request" as const, isEnabled: true }
