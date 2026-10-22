@@ -46,3 +46,5 @@ Use [ADR-TEMPLATE.md](ADR-TEMPLATE.md) for new records.
 | [ADR-0002](ADR-0002-tenant-model.md) | Tenant model | **Proposed** | TL-01 | Sprint 2 |
 | [ADR-0003](ADR-0003-stripe-connect-charge-model.md) | Stripe Connect charge model | **Proposed** | BE-02 / TL-01 | Sprint 8 |
 | [ADR-0004](ADR-0004-modular-architecture.md) | Modular architecture over microservices | Accepted | TL-01 | - |
+
+**Related (not ADRs):** [FS-76 environment secrets controls](../security/FS-76-environment-secrets-controls.md) — inventory and rotation prep; blocked on **FS-93** for provider secret-manager ADR.
