@@ -29,7 +29,8 @@ const TEST_ENV_VALUES = {
   RESET_TOKEN_TTL_SECONDS: "3600",
   ESTIMATE_EXPIRY_DAYS: "30",
   INVOICE_DUE_DAYS: "30",
-  NEXT_PUBLIC_API_URL: "http://localhost:3001"
+  NEXT_PUBLIC_API_URL: "http://localhost:3001",
+  RENVANI_INTERNAL_COMPANY_ID: "00000000-0000-4000-8000-000000000053"
 } as const;
 
 export function setupTestEnv(): void {

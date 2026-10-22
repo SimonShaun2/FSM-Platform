@@ -148,7 +148,6 @@
       "when": 1777640000000,
       "tag": "0020_inquiry_intake_idempotency",
       "breakpoints": true
-<<<<<<< HEAD
     },
     {
       "idx": 21,
@@ -156,8 +155,13 @@
       "when": 1792610524767,
       "tag": "0021_agent_action_approved_parameters",
       "breakpoints": true
-=======
->>>>>>> origin/dev
+    },
+    {
+      "idx": 22,
+      "version": "7",
+      "when": 1777660000000,
+      "tag": "0022_fs53_growth_intake_foundation",
+      "breakpoints": true
     }
   ]
 }
