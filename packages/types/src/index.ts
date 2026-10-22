@@ -24,6 +24,7 @@ export * from "./booking-request.types.js";
 export * from "./inquiry-intake.types.js";
 export * from "./growth-check/index.js";
 export * from "./booking-settings.types.js";
+export * from "./scheduling-agent.types.js";
 export * from "./product.types.js";
 export * from "./review-request.types.js";
 export * from "./service-agreement.types.js";
