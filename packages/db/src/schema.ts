@@ -1488,6 +1488,64 @@ export const agentProductEnum = pgEnum("agent_product", [
   "owner",
 ]);
 
+export const fieldSyncBatchStatusEnum = pgEnum("field_sync_batch_status", ["open", "completed"]);
+
+export const fieldSyncOperationOutcomeEnum = pgEnum("field_sync_operation_outcome", [
+  "applied",
+  "duplicate",
+  "conflict",
+  "rejected"
+]);
+
+export const fieldSyncBatches = pgTable(
+  "field_sync_batches",
+  {
+    id: id(),
+    companyId: companyId(),
+    userId: uuid("user_id").notNull().references(() => users.id),
+    deviceId: varchar("device_id", { length: 128 }).notNull(),
+    batchClientId: varchar("batch_client_id", { length: 128 }).notNull(),
+    status: fieldSyncBatchStatusEnum("status").notNull().default("open"),
+    lastAcknowledgedSequence: integer("last_acknowledged_sequence").notNull().default(0),
+    ...timestamps
+  },
+  (t) => ({
+    deviceBatchUnique: uniqueIndex("field_sync_batches_device_client_idx").on(
+      t.companyId,
+      t.deviceId,
+      t.batchClientId
+    ),
+    companyUserIdx: index("field_sync_batches_company_user_idx").on(t.companyId, t.userId)
+  })
+);
+
+export const fieldSyncOperations = pgTable(
+  "field_sync_operations",
+  {
+    id: id(),
+    companyId: companyId(),
+    batchId: uuid("batch_id")
+      .notNull()
+      .references(() => fieldSyncBatches.id, { onDelete: "cascade" }),
+    sequence: integer("sequence").notNull(),
+    clientOperationId: varchar("client_operation_id", { length: 128 }).notNull(),
+    jobId: uuid("job_id").notNull().references(() => jobs.id),
+    operationType: varchar("operation_type", { length: 64 }).notNull(),
+    requestPayload: jsonb("request_payload").notNull(),
+    outcome: fieldSyncOperationOutcomeEnum("outcome").notNull(),
+    resultPayload: jsonb("result_payload").notNull().default({}),
+    payloadHash: varchar("payload_hash", { length: 128 }).notNull(),
+    ...timestamps
+  },
+  (t) => ({
+    companyClientOpUnique: uniqueIndex("field_sync_operations_company_client_op_idx").on(
+      t.companyId,
+      t.clientOperationId
+    ),
+    batchSequenceIdx: index("field_sync_operations_batch_sequence_idx").on(t.batchId, t.sequence)
+  })
+);
+
 export const agentActions = pgTable(
   "agent_actions",
   {

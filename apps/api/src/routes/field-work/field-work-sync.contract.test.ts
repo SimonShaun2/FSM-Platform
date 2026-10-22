@@ -1,0 +1,278 @@
+/**
+ * FS-87 — offline-safe field work sync contract tests.
+ * Contract doc: docs/contracts/field-work-sync-v1.md
+ */
+import request from "supertest";
+import { afterEach, beforeAll, beforeEach, describe, expect, it, vi } from "vitest";
+
+import { buildRecordVersionV1 } from "@fsm/types";
+
+import { closeTestApp } from "../../test-support/close-test-app.js";
+import { setupTestEnv } from "../../test-support/env-setup.js";
+
+setupTestEnv();
+
+vi.mock("drizzle-orm", async () => {
+  const helper = await import("../../test-support/fake-db.js");
+  return helper.createDrizzleModuleMock();
+});
+
+vi.mock("@fsm/db", async () => {
+  const helper = await import("../../test-support/fake-db.js");
+  return helper.createDbModuleMock();
+});
+
+vi.mock("@fsm/jobs", () => ({
+  aiQueue: { add: vi.fn() },
+  agreementsQueue: { add: vi.fn() },
+  importsQueue: { add: vi.fn() },
+  invoicesQueue: { add: vi.fn() },
+  notificationsQueue: { add: vi.fn() },
+  webhooksQueue: { add: vi.fn() },
+  redisConnection: {
+    get: vi.fn(async () => null),
+    set: vi.fn(async () => "OK"),
+    del: vi.fn(async () => 1)
+  }
+}));
+
+type BuildAppModule = typeof import("../../app.js");
+type FakeDbModule = typeof import("../../test-support/fake-db.js");
+type TokensModule = typeof import("../../lib/tokens.js");
+
+let buildAppModule: BuildAppModule;
+let fakeDb: FakeDbModule;
+let tokens: TokensModule;
+let app: Awaited<ReturnType<BuildAppModule["buildApp"]>>;
+
+beforeAll(async () => {
+  buildAppModule = await import("../../app.js");
+  fakeDb = await import("../../test-support/fake-db.js");
+  tokens = await import("../../lib/tokens.js");
+});
+
+beforeEach(async () => {
+  fakeDb.resetTestState();
+  app = await buildAppModule.buildApp();
+  await app.ready();
+});
+
+afterEach(async () => {
+  await closeTestApp(app);
+});
+
+function bearer(companyId: string, userId: string, role: string): string {
+  return `Bearer ${tokens.generateAccessToken({ userId, companyId, role })}`;
+}
+
+function seedFieldJob() {
+  const company = fakeDb.seedCompany({ name: "Field Co", slug: "field-co" });
+  const customer = fakeDb.seedCustomer({
+    companyId: company.id,
+    firstName: "Pat",
+    lastName: "Customer",
+    leadSource: "web"
+  });
+  const techUser = fakeDb.seedUser({
+    companyId: company.id,
+    email: "tech@field-co.test",
+    firstName: "T",
+    lastName: "Tech",
+    role: "technician"
+  });
+  const technician = fakeDb.seedTechnician({
+    companyId: company.id,
+    userId: techUser.id,
+    firstName: "T",
+    lastName: "Tech",
+    phone: "+15555550101"
+  });
+  const job = fakeDb.seedJob({
+    companyId: company.id,
+    customerId: customer.id,
+    technicianId: technician.id,
+    status: "dispatched",
+    title: "Service call"
+  });
+
+  return { company, techUser, job };
+}
+
+describe("FS-87 field work sync", () => {
+  it("rejects unauthenticated sync batches (expired / missing session)", async () => {
+    const { job } = seedFieldJob();
+    const response = await request(app.server)
+      .post("/api/v1/field-work/sync/batches")
+      .send({
+        contractVersion: "1.0.0",
+        deviceId: "dev-1",
+        batchClientId: "batch-1",
+        operations: [
+          {
+            sequence: 1,
+            clientOperationId: "note-unauth",
+            jobId: job.id,
+            type: "job.note.append",
+            payload: { content: "offline note" }
+          }
+        ]
+      });
+
+    expect(response.status).toBe(401);
+  });
+
+  it("replays the same clientOperationId without duplicating notes", async () => {
+    const { company, techUser, job } = seedFieldJob();
+    const body = {
+      contractVersion: "1.0.0",
+      deviceId: "ipad-01",
+      batchClientId: "local-batch-1",
+      operations: [
+        {
+          sequence: 1,
+          clientOperationId: "note-op-1",
+          jobId: job.id,
+          type: "job.note.append",
+          payload: { content: "Checked filter", isInternal: true }
+        }
+      ]
+    };
+
+    const first = await request(app.server)
+      .post("/api/v1/field-work/sync/batches")
+      .set("Authorization", bearer(company.id, techUser.id, techUser.role))
+      .send(body);
+
+    expect(first.status).toBe(200);
+    expect(first.body.results[0].outcome).toBe("applied");
+    expect(fakeDb.getTestState().jobNotes).toHaveLength(1);
+
+    const second = await request(app.server)
+      .post("/api/v1/field-work/sync/batches")
+      .set("Authorization", bearer(company.id, techUser.id, techUser.role))
+      .send(body);
+
+    expect(second.status).toBe(200);
+    expect(second.body.results[0].outcome).toBe("duplicate");
+    expect(fakeDb.getTestState().jobNotes).toHaveLength(1);
+  });
+
+  it("returns conflict when job recordVersion is stale", async () => {
+    const { company, techUser, job } = seedFieldJob();
+    const staleVersion = buildRecordVersionV1("job", job.id, new Date("2020-01-01T00:00:00.000Z"));
+
+    const response = await request(app.server)
+      .post("/api/v1/field-work/sync/batches")
+      .set("Authorization", bearer(company.id, techUser.id, techUser.role))
+      .send({
+        contractVersion: "1.0.0",
+        deviceId: "ipad-01",
+        batchClientId: "local-batch-conflict",
+        operations: [
+          {
+            sequence: 1,
+            clientOperationId: "status-op-1",
+            jobId: job.id,
+            type: "job.status.update",
+            baseRecordVersion: staleVersion,
+            payload: { toStatus: "in_progress" }
+          }
+        ]
+      });
+
+    expect(response.status).toBe(200);
+    expect(response.body.results[0].outcome).toBe("conflict");
+    expect(response.body.results[0].conflict?.liveRecordVersion).toContain(job.id);
+    expect(fakeDb.getTestState().jobs[0]?.status).toBe("dispatched");
+  });
+
+  it("rejects cross-tenant job sync", async () => {
+    const { company, techUser, job } = seedFieldJob();
+    const other = fakeDb.seedCompany({ name: "Other Co", slug: "other-co" });
+    const intruder = fakeDb.seedUser({
+      companyId: other.id,
+      email: "intruder@other.test",
+      firstName: "X",
+      lastName: "Y",
+      role: "owner"
+    });
+
+    const response = await request(app.server)
+      .post("/api/v1/field-work/sync/batches")
+      .set("Authorization", bearer(other.id, intruder.id, intruder.role))
+      .send({
+        contractVersion: "1.0.0",
+        deviceId: "ipad-02",
+        batchClientId: "local-batch-x",
+        operations: [
+          {
+            sequence: 1,
+            clientOperationId: "note-op-x",
+            jobId: job.id,
+            type: "job.note.append",
+            payload: { content: "Should not apply" }
+          }
+        ]
+      });
+
+    expect(response.status).toBe(200);
+    expect(response.body.results[0].outcome).toBe("rejected");
+    expect(fakeDb.getTestState().jobNotes).toHaveLength(0);
+  });
+
+  it("resumes a batch and acknowledges media retry via duplicate", async () => {
+    const { company, techUser, job } = seedFieldJob();
+    const firstBody = {
+      contractVersion: "1.0.0",
+      deviceId: "ipad-03",
+      batchClientId: "resume-batch",
+      operations: [
+        {
+          sequence: 1,
+          clientOperationId: "media-op-1",
+          jobId: job.id,
+          type: "job.media.register",
+          payload: {
+            url: "https://cdn.example/photo-1.jpg",
+            photoType: "after",
+            caption: "Completed work"
+          }
+        }
+      ]
+    };
+
+    const first = await request(app.server)
+      .post("/api/v1/field-work/sync/batches")
+      .set("Authorization", bearer(company.id, techUser.id, techUser.role))
+      .send(firstBody);
+
+    expect(first.status).toBe(200);
+    expect(first.body.lastAcknowledgedSequence).toBe(1);
+    expect(fakeDb.getTestState().jobPhotos).toHaveLength(1);
+
+    const second = await request(app.server)
+      .post("/api/v1/field-work/sync/batches")
+      .set("Authorization", bearer(company.id, techUser.id, techUser.role))
+      .send({
+        ...firstBody,
+        resumeBatchId: first.body.batchId,
+        operations: [
+          firstBody.operations[0],
+          {
+            sequence: 2,
+            clientOperationId: "note-op-2",
+            jobId: job.id,
+            type: "job.note.append",
+            payload: { content: "Follow-up note" }
+          }
+        ]
+      });
+
+    expect(second.status).toBe(200);
+    expect(second.body.results[0].outcome).toBe("duplicate");
+    expect(second.body.results[1].outcome).toBe("applied");
+    expect(second.body.lastAcknowledgedSequence).toBe(2);
+    expect(fakeDb.getTestState().jobPhotos).toHaveLength(1);
+    expect(fakeDb.getTestState().jobNotes).toHaveLength(1);
+  });
+});
