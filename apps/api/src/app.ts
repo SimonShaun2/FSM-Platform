@@ -17,18 +17,25 @@ import companyRoutes from "./routes/company/index.js";
 import campaignRoutes from "./routes/campaigns/index.js";
 import customerRoutes from "./routes/customers/index.js";
 import dispatchRoutes from "./routes/dispatch/index.js";
+<<<<<<< HEAD
 import healthRoutes from "./routes/health/index.js";
+=======
+import growthCheckRoutes from "./routes/growth-checks/index.js";
+>>>>>>> origin/dev
 import estimateRoutes from "./routes/estimates/index.js";
+import growthCheckRoutes from "./routes/growth-check/index.js";
 import invoiceRoutes from "./routes/invoices/index.js";
 import importRoutes from "./routes/imports/index.js";
 import jobEngagementRoutes from "./routes/job-engagement/index.js";
 import jobRoutes from "./routes/jobs/index.js";
 import messageLogRoutes from "./routes/message-logs/index.js";
+import operatorRoutes from "./routes/operator/index.js";
 import publicRoutes from "./routes/public/index.js";
 import productRoutes from "./routes/products/index.js";
 import reportingRoutes from "./routes/reporting/index.js";
 import reviewRequestRoutes from "./routes/review-requests/index.js";
 import revenueInquiryRoutes from "./routes/revenue-inquiries/index.js";
+import schedulingAgentRoutes from "./routes/scheduling-agent/index.js";
 import tenantContextRoutes from "./routes/tenant-context/index.js";
 import serviceAgreementRoutes from "./routes/service-agreements/index.js";
 import stripeRoutes from "./routes/stripe/index.js";
@@ -52,8 +59,10 @@ export async function buildApp() {
 
   await app.register(activityEventRoutes, { prefix: "/api/v1" });
   await app.register(agentActionRoutes, { prefix: "/api/v1" });
+  await app.register(operatorRoutes, { prefix: "/api/v1" });
   await app.register(tenantContextRoutes, { prefix: "/api/v1" });
   await app.register(revenueInquiryRoutes, { prefix: "/api/v1" });
+  await app.register(schedulingAgentRoutes, { prefix: "/api/v1" });
   await app.register(aiRoutes, { prefix: "/api/v1/ai" });
   await app.register(automationRuleRoutes, { prefix: "/api/v1" });
   await app.register(authRoutes, { prefix: "/api/v1/auth" });
@@ -61,6 +70,7 @@ export async function buildApp() {
   await app.register(companyRoutes, { prefix: "/api/v1/company" });
   await app.register(customerRoutes, { prefix: "/api/v1/customers" });
   await app.register(dispatchRoutes, { prefix: "/api/v1" });
+  await app.register(growthCheckRoutes, { prefix: "/api/v1" });
   await app.register(attachmentRoutes, { prefix: "/api/v1" });
   await app.register(bookingRoutes, { prefix: "/api/v1" });
   await app.register(reportingRoutes, { prefix: "/api/v1" });
