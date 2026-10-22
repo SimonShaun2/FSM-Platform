@@ -7,7 +7,7 @@
 ## Migration ordering and release sequencing
 
 1. Migrations live in `packages/db/migrations/` and are generated with `pnpm --filter @fsm/db db:generate` after `schema.ts` changes.
-2. Never hand-edit generated SQL except through reviewed Drizzle output; journal order is authoritative (`migrations/meta/_journal.json`).
+2. Never hand-edit generated SQL except through reviewed Drizzle output; journal order is authoritative (`migrations/meta/_journal.json`). CI/local: `pnpm --filter @fsm/db db:check-migrations` validates journal ↔ SQL alignment and blocks unmarked destructive statements unless the line (or previous line) includes `-- fsm:migration-allow`.
 3. Use **expand → migrate → contract** for breaking changes:
    - **Expand:** add nullable columns/tables/indexes; deploy application code that writes new shape but reads old+new.
    - **Migrate:** backfill data in workers or one-off jobs; keep migrations idempotent where possible.

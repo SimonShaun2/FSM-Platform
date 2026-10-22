@@ -15,8 +15,9 @@
 |---|---|
 | Configurable pool + timeouts | `packages/config/src/env.ts`, `packages/db/src/connection-config.ts`, `client.ts` |
 | Connection budget helper | `computeConnectionBudget` in `@fsm/db` |
-| Transaction retry helper (deadlock/serialization only) | `packages/db/src/transactions.ts` |
+| Transaction retry helper (deadlock/serialization only) | `packages/db/src/transactions.ts` → `runWithPostgresRetry` in `postgres-retry.ts` |
 | Retryable error classification | `packages/db/src/postgres-errors.ts` |
+| Migration safety checks (journal/SQL/destructive guard) | `packages/db/src/migration-safety.ts`, `pnpm --filter @fsm/db db:check-migrations` |
 | Unit tests | `packages/db/src/*.test.ts` |
 | Migration/transaction policy | `docs/platform/FS-80-database-operations-policy.md` |
 | Inventory | `docs/platform/FS-80-database-inventory.md` |
