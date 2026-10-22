@@ -77,6 +77,72 @@ Staging deployment should prove a fresh database migration, worker startup, webh
 
 Exit criterion: one button or approved workflow can reliably put a reviewed build in staging; founder promotion releases the tested artifact to production with observable health and a documented recovery step. Platform 1 owns environment/CI implementation; Platform 2 owns observability and recovery; Security reviews gate authority and secret boundaries.
 
+# Infrastructure design: what we build and where it runs
+
+This is the production infrastructure target to validate against the team's current host and account configuration before implementation. Keep the existing TypeScript monorepo and modular services. The repository names Railway as a deployment target; confirm what is actually provisioned before treating a target as a live environment. Prefer managed platform capabilities for ingress, TLS, health checks and service replicas when they meet the requirements. A separate load balancer or Kubernetes cluster is not a starting requirement. [G2]
+
+| Layer | Initial responsibility | Scale and safety control |
+|---|---|---|
+| DNS, CDN and edge | Domain routing, TLS, static asset caching, basic bot and request filtering | Managed edge; rate limits at edge and again on sensitive API actions |
+| Web | Next.js user interface and public branded sites | Stateless instances; cache static assets, never tenant-private responses publicly |
+| API | Fastify authentication, validation, tenant context and domain-service calls | Stateless replicas behind managed ingress; bounded connection pools and graceful shutdown |
+| Webhooks | Verify and record provider callbacks, acknowledge quickly | Independently scaled service; durable inbox, signature validation, deduplication |
+| Workers | BullMQ jobs for messaging, imports, reports and agent actions | Scale independently by queue depth and oldest-job age; concurrency and retry caps |
+| Data | PostgreSQL system of record; Redis queues and short-lived coordination | Managed durable storage, limited connections, tested backups; isolate noisy workloads |
+| Vendors | Payment, messaging, AI, storage and accounting adapters | Per-provider timeout, circuit behavior, cost and rate limits; degrade without losing core state |
+
+## Security boundary
+
+Treat every request and queued job as untrusted until identity, role, company scope and action policy are checked. Derive company scope from authenticated membership, never from a caller-controlled company ID alone. Apply tenant predicates to every read, write, export, report and background job. Add automated cross-tenant negative tests around critical services. PostgreSQL row-level security may be added as defense in depth only after connection-pool/session-context behavior is verified; it does not replace application authorization.
+
+Use TLS in transit and platform-managed encryption at rest where available. Store secrets in the host's secret manager, separate credentials by environment and service, rotate them, and keep them out of source, logs, traces and AI prompts. Give the web, API, webhook and worker only the credentials they require. Validate webhook signatures and protect public endpoints with request size, rate and abuse limits. Keep an audit trail for sensitive access, payment actions, exports and agent approvals. Define retention, deletion and support-access procedures before production data.
+
+**Security exit gate:** threat review for identity/tenant boundaries, secret scan, dependency review, authorization tests, cross-tenant negative suite, webhook signature/replay tests, and no sensitive data in ordinary logs. Security and QA 2 sign off at the exact reviewed head for applicable changes.
+
+## Transaction and consistency boundary
+
+PostgreSQL is authoritative for customer, job, invoice and payment state. Use short database transactions for related local writes: validate state and tenant, apply the transition, write its audit record and insert an outbox event atomically. Do not hold a database transaction open while calling Stripe, Twilio or an AI provider. Use an idempotency key and explicit pending/succeeded/failed states around external calls; accept provider webhooks through a durable, deduplicated inbox and reconcile against provider references.
+
+For multi-step workflows that cross services, use a recoverable state machine or saga with compensating actions, not a long distributed transaction. A worker may receive a message more than once: handlers must be idempotent, retries bounded with backoff, and exhausted jobs visible in a dead-letter or operator recovery queue. Add unique constraints for business invariants such as external event IDs and idempotency keys. Review isolation/locking only for measured concurrent transitions such as slot holds, invoice settlement and inventory reservations; test races with two simultaneous requests.
+
+**Transaction exit gate:** integration tests prove atomic rollback, idempotent duplicate requests, duplicate/out-of-order webhooks, simultaneous booking attempts, payment reconciliation, and safe recovery after a worker interruption. No workflow needs a manual database edit to recover.
+
+## Load balancing, scaling and availability
+
+Make web, API, webhook and worker processes stateless so the hosting platform can distribute requests and add replicas without sticky sessions. Store sessions/shared state in managed durable services, not process memory. Configure readiness separately from liveness: remove a replica from traffic when it cannot serve safely, while a brief dependency blip should not cause restart loops. On shutdown, stop accepting new work, finish or release in-flight requests/jobs within a bounded grace period, and let the queue reclaim unfinished work safely.
+
+Scale the API/web tiers from observed request rate, CPU/memory saturation, p95 latency and error rate. Scale workers from oldest queue age, backlog, completion rate and provider throttles, with per-queue concurrency caps. Put hard bounds on database connections across all replicas; replica count must fit within the database connection budget. Start with one PostgreSQL writer. Add read replicas only when measured read load justifies them and the UI can tolerate replica lag; route writes and consistency-sensitive reads to the writer. Add caching only for measured hot reads with an explicit tenant-aware key and invalidation rule. Avoid Kubernetes, service meshes, sharding and multi-region writes until measured constraints justify their operational cost.
+
+Set service-level objectives and recovery time/data-loss targets with the product and operations owners after pilot workload and business impact are understood. Instrument request latency, error rate, queue age, database pool wait, query latency, webhook lag, payment mismatch, provider throttling and per-tenant workload. Establish alert ownership and on-call coverage that match the service promise.
+
+**Capacity exit gate:** record a representative baseline, run a repeatable load test at the agreed pilot peak and a documented headroom scenario, identify the first saturated resource, and prove the system recovers after load is removed. Test noisy-tenant fairness and queue backpressure. Do not claim a capacity number until this evidence exists.
+
+## Performance and cost optimization
+
+Optimize from traces and profiles, not guesses. For slow customer/job flows, inspect the complete request and query plan; add indexes that match tenant-scoped filters and ordering, then verify with representative data. Avoid N+1 queries, unbounded list endpoints, oversized payloads and repeated vendor calls. Paginate large histories and exports; move long reports, imports and sends to background jobs. Use CDN caching for immutable public assets and carefully scoped public pages. Never cache private tenant data without a complete authorization-aware cache key and invalidation policy.
+
+Track cost per active company and per completed workflow across database, compute, queue, storage, messaging, payment and AI usage. Put usage limits and budget alerts around expensive integrations. Treat optimization as a release gate when it changes correctness: compare behavior, latency and cost before/after under the same workload.
+
+## Delivery and recovery path
+
+A reviewed commit builds one immutable artifact. Deploy it to isolated staging, apply backward-compatible database changes, run smoke tests across a representative inquiry-to-payment simulation, and promote that same artifact only through the founder-controlled release path. Use expand-and-contract migrations: add compatible schema, deploy readers/writers, backfill with checkpoints, then remove obsolete columns in a later reviewed change. A code rollback must remain compatible with the current schema.
+
+Automate encrypted backups and point-in-time recovery if supported by the chosen database service. Restore into an isolated environment on a schedule and record measured recovery time and data gap. Document who can invoke recovery, how credentials are accessed, and what customer-facing status is shown. A backup that has not been restored is unproven.
+
+**Infrastructure exit gate:** staging has separate data and secrets; an approved batch deploys the reviewed artifact; migrations and smoke checks pass; rollback or forward-fix procedure is practiced; alerts identify a failed API, queue, webhook and payment reconciliation path; and a restore drill has measurable results.
+
+## Build sequence inside the infrastructure wave
+
+1. Inventory hosting, DNS, current environments, secrets, database size/connections, queue workload, providers, backup/restore capability and actual CI status.
+2. Correct the dev protection and exact-head checks through the existing authorized process; document the real result rather than assuming configuration.
+3. Provision isolated staging for web/API/webhook/worker, PostgreSQL and Redis; define health checks, secret scopes, logs and deploy identity.
+4. Implement transaction primitives: tenant-scoped service boundary, idempotency, audit event, outbox/inbox, retry/dead-letter and payment reconciliation.
+5. Add security and concurrency tests, then deploy a canonical workflow into staging and rehearse failures.
+6. Baseline and load-test the workflow; use evidence to decide scaling thresholds and any host changes.
+7. Promote the same artifact to production only after separate founder authorization and a release evidence packet.
+
+Keep this as infrastructure work attached to the accepted FS build sequence; do not split it into an unreviewed platform rewrite. Platform 1 owns deployment/environment mechanics, Platform 2 owns monitoring/recovery, Pair 1 and Security own tenant/agent authority, Pair 5 owns adapters and event provenance, and QA 2/4 verify negative and end-to-end cases. Technical Lead records material decisions in an ADR.
+
 # Slab: identity, tenancy, data, and trust
 
 The database is the load-bearing slab. Preserve a single source of truth for companies, users and roles, customers, service locations, assets, work, agreements, estimates, invoices, payments, communication consent, and event history. A company owns its own records and permissions. Company boundaries must be enforced in service queries and writes, including bulk imports and background jobs. [G2]
