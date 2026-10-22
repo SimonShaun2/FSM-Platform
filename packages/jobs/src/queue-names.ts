@@ -9,7 +9,9 @@ export const QUEUE_NAMES = {
   invoices: "invoices",
   agreements: "agreements",
   webhooks: "webhooks",
-  operator: "operator"
+  operator: "operator",
+  exports: "exports",
+  growth: "growth"
 } as const;
 
 export type PlatformQueueName = (typeof QUEUE_NAMES)[keyof typeof QUEUE_NAMES];

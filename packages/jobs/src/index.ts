@@ -34,5 +34,7 @@ export {
   invoicesQueue,
   notificationsQueue,
   webhooksQueue,
-  operatorQueue
+  operatorQueue,
+  exportsQueue,
+  growthQueue
 } from "./queues.js";

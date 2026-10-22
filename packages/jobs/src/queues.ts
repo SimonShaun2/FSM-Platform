@@ -31,3 +31,7 @@ export const agreementsQueue = createPlatformQueue(QUEUE_NAMES.agreements);
 export const webhooksQueue = createPlatformQueue(QUEUE_NAMES.webhooks);
 
 export const operatorQueue = createPlatformQueue(QUEUE_NAMES.operator);
+
+export const exportsQueue = createPlatformQueue(QUEUE_NAMES.exports);
+
+export const growthQueue = createPlatformQueue(QUEUE_NAMES.growth);
