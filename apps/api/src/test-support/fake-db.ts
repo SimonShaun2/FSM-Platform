@@ -39,6 +39,7 @@ type TableName =
   | "onTheWayNotifications"
   | "bookingRequests"
   | "bookingSettings"
+  | "agentActions"
   | "inquirySubmitIdempotency";
 
 type UserRole = "owner" | "admin" | "dispatcher" | "office" | "technician";
@@ -127,6 +128,19 @@ type BookingRequestStatus = "pending" | "confirmed" | "cancelled" | "completed" 
 type BookingSource = "google" | "facebook" | "instagram" | "yelp" | "direct" | "website" | "qr_code";
 type BookingUrgency = "emergency" | "this_week" | "flexible";
 type PreferredBookingWindow = "morning" | "afternoon" | "first_available";
+type AgentProduct = "revenue" | "scheduling" | "service" | "retention" | "owner";
+type AgentActionState =
+  | "proposed"
+  | "policy_evaluated"
+  | "awaiting_approval"
+  | "approved"
+  | "executing"
+  | "succeeded"
+  | "failed"
+  | "expired"
+  | "cancelled"
+  | "escalated"
+  | "reversed";
 
 export interface TestCompanyRecord {
   id: string;
@@ -888,6 +902,29 @@ export interface TestBookingRequestRecord {
   deletedAt: Date | null;
 }
 
+export interface TestAgentActionRecord {
+  id: string;
+  companyId: string;
+  agentProduct: AgentProduct;
+  actionType: string;
+  parameters: Record<string, unknown>;
+  target: Record<string, unknown>;
+  sourceEventIds: string[];
+  idempotencyKey: string;
+  payloadHash: string;
+  policyVersion: string;
+  requiresApproval: boolean;
+  state: AgentActionState;
+  confidence: string | null;
+  reason: string | null;
+  expiresAt: Date;
+  reviewerId: string | null;
+  executionReceipt: Record<string, unknown> | null;
+  createdAt: Date;
+  updatedAt: Date;
+  deletedAt: Date | null;
+}
+
 export interface TestInquirySubmitIdempotencyRecord {
   id: string;
   companyId: string;
@@ -963,6 +1000,7 @@ type AnyTestRecord =
   | TestOnTheWayNotificationRecord
   | TestBookingRequestRecord
   | TestBookingSettingsRecord
+  | TestAgentActionRecord
   | TestInquirySubmitIdempotencyRecord;
 
 type MockTable =
@@ -1001,6 +1039,7 @@ type MockTable =
   | typeof onTheWayNotificationsTable
   | typeof bookingRequestsTable
   | typeof bookingSettingsTable
+  | typeof agentActionsTable
   | typeof inquirySubmitIdempotencyTable;
 
 interface TestState {
@@ -1039,6 +1078,7 @@ interface TestState {
   onTheWayNotifications: TestOnTheWayNotificationRecord[];
   bookingRequests: TestBookingRequestRecord[];
   bookingSettings: TestBookingSettingsRecord[];
+  agentActions: TestAgentActionRecord[];
   inquirySubmitIdempotency: TestInquirySubmitIdempotencyRecord[];
 }
 
@@ -1834,6 +1874,30 @@ const bookingRequestsTable = {
   deletedAt: "deletedAt"
 } as const;
 
+const agentActionsTable = {
+  __name: "agentActions",
+  id: "id",
+  companyId: "companyId",
+  agentProduct: "agentProduct",
+  actionType: "actionType",
+  parameters: "parameters",
+  target: "target",
+  sourceEventIds: "sourceEventIds",
+  idempotencyKey: "idempotencyKey",
+  payloadHash: "payloadHash",
+  policyVersion: "policyVersion",
+  requiresApproval: "requiresApproval",
+  state: "state",
+  confidence: "confidence",
+  reason: "reason",
+  expiresAt: "expiresAt",
+  reviewerId: "reviewerId",
+  executionReceipt: "executionReceipt",
+  createdAt: "createdAt",
+  updatedAt: "updatedAt",
+  deletedAt: "deletedAt"
+} as const;
+
 const inquirySubmitIdempotencyTable = {
   __name: "inquirySubmitIdempotency",
   id: "id",
@@ -1909,6 +1973,7 @@ const state: TestState = {
   onTheWayNotifications: [],
   bookingRequests: [],
   bookingSettings: [],
+  agentActions: [],
   inquirySubmitIdempotency: []
 };
 
@@ -1960,6 +2025,7 @@ function restoreState(snapshot: TestState): void {
   );
   state.bookingRequests.splice(0, state.bookingRequests.length, ...snapshot.bookingRequests);
   state.bookingSettings.splice(0, state.bookingSettings.length, ...snapshot.bookingSettings);
+  state.agentActions.splice(0, state.agentActions.length, ...snapshot.agentActions);
   state.inquirySubmitIdempotency.splice(
     0,
     state.inquirySubmitIdempotency.length,
@@ -2039,6 +2105,8 @@ function getRows(tableName: TableName): AnyTestRecord[] {
       return state.bookingRequests;
     case "bookingSettings":
       return state.bookingSettings;
+    case "agentActions":
+      return state.agentActions;
     case "inquirySubmitIdempotency":
       return state.inquirySubmitIdempotency;
   }
@@ -3079,6 +3147,48 @@ function createInquirySubmitIdempotencyRecord(
   };
 }
 
+function createAgentActionRecord(
+  values: Partial<TestAgentActionRecord> &
+    Pick<
+      TestAgentActionRecord,
+      | "companyId"
+      | "agentProduct"
+      | "actionType"
+      | "target"
+      | "idempotencyKey"
+      | "payloadHash"
+      | "policyVersion"
+      | "requiresApproval"
+      | "state"
+      | "expiresAt"
+    >
+): TestAgentActionRecord {
+  const now = new Date();
+
+  return {
+    id: values.id ?? nextId(),
+    companyId: values.companyId,
+    agentProduct: values.agentProduct,
+    actionType: values.actionType,
+    parameters: values.parameters ?? {},
+    target: values.target,
+    sourceEventIds: values.sourceEventIds ?? [],
+    idempotencyKey: values.idempotencyKey,
+    payloadHash: values.payloadHash,
+    policyVersion: values.policyVersion,
+    requiresApproval: values.requiresApproval,
+    state: values.state,
+    confidence: values.confidence ?? null,
+    reason: values.reason ?? null,
+    expiresAt: values.expiresAt,
+    reviewerId: values.reviewerId ?? null,
+    executionReceipt: values.executionReceipt ?? null,
+    createdAt: values.createdAt ?? now,
+    updatedAt: values.updatedAt ?? now,
+    deletedAt: values.deletedAt ?? null
+  };
+}
+
 function createBookingSettingsRecord(
   values: Partial<TestBookingSettingsRecord> & Pick<TestBookingSettingsRecord, "companyId">
 ): TestBookingSettingsRecord {
@@ -3283,6 +3393,23 @@ function createRow(tableName: TableName, values: Record<string, unknown>): AnyTe
           Pick<
             TestInquirySubmitIdempotencyRecord,
             "companyId" | "idempotencyKey" | "payloadHash" | "bookingRequestId" | "responseSnapshot" | "expiresAt"
+          >
+      );
+    case "agentActions":
+      return createAgentActionRecord(
+        values as Partial<TestAgentActionRecord> &
+          Pick<
+            TestAgentActionRecord,
+            | "companyId"
+            | "agentProduct"
+            | "actionType"
+            | "target"
+            | "idempotencyKey"
+            | "payloadHash"
+            | "policyVersion"
+            | "requiresApproval"
+            | "state"
+            | "expiresAt"
           >
       );
   }
@@ -3580,6 +3707,7 @@ export const fileAttachments = fileAttachmentsTable;
 export const onTheWayNotifications = onTheWayNotificationsTable;
 export const bookingRequests = bookingRequestsTable;
 export const bookingSettings = bookingSettingsTable;
+export const agentActions = agentActionsTable;
 export const inquirySubmitIdempotency = inquirySubmitIdempotencyTable;
 
 export async function emitEvent(event: Omit<TestActivityEventRecord, "id" | "occurredAt"> & {
@@ -3928,6 +4056,7 @@ export function createDbModuleMock() {
     onTheWayNotifications,
     bookingRequests,
     bookingSettings,
+    agentActions,
     inquirySubmitIdempotency,
     emitEvent,
     emitEventWithExecutor,
@@ -3975,6 +4104,7 @@ export function resetTestState(): void {
   state.onTheWayNotifications.length = 0;
   state.bookingRequests.length = 0;
   state.bookingSettings.length = 0;
+  state.agentActions.length = 0;
   state.inquirySubmitIdempotency.length = 0;
 }
 

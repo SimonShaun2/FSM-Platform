@@ -2,6 +2,29 @@ const PUBLIC_API_PREFIX = "/api/v1/public";
 
 const ENCODED_DOT_SEGMENT = /^(?:\.|%2e|%2E)$/i;
 const ENCODED_DOT_DOT_SEGMENT = /^(?:\.{2}|%2e%2e|%2E%2E|%2e%2E|%2E%2e)$/i;
+const DOUBLE_ENCODED_DOT_ARTIFACT = /%25(?:2e|2E)/i;
+const MAX_PATH_DECODE_ROUNDS = 4;
+
+function decodePathRounds(value: string): string[] {
+  const versions = [value];
+  let current = value;
+
+  for (let round = 0; round < MAX_PATH_DECODE_ROUNDS; round += 1) {
+    try {
+      const next = decodeURIComponent(current);
+      if (next === current) {
+        break;
+      }
+
+      versions.push(next);
+      current = next;
+    } catch {
+      break;
+    }
+  }
+
+  return versions;
+}
 
 export function isPublicApiProxyPath(pathname: string): boolean {
   return pathname === PUBLIC_API_PREFIX || pathname.startsWith(`${PUBLIC_API_PREFIX}/`);
@@ -28,29 +51,27 @@ function segmentIsTraversal(segment: string): boolean {
 }
 
 function haystackHasTraversal(haystack: string): boolean {
-  if (haystack.includes("\\") || haystack.includes("..")) {
+  if (DOUBLE_ENCODED_DOT_ARTIFACT.test(haystack)) {
     return true;
   }
 
-  if (/%2e%2e/i.test(haystack)) {
-    return true;
+  for (const candidate of decodePathRounds(haystack)) {
+    if (candidate.includes("\\") || candidate.includes("..")) {
+      return true;
+    }
+
+    if (/%2e%2e/i.test(candidate)) {
+      return true;
+    }
+
+    const segments = candidate.split("/").filter(Boolean);
+
+    if (segments.some(segmentIsTraversal)) {
+      return true;
+    }
   }
 
-  let decodedPath = haystack;
-
-  try {
-    decodedPath = decodeURI(haystack);
-  } catch {
-    return true;
-  }
-
-  if (decodedPath.includes("..")) {
-    return true;
-  }
-
-  const segments = haystack.split("/").filter(Boolean);
-
-  return segments.some(segmentIsTraversal);
+  return false;
 }
 
 /**
