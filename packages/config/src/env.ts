@@ -2,6 +2,8 @@ import { z } from "zod";
 
 const envSchema = z.object({
   NODE_ENV: z.enum(["development", "test", "production"]).default("development"),
+  /** Injected by Render (and similar hosts); prefer over service-specific ports when set. */
+  PORT: z.coerce.number().int().positive().optional(),
   API_PORT: z.coerce.number().int().positive().default(3001),
   WEBHOOK_PORT: z.coerce.number().int().positive().default(3002),
   DATABASE_URL: z.string().min(1, "DATABASE_URL is required"),
@@ -45,6 +47,16 @@ const envSchema = z.object({
 
 export type Env = z.infer<typeof envSchema>;
 export type PublicEnv = Pick<Env, "NEXT_PUBLIC_API_URL">;
+
+/** Render sets `PORT`; local dev uses `API_PORT`. */
+export function resolveApiListenPort(config: Env): number {
+  return config.PORT ?? config.API_PORT;
+}
+
+/** Render sets `PORT`; local dev uses `WEBHOOK_PORT`. */
+export function resolveWebhookListenPort(config: Env): number {
+  return config.PORT ?? config.WEBHOOK_PORT;
+}
 
 const publicEnvSchema = envSchema.pick({
   NEXT_PUBLIC_API_URL: true

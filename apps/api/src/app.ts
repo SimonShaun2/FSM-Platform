@@ -1,3 +1,4 @@
+import fastifyCors from "@fastify/cors";
 import Fastify from "fastify";
 import pino from "pino";
 
@@ -17,13 +18,10 @@ import companyRoutes from "./routes/company/index.js";
 import campaignRoutes from "./routes/campaigns/index.js";
 import customerRoutes from "./routes/customers/index.js";
 import dispatchRoutes from "./routes/dispatch/index.js";
-<<<<<<< HEAD
 import healthRoutes from "./routes/health/index.js";
-=======
-import growthCheckRoutes from "./routes/growth-checks/index.js";
->>>>>>> origin/dev
+import growthCheckIntakeRoutes from "./routes/growth-checks/index.js";
 import estimateRoutes from "./routes/estimates/index.js";
-import growthCheckRoutes from "./routes/growth-check/index.js";
+import growthCheckScanRoutes from "./routes/growth-check/index.js";
 import invoiceRoutes from "./routes/invoices/index.js";
 import importRoutes from "./routes/imports/index.js";
 import dataExportRoutes from "./routes/data-exports/index.js";
@@ -53,6 +51,10 @@ export async function buildApp() {
     loggerInstance: logger
   });
 
+  await app.register(fastifyCors, {
+    origin: new URL(env.APP_URL).origin,
+    credentials: true
+  });
   await app.register(requestLoggerPlugin);
   await app.register(errorHandlerPlugin);
   await app.register(healthRoutes);
@@ -71,7 +73,8 @@ export async function buildApp() {
   await app.register(companyRoutes, { prefix: "/api/v1/company" });
   await app.register(customerRoutes, { prefix: "/api/v1/customers" });
   await app.register(dispatchRoutes, { prefix: "/api/v1" });
-  await app.register(growthCheckRoutes, { prefix: "/api/v1" });
+  await app.register(growthCheckIntakeRoutes, { prefix: "/api/v1" });
+  await app.register(growthCheckScanRoutes, { prefix: "/api/v1" });
   await app.register(attachmentRoutes, { prefix: "/api/v1" });
   await app.register(bookingRoutes, { prefix: "/api/v1" });
   await app.register(reportingRoutes, { prefix: "/api/v1" });

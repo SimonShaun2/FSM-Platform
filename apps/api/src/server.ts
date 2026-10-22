@@ -1,4 +1,4 @@
-import { env } from "@fsm/config";
+import { env, resolveApiListenPort } from "@fsm/config";
 
 import { buildApp } from "./app.js";
 
@@ -31,12 +31,14 @@ for (const signal of shutdownSignals) {
   });
 }
 
+const listenPort = resolveApiListenPort(env);
+
 try {
   await app.listen({
     host: "0.0.0.0",
-    port: env.API_PORT
+    port: listenPort
   });
-  app.log.info({ port: env.API_PORT }, "API listening");
+  app.log.info({ port: listenPort }, "API listening");
 } catch (error) {
   app.log.error({ err: error }, "API server failed to start");
   process.exit(1);
