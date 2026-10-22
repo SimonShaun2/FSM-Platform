@@ -86,6 +86,10 @@ const authenticatePlugin = fp(async (fastify) => {
       throw new AppError(ErrorCode.FORBIDDEN, "Token company does not match user company");
     }
 
+    if (user.companyId !== company.id) {
+      throw new AppError(ErrorCode.FORBIDDEN, "User membership does not match company context");
+    }
+
     request.user = {
       id: user.id,
       email: user.email,

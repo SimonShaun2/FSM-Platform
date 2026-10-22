@@ -221,6 +221,54 @@ describe("auth.service", () => {
     });
   });
 
+  it("rejects login for inactive users", async () => {
+    const company = fakeDb.seedCompany({ name: "Acme", slug: "acme" });
+    fakeDb.seedUser({
+      companyId: company.id,
+      email: "owner@example.com",
+      passwordHash: await hashPassword("password123", 12),
+      firstName: "Pat",
+      lastName: "Lee",
+      isActive: false
+    });
+
+    await expect(
+      authService.login({
+        email: "owner@example.com",
+        password: "password123"
+      })
+    ).rejects.toMatchObject({
+      code: ErrorCode.UNAUTHORIZED
+    });
+  });
+
+  it("rejects refresh for inactive users", async () => {
+    const company = fakeDb.seedCompany({ name: "Acme", slug: "acme" });
+    const user = fakeDb.seedUser({
+      companyId: company.id,
+      email: "owner@example.com",
+      passwordHash: await hashPassword("password123", 12),
+      firstName: "Pat",
+      lastName: "Lee",
+      isActive: false
+    });
+    const refreshToken = tokens.generateRefreshToken({
+      userId: user.id,
+      companyId: company.id
+    });
+
+    fakeDb.seedRefreshToken({
+      companyId: company.id,
+      userId: user.id,
+      tokenHash: await tokens.hashToken(refreshToken),
+      expiresAt: new Date(Date.now() + 60_000)
+    });
+
+    await expect(authService.refresh(refreshToken)).rejects.toMatchObject({
+      code: ErrorCode.UNAUTHORIZED
+    });
+  });
+
   it("rejects a revoked refresh token", async () => {
     const company = fakeDb.seedCompany({ name: "Acme", slug: "acme" });
     const user = fakeDb.seedUser({
