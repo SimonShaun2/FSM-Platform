@@ -58,10 +58,10 @@
 
 | PR | Branch | Owners | Ticket | Sign-offs @ head |
 | --- | --- | --- | --- | --- |
-| TBD | `cursor/post-81-registry-fix-1f27` | Iris | Registry | ☐ Isaac ☐ Lily ☐ Sam |
-| TBD | `cursor/mvp-p0-assignments-1f27` | Grace + Elena | Planning | ☐ ☐ ☐ |
-| TBD | `cursor/fs-72-reminder-candidates-1f27` | Aria, Marcus, Kai | FS-72 | ☐ ☐ ☐ |
-| TBD | `cursor/fs-87-mobile-contract-1f27` | Priya, Mila | FS-87 | ☐ ☐ ☐ |
-| TBD | `cursor/dispatch-sse-fallback-1f27` | Omar, Ben | Dispatch | ☐ ☐ ☐ |
+| [#87](https://github.com/SimonShaun2/Renvani/pull/87) | `cursor/post-81-registry-fix-1f27` | Iris | Registry (#81 follow-up) | ☐ Isaac ☐ Lily ☐ Sam |
+| [#84](https://github.com/SimonShaun2/Renvani/pull/84) | `cursor/mvp-p0-assignments-1f27` | Grace + Elena | Planning | ☐ ☐ ☐ |
+| [#85](https://github.com/SimonShaun2/Renvani/pull/85) | `cursor/fs-72-reminder-candidates-1f27` | Aria, Marcus, Kai | FS-72 | ☐ ☐ ☐ |
+| [#83](https://github.com/SimonShaun2/Renvani/pull/83) | `cursor/fs-87-mobile-contract-1f27` | Priya, Mila | FS-87 | ☐ ☐ ☐ |
+| [#86](https://github.com/SimonShaun2/Renvani/pull/86) | `cursor/dispatch-sse-fallback-1f27` | Omar, Ben | Dispatch SSE | ☐ ☐ ☐ |
 
-_Update this table when PRs open._
+**Next PRs (refresh from `dev`, assign owners):** FS-38 → `cursor/fs-38-contract-pair2-96e5` (Leo); FS-21 → `cursor/fs-21-security-hold-followups-da75` (Nina); FS-58 → `cursor/fs58-public-api-followup-d307` (Sofia).
