@@ -1,3 +1,4 @@
+-- FS-87 field work sync (Pair 2). Migration index may be renumbered when merging to dev (Grace / FS-3 journal order).
 DO $$ BEGIN
  CREATE TYPE "public"."field_sync_batch_status" AS ENUM('open', 'completed');
 EXCEPTION

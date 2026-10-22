@@ -46,7 +46,9 @@ Returns `batchId`, `lastAcknowledgedSequence`, and per-operation `results` with 
 - `applied` — mutation committed
 - `duplicate` — same `clientOperationId` replayed with identical payload
 - `conflict` — includes `conflict.liveRecordVersion` and `reason`
-- `rejected` — authorization or validation failure for that operation
+- `rejected` — authorization or validation failure for that operation, or **same `clientOperationId` with a different payload** (no silent overwrite)
+
+Conflict resolution helpers live in `@fsm/types` (`field-work-sync/v1/conflict.ts`).
 
 ## Local storage (client guidance)
 

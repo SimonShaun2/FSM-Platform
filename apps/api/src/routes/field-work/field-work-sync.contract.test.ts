@@ -220,6 +220,129 @@ describe("FS-87 field work sync", () => {
     expect(fakeDb.getTestState().jobNotes).toHaveLength(0);
   });
 
+  it("rejects clientOperationId replay when payload hash differs", async () => {
+    const { company, techUser, job } = seedFieldJob();
+
+    const first = await request(app.server)
+      .post("/api/v1/field-work/sync/batches")
+      .set("Authorization", bearer(company.id, techUser.id, techUser.role))
+      .send({
+        contractVersion: "1.0.0",
+        deviceId: "ipad-04",
+        batchClientId: "mismatch-batch",
+        operations: [
+          {
+            sequence: 1,
+            clientOperationId: "note-op-mismatch",
+            jobId: job.id,
+            type: "job.note.append",
+            payload: { content: "Original note" }
+          }
+        ]
+      });
+
+    expect(first.status).toBe(200);
+    expect(fakeDb.getTestState().jobNotes).toHaveLength(1);
+
+    const second = await request(app.server)
+      .post("/api/v1/field-work/sync/batches")
+      .set("Authorization", bearer(company.id, techUser.id, techUser.role))
+      .send({
+        contractVersion: "1.0.0",
+        deviceId: "ipad-04",
+        batchClientId: "mismatch-batch-2",
+        operations: [
+          {
+            sequence: 1,
+            clientOperationId: "note-op-mismatch",
+            jobId: job.id,
+            type: "job.note.append",
+            payload: { content: "Tampered note" }
+          }
+        ]
+      });
+
+    expect(second.status).toBe(200);
+    expect(second.body.results[0].outcome).toBe("rejected");
+    expect(second.body.results[0].message).toMatch(/different payload/i);
+    expect(fakeDb.getTestState().jobNotes).toHaveLength(1);
+  });
+
+  it("returns conflict when job task recordVersion is stale", async () => {
+    const { company, techUser, job } = seedFieldJob();
+    const task = fakeDb.seedJobTask({
+      companyId: company.id,
+      jobId: job.id,
+      title: "Inspect filter",
+      status: "pending"
+    });
+    const staleVersion = buildRecordVersionV1("job_task", task.id, new Date("2020-01-01T00:00:00.000Z"));
+
+    const response = await request(app.server)
+      .post("/api/v1/field-work/sync/batches")
+      .set("Authorization", bearer(company.id, techUser.id, techUser.role))
+      .send({
+        contractVersion: "1.0.0",
+        deviceId: "ipad-05",
+        batchClientId: "task-conflict",
+        operations: [
+          {
+            sequence: 1,
+            clientOperationId: "task-op-1",
+            jobId: job.id,
+            type: "job.task.update",
+            baseRecordVersion: staleVersion,
+            payload: { taskId: task.id, status: "completed" }
+          }
+        ]
+      });
+
+    expect(response.status).toBe(200);
+    expect(response.body.results[0].outcome).toBe("conflict");
+    expect(fakeDb.getTestState().jobTasks[0]?.status).toBe("pending");
+  });
+
+  it("returns conflict when signature already differs on the job", async () => {
+    const { company, techUser, job } = seedFieldJob();
+    fakeDb.getTestState().jobs[0] = {
+      ...job,
+      signatureUrl: "https://cdn.example/existing-sig.png",
+      signedByName: "Pat Customer",
+      signedAt: new Date("2026-01-01T00:00:00.000Z")
+    };
+    const liveVersion = buildRecordVersionV1(
+      "job",
+      job.id,
+      fakeDb.getTestState().jobs[0]!.updatedAt
+    );
+
+    const response = await request(app.server)
+      .post("/api/v1/field-work/sync/batches")
+      .set("Authorization", bearer(company.id, techUser.id, techUser.role))
+      .send({
+        contractVersion: "1.0.0",
+        deviceId: "ipad-06",
+        batchClientId: "sig-conflict",
+        operations: [
+          {
+            sequence: 1,
+            clientOperationId: "sig-op-1",
+            jobId: job.id,
+            type: "job.signature.capture",
+            baseRecordVersion: liveVersion,
+            payload: {
+              signatureUrl: "https://cdn.example/new-sig.png",
+              signedByName: "Pat Customer"
+            }
+          }
+        ]
+      });
+
+    expect(response.status).toBe(200);
+    expect(response.body.results[0].outcome).toBe("conflict");
+    expect(response.body.results[0].conflict?.reason).toMatch(/signature/i);
+  });
+
   it("resumes a batch and acknowledges media retry via duplicate", async () => {
     const { company, techUser, job } = seedFieldJob();
     const firstBody = {
