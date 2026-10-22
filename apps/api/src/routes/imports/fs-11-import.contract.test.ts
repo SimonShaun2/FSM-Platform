@@ -5,7 +5,14 @@
 import request from "supertest";
 import { afterEach, beforeAll, beforeEach, describe, expect, it, vi } from "vitest";
 
+import { ErrorCode } from "@fsm/types";
+
+import { closeTestApp } from "../../test-support/close-test-app.js";
 import { setupTestEnv } from "../../test-support/env-setup.js";
+import {
+  CSV_IMPORT_FILE_TOO_LARGE_MESSAGE,
+  CSV_IMPORT_MAX_FILE_SIZE_BYTES
+} from "./upload-limits.js";
 
 setupTestEnv();
 
@@ -42,6 +49,8 @@ let fakeDb: FakeDbModule;
 let tokens: TokensModule;
 let app: AppInstance;
 
+const OVERSIZED_CSV_BUFFER = Buffer.alloc(CSV_IMPORT_MAX_FILE_SIZE_BYTES + 1, 0x61);
+
 beforeAll(async () => {
   buildAppModule = await import("../../app.js");
   fakeDb = await import("../../test-support/fake-db.js");
@@ -61,7 +70,7 @@ beforeEach(async () => {
 });
 
 afterEach(async () => {
-  await app.close();
+  await closeTestApp(app);
 });
 
 function authFor(companyId: string, userId: string, role: "owner" | "admin" = "owner") {
@@ -233,6 +242,30 @@ describe("FS-11 data import contract", () => {
 
     expect(response.status).toBe(200);
     expect(response.body.errors[0].value).toBe("'=cmd|' /C calc'!A0");
+  });
+
+  it("FS-11-AC-07 upload size — POST /imports returns 413 when CSV exceeds 10MB", async () => {
+    const company = fakeDb.seedCompany({ name: "Sparkle", slug: "sparkle-7" });
+    const user = fakeDb.seedUser({
+      companyId: company.id,
+      email: "owner@sparkle.test",
+      firstName: "Maya",
+      lastName: "Ortiz",
+      role: "owner"
+    });
+
+    const response = await request(app.server)
+      .post("/api/v1/imports")
+      .set("Authorization", authFor(company.id, user.id))
+      .attach("file", OVERSIZED_CSV_BUFFER, {
+        filename: "huge.csv",
+        contentType: "text/csv"
+      });
+
+    expect(response.status).toBe(413);
+    expect(response.body.error).toBe(ErrorCode.VALIDATION_ERROR);
+    expect(response.body.message).toBe(CSV_IMPORT_FILE_TOO_LARGE_MESSAGE);
+    expect(addImportsQueueJob).not.toHaveBeenCalled();
   });
 
   it("FS-11-AC-08 tenant isolation — rollback, errors, and start are NOT_FOUND cross-tenant", async () => {
