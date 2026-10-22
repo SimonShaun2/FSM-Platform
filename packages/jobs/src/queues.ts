@@ -1,45 +1,37 @@
 import { Queue } from "bullmq";
 
 import { redisConnection } from "./connection.js";
+import { platformDefaultJobOptions } from "./queue-retry-policy.js";
+import { DEAD_LETTER_QUEUE_SUFFIX, QUEUE_NAMES, QUEUE_PREFIX } from "./queue-names.js";
 
-export const QUEUE_PREFIX = "fsm";
-
-export const QUEUE_NAMES = {
-  imports: "imports",
-  ai: "ai",
-  notifications: "notifications",
-  invoices: "invoices",
-  agreements: "agreements",
-  webhooks: "webhooks",
-  operator: "operator",
-<<<<<<< HEAD
-  exports: "exports"
-=======
-  growth: "growth"
->>>>>>> origin/dev
-} as const;
+export { DEAD_LETTER_QUEUE_SUFFIX, QUEUE_NAMES, QUEUE_PREFIX } from "./queue-names.js";
 
 export const queueBaseOptions = {
   connection: redisConnection,
   prefix: QUEUE_PREFIX
 } as const;
 
-export const importsQueue = new Queue(QUEUE_NAMES.imports, queueBaseOptions);
+function createPlatformQueue(name: string): Queue {
+  return new Queue(name, {
+    ...queueBaseOptions,
+    defaultJobOptions: platformDefaultJobOptions()
+  });
+}
 
-export const aiQueue = new Queue(QUEUE_NAMES.ai, queueBaseOptions);
+export const importsQueue = createPlatformQueue(QUEUE_NAMES.imports);
 
-export const notificationsQueue = new Queue(QUEUE_NAMES.notifications, queueBaseOptions);
+export const aiQueue = createPlatformQueue(QUEUE_NAMES.ai);
 
-export const invoicesQueue = new Queue(QUEUE_NAMES.invoices, queueBaseOptions);
+export const notificationsQueue = createPlatformQueue(QUEUE_NAMES.notifications);
 
-export const agreementsQueue = new Queue(QUEUE_NAMES.agreements, queueBaseOptions);
+export const invoicesQueue = createPlatformQueue(QUEUE_NAMES.invoices);
 
-export const webhooksQueue = new Queue(QUEUE_NAMES.webhooks, queueBaseOptions);
+export const agreementsQueue = createPlatformQueue(QUEUE_NAMES.agreements);
 
-export const operatorQueue = new Queue(QUEUE_NAMES.operator, queueBaseOptions);
+export const webhooksQueue = createPlatformQueue(QUEUE_NAMES.webhooks);
 
-<<<<<<< HEAD
-export const exportsQueue = new Queue(QUEUE_NAMES.exports, queueBaseOptions);
-=======
-export const growthQueue = new Queue(QUEUE_NAMES.growth, queueBaseOptions);
->>>>>>> origin/dev
+export const operatorQueue = createPlatformQueue(QUEUE_NAMES.operator);
+
+export const exportsQueue = createPlatformQueue(QUEUE_NAMES.exports);
+
+export const growthQueue = createPlatformQueue(QUEUE_NAMES.growth);
