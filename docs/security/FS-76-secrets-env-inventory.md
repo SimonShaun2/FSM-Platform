@@ -89,7 +89,19 @@ Templates: `docs/env/templates/`. Least-privilege target matrix: § below.
 ² Webhook: verify + `TWILIO_AUTH_TOKEN`; no outbound SMS.  
 ³ Inbound signature only.
 
-**FS-93 gate:** Host-specific secret-store wiring waits on provider ADR.
+## FS-93 Option A — per-host injection (approved)
+
+Documented deployment split: [PRODUCTION-DEPLOYMENT.md](../planning/PRODUCTION-DEPLOYMENT.md). Values are injected manually via host consoles until automated sync exists; **no live wiring in FS-76.**
+
+| Surface | Host | Variables (representative) |
+| --- | --- | --- |
+| `apps/web` | **Vercel** | `NEXT_PUBLIC_API_URL`, `API_URL` |
+| `apps/api` | **Railway** | Full schema — `docs/env/templates/api.env.example` |
+| `apps/worker` | **Railway** | Full schema — `docs/env/templates/worker.env.example` |
+| `apps/webhook` | **Railway** | `docs/env/templates/webhook.env.example` |
+| Postgres | **Railway** | `DATABASE_URL` on DB-connected services |
+| Redis | **Railway** | `REDIS_URL` on API, worker, webhook |
+| R2 | **Cloudflare** | `R2_*` on API + worker |
 
 ## Deployment doc drift
 

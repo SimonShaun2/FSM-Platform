@@ -7,7 +7,9 @@
 ## Scope
 
 - **In scope:** Documented steps for **non-production** rotation drills and production **process** (executed by Shaun).
-- **Out of scope:** Creating or rotating **production** credentials in this ticket; automated secret scanning CI (follow-up); FS-93 secret-store implementation.
+- **Out of scope:** Creating or rotating **production** credentials in this ticket; automated secret scanning CI (follow-up); automated host secret sync.
+
+**Injection (FS-93 Option A):** Vercel (web) + Railway (api, worker, webhook, Postgres, Redis) + Cloudflare R2 — see [PRODUCTION-DEPLOYMENT.md](../planning/PRODUCTION-DEPLOYMENT.md) and [owner map § Option A](./FS-76-secret-owner-map.md#fs-93-option-a--approved-injection-model-documentation-only).
 
 ## Preconditions
 
@@ -46,7 +48,7 @@
 **Goal:** Demonstrate rotation **process** without production impact.
 
 1. **Staging only** (or local): Shaun or delegate issues a **new** test credential for one non-critical class (e.g. SendGrid subuser or Stripe test key).
-2. Pair 5 updates **staging** secret store placeholder (FS-93 path TBD — document actual host when assigned).
+2. Pair 5 updates **staging** values in the approved hosts: **Railway** service variables (api/worker/webhook), **Vercel** (web), **Cloudflare** (R2 keys) — per [PRODUCTION-DEPLOYMENT.md](../planning/PRODUCTION-DEPLOYMENT.md).
 3. Redeploy one service; confirm startup passes Zod env validation (`packages/config/src/env.ts`).
 4. Run smoke: API `GET /health` (if present), one queued notification job in **test** mode.
 5. Revoke previous staging key.
