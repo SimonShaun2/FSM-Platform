@@ -1,10 +1,12 @@
 # ADR-FS-93: Managed platform boundaries and deployment responsibility
 
-**Status:** Proposed — **awaiting founder option selection** (see [FS-93 founder decision proposal](../decisions/FS-93-founder-decision-proposal.md))  
+**Status:** **Accepted** (founder architecture decision 2026-10-22) — **PO + Security ACK pending** for FS-93 ticket completion  
 **Owner:** Tech Lead  
 **Date:** 2026-10-22  
+**Accepted:** 2026-10-22 (Option A — Shaun Simon)  
 **Base SHA:** `7f1e6328e1a5ba54c7477b0cce0496502235f1e0`  
-**Supersedes:** None (reconciles `docs/planning/PRODUCTION-DEPLOYMENT.md` when Accepted)  
+**Evidence:** [FS-93 founder decision proposal](../decisions/FS-93-founder-decision-proposal.md) §7; [PR #59](https://github.com/SimonShaun2/Renvani/pull/59)  
+**Supersedes:** None (reconciles `docs/planning/PRODUCTION-DEPLOYMENT.md` in a follow-up reviewed PR)  
 **Superseded by:** None
 
 ---
@@ -13,46 +15,47 @@
 
 Renvani must run web, API, workers, webhooks, PostgreSQL, Redis, and vendor adapters with clear **tenant security**, **recovery**, and **merge authority**, without assuming Supabase/Vercel/Railway capabilities that are not verified in live accounts.
 
-## Decision (pending founder)
+## Decision
 
-**Recommended baseline (Option A):**
+**Option A — Vercel web + Railway compute/data + R2 storage + in-repo JWT** (founder-approved 2026-10-22).
 
-| Responsibility | Managed provider (candidate) | Renvani-owned application controls |
+| Responsibility | Managed provider | Renvani-owned application controls |
 | --- | --- | --- |
-| Web (Next.js) | Vercel | UX, auth cookies/BFF, tenant-safe data fetching, exact-head CI |
-| API (Fastify) | Railway (or equivalent long-lived PaaS) | JWT validation, `companyId` from membership, Zod boundaries, rate limits |
-| Worker (BullMQ) | Railway + Redis | Idempotent processors, tenant in job payload, DLQ review |
-| Webhook app | Railway | Signature verification, dedupe inbox, no inline money logic outside handlers |
-| PostgreSQL | Railway Postgres (or dedicated managed Postgres) | Drizzle migrations, transaction policy (FS-80), tenant predicates |
-| Redis | Managed Redis | Queue isolation; no tenant data as sole security boundary |
-| Object storage | Cloudflare R2 | Tenant object ACLs, signed URLs, separate restore evidence |
-| Identity | In-repo JWT/session | Staff lifecycle FS-84; optional future IdP via **new ADR** |
-| Secrets | Host secret stores per environment | Rotation, no secrets in previews/logs |
+| Web (Next.js) | **Vercel** | UX, auth cookies/BFF, tenant-safe data fetching, exact-head CI |
+| API (Fastify) | **Railway** | JWT validation, `companyId` from membership, Zod boundaries, rate limits |
+| Worker (BullMQ) | **Railway** + **Redis** | Idempotent processors, tenant in job payload, DLQ review |
+| Webhook app | **Railway** | Signature verification, dedupe inbox, no inline money logic outside handlers |
+| PostgreSQL | **Railway Postgres** | Drizzle migrations, transaction policy (FS-80), tenant predicates |
+| Redis | **Railway Redis** | Queue isolation; no tenant data as sole security boundary |
+| Object storage | **Cloudflare R2** | Tenant object ACLs, signed URLs, separate restore evidence |
+| Identity | **In-repo JWT/session** | Staff lifecycle FS-84; future IdP only via **new ADR** |
+| Secrets | Host secret stores per environment | Rotation, no secrets in previews/logs; **founder-owned accounts** |
 | CI/CD | GitHub Actions (`batch-ci`) | E.. CoS merge to `dev`; founder `main` |
 
-**Explicit non-goals in FS-93 wave:** Supabase Auth cutover; Kubernetes; multi-region; live vendor migration without inventory.
+**Explicit non-goals:** Supabase Auth cutover in this ADR; Kubernetes; multi-region; live vendor migration without inventory; **any account/resource/credential creation or deploy** (founder-only, separate approvals).
 
-## Alternatives
+## Alternatives considered
 
-See founder proposal Options B (Supabase Postgres-focused) and C (Vercel-maximal) — **C rejected** by Tech Lead.
+- **Option B** (Supabase Postgres-focused): not selected.  
+- **Option C** (Vercel-maximal serverless API): rejected.
 
 ## Security impact
 
-- FS-92 must prove anonymous and cross-tenant denial on **staging** matching selected architecture.  
+- FS-92 must prove anonymous and cross-tenant denial on **staging** matching Option A once provisioned.  
 - RLS optional only after pool/session context proof; never replace app-layer `companyId` checks.  
 - Privileged DB credentials server-only.
 
 ## Consequences
 
-- FS-75, FS-80, FS-84, FS-92, FS-94, FS-88 proceed against **Option A** unless founder selects B.  
-- `PRODUCTION-DEPLOYMENT.md` updated in a follow-up reviewed PR after Acceptance.  
-- No production deploy from this ADR alone.
+- FS-75, FS-76, FS-80, FS-84, FS-85, FS-92, FS-94, FS-88 **design** against Option A.  
+- `PRODUCTION-DEPLOYMENT.md` reconciliation via separate reviewed doc PR.  
+- No production deploy from this ADR alone. Staging provisioning requires **separate founder OK**.
 
-## Acceptance
+## Acceptance record
 
-| Party | Status |
-| --- | --- |
-| Founder (Shaun) | **Pending** — option + account inventory |
-| Product Owner | Pending — pricing invariant |
-| Security | Pending — FS-92 plan alignment |
-| E.. CoS | Records Accepted when merging FS-93 evidence to `dev` |
+| Party | Status | Date |
+| --- | --- | --- |
+| Founder (Shaun) | **ACK — Option A (architecture only)** | 2026-10-22 |
+| Product Owner | **Pending** | — |
+| Security | **Pending** | — |
+| E.. CoS | Merge FS-93 evidence to `dev` per batch policy | — |

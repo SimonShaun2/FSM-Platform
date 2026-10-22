@@ -8,7 +8,9 @@
 **Board ticket:** FS-93 — Choose managed-platform boundaries and reconcile deployment architecture  
 **Staffing (FS-91):** Pair 1 Ava+Marcus (FS-84 / #62), Pair 2 Priya+Leo (FS-80 / #63), Pair 3 Sofia+Omar (FS-92), Pair 4 Ben+Nina (FS-75 / #61), Pair 5 Diego+Hana (FS-76)
 
-**This is a decision packet, not an approved ADR.** No provider accounts, credentials, deploy, or live money change until you approve an option and E.. CoS schedules an authorized batch.
+**Founder architecture decision:** **Option A approved** 2026-10-22 (see §7). **ADR-FS-93** is **Accepted** on architecture; **PO + Security ACK** still required per FS-93 acceptance criteria.
+
+**Scope of approval — architecture only:** No agent may create or mutate provider **accounts**, **resources**, **credentials**, or **deployments**. Shaun owns all accounts/secrets. **Staging provisioning** requires a **separate explicit OK** from Shaun (not granted by §7).
 
 ---
 
@@ -129,20 +131,43 @@ Port Fastify API and BullMQ to Vercel functions/queues.
 
 ---
 
-## 7. Founder sign-off block (paste back to E.. CoS)
+## 7. Founder sign-off (recorded)
 
 ```text
-FS-93 decision: Option [ A | B | C ]
-Account inventory completed: [ yes | partial — list gaps ]
-Staging spend authorized: [ yes | no ]
-Notes:
+FS-93 decision: Option A
+Approved by: Shaun Simon (founder)
+Timestamp: 2026-10-22 ~4:56 PM CT (2026-10-22T21:56:00Z approximate)
+Architecture: Vercel (web) + Railway (API, worker, webhook, PostgreSQL, Redis) + Cloudflare R2; in-repo JWT (no Supabase Auth in this decision)
+Scope: Architecture and responsibility matrix only — NOT account creation, resource provisioning, credentials, deploy, or live money
+Account inventory completed: not required for this sign-off (Shaun-owned; update separately)
+Staging spend authorized: no — separate explicit founder OK required before FS-75 provisioning
+Recorded by: Tech Lead on PR #59 (E.. CoS / board traceability)
+Notes: PO + Security ACK still required before FS-93 ticket Done. Platform tickets FS-75, FS-76, FS-80, FS-84, FS-85, FS-92 may target Option A for design/docs only until staging OK.
 ```
 
 ---
 
-## 8. Related artifacts
+## 8. Dev team notice (Option A — design target)
+
+Pairs may align **provider-specific design** (env matrices, runbooks, connection assumptions, negative-test plans) to **Option A** for:
+
+| Ticket | PR / status | Pair |
+| --- | --- | --- |
+| FS-75 | #61 | Ben + Nina |
+| FS-76 | new | Diego + Hana |
+| FS-80 | #63 | Priya + Leo |
+| FS-84 | #62 | Ava + Marcus |
+| FS-85 | board | Platform |
+| FS-92 | new | Sofia + Omar |
+
+**Still forbidden without founder OK:** creating Vercel/Railway/R2 projects, setting secrets in hosts, deploy hooks, or pointing staging at live payment/SMS providers.
+
+---
+
+## 9. Related artifacts
 
 - [BUILD_LAYERS.md](../architecture/BUILD_LAYERS.md) — construction sequence and responsibility table  
-- [ADR-FS-93 (Proposed)](../adr/ADR-FS-93-managed-platform-boundaries.md) — formal ADR draft after your option selection  
+- [ADR-FS-93](../adr/ADR-FS-93-managed-platform-boundaries.md) — **Accepted** (founder); PO + Security ACK pending  
 - [MIGRATION_NUMBERING_REGISTRY.md](../platform/MIGRATION_NUMBERING_REGISTRY.md) — SQL migration sequence across open PRs  
-- [FS-4 TrayLoop reuse inventory](../inventory/FS-4-trayloop-reuse-inventory.md) — cross-repo patterns (inform only)
+- [FS-4 TrayLoop reuse inventory](../inventory/FS-4-trayloop-reuse-inventory.md) — cross-repo patterns (inform only)  
+- [FS-93 Option A dev notice](../platform/FS-93-option-a-dev-notice.md) — short broadcast for FS-75/76/80/84/85/92
