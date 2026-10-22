@@ -3,8 +3,6 @@ import { Decimal } from "decimal.js";
 
 import { customers, db, jobs } from "@fsm/db";
 import {
-  AppError,
-  ErrorCode,
   type JobGrowthChannel,
   type JobSourceChannelSummary,
   type JobSourceReportingQuery,
@@ -12,12 +10,25 @@ import {
   type JobStatus
 } from "@fsm/types";
 
-import { resolveReportingPeriod } from "../lib/reporting-period.js";
+import { assertJobSourceReportingPeriodAllowed, resolveReportingPeriod } from "../lib/reporting-period.js";
 
 type JobRow = typeof jobs.$inferSelect;
 type CustomerRow = Pick<typeof customers.$inferSelect, "id" | "leadSource" | "referredBy">;
 
 export const JOB_ACTIVITY_TIMESTAMP = sql`COALESCE(${jobs.scheduledStart}, ${jobs.createdAt})`;
+
+/** Postgres `postgres` driver rejects Date binds beside SQL expressions — use ISO strings. */
+function jobActivityOnOrAfter(instant: Date) {
+  return gte(JOB_ACTIVITY_TIMESTAMP, instant.toISOString());
+}
+
+function jobActivityOnOrBefore(instant: Date) {
+  return lte(JOB_ACTIVITY_TIMESTAMP, instant.toISOString());
+}
+
+function jobActivityBefore(instant: Date) {
+  return lt(JOB_ACTIVITY_TIMESTAMP, instant.toISOString());
+}
 
 export const UNKNOWN_ATTRIBUTION_DEFINITION =
   "Booked jobs in the period with no job.leadSource, no customer.leadSource, and no customer.referredBy (importSessionId does not count as unknown).";
@@ -207,9 +218,7 @@ export async function getJobSourceReportingSummary(
   const period = resolveReportingPeriod(query.startDate, query.endDate, timeZone);
   const includeJobIds = query.includeJobIds === true;
 
-  if (period.start > period.end) {
-    throw new AppError(ErrorCode.VALIDATION_ERROR, "startDate must be on or before endDate");
-  }
+  assertJobSourceReportingPeriodAllowed(period);
 
   const periodJobRows = await db
     .select()
@@ -219,8 +228,8 @@ export async function getJobSourceReportingSummary(
         eq(jobs.companyId, companyId),
         isNull(jobs.deletedAt),
         inArray(jobs.status, BOOKED_JOB_STATUS_LIST),
-        gte(JOB_ACTIVITY_TIMESTAMP, period.start),
-        lte(JOB_ACTIVITY_TIMESTAMP, period.end)
+        jobActivityOnOrAfter(period.start),
+        jobActivityOnOrBefore(period.end)
       )
     );
 
@@ -236,7 +245,7 @@ export async function getJobSourceReportingSummary(
         eq(jobs.companyId, companyId),
         isNull(jobs.deletedAt),
         inArray(jobs.status, PRIOR_JOB_STATUS_LIST),
-        lt(JOB_ACTIVITY_TIMESTAMP, period.start)
+        jobActivityBefore(period.start)
       )
     );
 

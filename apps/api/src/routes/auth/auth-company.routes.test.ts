@@ -248,6 +248,55 @@ describe("auth and company routes", () => {
     expect(expiredResponse.status).toBe(401);
   });
 
+  it("GET /company returns 403 when access token companyId does not match user membership", async () => {
+    const firstUser = await registerUser();
+    const secondUser = await request(app.server).post("/api/v1/auth/register").send({
+      companyName: "Other HVAC Co",
+      firstName: "Ben",
+      lastName: "Lee",
+      email: "owner-b@example.com",
+      password: "password123"
+    });
+
+    expect(secondUser.status).toBe(201);
+
+    const mismatchedAccessToken = jwt.sign(
+      {
+        userId: firstUser.user.id,
+        companyId: secondUser.body.company.id,
+        role: "owner",
+        tokenType: "access"
+      },
+      JWT_SECRET,
+      { expiresIn: 3600 }
+    );
+
+    const response = await request(app.server)
+      .get("/api/v1/company")
+      .set("Authorization", `Bearer ${mismatchedAccessToken}`);
+
+    expect(response.status).toBe(403);
+    expect(response.body.error).toBe("FORBIDDEN");
+  });
+
+  it("GET /company returns 401 when the user account is inactive", async () => {
+    const registerResponse = await registerUser();
+    const state = fakeDb.getTestState();
+    const storedUser = state.users.find((user) => user.id === registerResponse.user.id);
+
+    expect(storedUser).toBeDefined();
+    if (storedUser) {
+      storedUser.isActive = false;
+    }
+
+    const response = await request(app.server)
+      .get("/api/v1/company")
+      .set("Authorization", `Bearer ${registerResponse.tokens.accessToken}`);
+
+    expect(response.status).toBe(401);
+    expect(response.body.error).toBe("UNAUTHORIZED");
+  });
+
   it("GET /company succeeds with a token and returns 401 without one", async () => {
     const registerResponse = await registerUser();
 

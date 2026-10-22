@@ -64,9 +64,16 @@ async function publicApiFetch<TResponse>(path: string, options: RequestInit = {}
 
 export const publicApi = {
   get: <TResponse>(path: string) => publicApiFetch<TResponse>(path),
-  post: <TResponse>(path: string, body: unknown) =>
-    publicApiFetch<TResponse>(path, {
+  post: <TResponse>(path: string, body: unknown, options?: { headers?: Record<string, string> }) => {
+    const init: RequestInit = {
       method: "POST",
       body: JSON.stringify(body)
-    })
+    };
+
+    if (options?.headers) {
+      init.headers = options.headers;
+    }
+
+    return publicApiFetch<TResponse>(path, init);
+  }
 };
