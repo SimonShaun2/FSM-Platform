@@ -25,6 +25,10 @@ export async function buildWebhookApp() {
   app.addContentTypeParser("application/x-www-form-urlencoded", { parseAs: "buffer" }, bufferParser);
   app.addContentTypeParser("text/plain", { parseAs: "buffer" }, bufferParser);
 
+  app.get("/health", async (_request, reply) => {
+    return reply.send({ status: "ok", service: "webhook" });
+  });
+
   app.post("/stripe", { preHandler: stripeVerify }, stripeHandler);
   app.post("/twilio", { preHandler: twilioVerify }, twilioHandler);
 

@@ -1,3 +1,4 @@
+import fastifyMultipart from "@fastify/multipart";
 import type { FastifyPluginAsync } from "fastify";
 
 import {
@@ -13,7 +14,17 @@ import {
   uploadAttachmentRouteSchema
 } from "./schemas.js";
 
+const ATTACHMENT_MAX_FILE_SIZE_BYTES = 50 * 1024 * 1024;
+
 const attachmentRoutes: FastifyPluginAsync = async (fastify) => {
+  await fastify.register(fastifyMultipart, {
+    limits: {
+      fileSize: ATTACHMENT_MAX_FILE_SIZE_BYTES,
+      files: 1,
+      parts: 20
+    }
+  });
+
   fastify.post("/attachments", {
     preHandler: [fastify.authenticate],
     schema: uploadAttachmentRouteSchema

@@ -7,7 +7,15 @@ export default defineConfig({
     jsx: "automatic"
   },
   test: {
-    environment: "node"
+    environment: "node",
+    environmentMatchGlobs: [["**/*.{test,spec}.tsx", "happy-dom"]],
+    deps: {
+      optimizer: {
+        web: {
+          include: ["happy-dom", "@testing-library/react", "@testing-library/dom"]
+        }
+      }
+    }
   },
   resolve: {
     alias: {
