@@ -1,36 +1,10 @@
-import {
-  DeleteObjectCommand,
-  GetObjectCommand,
-  PutObjectCommand,
-  S3Client
-} from "@aws-sdk/client-s3";
-
 import { env } from "./env.js";
+import { getObjectStorageProvider } from "./object-storage/index.js";
+import { R2ObjectStorageProvider } from "./object-storage/r2-provider.js";
+import type { SignedObjectUrl } from "./object-storage/types.js";
 
-interface ByteArrayBody {
-  transformToByteArray(): Promise<Uint8Array>;
-}
-
-function hasByteArrayBody(value: unknown): value is ByteArrayBody {
-  return (
-    typeof value === "object" &&
-    value !== null &&
-    "transformToByteArray" in value &&
-    typeof (value as { transformToByteArray?: unknown }).transformToByteArray === "function"
-  );
-}
-
-const client = new S3Client({
-  region: "auto",
-  endpoint: `https://${env.R2_ACCOUNT_ID}.r2.cloudflarestorage.com`,
-  credentials: {
-    accessKeyId: env.R2_ACCESS_KEY_ID,
-    secretAccessKey: env.R2_SECRET_ACCESS_KEY
-  }
-});
-
-function buildObjectUrl(key: string): string {
-  return `https://${env.R2_ACCOUNT_ID}.r2.cloudflarestorage.com/${env.R2_BUCKET_NAME}/${key}`;
+export function getMediaSignedUrlTtlSeconds(): number {
+  return env.MEDIA_SIGNED_URL_TTL_SECONDS;
 }
 
 export async function uploadFile(
@@ -38,53 +12,40 @@ export async function uploadFile(
   buffer: Buffer,
   contentType: string
 ): Promise<{ url: string; key: string }> {
-  await client.send(
-    new PutObjectCommand({
-      Bucket: env.R2_BUCKET_NAME,
-      Key: key,
-      Body: buffer,
-      ContentType: contentType
-    })
-  );
-
+  const stored = await getObjectStorageProvider().putObject(key, buffer, contentType);
   return {
-    url: buildObjectUrl(key),
-    key
+    url: stored.reference,
+    key: stored.objectKey
   };
 }
 
 export async function downloadFile(key: string): Promise<Buffer> {
-  const response = await client.send(
-    new GetObjectCommand({
-      Bucket: env.R2_BUCKET_NAME,
-      Key: key
-    })
-  );
-
-  if (!hasByteArrayBody(response.Body)) {
-    throw new Error(`R2 object ${key} did not include a readable body`);
+  const provider = getObjectStorageProvider();
+  if (!(provider instanceof R2ObjectStorageProvider)) {
+    throw new Error("downloadFile is only supported for the R2 object storage provider");
   }
 
-  const bytes = await response.Body.transformToByteArray();
-  return Buffer.from(bytes);
+  return provider.downloadObject(key);
 }
 
 export async function deleteFile(key: string): Promise<void> {
-  await client.send(
-    new DeleteObjectCommand({
-      Bucket: env.R2_BUCKET_NAME,
-      Key: key
-    })
-  );
+  await getObjectStorageProvider().deleteObject(key);
+}
+
+export async function createSignedDownloadUrl(objectKey: string, expiresInSeconds?: number): Promise<SignedObjectUrl> {
+  const ttl = expiresInSeconds ?? getMediaSignedUrlTtlSeconds();
+  return getObjectStorageProvider().createSignedDownloadUrl(objectKey, ttl);
+}
+
+export async function createSignedUploadUrl(
+  objectKey: string,
+  contentType: string,
+  expiresInSeconds?: number
+): Promise<SignedObjectUrl> {
+  const ttl = expiresInSeconds ?? getMediaSignedUrlTtlSeconds();
+  return getObjectStorageProvider().createSignedUploadUrl(objectKey, contentType, ttl);
 }
 
 export function getFileKeyFromUrl(fileUrl: string): string {
-  const url = new URL(fileUrl);
-  const prefix = `/${env.R2_BUCKET_NAME}/`;
-
-  if (!url.pathname.startsWith(prefix)) {
-    throw new Error(`File URL does not belong to the configured R2 bucket: ${fileUrl}`);
-  }
-
-  return decodeURIComponent(url.pathname.slice(prefix.length));
+  return getObjectStorageProvider().resolveObjectKey(fileUrl);
 }

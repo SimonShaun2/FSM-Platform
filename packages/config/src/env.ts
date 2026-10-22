@@ -20,6 +20,12 @@ const envSchema = z.object({
   R2_ACCESS_KEY_ID: z.string().min(1, "R2_ACCESS_KEY_ID is required"),
   R2_SECRET_ACCESS_KEY: z.string().min(1, "R2_SECRET_ACCESS_KEY is required"),
   R2_BUCKET_NAME: z.string().min(1, "R2_BUCKET_NAME is required"),
+  OBJECT_STORAGE_PROVIDER: z.enum(["r2", "memory"]).default("r2"),
+  MEDIA_SIGNED_URL_TTL_SECONDS: z.coerce
+    .number()
+    .int()
+    .positive("MEDIA_SIGNED_URL_TTL_SECONDS must be greater than zero")
+    .default(900),
   APP_URL: z.string().url("APP_URL must be a valid URL"),
   JWT_SECRET: z.string().min(1, "JWT_SECRET is required"),
   JWT_REFRESH_SECRET: z.string().min(1, "JWT_REFRESH_SECRET is required"),

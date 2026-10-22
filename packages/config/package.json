@@ -17,6 +17,10 @@
     "./feature-flags": {
       "types": "./dist/feature-flags.d.ts",
       "import": "./dist/feature-flags.js"
+    },
+    "./object-storage": {
+      "types": "./dist/object-storage/index.d.ts",
+      "import": "./dist/object-storage/index.js"
     }
   },
   "scripts": {
@@ -25,6 +29,7 @@
   },
   "dependencies": {
     "@aws-sdk/client-s3": "^3.931.0",
+    "@aws-sdk/s3-request-presigner": "3.1038.0",
     "zod": "^3.25.76"
   },
   "devDependencies": {

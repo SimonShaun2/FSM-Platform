@@ -24,7 +24,13 @@ import {
   type ListAttachmentsQuery
 } from "@fsm/types";
 
-import { uploadFile } from "../lib/storage.js";
+import {
+  createSignedDownloadUrl,
+  createSignedUploadUrl,
+  getFileKeyFromUrl,
+  getMediaSignedUrlTtlSeconds,
+  uploadFile
+} from "../lib/storage.js";
 
 type AssetRow = typeof assets.$inferSelect;
 type CustomerRow = typeof customers.$inferSelect;
@@ -57,7 +63,7 @@ const DEFAULT_LIMIT = 25;
 const MAX_LIMIT = 100;
 const MAX_FILE_SIZE_BYTES = 50 * 1024 * 1024;
 const IMAGE_MIME_TYPES = new Set(["image/jpeg", "image/png", "image/webp"]);
-const ALLOWED_MIME_TYPES = new Set([
+export const ALLOWED_ATTACHMENT_MIME_TYPES = new Set([
   "image/jpeg",
   "image/png",
   "image/webp",
@@ -69,7 +75,11 @@ const ALLOWED_MIME_TYPES = new Set([
   "video/quicktime"
 ]);
 
-function sanitizeFileName(fileName: string): string {
+const ALLOWED_MIME_TYPES = ALLOWED_ATTACHMENT_MIME_TYPES;
+
+export const MAX_ATTACHMENT_FILE_SIZE_BYTES = MAX_FILE_SIZE_BYTES;
+
+export function sanitizeAttachmentFileName(fileName: string): string {
   const trimmedValue = fileName.trim();
   const sanitizedValue = trimmedValue.replace(/[^a-zA-Z0-9._-]+/gu, "-");
   return sanitizedValue.length > 0 ? sanitizedValue : "attachment";
@@ -242,7 +252,7 @@ export async function uploadAttachment(
     throw new AppError(ErrorCode.VALIDATION_ERROR, "Files must be 50MB or smaller");
   }
 
-  const sanitizedFileName = sanitizeFileName(input.fileName);
+  const sanitizedFileName = sanitizeAttachmentFileName(input.fileName);
   const timestamp = Date.now();
   const fileKey = `attachments/${companyId}/${timestamp}-${sanitizedFileName}`;
   await getActor(companyId, actorId, db);
@@ -326,6 +336,127 @@ export async function listAttachments(
     page,
     limit,
     totalPages
+  };
+}
+
+function buildTenantAttachmentObjectKey(companyId: string, sanitizedFileName: string): string {
+  return `attachments/${companyId}/${Date.now()}-${sanitizedFileName}`;
+}
+
+function assertObjectKeyBelongsToCompany(objectKey: string, companyId: string): void {
+  const expectedPrefix = `attachments/${companyId}/`;
+  if (!objectKey.startsWith(expectedPrefix)) {
+    throw new AppError(ErrorCode.FORBIDDEN, "Object key is outside tenant scope");
+  }
+}
+
+function redactSignedUrlForLogs(signedUrl: string): string {
+  const queryIndex = signedUrl.indexOf("?");
+  return queryIndex >= 0 ? `${signedUrl.slice(0, queryIndex)}?[redacted]` : signedUrl;
+}
+
+async function getAttachmentForCompany(
+  companyId: string,
+  attachmentId: string,
+  executor: SelectExecutor
+): Promise<FileAttachmentRow> {
+  const [attachment] = await executor
+    .select()
+    .from(fileAttachments)
+    .where(
+      and(
+        eq(fileAttachments.companyId, companyId),
+        eq(fileAttachments.id, attachmentId),
+        isNull(fileAttachments.deletedAt)
+      )
+    )
+    .limit(1);
+
+  if (!attachment) {
+    throw new AppError(ErrorCode.NOT_FOUND, "Attachment not found");
+  }
+
+  return attachment;
+}
+
+export interface AttachmentSignedUrlResult {
+  url: string;
+  expiresAt: string;
+  objectKey: string;
+}
+
+export interface CreateAttachmentUploadUrlInput {
+  entityType: AttachmentEntityType;
+  entityId: string;
+  fileName: string;
+  mimeType: string;
+  fileSizeBytes: number;
+}
+
+export async function mintAttachmentDownloadUrl(
+  companyId: string,
+  actorId: string,
+  attachmentId: string
+): Promise<AttachmentSignedUrlResult> {
+  await getActor(companyId, actorId, db);
+  const attachment = await getAttachmentForCompany(companyId, attachmentId, db);
+  const objectKey = getFileKeyFromUrl(attachment.fileUrl);
+  assertObjectKeyBelongsToCompany(objectKey, companyId);
+  const signed = await createSignedDownloadUrl(objectKey);
+
+  logger.info(
+    {
+      companyId,
+      attachmentId,
+      objectKey,
+      signedUrl: redactSignedUrlForLogs(signed.url),
+      expiresAt: signed.expiresAt.toISOString()
+    },
+    "Attachment download URL minted"
+  );
+
+  return {
+    url: signed.url,
+    expiresAt: signed.expiresAt.toISOString(),
+    objectKey: signed.objectKey
+  };
+}
+
+export async function createAttachmentUploadUrl(
+  companyId: string,
+  actorId: string,
+  input: CreateAttachmentUploadUrlInput
+): Promise<AttachmentSignedUrlResult> {
+  if (!ALLOWED_MIME_TYPES.has(input.mimeType)) {
+    throw new AppError(ErrorCode.VALIDATION_ERROR, "This file type is not supported");
+  }
+
+  if (input.fileSizeBytes > MAX_FILE_SIZE_BYTES) {
+    throw new AppError(ErrorCode.VALIDATION_ERROR, "Files must be 50MB or smaller");
+  }
+
+  const sanitizedFileName = sanitizeAttachmentFileName(input.fileName);
+  await getActor(companyId, actorId, db);
+  await resolveAttachmentContext(companyId, input.entityType, input.entityId, db);
+  const objectKey = buildTenantAttachmentObjectKey(companyId, sanitizedFileName);
+  const signed = await createSignedUploadUrl(objectKey, input.mimeType, getMediaSignedUrlTtlSeconds());
+
+  logger.info(
+    {
+      companyId,
+      entityType: input.entityType,
+      entityId: input.entityId,
+      objectKey,
+      signedUrl: redactSignedUrlForLogs(signed.url),
+      expiresAt: signed.expiresAt.toISOString()
+    },
+    "Attachment upload URL minted"
+  );
+
+  return {
+    url: signed.url,
+    expiresAt: signed.expiresAt.toISOString(),
+    objectKey: signed.objectKey
   };
 }
 

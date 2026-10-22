@@ -3,13 +3,16 @@ import type { FastifyReply, FastifyRequest } from "fastify";
 import { AppError, ErrorCode, type AttachmentEntityType, type JobPhotoType } from "@fsm/types";
 
 import {
+  createAttachmentUploadUrl,
   deleteAttachment,
   listAttachments,
+  mintAttachmentDownloadUrl,
   uploadAttachment
 } from "../../services/attachment.service.js";
 import type {
   AttachmentIdParams,
-  AttachmentListQuery
+  AttachmentListQuery,
+  CreateAttachmentUploadUrlBody
 } from "./schemas.js";
 
 function toIsoString(value: Date | null): string | null {
@@ -110,6 +113,30 @@ export async function listAttachmentsHandler(
     page: result.page,
     limit: result.limit,
     totalPages: result.totalPages
+  });
+}
+
+export async function mintAttachmentDownloadUrlHandler(
+  request: FastifyRequest,
+  reply: FastifyReply
+): Promise<FastifyReply> {
+  const params = request.params as AttachmentIdParams;
+  const signed = await mintAttachmentDownloadUrl(request.company.id, request.user.id, params.id);
+
+  return reply.send({
+    download: signed
+  });
+}
+
+export async function createAttachmentUploadUrlHandler(
+  request: FastifyRequest,
+  reply: FastifyReply
+): Promise<FastifyReply> {
+  const body = request.body as CreateAttachmentUploadUrlBody;
+  const signed = await createAttachmentUploadUrl(request.company.id, request.user.id, body);
+
+  return reply.status(201).send({
+    upload: signed
   });
 }
 
