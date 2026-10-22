@@ -10,6 +10,7 @@ export * from "./campaign.types.js";
 export * from "./company-settings.types.js";
 export * from "./customer.types.js";
 export * from "./dispatch.types.js";
+export * from "./field-work-sync/v1/index.js";
 export * from "./estimate.types.js";
 export * from "./file-attachment.types.js";
 export * from "./import.types.js";

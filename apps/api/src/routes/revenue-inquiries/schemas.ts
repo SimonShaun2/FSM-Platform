@@ -1,3 +1,5 @@
+import { z } from "zod";
+
 import {
   BookingRequestIdParamsV1Schema,
   CreateInquiryResponseBodyV1Schema,

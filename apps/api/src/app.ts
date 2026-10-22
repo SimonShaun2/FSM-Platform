@@ -18,6 +18,7 @@ import companyRoutes from "./routes/company/index.js";
 import campaignRoutes from "./routes/campaigns/index.js";
 import customerRoutes from "./routes/customers/index.js";
 import dispatchRoutes from "./routes/dispatch/index.js";
+import fieldWorkRoutes from "./routes/field-work/index.js";
 import healthRoutes from "./routes/health/index.js";
 import growthCheckIntakeRoutes from "./routes/growth-checks/index.js";
 import estimateRoutes from "./routes/estimates/index.js";
@@ -73,6 +74,7 @@ export async function buildApp() {
   await app.register(companyRoutes, { prefix: "/api/v1/company" });
   await app.register(customerRoutes, { prefix: "/api/v1/customers" });
   await app.register(dispatchRoutes, { prefix: "/api/v1" });
+  await app.register(fieldWorkRoutes, { prefix: "/api/v1" });
   await app.register(growthCheckIntakeRoutes, { prefix: "/api/v1" });
   await app.register(growthCheckScanRoutes, { prefix: "/api/v1" });
   await app.register(attachmentRoutes, { prefix: "/api/v1" });

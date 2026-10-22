@@ -1,7 +1,7 @@
-import type { GrowthCheckFindingConfidence, GrowthCheckFindingStatus } from "./types.js";
+import type { GrowthCheckFindingConfidence, GrowthCheckRubricFindingStatus } from "./types.js";
 
 export interface PublicSignalEvaluation {
-  status: GrowthCheckFindingStatus;
+  status: GrowthCheckRubricFindingStatus;
   confidence: GrowthCheckFindingConfidence;
   summary: string;
 }

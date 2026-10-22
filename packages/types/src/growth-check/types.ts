@@ -1,4 +1,4 @@
-export type GrowthCheckFindingStatus = "pass" | "fail" | "warning" | "unknown";
+export type GrowthCheckRubricFindingStatus = "pass" | "fail" | "warning" | "unknown";
 export type GrowthCheckFindingConfidence = "high" | "medium" | "low";
 export type GrowthCheckScanStatus = "queued" | "running" | "completed" | "failed";
 export type GrowthCheckCheckVisibility = "public" | "private_ops";
@@ -24,7 +24,7 @@ export interface GrowthCheckFindingRecord {
   areaId: string;
   sourceUrl: string;
   observedAt: string;
-  status: GrowthCheckFindingStatus;
+  status: GrowthCheckRubricFindingStatus;
   confidence: GrowthCheckFindingConfidence;
   summary: string;
 }

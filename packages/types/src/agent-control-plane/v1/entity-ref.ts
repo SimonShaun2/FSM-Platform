@@ -5,6 +5,7 @@ export const CANONICAL_ENTITY_TYPES_V1 = [
   "property",
   "asset",
   "job",
+  "job_task",
   "estimate",
   "invoice",
   "booking_request"
