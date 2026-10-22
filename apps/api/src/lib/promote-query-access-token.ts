@@ -4,10 +4,10 @@ import type { FastifyReply, FastifyRequest } from "fastify";
  * EventSource cannot send Authorization headers. For SSE routes only, promote
  * `access_token` query param to Bearer before `fastify.authenticate`.
  */
-export function promoteQueryAccessTokenToHeader(
+export async function promoteQueryAccessTokenToHeader(
   request: FastifyRequest,
   _reply: FastifyReply
-): void {
+): Promise<void> {
   if (request.headers.authorization) {
     return;
   }

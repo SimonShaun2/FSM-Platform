@@ -13,6 +13,7 @@ import {
   autoFitValidation,
   autoFitRouteSchema,
   dispatchDateValidation,
+  dispatchStreamDateValidation,
   dispatchViewRouteSchema,
   dispatchWorkloadRouteSchema,
   listApprovedUnconvertedEstimatesRouteSchema,
@@ -27,8 +28,8 @@ const dispatchRoutes: FastifyPluginAsync = async (fastify) => {
   }, getDispatchViewHandler);
 
   fastify.get("/dispatch/stream", {
-    preHandler: [promoteQueryAccessTokenToHeader, fastify.authenticate],
-    preValidation: [dispatchDateValidation]
+    preValidation: [dispatchStreamDateValidation],
+    preHandler: [promoteQueryAccessTokenToHeader, fastify.authenticate]
   }, dispatchStreamHandler);
 
   fastify.get("/dispatch/workload", {
