@@ -1,8 +1,12 @@
 import type { Metadata } from "next";
 import { notFound } from "next/navigation";
 
+import { BrandedLocalSeo } from "@/src/components/growth/BrandedLocalSeo";
 import { BrandedStorefront } from "@/src/components/growth/BrandedStorefront";
-import { buildBrandedStorefrontViewModel } from "@/src/components/growth/branded-storefront.utils";
+import {
+  buildBrandedStorefrontViewModel,
+  buildLocalBusinessJsonLd
+} from "@/src/components/growth/branded-storefront.utils";
 import { fetchPublicBookingSettingsBySlug } from "@/src/lib/public-booking-server";
 
 export async function generateMetadata({
@@ -17,11 +21,23 @@ export async function generateMetadata({
     return { title: "Business not found" };
   }
 
+  const title = `${settings.companyName} · Residential cleaning`;
+  const description =
+    settings.tagline ??
+    `${settings.companyName} — book online or send a direct inquiry. Local SEO-ready storefront powered by Renvani.`;
+
   return {
-    title: `${settings.companyName} · Book cleaning online`,
-    description:
-      settings.tagline ??
-      `Book ${settings.companyName} online. Verified availability and pricing through Renvani.`
+    title,
+    description,
+    openGraph: { title, description, type: "website" },
+    robots: { index: true, follow: true },
+    keywords: [
+      "residential cleaning",
+      settings.companyName,
+      "house cleaning",
+      "book cleaning online",
+      "local cleaning service"
+    ]
   };
 }
 
@@ -34,6 +50,13 @@ export default async function BrandedWebsitePage({ params }: { params: Promise<{
   }
 
   const model = buildBrandedStorefrontViewModel(settings);
+  const sitePath = `/site/${slug}`;
+  const jsonLd = buildLocalBusinessJsonLd(model, sitePath);
 
-  return <BrandedStorefront model={model} />;
+  return (
+    <>
+      <BrandedLocalSeo jsonLd={jsonLd} />
+      <BrandedStorefront model={model} />
+    </>
+  );
 }

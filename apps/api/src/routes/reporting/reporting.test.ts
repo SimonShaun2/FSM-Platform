@@ -196,4 +196,56 @@ describe("GET /api/v1/reporting/job-sources", () => {
 
     expect(response.body.error).toBe("UNAUTHORIZED");
   });
+
+  it("returns 400 VALIDATION_ERROR when the range exceeds 366 days", async () => {
+    const company = fakeDb.seedCompany({ name: "Range Co", slug: "range-co" });
+    const user = fakeDb.seedUser({
+      companyId: company.id,
+      email: "owner@range-co.test",
+      firstName: "Owner",
+      lastName: "Range",
+      role: "owner"
+    });
+
+    const accessToken = tokens.generateAccessToken({
+      userId: user.id,
+      companyId: company.id,
+      role: user.role
+    });
+
+    const response = await request(app.server)
+      .get("/api/v1/reporting/job-sources")
+      .query({ startDate: "2024-01-01", endDate: "2025-01-01" })
+      .set("Authorization", `Bearer ${accessToken}`);
+
+    expect(response.status).toBe(400);
+    expect(response.body.error).toBe("VALIDATION_ERROR");
+    expect(response.body.message).toContain("366");
+  });
+
+  it("returns 400 VALIDATION_ERROR when startDate is after endDate", async () => {
+    const company = fakeDb.seedCompany({ name: "Order Co", slug: "order-co" });
+    const user = fakeDb.seedUser({
+      companyId: company.id,
+      email: "owner@order-co.test",
+      firstName: "Owner",
+      lastName: "Order",
+      role: "owner"
+    });
+
+    const accessToken = tokens.generateAccessToken({
+      userId: user.id,
+      companyId: company.id,
+      role: user.role
+    });
+
+    const response = await request(app.server)
+      .get("/api/v1/reporting/job-sources")
+      .query({ startDate: "2026-10-31", endDate: "2026-10-01" })
+      .set("Authorization", `Bearer ${accessToken}`);
+
+    expect(response.status).toBe(400);
+    expect(response.body.error).toBe("VALIDATION_ERROR");
+    expect(response.body.message).toContain("startDate");
+  });
 });

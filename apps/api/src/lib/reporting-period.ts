@@ -1,4 +1,6 @@
-import { AppError, ErrorCode } from "@fsm/types";
+import { AppError, ErrorCode, JOB_SOURCE_REPORTING_MAX_RANGE_DAYS } from "@fsm/types";
+
+const MS_PER_DAY = 24 * 60 * 60 * 1000;
 
 export type ReportingDateInterpretation = "company_local_days" | "utc_instant";
 
@@ -131,4 +133,19 @@ export function resolveReportingPeriod(
     timeZone,
     dateInterpretation: "utc_instant"
   };
+}
+
+export function assertJobSourceReportingPeriodAllowed(period: ResolvedReportingPeriod): void {
+  if (period.start.getTime() > period.end.getTime()) {
+    throw new AppError(ErrorCode.VALIDATION_ERROR, "startDate must be on or before endDate");
+  }
+
+  const spanMs = period.end.getTime() - period.start.getTime();
+
+  if (spanMs >= JOB_SOURCE_REPORTING_MAX_RANGE_DAYS * MS_PER_DAY) {
+    throw new AppError(
+      ErrorCode.VALIDATION_ERROR,
+      `Reporting date range cannot exceed ${JOB_SOURCE_REPORTING_MAX_RANGE_DAYS} days`
+    );
+  }
 }
