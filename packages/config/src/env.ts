@@ -5,6 +5,13 @@ const envSchema = z.object({
   API_PORT: z.coerce.number().int().positive().default(3001),
   WEBHOOK_PORT: z.coerce.number().int().positive().default(3002),
   DATABASE_URL: z.string().min(1, "DATABASE_URL is required"),
+  DATABASE_POOL_MAX: z.coerce.number().int().positive().optional(),
+  DATABASE_IDLE_TIMEOUT_SECONDS: z.coerce.number().int().nonnegative().default(20),
+  DATABASE_CONNECT_TIMEOUT_SECONDS: z.coerce.number().int().positive().default(10),
+  /** Documented ceiling for aggregate pool budgeting; not enforced at runtime until FS-93 sets service limits. */
+  DATABASE_SERVICE_MAX_CONNECTIONS: z.coerce.number().int().positive().optional(),
+  DATABASE_TRANSACTION_MAX_RETRIES: z.coerce.number().int().nonnegative().default(3),
+  DATABASE_TRANSACTION_RETRY_BASE_MS: z.coerce.number().int().positive().default(25),
   REDIS_URL: z.string().min(1, "REDIS_URL is required"),
   STRIPE_SECRET_KEY: z.string().min(1, "STRIPE_SECRET_KEY is required"),
   STRIPE_WEBHOOK_SECRET: z.string().min(1, "STRIPE_WEBHOOK_SECRET is required"),
