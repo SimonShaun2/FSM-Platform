@@ -1,4 +1,5 @@
 import fastifyMultipart from "@fastify/multipart";
+import fastifyCors from "@fastify/cors";
 import Fastify from "fastify";
 import pino from "pino";
 
@@ -41,10 +42,16 @@ export async function buildApp() {
     loggerInstance: logger
   });
 
+  await app.register(fastifyCors, {
+    origin: new URL(env.APP_URL).origin,
+    credentials: true
+  });
   await app.register(requestLoggerPlugin);
   await app.register(errorHandlerPlugin);
   await app.register(authenticatePlugin);
   await app.register(fastifyMultipart);
+
+  app.get("/health", async () => ({ status: "ok" }));
 
   await app.register(activityEventRoutes, { prefix: "/api/v1" });
   await app.register(aiRoutes, { prefix: "/api/v1/ai" });

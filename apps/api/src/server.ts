@@ -7,7 +7,7 @@ const app = await buildApp();
 try {
   await app.listen({
     host: "0.0.0.0",
-    port: env.API_PORT
+    port: env.PORT ?? env.API_PORT
   });
 } catch (error) {
   app.log.error({ err: error }, "API server failed to start");

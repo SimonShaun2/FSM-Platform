@@ -8,7 +8,7 @@
     "build": "next build",
     "lint": "tsc --noEmit",
     "test": "node --eval \"process.exit(0)\"",
-    "start": "next start --port 3000"
+    "start": "next start --hostname 0.0.0.0"
   },
   "dependencies": {
     "@dnd-kit/core": "^6.1.0",
