@@ -2,11 +2,15 @@ import { randomUUID } from "node:crypto";
 
 import type { FastifyReply, FastifyRequest } from "fastify";
 import type Stripe from "stripe";
-import { beforeAll, beforeEach, describe, expect, it, vi } from "vitest";
+import { afterEach, beforeAll, beforeEach, describe, expect, it, vi } from "vitest";
 
 import { setupTestEnv } from "../test-support/env-setup.js";
+import { notificationsQueueAddMock } from "../test-support/fsm-jobs.mock.js";
 
 setupTestEnv();
+
+const FIXED_WEBHOOK_TEST_NOW = new Date("2026-06-15T12:00:00.000Z");
+const FIXED_RENEWAL_PAID_DATE = FIXED_WEBHOOK_TEST_NOW.toISOString().slice(0, 10);
 
 type CompanyRecord = {
   id: string;
@@ -76,14 +80,12 @@ interface MockTransaction {
 }
 
 const {
-  notificationsQueueAddMock,
   forwardStripePaymentFailedMock,
   forwardStripePaymentSuccessMock,
   errorLogMock,
   infoLogMock,
   warnLogMock
 } = vi.hoisted(() => ({
-  notificationsQueueAddMock: vi.fn(),
   forwardStripePaymentFailedMock: vi.fn(),
   forwardStripePaymentSuccessMock: vi.fn(),
   errorLogMock: vi.fn(),
@@ -292,12 +294,6 @@ vi.mock("@fsm/db", () => ({
   }
 }));
 
-vi.mock("@fsm/jobs", () => ({
-  notificationsQueue: {
-    add: notificationsQueueAddMock
-  }
-}));
-
 vi.mock("../lib/invoice-service-bridge.js", () => ({
   forwardStripePaymentFailed: forwardStripePaymentFailedMock,
   forwardStripePaymentSuccess: forwardStripePaymentSuccessMock
@@ -331,13 +327,21 @@ beforeAll(async () => {
 });
 
 beforeEach(() => {
+  // #45: pin renewal dates only — full fake timers break BullMQ if @fsm/jobs ever resolves to dist.
+  vi.useFakeTimers({ toFake: ["Date"] });
+  vi.setSystemTime(FIXED_WEBHOOK_TEST_NOW);
   resetState();
   notificationsQueueAddMock.mockReset();
+  notificationsQueueAddMock.mockResolvedValue({ id: "mock-notification-job" });
   forwardStripePaymentFailedMock.mockReset();
   forwardStripePaymentSuccessMock.mockReset();
   errorLogMock.mockReset();
   infoLogMock.mockReset();
   warnLogMock.mockReset();
+});
+
+afterEach(() => {
+  vi.useRealTimers();
 });
 
 function createLog() {
@@ -414,13 +418,16 @@ describe("stripe.handler", () => {
   });
 
   it("handleSubscriptionUpdated updates maintenance plan status and emits renewal when the period changes", async () => {
+    const previousPeriodStart = new Date("2026-04-01T00:00:00.000Z");
+    const nextPeriodStart = new Date("2026-05-01T00:00:00.000Z");
+    const nextPeriodEnd = new Date("2026-06-01T00:00:00.000Z");
     const company = seedCompany();
     const customer = seedCustomer({ companyId: company.id });
     const plan = seedMaintenancePlan({
       companyId: company.id,
       customerId: customer.id,
       stripeSubscriptionId: "sub_123",
-      stripeCurrentPeriodStart: new Date("2026-04-01T00:00:00.000Z")
+      stripeCurrentPeriodStart: previousPeriodStart
     });
     const event = {
       id: "evt_sub_updated",
@@ -429,8 +436,8 @@ describe("stripe.handler", () => {
         object: {
           id: "sub_123",
           status: "past_due",
-          current_period_start: 1_777_603_200,
-          current_period_end: 1_780_281_600,
+          current_period_start: Math.floor(nextPeriodStart.getTime() / 1000),
+          current_period_end: Math.floor(nextPeriodEnd.getTime() / 1000),
           cancel_at_period_end: false,
           metadata: {
             companyId: company.id
@@ -438,7 +445,7 @@ describe("stripe.handler", () => {
         }
       }
     } as unknown as Stripe.CustomerSubscriptionUpdatedEvent;
-    const expectedPeriodStart = new Date(1_777_603_200 * 1000).toISOString();
+    const expectedPeriodStart = nextPeriodStart.toISOString();
 
     await stripeHandlerModule.handleSubscriptionUpdated(event, createLog() as unknown as FastifyRequest["log"]);
 
@@ -500,11 +507,9 @@ describe("stripe.handler", () => {
         }
       }
     } as unknown as Stripe.InvoicePaymentSucceededEvent;
-    const expectedRenewalPaidDate = new Date().toISOString().slice(0, 10);
-
     await stripeHandlerModule.handleInvoicePaymentSucceeded(event, createLog() as unknown as FastifyRequest["log"]);
 
-    expect(plan.lastServiceDate).toBe(expectedRenewalPaidDate);
+    expect(plan.lastServiceDate).toBe(FIXED_RENEWAL_PAID_DATE);
     expect(state.activityEvents.at(-1)?.eventType).toBe("payment.received");
   });
 
@@ -639,14 +644,12 @@ describe("stripe.handler", () => {
         }
       }
     } as unknown as Stripe.InvoicePaymentSucceededEvent;
-    const expectedRenewalPaidDate = new Date().toISOString().slice(0, 10);
-
     await stripeHandlerModule.stripeHandler(createRequestWithEvent(event), firstReply);
     await stripeHandlerModule.stripeHandler(createRequestWithEvent(event), secondReply);
 
     expect(firstReply.statusCode).toBe(200);
     expect(secondReply.statusCode).toBe(200);
-    expect(plan.lastServiceDate).toBe(expectedRenewalPaidDate);
+    expect(plan.lastServiceDate).toBe(FIXED_RENEWAL_PAID_DATE);
     expect(state.activityEvents.filter((activityEvent) => activityEvent.eventType === "payment.received")).toHaveLength(1);
   });
 

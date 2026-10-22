@@ -3,14 +3,15 @@
   "private": true,
   "packageManager": "pnpm@10.0.0",
   "engines": {
-    "node": ">=20"
+    "node": "22.16.0"
   },
   "scripts": {
     "dev": "corepack pnpm -r --filter @fsm/config --filter @fsm/types --filter @fsm/db --filter @fsm/jobs --filter @fsm/ai build && corepack pnpm -r --parallel --filter @fsm/api --filter @fsm/worker --filter @fsm/webhook --filter @fsm/web dev",
     "build": "corepack pnpm -r --filter @fsm/config --filter @fsm/types --filter @fsm/db --filter @fsm/jobs --filter @fsm/ai --filter @fsm/api --filter @fsm/worker --filter @fsm/webhook --filter @fsm/web build",
     "lint": "corepack pnpm -r lint",
     "test": "corepack pnpm -r test",
-    "qa:branded-site": "bash scripts/qa-branded-site-local.sh"
+    "qa:branded-site": "bash scripts/qa-branded-site-local.sh",
+    "check:env-docs": "node scripts/check-env-documentation.mjs"
   },
   "devDependencies": {
     "@types/node": "^24.3.0",

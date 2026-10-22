@@ -10,7 +10,8 @@
     "build": "tsc -p tsconfig.json",
     "lint": "tsc --noEmit",
     "test": "vitest run",
-    "start": "node dist/index.js"
+    "start": "node dist/index.js",
+    "replay-failed-job": "tsx src/tools/replay-failed-job.ts"
   },
   "dependencies": {
     "@aws-sdk/client-s3": "^3.931.0",

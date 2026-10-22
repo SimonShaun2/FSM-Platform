@@ -6,7 +6,7 @@ import { useQueries } from "@tanstack/react-query";
 
 import { CurrencyDisplay } from "@/src/components/ui/CurrencyDisplay";
 import { cn } from "@/src/lib/utils";
-import { api } from "@/src/lib/api";
+import { publicApi } from "@/src/lib/public-api";
 import type { PublicEstimateRecord, PublicEstimateSchedulingRecord } from "@/src/hooks/estimates.hooks";
 import type { BookingAvailabilityRecord } from "@/src/hooks/booking.hooks";
 import { useSubmitBookingRequest } from "@/src/hooks/booking.hooks";
@@ -86,7 +86,7 @@ export function CustomerEstimateSlotStep({ estimate, scheduling, onRequested }: 
       queryKey: ["public-booking", "availability", scheduling.bookingSlug, scheduling.zip, date],
       queryFn: async () => {
         const query = new URLSearchParams({ zip: scheduling.zip, date });
-        return api.get<{ availability: BookingAvailabilityRecord[] }>(
+        return publicApi.get<{ availability: BookingAvailabilityRecord[] }>(
           `/api/v1/public/booking/${scheduling.bookingSlug}/availability?${query.toString()}`
         );
       },
