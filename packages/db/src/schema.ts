@@ -324,19 +324,16 @@ export const activityEventTypeEnum = pgEnum("activity_event_type", [
   "import.completed",
   "import.rolled_back",
   "import.failed",
-<<<<<<< HEAD
   // Data export (FS-89)
   "export.requested",
   "export.completed",
   "export.failed",
   "export.downloaded",
   "export.expired",
-=======
   // Growth check (FS-55)
   "growth.check_scan_enqueued",
   "growth.check_scan_completed",
   "growth.check_scan_failed",
->>>>>>> origin/dev
   // Booking
   "booking.requested",
   "booking.confirmed",
