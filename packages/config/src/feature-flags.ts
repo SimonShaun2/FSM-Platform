@@ -8,7 +8,11 @@ export const featureFlags = {
   // FEATURE FLAG: retention-win-back-enqueue — lapse rebook / win-back proposals (FS-28 batch 2)
   retentionWinBackEnqueue: false,
   // FEATURE FLAG: growth-check-public-scan — FS-55 worker-backed public growth scans (staff enqueue)
-  growthCheckPublicScan: false
+  growthCheckPublicScan: false,
+  // FEATURE FLAG: loyalty-reminders-enabled — FS-72 candidate evaluation (proposal path separate)
+  loyaltyRemindersEnabled: false,
+  // FEATURE FLAG: loyalty-reminders-dry-run — FS-72 blocks customer send until founder gate
+  loyaltyRemindersDryRun: true
 } as const;
 
 export type FeatureFlags = typeof featureFlags;
