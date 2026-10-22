@@ -315,3 +315,18 @@ Diagnosing a production problem must not require guessing.
 ## 14. How Work Flows
 
 Read `TEAM.md` for roles, tandem process, WIP and exact-head gates. The Notion Field Service Build Board governs FS-* priority; `SPRINT_ROADMAP.md` and `tickets/INDEX.md` are legacy references. Integration branch: **`dev`** (E.. CoS final merge approver). **`main`:** Shaun promotion-only. Every change on a draft PR; CI only in an approved batch; a new commit invalidates sign-offs. Never merge to `dev` or mark Done without peer review, QA, Security-as-risk, batch CI, and E.. CoS approval.
+
+---
+
+## Cursor Cloud specific instructions
+
+The Cloud Agent `start` script boots local Postgres, Redis, migrations, a browser API proxy, and `pnpm dev`. The API, worker, and webhook do not load a `.env` file. `start` exports the required variables. Provider values are local placeholders that satisfy Zod. They are not live Stripe, Twilio, SendGrid, OpenAI, or R2 credentials.
+
+- Node.js 20 or newer. Package manager is pnpm 10.0.0, from the `packageManager` field, via `corepack prepare pnpm@10.0.0 --activate`.
+- Postgres 16 listens on `127.0.0.1:5432`. Database `fsm`, role `fsm`, password `fsm`. Start it with `sudo pg_ctlcluster 16 main start`. `policy-rc.d` blocks `service postgresql start`.
+- Redis listens on `127.0.0.1:6379`. Start it with `redis-server --daemonize yes` when the service helper is blocked the same way.
+- `pnpm --filter @fsm/db db:migrate` fails: drizzle-kit requires `packages/config/src/env.js`, and TypeScript emits that module to `dist` instead. Apply `packages/db/migrations` with the drizzle-orm migrator. `start` does this.
+- Web UI: `http://localhost:3000`. The API process listens on port 3010. The browser calls `http://localhost:3001` (`NEXT_PUBLIC_API_URL`). A local proxy on 3001 forwards to 3010 and adds CORS for `http://localhost:3000`, because the API does not send CORS headers. Webhook: port 3002. The worker has no port.
+- `pnpm dev` builds `@fsm/config`, `@fsm/types`, `@fsm/db`, `@fsm/jobs`, and `@fsm/ai`, then runs the API, worker, webhook, and web app.
+- The signup page is still a placeholder. Create the first company with `POST /api/v1/auth/register`, then sign in at `/login`.
+- Checks: `pnpm lint` and `pnpm test`. `pnpm build` compiles the workspace, including the Next.js app.
