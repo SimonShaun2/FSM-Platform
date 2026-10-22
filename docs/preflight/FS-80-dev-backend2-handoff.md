@@ -4,6 +4,10 @@
 **Branch:** `cursor/fs-80-database-transactions`  
 **Base:** `dev`
 
+## Commit `8728d6c` (Leo)
+
+**Decision:** **Retained** (no revert). Provider-neutral FS-80 scope: `runWithPostgresRetry` refactor, `migration-safety` + `db:check-migrations`, tests. Pair 2 owns PR #63; content matches acceptance #1/#3 prep. No force-push.
+
 ## Verified inputs
 
 - `AGENTS.md`, `TEAM.md`, `GITHUB_WORKFLOW.md` read at task start

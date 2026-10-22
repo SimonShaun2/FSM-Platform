@@ -4,6 +4,7 @@
 
 ## Prerequisites
 
+- `pnpm --filter @fsm/db db:check-migrations` green on the deploy commit (journal/SQL alignment, destructive-SQL guard)
 - Isolated database instance (staging clone or local Postgres)
 - `DATABASE_URL` pointing at the target instance
 - Application stopped on that instance (no API/worker/webhook writers)
