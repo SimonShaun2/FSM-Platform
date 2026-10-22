@@ -1540,6 +1540,7 @@ export const agentActionStateEnum = pgEnum("agent_action_state", [
   "expired",
   "cancelled",
   "escalated",
+  "reversed",
 ]);
 
 export const agentProductEnum = pgEnum("agent_product", [

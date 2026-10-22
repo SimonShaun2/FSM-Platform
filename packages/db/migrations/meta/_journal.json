@@ -169,6 +169,20 @@
       "when": 1777650000000,
       "tag": "0023_field_work_sync",
       "breakpoints": true
+    },
+    {
+      "idx": 24,
+      "version": "7",
+      "when": 1777670000000,
+      "tag": "0024_fs89_data_export_sessions",
+      "breakpoints": true
+    },
+    {
+      "idx": 25,
+      "version": "7",
+      "when": 1777680000000,
+      "tag": "0025_agent_action_reversed_state",
+      "breakpoints": true
     }
   ]
 }

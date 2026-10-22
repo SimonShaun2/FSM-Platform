@@ -1,3 +1,5 @@
+import { randomUUID } from "node:crypto";
+
 import { and, eq, isNull } from "drizzle-orm";
 
 import { bookingRequests, db, emitEventWithExecutor } from "@fsm/db";
@@ -100,11 +102,12 @@ export async function createInquiryResponseProposal(
         confidence: qualification.qualificationScore,
         reason: qualification.suggestedNextStep,
         parameters: {
+          draftProposalId: randomUUID(),
+          channel: draft.channel,
           workflow: "revenue.inquiry_response",
           consentScope: consentSnapshot.consentScope,
           consentSnapshot,
           draftType: draft.draftType,
-          channel: draft.channel,
           subject: draft.subject ?? null,
           body: draft.body,
           qualification,

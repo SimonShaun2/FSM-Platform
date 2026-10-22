@@ -1,7 +1,9 @@
 import {
   agreementsQueue,
   aiQueue,
+  exportsQueue,
   getQueueByName,
+  growthQueue,
   importsQueue,
   invoicesQueue,
   notificationsQueue,
@@ -18,7 +20,9 @@ const queueRegistry = {
   [QUEUE_NAMES.invoices]: invoicesQueue,
   [QUEUE_NAMES.agreements]: agreementsQueue,
   [QUEUE_NAMES.webhooks]: webhooksQueue,
-  [QUEUE_NAMES.operator]: operatorQueue
+  [QUEUE_NAMES.operator]: operatorQueue,
+  [QUEUE_NAMES.exports]: exportsQueue,
+  [QUEUE_NAMES.growth]: growthQueue
 };
 
 function readArg(flag: string): string | undefined {

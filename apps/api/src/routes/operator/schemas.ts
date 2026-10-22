@@ -1,9 +1,10 @@
 import { z } from "zod";
 
-import { EditAgentActionParametersSchema } from "@fsm/types";
+import { EditAgentActionParametersSchema, ListAgentActionsQueryV1Schema } from "@fsm/types";
 
 import { withZodValidation } from "../shared/validation.js";
-import { listAgentActionsQuerySchema } from "../agent-actions/schemas.js";
+
+const listAgentActionsQuerySchema = ListAgentActionsQueryV1Schema;
 
 export const operatorInboxIdParamsSchema = z.object({
   id: z.string().uuid()
