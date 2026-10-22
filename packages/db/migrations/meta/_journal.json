@@ -127,6 +127,20 @@
       "when": 1777620000000,
       "tag": "0017_agent_control_plane",
       "breakpoints": true
+    },
+    {
+      "idx": 18,
+      "version": "7",
+      "when": 1777623600000,
+      "tag": "0018_growth_check_fs55",
+      "breakpoints": true
+    },
+    {
+      "idx": 19,
+      "version": "7",
+      "when": 1777627200000,
+      "tag": "0019_growth_check_activity_events",
+      "breakpoints": true
     }
   ]
 }

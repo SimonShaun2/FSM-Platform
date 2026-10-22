@@ -314,6 +314,10 @@ export const activityEventTypeEnum = pgEnum("activity_event_type", [
   "import.completed",
   "import.rolled_back",
   "import.failed",
+  // Growth check (FS-55)
+  "growth.check_scan_enqueued",
+  "growth.check_scan_completed",
+  "growth.check_scan_failed",
   // Booking
   "booking.requested",
   "booking.confirmed",
@@ -1545,6 +1549,74 @@ export const bookingSettings = pgTable("booking_settings", {
   companyIdx: uniqueIndex("booking_settings_company_idx").on(t.companyId),
   slugIdx: uniqueIndex("booking_settings_slug_idx").on(t.bookingSlug),
 }));
+
+export const growthCheckScanStatusEnum = pgEnum("growth_check_scan_status", [
+  "queued",
+  "running",
+  "completed",
+  "failed",
+]);
+
+export const growthCheckFindingStatusEnum = pgEnum("growth_check_finding_status", [
+  "pass",
+  "fail",
+  "warning",
+  "unknown",
+]);
+
+export const growthCheckFindingConfidenceEnum = pgEnum("growth_check_finding_confidence", [
+  "high",
+  "medium",
+  "low",
+]);
+
+export const growthCheckScans = pgTable(
+  "growth_check_scans",
+  {
+    id: id(),
+    companyId: companyId(),
+    requestedByUserId: uuid("requested_by_user_id").references(() => users.id),
+    targetUrl: text("target_url").notNull(),
+    rubricId: varchar("rubric_id", { length: 64 }).notNull(),
+    rubricVersion: varchar("rubric_version", { length: 32 }).notNull(),
+    status: growthCheckScanStatusEnum("status").notNull().default("queued"),
+    progress: jsonb("progress").notNull().default({}),
+    idempotencyKey: varchar("idempotency_key", { length: 128 }).notNull(),
+    failureReason: text("failure_reason"),
+    ...timestamps,
+  },
+  (t) => ({
+    companyIdx: index("growth_check_scans_company_idx").on(t.companyId),
+    companyIdempotencyUnique: uniqueIndex("growth_check_scans_company_idempotency_idx").on(
+      t.companyId,
+      t.idempotencyKey
+    ),
+  })
+);
+
+export const growthCheckFindings = pgTable(
+  "growth_check_findings",
+  {
+    id: id(),
+    companyId: companyId(),
+    scanId: uuid("scan_id")
+      .notNull()
+      .references(() => growthCheckScans.id, { onDelete: "cascade" }),
+    areaId: varchar("area_id", { length: 64 }).notNull(),
+    checkId: varchar("check_id", { length: 64 }).notNull(),
+    sourceUrl: text("source_url").notNull(),
+    observedAt: timestamp("observed_at").notNull(),
+    status: growthCheckFindingStatusEnum("status").notNull(),
+    confidence: growthCheckFindingConfidenceEnum("confidence").notNull(),
+    summary: text("summary").notNull(),
+    ...timestamps,
+  },
+  (t) => ({
+    companyIdx: index("growth_check_findings_company_idx").on(t.companyId),
+    scanIdx: index("growth_check_findings_scan_idx").on(t.scanId),
+    scanCheckUnique: uniqueIndex("growth_check_findings_scan_check_idx").on(t.scanId, t.checkId),
+  })
+);
 
 // ─────────────────────────────────────────────
 // RELATIONS
