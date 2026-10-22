@@ -1,12 +1,61 @@
 # Renvani batch plan — Batches 5–9 (autonomous execution)
 
-**Authority:** Founder standing orders 2026-10-22 5:26 PM CT (relay E.. CoS)  
+**Authority:** Founder standing orders 2026-10-22 **5:26 PM CT** (relay E.. CoS) and **6:24 PM CT MVP-first / cost policy** (relay E.. CoS; PO alignment with Elena)  
+**North star:** **Get to MVP** — finish core products on solid FSM infrastructure and the full **Discover → Book → Serve → Repeat** lifecycle.  
 **Tech Lead:** Grace (`bc-f58c7cfc-d866-4f13-bbbb-b95c96ea1f27`) — autonomous batch-to-batch for **5 batches** (no per-batch founder/CoS wait; Shaun pre-approved CI + merge to `dev`)  
-**Product Owner:** Elena (`bc-0da9c117-da01-40c1-9d2a-29957eaa548f`) — scope and acceptance alignment  
+**Product Owner:** Elena (`bc-0da9c117-da01-40c1-9d2a-29957eaa548f`) — scope, acceptance, and **MVP cut-line** (what ships vs slips)  
 **Integration base (planning):** `dev` @ `7c41d2dc282b14ef04c714a406ff9642c1e6b145` (dispatch 2026-10-22 UTC)  
 **Hard rules:** no rebase, no force-push, new commit voids sign-offs; never touch `main`; no deploys; no account/credential/resource creation; no live payments or real-customer sends; no Render/Vercel/R2 **provisioning** (FS-93 architecture/docs only until Shaun OK).
 
 **Reporting:** E.. CoS only at each batch merge (PR list + merge SHAs) or a real blocker.
+
+---
+
+## 0. Founder policy — MVP-first, cost-disciplined (2026-10-22 6:24 PM CT)
+
+**Applies to:** Batches 5–9 planning, execution, and Elena's acceptance scope. Grace and pods **filter every new PR, ticket, and vendor choice** through this section before expanding batch rosters.
+
+### Principles
+
+1. **MVP-first:** Merge work that completes or hardens the **Discover → Book → Serve → Repeat** loop on production-grade FSM (tenant-safe data, jobs, dispatch, estimates/invoices, customer comms, agreements where already specced). Defer polish, pilots, GTM-only, and “platform nice-to-have” that does not unblock MVP operators.
+2. **Cost-disciplined:** No new **paid service, subscription, or metered vendor SKU** (hosting tier upgrades, new SaaS seats, paid APIs, add-on cloud products) unless:
+   - there is a **demonstrated MVP dependency** (feature cannot ship without it),
+   - **business justification** is written (who benefits, what breaks without it),
+   - **founder-approved budget** is recorded.
+   - **Agents and implementers do not add or provision these.** Flag the need to **E.. CoS** with the three bullets above; CoS routes to founder for budget — do not silently expand `environment.json`, Render/Vercel/R2 **paid** tiers, or new third-party accounts.
+3. **Deprioritize non-MVP work:** Items marked **⏸ post-MVP** in batch tables below stay out of merge trains unless Elena promotes them with explicit MVP linkage in Notion + batch PR description.
+4. **Infrastructure vs MVP:** FS-93 / staging matrix / runbooks remain **design and docs-only** until Shaun OK (unchanged). That supports MVP without provisioning spend.
+
+### Lifecycle map (planning priority)
+
+| Stage | MVP meaning (engineering) | Primary batches / tickets |
+| --- | --- | --- |
+| **Discover** | Branded site, inquiry/intake, growth signals that feed booking | FS-31, FS-38, FS-17, FS-55/53 (Batch 6–7) |
+| **Book** | Booking requests, scheduling agent, holds, public book flow | FS-23, FS-21, FS-87 sync contract (Batch 6–7) |
+| **Serve** | Jobs, dispatch, field work, attachments, technician mobile | FS-85/89, dispatch/SSE, FS-87 client (Batch 7–8) |
+| **Repeat** | Maintenance plans, reminders, loyalty (FS-72), revenue follow-up | FS-72 spec + impl (Batch 5 doc / Batch 9 impl), FS-14 agent proposals |
+
+### Paid / subscription gate (examples)
+
+| Item | MVP dependency? | Action |
+| --- | --- | --- |
+| FS-94 Renvani→operator **platform billing** (new Stripe products, metering) | **Not required for operator MVP** on existing Connect model | **⏸ Batch 9** until founder budget + Elena scope; flag E.. CoS — do not open new paid Stripe/platform SKUs in agent runs |
+| Staging **provisioning** (Render/R2/Vercel paid tiers) | Design-only for MVP proof | Docs/matrix only (FS-75, FS-93); no provisioning |
+| FS-6 design partners, FS-4 TrayLoop inventory refresh | GTM / inform | **⏸ post-MVP** (§6 Notion Ready) |
+| FS-82 capacity qualification, FS-35 pilot rubric | Hardening / pilot | **⏸ post-MVP** unless Elena ties to MVP launch checklist |
+| FS-83 drill **automation** (beyond docs) | DR evidence | Docs + CI checks in Batch 8; full automation **⏸** unless founder approves ops budget |
+
+### Elena (PO) — MVP cut-line duties
+
+- Own **acceptance per lifecycle stage** above; reject batch scope that does not advance Discover → Book → Serve → Repeat.
+- Keep Notion `CI Batch` aligned (§6); **do not** pull FS-6/FS-4/FS-94 into engineering merges without founder + CoS visibility.
+- When a ticket implies a **new paid vendor**, add Notion note “**CoS budget flag**” and stop implementation until founder approval.
+
+### Grace (Tech Lead) — execution duties
+
+- Re-order within-batch merge priority: **MVP P0** before **⏸ post-MVP** slots.
+- Refuse autonomous expansion of batch rosters with non-MVP work; surface conflicts to E.. CoS.
+- Continue migration registry discipline; **no** migration solely for deferred FS-94 until policy gate clears.
 
 ---
 
@@ -71,7 +120,7 @@
 | 0022 | FS-53 growth intake | #56 |
 | **0023** | **FS-87 field work sync** | **#75** (renumber from `0018_field_work_sync` — new commit only) |
 | **0024** | *Reserved — Batch 6* | FS-85 storage schema (PR #69) — **request before generate** |
-| **0025** | *Reserved — Batch 7* | FS-94 subscription billing (new PR) |
+| **0025+** | *Unallocated until founder gate* | FS-94 subscription billing — **⏸** per §0 (flag E.. CoS; no generate without budget) |
 | **0026+** | Unallocated | Tech Lead only |
 
 **Merge rule:** Within a batch, merge SQL-bearing PRs in **ascending idx** after all non-SQL PRs in that batch unless registry says otherwise.
@@ -105,7 +154,8 @@
 
 ### Batch 5 — `BATCH-FS5-FOUNDATION-004`
 
-**Theme:** Close FS-93 documentation; platform footings (no cloud provisioning); runtime health + secrets + staging **design**.
+**Theme:** Close FS-93 documentation; platform footings (no cloud provisioning); runtime health + secrets + staging **design**.  
+**MVP lens (§0):** **P0** — tenant-safe DB/helpers (FS-80), secrets/env contracts (FS-76), runtime health (FS-79) underpin Serve/Repeat. **P0 docs** — FS-93/75/83 design without spend. **P1** — branch protection (FS-74). FS-72 **spec only** (#54) supports Repeat; implementation waits Batch 9.
 
 | # | PR | Ticket | Layer | Owner | Reviewer | QA | Sec |
 | --- | --- | --- | --- | --- | --- | --- | --- |
@@ -128,7 +178,8 @@
 
 ### Batch 6 — `BATCH-FS6-GROWTH-CONTROL-005`
 
-**Theme:** Growth migration chain + agent control plane + identity/isolation proofs.
+**Theme:** Growth migration chain + agent control plane + identity/isolation proofs.  
+**MVP lens (§0):** **P0** — Discover/Book (FS-17 inquiry, FS-55/53 growth intake), human-in-the-loop revenue (FS-14, FS-10), isolation (FS-92), field sync contract (FS-87). **P1** — FS-12/13 session/context depth if not blocking MVP demos.
 
 | # | PR | Ticket | Layer | Owner | Migration |
 | --- | --- | --- | --- | --- | --- |
@@ -149,7 +200,8 @@
 
 ### Batch 7 — `BATCH-FS7-REVENUE-SCHEDULE-006`
 
-**Theme:** Branded acquisition, scheduling agent, queues, export.
+**Theme:** Branded acquisition, scheduling agent, queues, export.  
+**MVP lens (§0):** **P0** — Discover + Book (FS-31, FS-23, FS-38 hardening, FS-21 holds). **P1** — FS-89 export, FS-81 queue policy docs, FS-58 proxy hardening. **⏸ post-MVP** — Cloud Agent env notes (#60) unless required for MVP CI only (docs, no new paid env).
 
 | # | PR | Ticket | Layer | Owner |
 | --- | --- | --- | --- | --- |
@@ -169,7 +221,8 @@
 
 ### Batch 8 — `BATCH-FS8-MEDIA-OFFLINE-007`
 
-**Theme:** Tenant-safe media, offline sync UX, recovery drill evidence.
+**Theme:** Tenant-safe media, offline sync UX, recovery drill evidence.  
+**MVP lens (§0):** **P0** — Serve (FS-85/#69 after #70, FS-87 mobile contract, dispatch SSE fallback). **P1** — FS-83 drill **documentation** + CI checks. **⏸ post-MVP** — FS-82 capacity qualification, FS-9 copy-only if not on MVP launch checklist, FS-4 TrayLoop inventory refresh, worker shutdown polish unless blocking production MVP.
 
 | # | PR | Ticket | Layer | Owner | Notes |
 | --- | --- | --- | --- | --- | --- |
@@ -186,18 +239,19 @@
 
 ### Batch 9 — `BATCH-FS9-RETENTION-BILLING-008`
 
-**Theme:** Loyalty/maintenance plans (FS-72), platform billing (FS-94), subscription webhooks design.
+**Theme:** **Repeat** lifecycle — loyalty/maintenance plans (FS-72); billing boundary docs; defer paid platform billing.  
+**MVP lens (§0):** **P0** — FS-72 implementation from #54 spec (maintenance plans + reminders UI slice). **P1** — FS-88 operator→customer payments **boundary doc** (no new SKUs). **⏸ post-MVP / CoS gate** — FS-94 Renvani→operator billing, FS-94 migration, Stripe webhook matrix expansion, FS-35 pilot rubric (founder budget + Elena promotion required). FS-92 staging re-run after FS-85 stays **P1** security regression only.
 
 | # | Work | Ticket | Layer | Owner |
 | --- | --- | --- | --- | --- |
-| 1 | Implement FS-72 from #54 spec | FS-72 | BE+worker+web | Pair 4 + Dev G |
-| 2 | FS-94 Renvani→operator billing | FS-94 | BE+webhook | Priya+Leo / Aria |
-| 3 | FS-88 operator→customer payments boundary doc | FS-88 | Docs | Grace + Sam |
-| 4 | FS-94 migration | — | DB | **0025** reserved |
-| 5 | Maintenance plan UI slice | FS-72 | Frontend | Dev E |
-| 6 | Stripe webhook matrix update | FS-94 | Infra/docs | Iris |
-| 7 | FS-92 staging re-run post-FS-85 | FS-92 | Tests | Kai |
-| 8 | FS-35 pilot rubric tie-in | FS-35 | Product | Elena |
+| 1 | Implement FS-72 from #54 spec | FS-72 | BE+worker+web | Pair 4 + Dev G | **P0 Repeat** |
+| 2 | FS-94 Renvani→operator billing | FS-94 | BE+webhook | Priya+Leo / Aria | **⏸ §0 — CoS/founder budget** |
+| 3 | FS-88 operator→customer payments boundary doc | FS-88 | Docs | Grace + Sam | **P1** |
+| 4 | FS-94 migration | — | DB | Tech Lead | **⏸ §0 — no slot until gate** |
+| 5 | Maintenance plan UI slice | FS-72 | Frontend | Dev E | **P0** |
+| 6 | Stripe webhook matrix update | FS-94 | Infra/docs | Iris | **⏸ §0** |
+| 7 | FS-92 staging re-run post-FS-85 | FS-92 | Tests | Kai | **P1** |
+| 8 | FS-35 pilot rubric tie-in | FS-35 | Product | Elena | **⏸ post-MVP** |
 
 **Balance:** 3 BE, 2 FE, 2 docs/infra, 1 product.
 
@@ -207,11 +261,11 @@
 
 **Pulled 2026-10-22 UTC** from Field Service Build Board:
 
-- **Ready (true):** FS-4 TrayLoop inventory, FS-6 design partners (GTM — not in engineering batches 5–9 unless Elena pulls in).
+- **Ready (true):** FS-4 TrayLoop inventory, FS-6 design partners (GTM — **⏸ post-MVP** per §0; not in engineering batches 5–9 unless Elena + founder explicitly promote with CoS note).
 - **In Progress / staged (Batch 4 carry):** FS-12, FS-13, FS-14, FS-17, FS-23, FS-31, FS-41, FS-53, FS-55.
 - **Platform In Progress:** FS-75, FS-76, FS-80, FS-84, FS-92, FS-93 (In Review).
 
-**PO action (Elena):** Set `CI Batch` on cards to `BATCH-FS5-FOUNDATION-004` … `BATCH-FS9-RETENTION-BILLING-008` as batches dispatch; keep FS-6/FS-4 Ready items out of engineering merge trains unless explicitly added.
+**PO action (Elena):** Set `CI Batch` on cards to `BATCH-FS5-FOUNDATION-004` … `BATCH-FS9-RETENTION-BILLING-008` as batches dispatch; tag each card with lifecycle stage (**Discover / Book / Serve / Repeat**) and **MVP P0 vs ⏸ post-MVP** per §0; keep FS-6/FS-4/FS-94 out of merge trains unless founder + CoS budget path is satisfied.
 
 ---
 
@@ -223,7 +277,7 @@ flowchart TD
   B6[Batch 6 migrations 0018-0023 + control plane]
   B7[Batch 7 revenue schedule FE]
   B8[Batch 8 FS-85 0024 + offline]
-  B9[Batch 9 FS-72 FS-94 billing]
+  B9[Batch 9 FS-72 Repeat FS-94 gated]
   B5 --> B6
   B6 --> B7
   B7 --> B8
@@ -236,10 +290,12 @@ flowchart TD
 
 ## 8. Autonomous execution start (Grace — immediate)
 
-1. **Batch 5:** Chase Security + Reviewer + QA sign-offs on #59, #76, #54; confirm #75 renumber commit on #75; hold #69.
-2. **Parallel prep:** Batch 6 owners rebase **via new commits** onto post–Batch-5 `dev` (no force-push); declare migration slots in PR bodies.
-3. **Migration registry:** Land registry from #59 with Batch 5; update **0024+** reservations as PRs open.
-4. **Do not** provision staging or cloud resources until Shaun OK (FS-75 remains design/matrix).
+1. **Apply §0 on every batch:** MVP P0 merges before ⏸ post-MVP; any paid vendor → stop and flag E.. CoS (do not provision).
+2. **Batch 5:** Chase Security + Reviewer + QA sign-offs on #59, #76, #54; confirm #75 renumber commit on #75; hold #69.
+3. **Parallel prep:** Batch 6 owners rebase **via new commits** onto post–Batch-5 `dev` (no force-push); declare migration slots in PR bodies.
+4. **Migration registry:** Land registry from #59 with Batch 5; update **0024+** reservations as PRs open; **no FS-94 migration** until §0 founder gate.
+5. **Do not** provision staging or cloud resources until Shaun OK (FS-75 remains design/matrix).
+6. **Elena sync:** After §0 lands in this doc, PO confirms MVP P0 list per batch in Notion before Batch 7+ scope expands.
 
 ---
 
@@ -249,3 +305,4 @@ flowchart TD
 | --- | --- |
 | 2026-10-22 | Initial Batches 5–9 plan — Grace + Elena (founder 5:26 PM CT standing orders) |
 | 2026-10-22 | Notion: [Batches 5–9 plan](https://app.notion.com/p/401317b92d1581f7bf59f91174e32f43); docs PR [#78](https://github.com/SimonShaun2/Renvani/pull/78) |
+| 2026-10-22 | §0 Founder MVP-first / cost policy (6:24 PM CT) — lifecycle map, paid-vendor gate, batch P0/⏸ labels, Elena cut-line; FS-94 deferred pending CoS/founder budget |
