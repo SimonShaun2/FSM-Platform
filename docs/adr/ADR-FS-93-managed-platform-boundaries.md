@@ -13,20 +13,20 @@
 
 ## Problem
 
-Renvani must run web, API, workers, webhooks, PostgreSQL, Redis, and vendor adapters with clear **tenant security**, **recovery**, and **merge authority**, without assuming Supabase/Vercel/Railway capabilities that are not verified in live accounts.
+Renvani must run web, API, workers, webhooks, PostgreSQL, Redis-compatible queues, and vendor adapters with clear **tenant security**, **recovery**, and **merge authority**, without assuming Supabase/Vercel/Render capabilities that are not verified in live accounts.
 
 ## Decision
 
-**Option A — Vercel web + Railway compute/data + R2 storage + in-repo JWT** (founder-approved 2026-10-22).
+**Option A — Vercel web + Render compute/data + R2 storage + in-repo JWT** (founder-approved 2026-10-22; **Render** as compute host recorded 2026-10-22 5:12 PM CT — supersedes earlier Railway wording).
 
 | Responsibility | Managed provider | Renvani-owned application controls |
 | --- | --- | --- |
 | Web (Next.js) | **Vercel** | UX, auth cookies/BFF, tenant-safe data fetching, exact-head CI |
-| API (Fastify) | **Railway** | JWT validation, `companyId` from membership, Zod boundaries, rate limits |
-| Worker (BullMQ) | **Railway** + **Redis** | Idempotent processors, tenant in job payload, DLQ review |
-| Webhook app | **Railway** | Signature verification, dedupe inbox, no inline money logic outside handlers |
-| PostgreSQL | **Railway Postgres** | Drizzle migrations, transaction policy (FS-80), tenant predicates |
-| Redis | **Railway Redis** | Queue isolation; no tenant data as sole security boundary |
+| API (Fastify) | **Render** (web service) | JWT validation, `companyId` from membership, Zod boundaries, rate limits |
+| Worker (BullMQ) | **Render** (background worker) + **Key Value** | Idempotent processors, tenant in job payload, DLQ review |
+| Webhook app | **Render** (web service) | Signature verification, dedupe inbox, no inline money logic outside handlers |
+| PostgreSQL | **Render Postgres** | Drizzle migrations, transaction policy (FS-80), tenant predicates |
+| Queue store | **Render Key Value** (Redis-compatible) | BullMQ; **`maxmemoryPolicy: noeviction`**; queue isolation; no tenant data as sole security boundary |
 | Object storage | **Cloudflare R2** | Tenant object ACLs, signed URLs, separate restore evidence |
 | Identity | **In-repo JWT/session** | Staff lifecycle FS-84; future IdP only via **new ADR** |
 | Secrets | Host secret stores per environment | Rotation, no secrets in previews/logs; **founder-owned accounts** |
@@ -42,6 +42,7 @@ Renvani must run web, API, workers, webhooks, PostgreSQL, Redis, and vendor adap
 ## Security impact
 
 - FS-92 must prove anonymous and cross-tenant denial on **staging** matching Option A once provisioned.  
+- Render Key Value for BullMQ must use **`noeviction`**; see [FS-93 Render runbook](../platform/FS-93-render-runbook.md).  
 - RLS optional only after pool/session context proof; never replace app-layer `companyId` checks.  
 - Privileged DB credentials server-only.
 
@@ -55,7 +56,7 @@ Renvani must run web, API, workers, webhooks, PostgreSQL, Redis, and vendor adap
 
 | Party | Status | Date |
 | --- | --- | --- |
-| Founder (Shaun) | **ACK — Option A (architecture only)** | 2026-10-22 |
+| Founder (Shaun) | **ACK — Option A (architecture only); Render host 5:12 PM CT** | 2026-10-22 |
 | Product Owner | **Pending** | — |
 | Security | **Pending** | — |
 | E.. CoS | Merge FS-93 evidence to `dev` per batch policy | — |

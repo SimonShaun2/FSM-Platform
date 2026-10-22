@@ -81,7 +81,7 @@ Exit criterion: one button or approved workflow can reliably put a reviewed buil
 
 Do not treat a provider's managed feature as proof that Renvani's product-level controls are complete. The repository currently contains a Next.js web app, a Fastify API, BullMQ/Redis workers, a webhook app, PostgreSQL/Drizzle, an in-house JWT flow, and storage/payment adapters. Keep that inventory as the baseline until the platform/account audit and an approved ADR establish actual deployed state. FS-93 owns the provider decision and deployment-document reconciliation; it does not authorize account changes, migration, deployment, or live money.
 
-**FS-93:** Founder approved **Option A** 2026-10-22 ([decision proposal](../decisions/FS-93-founder-decision-proposal.md) §7; [ADR-FS-93](../adr/ADR-FS-93-managed-platform-boundaries.md) Accepted pending PO + Security). Architecture only — no provisioning/deploy. **SQL migration order:** [MIGRATION_NUMBERING_REGISTRY.md](../platform/MIGRATION_NUMBERING_REGISTRY.md).
+**FS-93:** Founder approved **Option A** 2026-10-22 — **Vercel web + Render** (API, worker, webhook, Postgres, Key Value with BullMQ **`noeviction`**) + R2 + in-repo JWT ([decision proposal](../decisions/FS-93-founder-decision-proposal.md) §7 amendment 5:12 PM CT; [ADR-FS-93](../adr/ADR-FS-93-managed-platform-boundaries.md) Accepted pending PO + Security; [Render runbook](../platform/FS-93-render-runbook.md)). Architecture only — no provisioning/deploy. **SQL migration order:** [MIGRATION_NUMBERING_REGISTRY.md](../platform/MIGRATION_NUMBERING_REGISTRY.md).
 
 | Responsibility | Candidate managed service contribution | Renvani remains accountable for |
 |---|---|---|
@@ -115,7 +115,7 @@ Tests should use separate companies, roles, and unauthenticated requests, assert
 
 # Infrastructure design: what we build and where it runs
 
-This is the production infrastructure target to validate against the team's current host and account configuration before implementation. Keep the existing TypeScript monorepo and modular services. The repository names Railway as a deployment target; confirm what is actually provisioned before treating a target as a live environment. Prefer managed platform capabilities for ingress, TLS, health checks and service replicas when they meet the requirements. A separate load balancer or Kubernetes cluster is not a starting requirement. [G2]
+This is the production infrastructure target to validate against the team's current host and account configuration before implementation. Keep the existing TypeScript monorepo and modular services. **FS-93** names **Render** for API/worker/webhook/Postgres/Key Value and **Vercel** for web; older docs may still say Railway until reconciled. Confirm what is actually provisioned before treating a target as a live environment. Prefer managed platform capabilities for ingress, TLS, health checks and service replicas when they meet the requirements. A separate load balancer or Kubernetes cluster is not a starting requirement. [G2]
 
 | Layer | Initial responsibility | Scale and safety control |
 |---|---|---|

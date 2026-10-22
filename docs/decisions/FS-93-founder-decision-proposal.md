@@ -25,33 +25,33 @@ Where does each Renvani workload run, and what stays **Renvani-owned** vs **vend
 | Workload | Codebase evidence | Deployed state |
 | --- | --- | --- |
 | Web | `apps/web` (Next.js) | **Unknown** — `docs/planning/PRODUCTION-DEPLOYMENT.md` names Vercel |
-| API | `apps/api` (Fastify, long-lived) | **Unknown** — doc names Railway |
+| API | `apps/api` (Fastify, long-lived) | **Unknown** — FS-93 targets **Render** web service |
 | Worker | `apps/worker` (BullMQ consumers) | **Unknown** — needs persistent process + Redis |
 | Webhook | `apps/webhook` (Stripe/Twilio ingress) | **Unknown** |
-| Database | Drizzle, `packages/db/migrations` | **Unknown** — doc names Railway Postgres |
+| Database | Drizzle, `packages/db/migrations` | **Unknown** — FS-93 targets **Render Postgres** |
 | Queue | Redis + BullMQ | **Unknown** |
 | Auth | In-house JWT + refresh (`apps/api`) | Implemented in repo; not tied to Supabase Auth |
 | Object storage | R2 adapter in API | **Unknown** account linkage |
 
-**Account verification is a founder/operator action** (log into Vercel, Railway, Stripe, etc.) and is listed as a gate below — not inferable from git alone.
+**Account verification is a founder/operator action** (log into Vercel, Render, Stripe, etc.) and is listed as a gate below — not inferable from git alone.
 
 ---
 
 ## 3. Options
 
-### Option A — **Documented hybrid (Railway compute + Vercel web + R2)** — **Recommended**
+### Option A — **Documented hybrid (Render compute + Vercel web + R2)** — **Recommended**
 
 | Layer | Placement | Notes |
 | --- | --- | --- |
 | Web | **Vercel** | Next.js, previews, edge TLS |
-| API / worker / webhook | **Railway** (or equivalent long-lived PaaS) | Matches existing Fastify + BullMQ model |
-| PostgreSQL | **Railway Postgres** (or same project) | Single writer; pool limits enforced in app (FS-80) |
-| Redis | **Railway Redis** | BullMQ |
+| API / worker / webhook | **Render** (web service + background worker + web service) | Matches existing Fastify + BullMQ model |
+| PostgreSQL | **Render Postgres** | Single writer; pool limits enforced in app (FS-80) |
+| Redis-compatible queue | **Render Key Value** | BullMQ; **`maxmemoryPolicy: noeviction`** required |
 | Auth | **Renvani JWT** (current) | No identity migration in FS-93 wave |
 | Files | **Cloudflare R2** | Private objects; backup/restore separate from DB |
 | CI | **GitHub** + approved `batch-ci` | No change to merge authority |
 
-**Estimated monthly cost (pilot):** ~**$40–90** (aligns with `PRODUCTION-DEPLOYMENT.md`: Railway ~$20, Vercel Pro ~$20, R2/usage variable).  
+**Estimated monthly cost (pilot):** ~**$40–120** (Render web + worker + webhook + Postgres + Key Value + Vercel Pro + R2/usage; reconcile `PRODUCTION-DEPLOYMENT.md` in a follow-up doc PR).  
 **Engineering cost:** Low — reconcile runbooks (#59, #61, #63); no runtime rewrite.  
 **Operational cost:** Medium — two vendors + R2; founder retains `main` promotion.
 
@@ -61,23 +61,23 @@ Where does each Renvani workload run, and what stays **Renvani-owned** vs **vend
 - **FS-80 / PR #63** — DB ops policy, transactions, connection config (no vendor swap required)  
 - **FS-84 / PR #62** — staff session contract (app-layer; no Supabase Auth dependency)  
 - **FS-92** (Pair 3) — isolation proofs against chosen staging Postgres/RLS *optional* layer  
-- **FS-94 / FS-88** — separate Stripe contexts with clear webhook ingress on Railway webhook service  
+- **FS-94 / FS-88** — separate Stripe contexts with clear webhook ingress on Render webhook service  
 - **BUILD_LAYERS** footings wave — staging smoke path without Kubernetes
 
 **Risks:** Doc may not match actual accounts; must run founder account inventory (§6).
 
 ---
 
-### Option B — **Supabase Postgres (+ optional Storage) + Vercel web + Railway/Fly workers**
+### Option B — **Supabase Postgres (+ optional Storage) + Vercel web + Render/Fly workers**
 
 | Layer | Placement | Notes |
 | --- | --- | --- |
 | PostgreSQL | **Supabase** | Pooling, PITR marketing — verify plan limits before relying |
 | Auth | **Stay JWT v1**; Supabase Auth = **separate ADR** | Do not combine with FS-93 approval |
 | Storage | Supabase Storage **or** keep R2 | Two recovery surfaces if both |
-| API/worker/webhook | **Not on Vercel functions** for BullMQ | Keep long-lived workers on Railway/Fly |
+| API/worker/webhook | **Not on Vercel functions** for BullMQ | Keep long-lived workers on Render/Fly |
 
-**Estimated monthly cost (pilot):** ~**$60–150** (Supabase Pro + Vercel + Railway).  
+**Estimated monthly cost (pilot):** ~**$60–150** (Supabase Pro + Vercel + Render/Fly).  
 **Engineering cost:** **Medium–high** — connection strings, migration runner, backup drills, possible network rules.  
 **Operational cost:** Medium — strong DB UX; more policy surface (RLS, service role keys).
 
@@ -92,7 +92,7 @@ Port Fastify API and BullMQ to Vercel functions/queues.
 
 **Engineering cost:** **Very high** — conflicts with current architecture; duplicate idempotency story.  
 **Unblocks:** Little that Option A does not, faster.  
-**Recommendation:** Reject unless measured proof that Railway cannot host API at pilot scale.
+**Recommendation:** Reject unless measured proof that Render (or equivalent long-lived PaaS) cannot host API at pilot scale.
 
 ---
 
@@ -124,7 +124,7 @@ Port Fastify API and BullMQ to Vercel functions/queues.
 
 ## 6. Gates only you (or delegated operator) can clear
 
-1. **Account inventory** — List real projects: Vercel team, Railway project(s), Stripe accounts (platform vs Connect), R2 bucket, SendGrid/Twilio — mark **unknown** where missing.  
+1. **Account inventory** — List real projects: Vercel team, Render workspace/service(s), Stripe accounts (platform vs Connect), R2 bucket, SendGrid/Twilio — mark **unknown** where missing.  
 2. **Pick Option A, B, or C** (or A + “evaluate Supabase in Q2” note).  
 3. **Authorize staging spend** for FS-75 (isolated DB/Redis, test keys only).  
 4. **SLO/RPO/RTO targets** for pilot (can be “best effort until FS-83 / #64 drill”).
@@ -145,6 +145,19 @@ Recorded by: Tech Lead on PR #59 (E.. CoS / board traceability)
 Notes: PO + Security ACK still required before FS-93 ticket Done. Platform tickets FS-75, FS-76, FS-80, FS-84, FS-85, FS-92 may target Option A for design/docs only until staging OK.
 ```
 
+### Amendment — compute host Render (supersedes Railway in sign-off above)
+
+```text
+FS-93 amendment: Option A compute/data on Render (hosting vendor change only)
+Approved by: Shaun Simon (founder)
+Timestamp: 2026-10-22 5:12 PM CT
+Architecture: Vercel (web) + Render (API web service, background worker, webhook web service, Render Postgres, Render Key Value for BullMQ) + Cloudflare R2; in-repo JWT (no Supabase Auth in this decision)
+Render-specific: BullMQ requires Render Key Value maxmemoryPolicy noeviction; see docs/platform/FS-93-render-runbook.md and docs/infrastructure/render-blueprint.render.yaml (blueprint draft, NOT APPLIED)
+Scope: Architecture and runbook only — NOT accounts, credentials, resources, deploy, or live money
+Staging spend authorized: unchanged — no (separate explicit founder OK)
+Recorded by: Tech Lead on PR #59
+```
+
 ---
 
 ## 8. Dev team notice (Option A — design target)
@@ -160,7 +173,7 @@ Pairs may align **provider-specific design** (env matrices, runbooks, connection
 | FS-85 | board | Platform |
 | FS-92 | new | Sofia + Omar |
 
-**Still forbidden without founder OK:** creating Vercel/Railway/R2 projects, setting secrets in hosts, deploy hooks, or pointing staging at live payment/SMS providers.
+**Still forbidden without founder OK:** creating Vercel/Render/R2 projects, setting secrets in hosts, deploy hooks, Blueprint apply, or pointing staging at live payment/SMS providers.
 
 ---
 
@@ -168,6 +181,8 @@ Pairs may align **provider-specific design** (env matrices, runbooks, connection
 
 - [BUILD_LAYERS.md](../architecture/BUILD_LAYERS.md) — construction sequence and responsibility table  
 - [ADR-FS-93](../adr/ADR-FS-93-managed-platform-boundaries.md) — **Accepted** (founder); PO + Security ACK pending  
+- [FS-93 Render runbook](../platform/FS-93-render-runbook.md) — Key Value `noeviction`, service layout, env inventory  
+- [Render blueprint draft](../infrastructure/render-blueprint.render.yaml) — reference only, not applied  
 - [MIGRATION_NUMBERING_REGISTRY.md](../platform/MIGRATION_NUMBERING_REGISTRY.md) — SQL migration sequence across open PRs  
 - [FS-4 TrayLoop reuse inventory](../inventory/FS-4-trayloop-reuse-inventory.md) — cross-repo patterns (inform only)  
 - [FS-93 Option A dev notice](../platform/FS-93-option-a-dev-notice.md) — short broadcast for FS-75/76/80/84/85/92
