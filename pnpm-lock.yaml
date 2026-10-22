@@ -387,6 +387,9 @@ importers:
       '@fsm/config':
         specifier: workspace:*
         version: link:../config
+      '@fsm/types':
+        specifier: workspace:*
+        version: link:../types
       bullmq:
         specifier: ^5.0.0
         version: 5.76.2
@@ -400,6 +403,9 @@ importers:
       typescript:
         specifier: ^5.9.2
         version: 5.9.3
+      vitest:
+        specifier: ^3.2.4
+        version: 3.2.4(@types/node@24.12.2)(happy-dom@21.0.4)(jiti@1.21.7)(tsx@4.21.0)
 
   packages/types:
     dependencies:
