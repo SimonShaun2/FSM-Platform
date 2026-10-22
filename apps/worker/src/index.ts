@@ -9,7 +9,11 @@ import { processAiRevenue } from "./processors/ai-revenue.processor.js";
 import { processCsvImport } from "./processors/csv-import.processor.js";
 import { processInvoiceReminder } from "./processors/invoice-reminder.processor.js";
 import { processNotifications } from "./processors/notifications.processor.js";
+<<<<<<< HEAD
+import { processDataExport } from "./processors/data-export.processor.js";
+=======
 import { processGrowthCheck } from "./processors/growth-check.processor.js";
+>>>>>>> origin/dev
 import { processRetentionGates } from "./processors/retention-gates.processor.js";
 
 const logger = pino({
@@ -48,7 +52,11 @@ const workers: Array<Worker<Record<string, unknown>, void, string>> = [
   createWorker(QUEUE_NAMES.invoices, processInvoiceReminder),
   createWorker(QUEUE_NAMES.agreements, processAgreements),
   createWorker(QUEUE_NAMES.operator, processRetentionGates),
+<<<<<<< HEAD
+  createWorker(QUEUE_NAMES.exports, processDataExport)
+=======
   createWorker(QUEUE_NAMES.growth, processGrowthCheck)
+>>>>>>> origin/dev
 ];
 
 logger.info(

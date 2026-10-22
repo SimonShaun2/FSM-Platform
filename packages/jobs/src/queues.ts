@@ -12,7 +12,11 @@ export const QUEUE_NAMES = {
   agreements: "agreements",
   webhooks: "webhooks",
   operator: "operator",
+<<<<<<< HEAD
+  exports: "exports"
+=======
   growth: "growth"
+>>>>>>> origin/dev
 } as const;
 
 export const queueBaseOptions = {
@@ -34,4 +38,8 @@ export const webhooksQueue = new Queue(QUEUE_NAMES.webhooks, queueBaseOptions);
 
 export const operatorQueue = new Queue(QUEUE_NAMES.operator, queueBaseOptions);
 
+<<<<<<< HEAD
+export const exportsQueue = new Queue(QUEUE_NAMES.exports, queueBaseOptions);
+=======
 export const growthQueue = new Queue(QUEUE_NAMES.growth, queueBaseOptions);
+>>>>>>> origin/dev

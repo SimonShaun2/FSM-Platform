@@ -191,6 +191,16 @@ export const importSessionStatusEnum = pgEnum("import_session_status", [
   "rolled_back",
 ]);
 
+export const dataExportStatusEnum = pgEnum("data_export_status", [
+  "pending",
+  "processing",
+  "completed",
+  "failed",
+  "expired"
+]);
+
+export const dataExportFormatEnum = pgEnum("data_export_format", ["json", "csv_bundle"]);
+
 export const importEntityTypeEnum = pgEnum("import_entity_type", [
   "customers",
   "properties",
@@ -314,10 +324,19 @@ export const activityEventTypeEnum = pgEnum("activity_event_type", [
   "import.completed",
   "import.rolled_back",
   "import.failed",
+<<<<<<< HEAD
+  // Data export (FS-89)
+  "export.requested",
+  "export.completed",
+  "export.failed",
+  "export.downloaded",
+  "export.expired",
+=======
   // Growth check (FS-55)
   "growth.check_scan_enqueued",
   "growth.check_scan_completed",
   "growth.check_scan_failed",
+>>>>>>> origin/dev
   // Booking
   "booking.requested",
   "booking.confirmed",
@@ -1253,6 +1272,26 @@ export const importSessions = pgTable("import_sessions", {
   companyIdx: index("import_sessions_company_idx").on(t.companyId),
   statusIdx: index("import_sessions_status_idx").on(t.status),
   entityTypeIdx: index("import_sessions_entity_type_idx").on(t.entityType),
+}));
+
+export const dataExportSessions = pgTable("data_export_sessions", {
+  id: id(),
+  companyId: companyId(),
+  requestedById: uuid("requested_by_id").references(() => users.id),
+  status: dataExportStatusEnum("status").notNull().default("pending"),
+  format: dataExportFormatEnum("format").notNull().default("json"),
+  manifestVersion: varchar("manifest_version", { length: 64 }).notNull().default("fsm.data-export.v1"),
+  progressPercent: integer("progress_percent").notNull().default(0),
+  fileName: varchar("file_name", { length: 255 }),
+  fileUrl: text("file_url"),
+  recordCounts: jsonb("record_counts").notNull().default({}),
+  expiresAt: timestamp("expires_at"),
+  completedAt: timestamp("completed_at"),
+  errorMessage: text("error_message"),
+  ...timestamps
+}, (t) => ({
+  companyIdx: index("data_export_sessions_company_idx").on(t.companyId),
+  statusIdx: index("data_export_sessions_status_idx").on(t.status)
 }));
 
 export const automationRuleTypeEnum = pgEnum("automation_rule_type", [
