@@ -18,6 +18,7 @@
   },
   "dependencies": {
     "@fsm/config": "workspace:*",
+    "@fsm/types": "workspace:*",
     "bullmq": "^5.0.0",
     "ioredis": "^5.4.0"
   },

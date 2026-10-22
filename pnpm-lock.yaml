@@ -387,6 +387,9 @@ importers:
       '@fsm/config':
         specifier: workspace:*
         version: link:../config
+      '@fsm/types':
+        specifier: workspace:*
+        version: link:../types
       bullmq:
         specifier: ^5.0.0
         version: 5.76.2
