@@ -3,7 +3,7 @@
 **Agent:** Backend Dev 3  
 **Branch:** `cursor/fs-92-tenant-isolation-proof`  
 **Base:** `dev` (branch created from current `dev` at start of work)  
-**Head SHA:** `366079f6b0a6b8d234a29af53f0655cb624d73d4` (verify with `git rev-parse HEAD` after any new commits)
+**Head SHA:** `f0892df078e791636b3a28078de06112adab5ed3`
 
 ## What changed
 
