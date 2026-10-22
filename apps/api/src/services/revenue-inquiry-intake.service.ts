@@ -355,7 +355,7 @@ export async function intakeInboxInquiry(
     {
       firstName,
       lastName,
-      phone: phoneMatch ?? "+10000000000",
+      phone: phoneMatch ?? "",
       email: emailMatch,
       addressLine1: "Inbox intake",
       city: "Pending",

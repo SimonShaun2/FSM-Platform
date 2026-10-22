@@ -121,6 +121,12 @@ function normalizePhone(value: string): string {
   return value.trim();
 }
 
+/** Phone used only for matching/creating customers — not placeholder inbox values. */
+function isUsableContactPhone(phone: string): boolean {
+  const trimmed = normalizePhone(phone);
+  return trimmed.length > 0 && trimmed !== "+10000000000";
+}
+
 function normalizeOptionalEmail(value: string | null | undefined): string | null | undefined {
   const normalizedValue = normalizeOptionalString(value);
 
@@ -458,10 +464,21 @@ async function findCustomerByContact(
     .from(customers)
     .where(and(eq(customers.companyId, companyId), isNull(customers.deletedAt)));
 
-  return (
-    companyCustomers.find((customer) => customer.phone === phone) ??
-    (email ? companyCustomers.find((customer) => customer.email === email) ?? null : null)
-  );
+  const normalizedEmail = email ? normalizeOptionalEmail(email) ?? null : null;
+
+  if (isUsableContactPhone(phone)) {
+    const normalizedPhone = normalizePhone(phone);
+    const byPhone = companyCustomers.find((customer) => customer.phone === normalizedPhone);
+    if (byPhone) {
+      return byPhone;
+    }
+  }
+
+  if (normalizedEmail) {
+    return companyCustomers.find((customer) => customer.email === normalizedEmail) ?? null;
+  }
+
+  return null;
 }
 
 async function findPropertyForCustomer(
@@ -498,7 +515,7 @@ async function createCustomerForBooking(
       firstName: input.firstName.trim(),
       lastName: input.lastName.trim(),
       email: normalizeOptionalEmail(input.email) ?? null,
-      phone: normalizePhone(input.phone),
+      phone: isUsableContactPhone(input.phone) ? normalizePhone(input.phone) : null,
       prefersSms: input.smsConsentAppointments ?? true,
       prefersEmail: Boolean(input.email),
       doNotContact: false

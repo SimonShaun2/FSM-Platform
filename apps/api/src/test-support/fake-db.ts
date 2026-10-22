@@ -38,7 +38,8 @@ type TableName =
   | "fileAttachments"
   | "onTheWayNotifications"
   | "bookingRequests"
-  | "bookingSettings";
+  | "bookingSettings"
+  | "inquirySubmitIdempotency";
 
 type UserRole = "owner" | "admin" | "dispatcher" | "office" | "technician";
 type TechnicianStatus = "active" | "inactive" | "on_leave";
@@ -887,6 +888,19 @@ export interface TestBookingRequestRecord {
   deletedAt: Date | null;
 }
 
+export interface TestInquirySubmitIdempotencyRecord {
+  id: string;
+  companyId: string;
+  idempotencyKey: string;
+  payloadHash: string;
+  bookingRequestId: string;
+  responseSnapshot: Record<string, unknown>;
+  expiresAt: Date;
+  createdAt: Date;
+  updatedAt: Date;
+  deletedAt: Date | null;
+}
+
 export interface TestBookingSettingsRecord {
   id: string;
   companyId: string;
@@ -948,7 +962,8 @@ type AnyTestRecord =
   | TestFileAttachmentRecord
   | TestOnTheWayNotificationRecord
   | TestBookingRequestRecord
-  | TestBookingSettingsRecord;
+  | TestBookingSettingsRecord
+  | TestInquirySubmitIdempotencyRecord;
 
 type MockTable =
   | typeof companiesTable
@@ -985,7 +1000,8 @@ type MockTable =
   | typeof fileAttachmentsTable
   | typeof onTheWayNotificationsTable
   | typeof bookingRequestsTable
-  | typeof bookingSettingsTable;
+  | typeof bookingSettingsTable
+  | typeof inquirySubmitIdempotencyTable;
 
 interface TestState {
   companies: TestCompanyRecord[];
@@ -1023,6 +1039,7 @@ interface TestState {
   onTheWayNotifications: TestOnTheWayNotificationRecord[];
   bookingRequests: TestBookingRequestRecord[];
   bookingSettings: TestBookingSettingsRecord[];
+  inquirySubmitIdempotency: TestInquirySubmitIdempotencyRecord[];
 }
 
 interface OrderByDefinition {
@@ -1817,6 +1834,20 @@ const bookingRequestsTable = {
   deletedAt: "deletedAt"
 } as const;
 
+const inquirySubmitIdempotencyTable = {
+  __name: "inquirySubmitIdempotency",
+  id: "id",
+  companyId: "companyId",
+  idempotencyKey: "idempotencyKey",
+  payloadHash: "payloadHash",
+  bookingRequestId: "bookingRequestId",
+  responseSnapshot: "responseSnapshot",
+  expiresAt: "expiresAt",
+  createdAt: "createdAt",
+  updatedAt: "updatedAt",
+  deletedAt: "deletedAt"
+} as const;
+
 const bookingSettingsTable = {
   __name: "bookingSettings",
   id: "id",
@@ -1877,7 +1908,8 @@ const state: TestState = {
   fileAttachments: [],
   onTheWayNotifications: [],
   bookingRequests: [],
-  bookingSettings: []
+  bookingSettings: [],
+  inquirySubmitIdempotency: []
 };
 
 function nextId(): string {
@@ -1928,6 +1960,11 @@ function restoreState(snapshot: TestState): void {
   );
   state.bookingRequests.splice(0, state.bookingRequests.length, ...snapshot.bookingRequests);
   state.bookingSettings.splice(0, state.bookingSettings.length, ...snapshot.bookingSettings);
+  state.inquirySubmitIdempotency.splice(
+    0,
+    state.inquirySubmitIdempotency.length,
+    ...snapshot.inquirySubmitIdempotency
+  );
 }
 
 function getRows(tableName: TableName): AnyTestRecord[] {
@@ -2002,6 +2039,8 @@ function getRows(tableName: TableName): AnyTestRecord[] {
       return state.bookingRequests;
     case "bookingSettings":
       return state.bookingSettings;
+    case "inquirySubmitIdempotency":
+      return state.inquirySubmitIdempotency;
   }
 }
 
@@ -3017,6 +3056,29 @@ function createBookingRequestRecord(
   };
 }
 
+function createInquirySubmitIdempotencyRecord(
+  values: Partial<TestInquirySubmitIdempotencyRecord> &
+    Pick<
+      TestInquirySubmitIdempotencyRecord,
+      "companyId" | "idempotencyKey" | "payloadHash" | "bookingRequestId" | "responseSnapshot" | "expiresAt"
+    >
+): TestInquirySubmitIdempotencyRecord {
+  const now = new Date();
+
+  return {
+    id: values.id ?? nextId(),
+    companyId: values.companyId,
+    idempotencyKey: values.idempotencyKey,
+    payloadHash: values.payloadHash,
+    bookingRequestId: values.bookingRequestId,
+    responseSnapshot: values.responseSnapshot,
+    expiresAt: values.expiresAt,
+    createdAt: values.createdAt ?? now,
+    updatedAt: values.updatedAt ?? now,
+    deletedAt: values.deletedAt ?? null
+  };
+}
+
 function createBookingSettingsRecord(
   values: Partial<TestBookingSettingsRecord> & Pick<TestBookingSettingsRecord, "companyId">
 ): TestBookingSettingsRecord {
@@ -3214,6 +3276,14 @@ function createRow(tableName: TableName, values: Record<string, unknown>): AnyTe
     case "bookingSettings":
       return createBookingSettingsRecord(
         values as Partial<TestBookingSettingsRecord> & Pick<TestBookingSettingsRecord, "companyId">
+      );
+    case "inquirySubmitIdempotency":
+      return createInquirySubmitIdempotencyRecord(
+        values as Partial<TestInquirySubmitIdempotencyRecord> &
+          Pick<
+            TestInquirySubmitIdempotencyRecord,
+            "companyId" | "idempotencyKey" | "payloadHash" | "bookingRequestId" | "responseSnapshot" | "expiresAt"
+          >
       );
   }
 }
@@ -3510,6 +3580,7 @@ export const fileAttachments = fileAttachmentsTable;
 export const onTheWayNotifications = onTheWayNotificationsTable;
 export const bookingRequests = bookingRequestsTable;
 export const bookingSettings = bookingSettingsTable;
+export const inquirySubmitIdempotency = inquirySubmitIdempotencyTable;
 
 export async function emitEvent(event: Omit<TestActivityEventRecord, "id" | "occurredAt"> & {
   occurredAt?: Date;
@@ -3857,6 +3928,7 @@ export function createDbModuleMock() {
     onTheWayNotifications,
     bookingRequests,
     bookingSettings,
+    inquirySubmitIdempotency,
     emitEvent,
     emitEventWithExecutor,
     markInvoiceOverdueIfNeeded,
@@ -3903,6 +3975,7 @@ export function resetTestState(): void {
   state.onTheWayNotifications.length = 0;
   state.bookingRequests.length = 0;
   state.bookingSettings.length = 0;
+  state.inquirySubmitIdempotency.length = 0;
 }
 
 export function seedCompany(
