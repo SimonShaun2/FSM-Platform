@@ -5,7 +5,8 @@ import { afterEach, beforeAll, beforeEach, describe, expect, it, vi } from "vite
 import { env } from "@fsm/config";
 
 import { generateBookingHoldToken } from "../../../lib/booking-hold-token.js";
-import { resetPublicBookingRateLimitStateForTests } from "./rate-limit-state.js";
+import { resetBookingHoldTokenJtiStateForTests } from "../../../lib/booking-hold-token-store.js";
+import { resetPublicBookingRateLimitStateForTests } from "../../../lib/public-booking-rate-limit.js";
 import { setupTestEnv } from "../../../test-support/env-setup.js";
 
 setupTestEnv();
@@ -97,6 +98,7 @@ beforeAll(async () => {
 beforeEach(async () => {
   fakeDb.resetTestState();
   resetPublicBookingRateLimitStateForTests();
+  resetBookingHoldTokenJtiStateForTests();
   vi.useFakeTimers();
   vi.setSystemTime(new Date("2026-04-28T14:00:00.000Z"));
   app = await buildAppModule.buildApp();
@@ -151,9 +153,10 @@ describe("public booking slot-hold security", () => {
         companyId: booking.companyId,
         bookingRequestId: booking.id,
         referenceNumber,
+        jti: "550e8400-e29b-41d4-a716-446655440099",
         tokenType: "booking_hold"
       },
-      env.JWT_SECRET,
+      env.BOOKING_HOLD_TOKEN_SECRET,
       { expiresIn: -60 }
     );
 
@@ -220,18 +223,51 @@ describe("public booking slot-hold security", () => {
   });
 
   it("returns 429 on the 16th slot-hold attempt for the same reference", async () => {
+    vi.useRealTimers();
     const { referenceNumber } = seedPublicHoldFixture();
     const path = slotHoldPath("acme-hvac", referenceNumber);
+    const payload = "{}";
 
     for (let attempt = 1; attempt <= 15; attempt += 1) {
-      const response = await request(app.server).post(path).send({});
-      expect(response.status).not.toBe(429);
+      const response = await app.inject({
+        method: "POST",
+        url: path,
+        remoteAddress: `10.0.0.${attempt}`,
+        headers: { "content-type": "application/json" },
+        payload
+      });
+      expect(response.statusCode).not.toBe(429);
     }
 
-    const limited = await request(app.server).post(path).send({});
-    expect(limited.status).toBe(429);
-    expect(limited.body.error).toBe("RATE_LIMITED");
-    expect(limited.body.message).toContain("booking reference");
+    const limited = await app.inject({
+      method: "POST",
+      url: path,
+      remoteAddress: "10.0.0.99",
+      headers: { "content-type": "application/json" },
+      payload
+    });
+    expect(limited.statusCode).toBe(429);
+    expect(limited.json().error).toBe("RATE_LIMITED");
+    expect(limited.json().message).toContain("booking reference");
+    vi.useFakeTimers();
+    vi.setSystemTime(new Date("2026-04-28T14:00:00.000Z"));
+  });
+
+  it("returns 409 when the same hold token is reused after a successful hold", async () => {
+    const { technician, holdToken, referenceNumber } = seedPublicHoldFixture();
+    const body = {
+      holdToken,
+      technicianId: technician.id,
+      scheduledStart: AFTERNOON_START,
+      scheduledEnd: AFTERNOON_END
+    };
+
+    const first = await request(app.server).post(slotHoldPath("acme-hvac", referenceNumber)).send(body);
+    expect(first.status).toBe(200);
+
+    const replay = await request(app.server).post(slotHoldPath("acme-hvac", referenceNumber)).send(body);
+    expect(replay.status).toBe(409);
+    expect(replay.body.message).toContain("already been used");
   });
 
   it("holds a slot when token, zip, and availability are valid", async () => {

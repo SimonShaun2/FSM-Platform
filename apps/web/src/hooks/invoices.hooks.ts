@@ -12,6 +12,7 @@ import type {
 } from "@fsm/types";
 
 import { api } from "@/src/lib/api";
+import { publicApi } from "@/src/lib/public-api";
 
 interface PaginatedResponse<TItem> {
   data: TItem[];
@@ -284,7 +285,7 @@ export function useDeleteInvoiceItem(invoiceId: string) {
 export function usePublicPaymentLink(token: string | null) {
   return useQuery({
     queryKey: token ? invoiceKeys.publicPay(token) : invoiceKeys.publicPay("pending"),
-    queryFn: () => api.get<PublicPaymentLinkResponse>(`/api/v1/public/pay/${token}`),
+    queryFn: () => publicApi.get<PublicPaymentLinkResponse>(`/api/v1/public/pay/${token}`),
     enabled: Boolean(token)
   });
 }

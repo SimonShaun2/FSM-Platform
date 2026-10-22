@@ -193,10 +193,19 @@ export function usePublicAvailability(slug: string | null, zip: string | null, d
 
 export function useSubmitBookingRequest(slug: string) {
   return useMutation({
-    mutationFn: ({ source, body }: { source?: string; body: Record<string, unknown> }) =>
+    mutationFn: ({
+      source,
+      body,
+      idempotencyKey
+    }: {
+      source?: string;
+      body: Record<string, unknown>;
+      idempotencyKey?: string;
+    }) =>
       publicApi.post<SubmitBookingResponse>(
         `/api/v1/public/booking/${slug}/submit${source ? `?src=${encodeURIComponent(source)}` : ""}`,
-        body
+        body,
+        idempotencyKey ? { headers: { "Idempotency-Key": idempotencyKey } } : undefined
       )
   });
 }
