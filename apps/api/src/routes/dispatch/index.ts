@@ -2,6 +2,7 @@ import type { FastifyPluginAsync } from "fastify";
 
 import {
   autoFitHandler,
+  dispatchStreamHandler,
   getDispatchViewHandler,
   getDispatchWorkloadHandler,
   listApprovedUnconvertedEstimatesHandler,
@@ -23,6 +24,11 @@ const dispatchRoutes: FastifyPluginAsync = async (fastify) => {
     preValidation: [dispatchDateValidation],
     schema: dispatchViewRouteSchema
   }, getDispatchViewHandler);
+
+  fastify.get("/dispatch/stream", {
+    preHandler: [fastify.authenticate],
+    preValidation: [dispatchDateValidation]
+  }, dispatchStreamHandler);
 
   fastify.get("/dispatch/workload", {
     preHandler: [fastify.authenticate],

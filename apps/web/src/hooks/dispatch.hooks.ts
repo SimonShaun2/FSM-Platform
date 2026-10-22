@@ -119,7 +119,10 @@ export function useDispatchView(date: string) {
   return useQuery({
     queryKey: ["dispatch", date],
     queryFn: () => api.get<DispatchView>(`/api/v1/dispatch?date=${date}`),
-    staleTime: 60 * 1000
+    staleTime: 60 * 1000,
+    // Fallback when dispatch SSE is disconnected (AGENTS.md — 30s poll)
+    refetchInterval: 30_000,
+    refetchIntervalInBackground: true
   });
 }
 

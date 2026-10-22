@@ -11,6 +11,39 @@ import {
 } from "../../services/dispatch.service.js";
 import type { AutoFitBody, DispatchDateQuery } from "./schemas.js";
 
+const DISPATCH_SSE_PING_MS = 25_000;
+
+export async function dispatchStreamHandler(
+  request: FastifyRequest,
+  reply: FastifyReply
+): Promise<void> {
+  const query = request.query as DispatchDateQuery;
+
+  reply.hijack();
+  reply.raw.writeHead(200, {
+    "Content-Type": "text/event-stream",
+    "Cache-Control": "no-cache",
+    Connection: "keep-alive"
+  });
+
+  const writePing = () => {
+    reply.raw.write(
+      `event: ping\ndata: ${JSON.stringify({
+        date: query.date,
+        companyId: request.company.id,
+        at: new Date().toISOString()
+      })}\n\n`
+    );
+  };
+
+  writePing();
+  const interval = setInterval(writePing, DISPATCH_SSE_PING_MS);
+
+  request.raw.on("close", () => {
+    clearInterval(interval);
+  });
+}
+
 export async function getDispatchViewHandler(
   request: FastifyRequest,
   reply: FastifyReply
