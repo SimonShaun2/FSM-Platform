@@ -3,7 +3,10 @@ import { describe, expect, it } from "vitest";
 import {
   buildBookPath,
   buildBrandedStorefrontViewModel,
+  buildInquirePath,
+  buildLocalBusinessJsonLd,
   buildReviewLinks,
+  buildServiceAreaSummary,
   buildServiceCards
 } from "./branded-storefront.utils";
 
@@ -19,12 +22,33 @@ const baseSettings = {
   maxAdvanceDays: 30,
   googleReviewUrl: null,
   yelpReviewUrl: null,
-  facebookReviewUrl: null
+  facebookReviewUrl: null,
+  serviceAreaZipCodes: []
 };
 
 describe("branded-storefront.utils", () => {
   it("builds book path with website attribution", () => {
     expect(buildBookPath("sparkle-co")).toBe("/book/sparkle-co?src=website");
+  });
+
+  it("builds inquire path for direct acquisition", () => {
+    expect(buildInquirePath("sparkle-co")).toBe("/site/sparkle-co/inquire?src=website");
+  });
+
+  it("summarizes service area zips for local SEO copy", () => {
+    expect(buildServiceAreaSummary(["90210", "90211", "90210"])).toContain("90210");
+  });
+
+  it("emits LocalBusiness JSON-LD without fabricated ratings", () => {
+    const model = buildBrandedStorefrontViewModel({
+      ...baseSettings,
+      serviceAreaZipCodes: ["97201"]
+    });
+    const jsonLd = buildLocalBusinessJsonLd(model, "/site/sparkle-co");
+
+    expect(jsonLd["@type"]).toBe("LocalBusiness");
+    expect(jsonLd.areaServed).toEqual(["97201"]);
+    expect(JSON.stringify(jsonLd)).not.toContain("aggregateRating");
   });
 
   it("maps offered services into storefront cards", () => {

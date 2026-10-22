@@ -1,7 +1,11 @@
 import request from "supertest";
 import { afterEach, beforeAll, beforeEach, describe, expect, it, vi } from "vitest";
 
+import { ErrorCode } from "@fsm/types";
+
+import { closeTestApp } from "../../test-support/close-test-app.js";
 import { setupTestEnv } from "../../test-support/env-setup.js";
+import { CSV_IMPORT_TOO_MANY_FILES_MESSAGE } from "./upload-limits.js";
 
 setupTestEnv();
 
@@ -106,7 +110,7 @@ beforeEach(async () => {
 });
 
 afterEach(async () => {
-  await app.close();
+  await closeTestApp(app);
 });
 
 function createAuthContext(role: "owner" | "admin" | "technician" = "owner") {
@@ -166,6 +170,22 @@ describe("imports routes", () => {
     expect(successResponse.body.importSession.status).toBe("uploaded");
     expect(invalidResponse.status).toBe(400);
     expect(forbiddenResponse.status).toBe(403);
+  });
+
+  it("POST /imports returns 400 when more than one file is attached", async () => {
+    const owner = createAuthContext("owner");
+    const csv = Buffer.from("First Name,Email\nChris,chris@example.com");
+
+    const response = await request(app.server)
+      .post("/api/v1/imports")
+      .set("Authorization", owner.authorization)
+      .attach("file", csv, { filename: "a.csv", contentType: "text/csv" })
+      .attach("secondaryFile", csv, { filename: "b.csv", contentType: "text/csv" });
+
+    expect(response.status).toBe(400);
+    expect(response.body.error).toBe(ErrorCode.VALIDATION_ERROR);
+    expect(response.body.message).toBe(CSV_IMPORT_TOO_MANY_FILES_MESSAGE);
+    expect(addImportsQueueJob).not.toHaveBeenCalled();
   });
 
   it("GET /imports returns a paginated list", async () => {

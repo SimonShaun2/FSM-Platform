@@ -25,4 +25,14 @@ describe("middleware public API proxy", () => {
 
     expect(response.status).toBe(400);
   });
+
+  it("returns 400 for double-encoded traversal on public API paths", async () => {
+    const request = new NextRequest("http://localhost:3000/api/v1/public/booking/%252e%252e/admin", {
+      method: "GET"
+    });
+
+    const response = await middleware(request);
+
+    expect(response.status).toBe(400);
+  });
 });

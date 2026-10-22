@@ -1,7 +1,7 @@
 import { and, eq, isNull } from "drizzle-orm";
 
 import { bookingRequests, db, emitEventWithExecutor } from "@fsm/db";
-import { AppError, ErrorCode } from "@fsm/types";
+import { AppError, ErrorCode, type ChannelConsentSnapshot, type ConsentScope } from "@fsm/types";
 
 import { createAgentActionProposal } from "./agent-action.service.js";
 import {
@@ -39,6 +39,23 @@ function toInquirySnapshot(row: typeof bookingRequests.$inferSelect): BookingInq
   };
 }
 
+function buildBookingConsentSnapshot(
+  row: typeof bookingRequests.$inferSelect,
+  consentScope: ConsentScope
+): ChannelConsentSnapshot {
+  const consentVersion = row.updatedAt.getTime();
+
+  return {
+    consentScope,
+    capturedAt: row.updatedAt.toISOString(),
+    consentVersion,
+    currentConsentVersion: consentVersion,
+    appointmentOptIn: row.smsConsentAppointments ?? false,
+    marketingOptIn: row.smsConsentMarketing ?? false,
+    revokedAt: null
+  };
+}
+
 export async function createInquiryResponseProposal(
   companyId: string,
   bookingRequestId: string,
@@ -67,6 +84,7 @@ export async function createInquiryResponseProposal(
     const snapshot = toInquirySnapshot(row);
     const qualification = qualifyInquiry(snapshot);
     const draft = buildInquiryResponseDraft(snapshot, qualification);
+    const consentSnapshot = buildBookingConsentSnapshot(row, "appointment");
 
     const proposal = await createAgentActionProposal(
       {
@@ -83,6 +101,8 @@ export async function createInquiryResponseProposal(
         reason: qualification.suggestedNextStep,
         parameters: {
           workflow: "revenue.inquiry_response",
+          consentScope: consentSnapshot.consentScope,
+          consentSnapshot,
           draftType: draft.draftType,
           channel: draft.channel,
           subject: draft.subject ?? null,

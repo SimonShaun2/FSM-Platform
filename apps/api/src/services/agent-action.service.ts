@@ -8,8 +8,19 @@ import {
   ErrorCode,
   type AgentActionStateV1,
   type CanonicalEntityRefV1,
+  assertAgentActionApprovable,
+  assertAgentActionExecutable,
+  assertAgentActionRejectable,
+  assertAgentActionTenantScope,
+  assertActionTypeMatchesToolName,
+  agentActionExpiredError,
+  agentActionStaleTargetError,
+  AgentToolNameV1Schema,
   assertIdempotencyPayloadMatches,
-  isStaleRecordVersion
+  evaluateAgentActionPolicyDecision,
+  isAgentActionExpired,
+  isStaleRecordVersion,
+  type AgentToolNameV1
 } from "@fsm/types";
 
 import {
@@ -17,13 +28,13 @@ import {
   assertPolicyVersion,
   requiresHumanApproval
 } from "./agent-action.policy.js";
+import { authorizeAgentActionExecution } from "./outbound-policy-engine.service.js";
 import { resolveEntityRef } from "./tenant-context.service.js";
 
 const DEFAULT_TTL_MS = 72 * 60 * 60 * 1000;
 
 type SelectExecutor = Pick<typeof db, "select">;
 type AgentActionWriteExecutor = Pick<typeof db, "select" | "insert">;
-
 export function agentActionScopedWhere(companyId: string, actionId: string) {
   return and(
     eq(agentActions.id, actionId),
@@ -71,9 +82,20 @@ function mapRow(row: typeof agentActions.$inferSelect) {
     reason: row.reason,
     expiresAt: row.expiresAt.toISOString(),
     reviewerId: row.reviewerId,
+    approvedParameters: (row.approvedParameters as Record<string, unknown> | null) ?? null,
     executionReceipt: row.executionReceipt as Record<string, unknown> | null,
     createdAt: row.createdAt.toISOString(),
     updatedAt: row.updatedAt.toISOString()
+  };
+}
+
+function toLifecycleSlice(row: typeof agentActions.$inferSelect) {
+  return {
+    companyId: row.companyId,
+    state: row.state as AgentActionState,
+    actionType: row.actionType,
+    requiresApproval: row.requiresApproval,
+    expiresAt: row.expiresAt
   };
 }
 
@@ -88,7 +110,36 @@ async function getActionRow(companyId: string, actionId: string, executor: Selec
     throw new AppError(ErrorCode.NOT_FOUND, "Agent action not found");
   }
 
+  assertAgentActionTenantScope(companyId, row.companyId);
+
   return row;
+}
+
+async function persistTerminalExpiredState(companyId: string, actionId: string): Promise<void> {
+  await db
+    .update(agentActions)
+    .set({ state: "expired", updatedAt: new Date() })
+    .where(agentActionScopedWhere(companyId, actionId));
+}
+
+function resolveProposalPolicy(input: CreateAgentActionInput) {
+  if (AgentToolNameV1Schema.safeParse(input.actionType).success) {
+    assertActionTypeMatchesToolName(input.actionType as AgentToolNameV1, input.parameters);
+    return evaluateAgentActionPolicyDecision({
+      agentProduct: input.agentProduct,
+      actionType: input.actionType,
+      actorType: input.actorType,
+      policyVersion: input.policyVersion,
+      requiresApproval: requiresHumanApproval(input.actionType)
+    });
+  }
+
+  const needsApproval = requiresHumanApproval(input.actionType);
+  return {
+    initialState: (needsApproval ? "awaiting_approval" : "policy_evaluated") as AgentActionState,
+    requiresApproval: needsApproval,
+    allowsAutoExecute: false
+  };
 }
 
 async function createAgentActionProposalInTransaction(
@@ -105,70 +156,68 @@ async function createAgentActionProposalInTransaction(
   });
 
   const expiresAt = input.expiresAt ?? new Date(Date.now() + DEFAULT_TTL_MS);
-  const needsApproval = requiresHumanApproval(input.actionType);
+  const policyDecision = resolveProposalPolicy(input);
 
   const [existing] = await tx
-      .select()
-      .from(agentActions)
-      .where(
-        and(
-          eq(agentActions.companyId, input.companyId),
-          eq(agentActions.idempotencyKey, input.idempotencyKey),
-          isNull(agentActions.deletedAt)
-        )
+    .select()
+    .from(agentActions)
+    .where(
+      and(
+        eq(agentActions.companyId, input.companyId),
+        eq(agentActions.idempotencyKey, input.idempotencyKey),
+        isNull(agentActions.deletedAt)
       )
-      .limit(1);
+    )
+    .limit(1);
 
-    if (existing) {
-      assertIdempotencyPayloadMatches(existing.payloadHash, {
-        companyId: input.companyId,
-        idempotencyKey: input.idempotencyKey,
-        payloadFingerprint: payloadHash
-      });
-      return mapRow(existing);
-    }
-
-    const initialState: AgentActionState = needsApproval ? "awaiting_approval" : "policy_evaluated";
-
-    const insertedRows = await tx
-      .insert(agentActions)
-      .values({
-        companyId: input.companyId,
-        agentProduct: input.agentProduct,
-        actionType: input.actionType,
-        parameters: input.parameters,
-        target: input.target,
-        sourceEventIds: input.sourceEventIds ?? [],
-        idempotencyKey: input.idempotencyKey,
-        payloadHash,
-        policyVersion: input.policyVersion,
-        requiresApproval: needsApproval,
-        state: initialState,
-        confidence: input.confidence?.toString(),
-        reason: input.reason,
-        expiresAt
-      })
-      .returning();
-
-    const inserted = insertedRows[0];
-    if (!inserted) {
-      throw new AppError(ErrorCode.INTERNAL_ERROR, "Failed to create agent action");
-    }
-
-    await emitEventWithExecutor(tx, {
+  if (existing) {
+    assertIdempotencyPayloadMatches(existing.payloadHash, {
       companyId: input.companyId,
-      eventType: "agent.proposal_created",
-      actorId: input.actorId,
-      actorType: input.actorType,
-      entityType: "agent_action",
-      entityId: inserted.id,
-      payload: {
-        actionType: input.actionType,
-        agentProduct: input.agentProduct,
-        state: inserted.state
-      },
-      summary: `Agent proposal created (${input.actionType})`
+      idempotencyKey: input.idempotencyKey,
+      payloadFingerprint: payloadHash
     });
+    return mapRow(existing);
+  }
+
+  const insertedRows = await tx
+    .insert(agentActions)
+    .values({
+      companyId: input.companyId,
+      agentProduct: input.agentProduct,
+      actionType: input.actionType,
+      parameters: input.parameters,
+      target: input.target,
+      sourceEventIds: input.sourceEventIds ?? [],
+      idempotencyKey: input.idempotencyKey,
+      payloadHash,
+      policyVersion: input.policyVersion,
+      requiresApproval: policyDecision.requiresApproval,
+      state: policyDecision.initialState as AgentActionState,
+      confidence: input.confidence?.toString(),
+      reason: input.reason,
+      expiresAt
+    })
+    .returning();
+
+  const inserted = insertedRows[0];
+  if (!inserted) {
+    throw new AppError(ErrorCode.INTERNAL_ERROR, "Failed to create agent action");
+  }
+
+  await emitEventWithExecutor(tx, {
+    companyId: input.companyId,
+    eventType: "agent.proposal_created",
+    actorId: input.actorId,
+    actorType: input.actorType,
+    entityType: "agent_action",
+    entityId: inserted.id,
+    payload: {
+      actionType: input.actionType,
+      agentProduct: input.agentProduct,
+      state: inserted.state
+    },
+    summary: `Agent proposal created (${input.actionType})`
+  });
 
   return mapRow(inserted);
 }
@@ -200,45 +249,62 @@ export async function listAgentActions(
 }
 
 export async function approveAgentAction(companyId: string, actionId: string, reviewerId: string) {
-  return db.transaction(async (tx) => {
-    const row = await getActionRow(companyId, actionId, tx);
+  let persistExpiredAfterRollback = false;
 
-    if (row.state !== "awaiting_approval" && row.state !== "policy_evaluated") {
-      throw new AppError(ErrorCode.CONFLICT, "Agent action is not awaiting approval");
-    }
+  try {
+    return await db.transaction(async (tx) => {
+      const row = await getActionRow(companyId, actionId, tx);
 
-    const updatedRows = await tx
-      .update(agentActions)
-      .set({ state: "approved", reviewerId, updatedAt: new Date() })
-      .where(agentActionScopedWhere(companyId, actionId))
-      .returning();
+      assertAgentActionApprovable(toLifecycleSlice(row));
 
-    const updated = updatedRows[0];
-    if (!updated) {
-      throw new AppError(ErrorCode.INTERNAL_ERROR, "Failed to approve agent action");
-    }
+      if (isAgentActionExpired(row.expiresAt)) {
+        persistExpiredAfterRollback = true;
+        throw agentActionExpiredError();
+      }
 
-    await emitEventWithExecutor(tx, {
-      companyId,
-      eventType: "agent.proposal_approved",
-      actorId: reviewerId,
-      actorType: "user",
-      entityType: "agent_action",
-      entityId: actionId,
-      summary: "Agent proposal approved"
+      const approvedParameters = (row.parameters as Record<string, unknown>) ?? {};
+
+      const updatedRows = await tx
+        .update(agentActions)
+        .set({
+          state: "approved",
+          reviewerId,
+          approvedParameters,
+          updatedAt: new Date()
+        })
+        .where(agentActionScopedWhere(companyId, actionId))
+        .returning();
+
+      const updated = updatedRows[0];
+      if (!updated) {
+        throw new AppError(ErrorCode.INTERNAL_ERROR, "Failed to approve agent action");
+      }
+
+      await emitEventWithExecutor(tx, {
+        companyId,
+        eventType: "agent.proposal_approved",
+        actorId: reviewerId,
+        actorType: "user",
+        entityType: "agent_action",
+        entityId: actionId,
+        summary: "Agent proposal approved"
+      });
+
+      return mapRow(updated);
     });
-
-    return mapRow(updated);
-  });
+  } catch (error) {
+    if (persistExpiredAfterRollback) {
+      await persistTerminalExpiredState(companyId, actionId);
+    }
+    throw error;
+  }
 }
 
 export async function rejectAgentAction(companyId: string, actionId: string, reviewerId: string) {
   return db.transaction(async (tx) => {
     const row = await getActionRow(companyId, actionId, tx);
 
-    if (row.state !== "awaiting_approval" && row.state !== "policy_evaluated") {
-      throw new AppError(ErrorCode.CONFLICT, "Agent action is not awaiting approval");
-    }
+    assertAgentActionRejectable(toLifecycleSlice(row));
 
     const updatedRows = await tx
       .update(agentActions)
@@ -265,54 +331,56 @@ export async function rejectAgentAction(companyId: string, actionId: string, rev
   });
 }
 
-export async function executeAgentAction(companyId: string, actionId: string, actorId: string) {
-  const row = await getActionRow(companyId, actionId);
+export function resolveExecutableParameters(row: typeof agentActions.$inferSelect): Record<string, unknown> {
+  if (row.requiresApproval) {
+    const approved = row.approvedParameters as Record<string, unknown> | null;
+    if (!approved) {
+      throw new AppError(ErrorCode.CONFLICT, "Approved parameters are missing");
+    }
 
-  const target = row.target as CanonicalEntityRefV1;
-  const liveRef = await resolveEntityRef(companyId, target.entityType, target.entityId);
-  if (isStaleRecordVersion(target.recordVersion, liveRef.recordVersion)) {
-    throw new AppError(ErrorCode.CONFLICT, "Target recordVersion is stale; re-resolve context");
+    return approved;
   }
 
+  return (row.parameters as Record<string, unknown>) ?? {};
+}
+
+export async function editAgentActionParameters(
+  companyId: string,
+  actionId: string,
+  editorId: string,
+  patch: { channel?: "sms" | "email"; subject?: string | null; body: string }
+) {
   return db.transaction(async (tx) => {
-    const lockedRow = await getActionRow(companyId, actionId, tx);
+    const row = await getActionRow(companyId, actionId, tx);
 
-    if (lockedRow.expiresAt.getTime() < Date.now()) {
-      await tx
-        .update(agentActions)
-        .set({ state: "expired", updatedAt: new Date() })
-        .where(agentActionScopedWhere(companyId, actionId));
-      throw new AppError(ErrorCode.CONFLICT, "Agent action has expired");
+    if (row.state !== "awaiting_approval") {
+      throw new AppError(ErrorCode.CONFLICT, "Only awaiting-approval actions can be edited");
     }
 
-    if (lockedRow.requiresApproval && lockedRow.state !== "approved") {
-      throw new AppError(ErrorCode.CONFLICT, "Agent action requires approval before execution");
+    if (row.actionType !== "message.send_proposed" && row.actionType !== "message.draft") {
+      throw new AppError(ErrorCode.VALIDATION_ERROR, "This action type cannot be edited");
     }
 
-    if (
-      !lockedRow.requiresApproval &&
-      lockedRow.state !== "policy_evaluated" &&
-      lockedRow.state !== "approved"
-    ) {
-      throw new AppError(ErrorCode.CONFLICT, "Agent action is not executable");
-    }
-
-    await tx
-      .update(agentActions)
-      .set({ state: "executing", updatedAt: new Date() })
-      .where(agentActionScopedWhere(companyId, actionId));
-
-    const receipt = {
-      outcome: "succeeded" as const,
-      emittedEventIds: [] as string[],
-      note: "No outbound provider send in Batch 2 slice"
+    const current = (row.parameters as Record<string, unknown>) ?? {};
+    const nextParameters: Record<string, unknown> = {
+      ...current,
+      body: patch.body,
+      ...(patch.channel ? { channel: patch.channel } : {}),
+      ...(patch.subject !== undefined ? { subject: patch.subject } : {})
     };
+
+    const payloadHash = hashPayload({
+      actionType: row.actionType,
+      parameters: nextParameters,
+      target: row.target as CanonicalEntityRefV1
+    });
 
     const updatedRows = await tx
       .update(agentActions)
       .set({
-        state: "succeeded",
-        executionReceipt: receipt,
+        parameters: nextParameters,
+        payloadHash,
+        approvedParameters: null,
         updatedAt: new Date()
       })
       .where(agentActionScopedWhere(companyId, actionId))
@@ -320,25 +388,134 @@ export async function executeAgentAction(companyId: string, actionId: string, ac
 
     const updated = updatedRows[0];
     if (!updated) {
-      throw new AppError(ErrorCode.INTERNAL_ERROR, "Failed to execute agent action");
+      throw new AppError(ErrorCode.INTERNAL_ERROR, "Failed to edit agent action");
     }
 
     await emitEventWithExecutor(tx, {
       companyId,
-      eventType: "agent.execution_succeeded",
-      actorId,
+      eventType: "agent.proposal_edited",
+      actorId: editorId,
       actorType: "user",
       entityType: "agent_action",
       entityId: actionId,
       payload: {
-        actionType: lockedRow.actionType,
-        receipt
+        actionType: row.actionType,
+        channel: patch.channel ?? current.channel
       },
-      summary: `Agent action executed (${lockedRow.actionType})`
+      summary: "Agent proposal edited by operator"
     });
 
     return mapRow(updated);
   });
+}
+
+export async function executeAgentAction(companyId: string, actionId: string, actorId: string) {
+  let persistExpiredAfterRollback = false;
+
+  try {
+    return await db.transaction(async (tx) => {
+      const row = await getActionRow(companyId, actionId, tx);
+
+      if (isAgentActionExpired(row.expiresAt)) {
+        persistExpiredAfterRollback = true;
+        throw agentActionExpiredError();
+      }
+
+      assertAgentActionExecutable(toLifecycleSlice(row));
+
+      const executableParameters = resolveExecutableParameters(row);
+      const target = row.target as CanonicalEntityRefV1;
+      const liveRef = await resolveEntityRef(companyId, target.entityType, target.entityId);
+      if (isStaleRecordVersion(target.recordVersion, liveRef.recordVersion)) {
+        throw agentActionStaleTargetError();
+      }
+
+      let authorizationDecision: Awaited<ReturnType<typeof authorizeAgentActionExecution>> | null =
+        null;
+
+      if (row.actionType === "message.send_proposed") {
+        authorizationDecision = await authorizeAgentActionExecution({
+          companyId,
+          actorId,
+          actorType: "user",
+          actionType: row.actionType,
+          parameters: executableParameters,
+          target,
+          requiresApproval: row.requiresApproval,
+          state: row.state as AgentActionState
+        });
+
+        if (!authorizationDecision.allowed) {
+          throw new AppError(
+            authorizationDecision.errorCode ?? ErrorCode.POLICY_DENIED,
+            authorizationDecision.reason
+          );
+        }
+      }
+
+      await tx
+        .update(agentActions)
+        .set({ state: "executing", updatedAt: new Date() })
+        .where(agentActionScopedWhere(companyId, actionId));
+
+      const receipt = {
+        outcome: "succeeded" as const,
+        emittedEventIds: [] as string[],
+        note: "No outbound provider send in Batch 4 slice",
+        approvedParameters: executableParameters,
+        approvedParametersHash: hashPayload({
+          actionType: row.actionType,
+          parameters: executableParameters,
+          target
+        }),
+        executedAt: new Date().toISOString(),
+        ...(authorizationDecision
+          ? {
+              authorizationDecision: {
+                policyVersion: authorizationDecision.policyVersion,
+                reason: authorizationDecision.reason
+              }
+            }
+          : {})
+      };
+
+      const updatedRows = await tx
+        .update(agentActions)
+        .set({
+          state: "succeeded",
+          executionReceipt: receipt,
+          updatedAt: new Date()
+        })
+        .where(agentActionScopedWhere(companyId, actionId))
+        .returning();
+
+      const updated = updatedRows[0];
+      if (!updated) {
+        throw new AppError(ErrorCode.INTERNAL_ERROR, "Failed to execute agent action");
+      }
+
+      await emitEventWithExecutor(tx, {
+        companyId,
+        eventType: "agent.execution_succeeded",
+        actorId,
+        actorType: "user",
+        entityType: "agent_action",
+        entityId: actionId,
+        payload: {
+          actionType: row.actionType,
+          receipt
+        },
+        summary: `Agent action executed (${row.actionType})`
+      });
+
+      return mapRow(updated);
+    });
+  } catch (error) {
+    if (persistExpiredAfterRollback) {
+      await persistTerminalExpiredState(companyId, actionId);
+    }
+    throw error;
+  }
 }
 
 export async function getAgentAction(companyId: string, actionId: string) {

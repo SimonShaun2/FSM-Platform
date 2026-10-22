@@ -1,6 +1,9 @@
+import fastifyMultipart from "@fastify/multipart";
 import type { FastifyPluginAsync } from "fastify";
 
 import { requireRole } from "../../lib/authorize.js";
+import { rejectOversizedImportBodyByContentLength } from "./upload-guards.js";
+import { csvImportMultipartLimits, csvImportMultipartParserOptions } from "./upload-limits.js";
 import {
   confirmMappingHandler,
   createImportHandler,
@@ -25,11 +28,16 @@ import {
 } from "./schemas.js";
 
 const importRoutes: FastifyPluginAsync = async (fastify) => {
+  await fastify.register(fastifyMultipart, {
+    limits: csvImportMultipartLimits,
+    throwFileSizeLimit: csvImportMultipartParserOptions.throwFileSizeLimit
+  });
+
   const authenticate = fastify.authenticate;
   const requireOwnerOrAdmin = requireRole(["owner", "admin"]);
 
   fastify.post("/imports", {
-    preHandler: [authenticate, requireOwnerOrAdmin],
+    preHandler: [rejectOversizedImportBodyByContentLength, authenticate, requireOwnerOrAdmin],
     schema: createImportRouteSchema
   }, createImportHandler);
 
