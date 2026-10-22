@@ -1,6 +1,8 @@
 "use client";
 
+import { useEffect, useState } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import { publicEnv } from "@fsm/config";
 import type {
   AutoFitResponse,
   ConfirmBookingRequestInput,
@@ -10,6 +12,7 @@ import type {
 } from "@fsm/types";
 
 import { api } from "@/src/lib/api";
+import { getAuthToken } from "@/src/lib/auth";
 import type { UnscheduledJobListItem } from "@/src/hooks/dashboard.hooks";
 
 interface PaginatedResponse<TItem> {
@@ -116,12 +119,47 @@ async function invalidateDispatchQueries(queryClient: ReturnType<typeof useQuery
 }
 
 export function useDispatchView(date: string) {
+  const queryClient = useQueryClient();
+  const [streamLive, setStreamLive] = useState(true);
+
+  useEffect(() => {
+    const token = getAuthToken();
+    if (!token) {
+      setStreamLive(false);
+      return;
+    }
+
+    const params = new URLSearchParams({
+      date,
+      access_token: token
+    });
+    const streamUrl = `${publicEnv.NEXT_PUBLIC_API_URL}/api/v1/dispatch/stream?${params.toString()}`;
+    const eventSource = new EventSource(streamUrl);
+
+    eventSource.onopen = () => {
+      setStreamLive(true);
+    };
+
+    eventSource.addEventListener("ping", () => {
+      void invalidateDispatchQueries(queryClient);
+    });
+
+    eventSource.onerror = () => {
+      setStreamLive(false);
+      eventSource.close();
+    };
+
+    return () => {
+      setStreamLive(false);
+      eventSource.close();
+    };
+  }, [date, queryClient]);
+
   return useQuery({
     queryKey: ["dispatch", date],
     queryFn: () => api.get<DispatchView>(`/api/v1/dispatch?date=${date}`),
     staleTime: 60 * 1000,
-    // Fallback when dispatch SSE is disconnected (AGENTS.md — 30s poll)
-    refetchInterval: 30_000,
+    refetchInterval: streamLive ? false : 30_000,
     refetchIntervalInBackground: true
   });
 }
