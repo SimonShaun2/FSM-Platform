@@ -2,7 +2,7 @@ import type { Processor } from "bullmq";
 import { Worker } from "bullmq";
 import pino from "pino";
 
-import { queueBaseOptions } from "@fsm/jobs";
+import { buildDefaultWorkerOptions } from "@fsm/jobs";
 
 const workerLogger = pino({
   name: "fsm-worker"
@@ -45,9 +45,7 @@ export function createWorker<TData extends Record<string, unknown>>(
         throw error;
       }
     },
-    {
-      ...queueBaseOptions
-    }
+    buildDefaultWorkerOptions()
   );
 
   worker.on("failed", (job, error) => {
