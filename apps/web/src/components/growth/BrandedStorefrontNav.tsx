@@ -11,6 +11,7 @@ import {
 
 interface BrandedStorefrontNavProps {
   bookHref: string;
+  inquireHref: string;
   showReviewsLink: boolean;
   primaryClassName: string;
 }
@@ -21,7 +22,12 @@ const NAV_LINKS = [
   { href: "#areas", label: "Areas we serve" }
 ] as const;
 
-export function BrandedStorefrontNav({ bookHref, showReviewsLink, primaryClassName }: BrandedStorefrontNavProps) {
+export function BrandedStorefrontNav({
+  bookHref,
+  inquireHref,
+  showReviewsLink,
+  primaryClassName
+}: BrandedStorefrontNavProps) {
   const [mobileOpen, setMobileOpen] = useState(false);
   const toggleRef = useRef<HTMLButtonElement>(null);
   const panelRef = useRef<HTMLElement>(null);
@@ -77,6 +83,9 @@ export function BrandedStorefrontNav({ bookHref, showReviewsLink, primaryClassNa
             {link.label}
           </a>
         ))}
+        <Link href={inquireHref} className="text-[#2f7d4f] hover:underline">
+          Request a quote
+        </Link>
       </nav>
 
       <button
@@ -112,6 +121,11 @@ export function BrandedStorefrontNav({ bookHref, showReviewsLink, primaryClassNa
                 </a>
               </li>
             ))}
+            <li>
+              <Link href={inquireHref} className="block py-1" onClick={() => closeMenu(true)}>
+                Request a quote
+              </Link>
+            </li>
             <li>
               <Link
                 href={bookHref}

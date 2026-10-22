@@ -38,7 +38,13 @@ type TableName =
   | "fileAttachments"
   | "onTheWayNotifications"
   | "bookingRequests"
-  | "bookingSettings";
+  | "bookingSettings"
+  | "agentActions"
+  | "inquirySubmitIdempotency"
+  | "growthIntakeChecks"
+  | "growthIntakeIdentityCandidates"
+  | "growthIntakeFindings"
+  | "growthIntakeAuditEvents";
 
 type UserRole = "owner" | "admin" | "dispatcher" | "office" | "technician";
 type TechnicianStatus = "active" | "inactive" | "on_leave";
@@ -887,6 +893,904 @@ export interface TestBookingRequestRecord {
   deletedAt: Date | null;
 }
 
+type GrowthCheckStatus =
+  | "intake_draft"
+  | "queued"
+  | "scanning"
+  | "review_needed"
+  | "completed"
+  | "archived";
+type GrowthCheckIdentitySource = "manual" | "website" | "google_business" | "facebook" | "import" | "ai";
+type GrowthCheckFindingSeverity = "info" | "low" | "medium" | "high" | "critical";
+type GrowthCheckFindingStatus = "open" | "acknowledged" | "resolved" | "dismissed";
+type GrowthIntakeAuditEntityType =
+  | "growth_intake_check"
+  | "growth_intake_identity_candidate"
+  | "growth_intake_finding";
+type GrowthCheckAuditAction = "created" | "updated" | "deleted";
+
+export interface TestGrowthIntakeCheckRecord {
+  id: string;
+  companyId: string;
+  status: GrowthCheckStatus;
+  ownerUserId: string;
+  createdById: string;
+  reviewNeeded: boolean;
+  lastScanAt: Date | null;
+  businessName: string;
+  websiteUrl: string | null;
+  industry: string | null;
+  trade: string | null;
+  city: string | null;
+  state: string | null;
+  zip: string | null;
+  contactName: string | null;
+  contactEmail: string | null;
+  contactPhone: string | null;
+  targetMarket: string | null;
+  googleBusinessProfileUrl: string | null;
+  facebookPageUrl: string | null;
+  intakeNotes: string | null;
+  createdAt: Date;
+  updatedAt: Date;
+  deletedAt: Date | null;
+}
+
+export interface TestGrowthIntakeIdentityCandidateRecord {
+  id: string;
+  companyId: string;
+  growthIntakeCheckId: string;
+  displayName: string;
+  domain: string | null;
+  source: GrowthCheckIdentitySource;
+  confidenceScore: string | null;
+  isPrimary: boolean;
+  metadata: Record<string, unknown>;
+  createdAt: Date;
+  updatedAt: Date;
+  deletedAt: Date | null;
+}
+
+export interface TestGrowthIntakeFindingRecord {
+  id: string;
+  companyId: string;
+  growthIntakeCheckId: string;
+  category: string;
+  severity: GrowthCheckFindingSeverity;
+  status: GrowthCheckFindingStatus;
+  title: string;
+  description: string | null;
+  recommendation: string | null;
+  evidence: Record<string, unknown>;
+  createdAt: Date;
+  updatedAt: Date;
+  deletedAt: Date | null;
+}
+
+export interface TestGrowthIntakeAuditEventRecord {
+  id: string;
+  companyId: string;
+  entityType: GrowthIntakeAuditEntityType;
+  entityId: string;
+  growthIntakeCheckId: string | null;
+  action: GrowthCheckAuditAction;
+  actorId: string | null;
+  beforeState: Record<string, unknown> | null;
+  afterState: Record<string, unknown> | null;
+  createdAt: Date;
+}
+
+type AgentProduct = "revenue" | "scheduling" | "service" | "retention" | "owner";
+type AgentActionState =
+  | "proposed"
+  | "policy_evaluated"
+  | "awaiting_approval"
+  | "approved"
+  | "executing"
+  | "succeeded"
+  | "failed"
+  | "expired"
+  | "cancelled"
+  | "escalated"
+  | "reversed";
+
+export interface TestCompanyRecord {
+  id: string;
+  name: string;
+  slug: string;
+  phone: string | null;
+  email: string | null;
+  website: string | null;
+  logoUrl: string | null;
+  addressLine1: string | null;
+  addressLine2: string | null;
+  city: string | null;
+  state: string | null;
+  zip: string | null;
+  country: string;
+  timezone: string;
+  stripeCustomerId: string | null;
+  stripeAccountId: string | null;
+  settings: Record<string, unknown>;
+  createdAt: Date;
+  updatedAt: Date;
+  deletedAt: Date | null;
+}
+
+export interface TestUserRecord {
+  id: string;
+  companyId: string;
+  email: string;
+  passwordHash: string | null;
+  passwordChangedAt: Date | null;
+  firstName: string;
+  lastName: string;
+  phone: string | null;
+  role: UserRole;
+  avatarUrl: string | null;
+  isActive: boolean;
+  lastLoginAt: Date | null;
+  technicianId: string | null;
+  createdAt: Date;
+  updatedAt: Date;
+  deletedAt: Date | null;
+}
+
+export interface TestRefreshTokenRecord {
+  id: string;
+  companyId: string;
+  userId: string;
+  tokenHash: string;
+  expiresAt: Date;
+  revokedAt: Date | null;
+  createdAt: Date;
+}
+
+export interface TestCustomerRecord {
+  id: string;
+  companyId: string;
+  firstName: string;
+  lastName: string;
+  displayName: string | null;
+  email: string | null;
+  phone: string | null;
+  altPhone: string | null;
+  leadSource: string | null;
+  referredBy: string | null;
+  tags: string[] | null;
+  internalNotes: string | null;
+  lifetimeValue: string | null;
+  totalJobs: number | null;
+  lastServiceDate: string | null;
+  firstServiceDate: string | null;
+  prefersSms: boolean | null;
+  prefersEmail: boolean | null;
+  doNotContact: boolean | null;
+  stripeCustomerId: string | null;
+  importSessionId: string | null;
+  createdAt: Date;
+  updatedAt: Date;
+  deletedAt: Date | null;
+}
+
+export interface TestPropertyRecord {
+  id: string;
+  companyId: string;
+  customerId: string;
+  addressLine1: string;
+  addressLine2: string | null;
+  city: string;
+  state: string;
+  zip: string;
+  country: string | null;
+  lat: string | null;
+  lng: string | null;
+  type: "residential" | "commercial" | "industrial" | "multi_family";
+  sqft: number | null;
+  yearBuilt: number | null;
+  accessNotes: string | null;
+  notes: string | null;
+  isPrimary: boolean;
+  isActive: boolean;
+  importSessionId: string | null;
+  createdAt: Date;
+  updatedAt: Date;
+  deletedAt: Date | null;
+}
+
+export interface TestAssetRecord {
+  id: string;
+  companyId: string;
+  propertyId: string;
+  customerId: string;
+  name: string;
+  assetType: string;
+  brand: string | null;
+  model: string | null;
+  serialNumber: string | null;
+  installDate: string | null;
+  warrantyExpiration: string | null;
+  lastServiceDate: string | null;
+  nextServiceDate: string | null;
+  condition: "excellent" | "good" | "fair" | "poor" | "failed" | null;
+  conditionNotes: string | null;
+  conditionScore: number | null;
+  replacementProbability: string | null;
+  photoUrls: string[] | null;
+  notes: string | null;
+  isActive: boolean;
+  importSessionId: string | null;
+  createdAt: Date;
+  updatedAt: Date;
+  deletedAt: Date | null;
+}
+
+export interface TestJobRecord {
+  id: string;
+  companyId: string;
+  customerId: string;
+  jobNumber: string;
+  propertyId: string | null;
+  assetId: string | null;
+  technicianId: string | null;
+  assignedById: string | null;
+  type: JobType;
+  priority: JobPriority;
+  status: JobStatus;
+  leadSource: string | null;
+  title: string;
+  description: string | null;
+  scheduledStart: Date | null;
+  scheduledEnd: Date | null;
+  scheduledDurationMinutes: number | null;
+  actualStart: Date | null;
+  actualEnd: Date | null;
+  techNotes: string | null;
+  completionNotes: string | null;
+  signatureUrl: string | null;
+  signedAt: Date | null;
+  signedByName: string | null;
+  estimateTotal: string | null;
+  invoiceTotal: string | null;
+  amountPaid: string | null;
+  maintenancePlanId: string | null;
+  parentJobId: string | null;
+  tags: string[] | null;
+  importSessionId: string | null;
+  createdAt: Date;
+  updatedAt: Date;
+  deletedAt: Date | null;
+}
+
+export interface TestImportValidationError {
+  row: number;
+  field: string;
+  message: string;
+  value: string;
+}
+
+export interface TestImportSessionRecord {
+  id: string;
+  companyId: string;
+  createdById: string | null;
+  entityType: ImportEntityType;
+  status: ImportSessionStatus;
+  fileName: string;
+  fileUrl: string;
+  totalRows: number | null;
+  validRows: number | null;
+  errorRows: number | null;
+  importedRows: number | null;
+  skippedRows: number | null;
+  duplicateRows: number | null;
+  columnMappings: Record<string, string | null>;
+  validationErrors: TestImportValidationError[];
+  aiInferences: Record<string, unknown>;
+  rolledBackAt: Date | null;
+  rolledBackById: string | null;
+  completedAt: Date | null;
+  errorMessage: string | null;
+  createdAt: Date;
+  updatedAt: Date;
+  deletedAt: Date | null;
+}
+
+export interface TestEstimateRecord {
+  id: string;
+  companyId: string;
+  estimateNumber: string;
+  jobId: string | null;
+  customerId: string;
+  propertyId: string | null;
+  createdById: string | null;
+  status: EstimateStatus;
+  tierLabel: string | null;
+  tierGroupId: string | null;
+  isSelectedTier: boolean | null;
+  subtotal: string;
+  taxRate: string | null;
+  taxAmount: string | null;
+  discountAmount: string | null;
+  total: string;
+  title: string | null;
+  messageToCustomer: string | null;
+  internalNotes: string | null;
+  approvalToken: string | null;
+  approvedAt: Date | null;
+  approvedByName: string | null;
+  approvedSignatureUrl: string | null;
+  declinedAt: Date | null;
+  declineReason: string | null;
+  expiresAt: Date | null;
+  sentAt: Date | null;
+  viewedAt: Date | null;
+  followUpSentAt: Date | null;
+  financingOffered: boolean | null;
+  createdAt: Date;
+  updatedAt: Date;
+  deletedAt: Date | null;
+}
+
+export interface TestEstimateItemRecord {
+  id: string;
+  estimateId: string;
+  companyId: string;
+  name: string;
+  description: string | null;
+  itemType: EstimateItemType;
+  quantity: string;
+  unitPrice: string;
+  total: string;
+  isTaxable: boolean | null;
+  sortOrder: number | null;
+  createdAt: Date;
+  updatedAt: Date;
+  deletedAt: Date | null;
+}
+
+export interface TestInvoiceRecord {
+  id: string;
+  companyId: string;
+  invoiceNumber: string;
+  jobId: string | null;
+  estimateId: string | null;
+  customerId: string;
+  createdById: string | null;
+  status: InvoiceStatus;
+  subtotal: string;
+  taxRate: string | null;
+  taxAmount: string | null;
+  discountAmount: string | null;
+  total: string;
+  amountPaid: string | null;
+  balanceDue: string;
+  issuedAt: Date | null;
+  dueAt: Date | null;
+  sentAt: Date | null;
+  viewedAt: Date | null;
+  paidAt: Date | null;
+  stripePaymentLinkId: string | null;
+  stripePaymentLinkUrl: string | null;
+  paymentToken: string | null;
+  reminder1SentAt: Date | null;
+  reminder2SentAt: Date | null;
+  reminder3SentAt: Date | null;
+  title: string | null;
+  messageToCustomer: string | null;
+  internalNotes: string | null;
+  createdAt: Date;
+  updatedAt: Date;
+  deletedAt: Date | null;
+}
+
+export interface TestInvoiceItemRecord {
+  id: string;
+  invoiceId: string;
+  companyId: string;
+  name: string;
+  description: string | null;
+  itemType: InvoiceItemType;
+  quantity: string;
+  unitPrice: string;
+  total: string;
+  isTaxable: boolean | null;
+  sortOrder: number | null;
+  createdAt: Date;
+  updatedAt: Date;
+  deletedAt: Date | null;
+}
+
+export interface TestPaymentRecord {
+  id: string;
+  companyId: string;
+  invoiceId: string;
+  customerId: string;
+  collectedById: string | null;
+  amount: string;
+  method: PaymentMethod;
+  status: PaymentStatus;
+  stripePaymentIntentId: string | null;
+  stripeChargeId: string | null;
+  checkNumber: string | null;
+  referenceNumber: string | null;
+  notes: string | null;
+  paidAt: Date | null;
+  createdAt: Date;
+  updatedAt: Date;
+  deletedAt: Date | null;
+}
+
+export interface TestJobNoteRecord {
+  id: string;
+  companyId: string;
+  jobId: string;
+  authorId: string | null;
+  content: string;
+  isInternal: boolean;
+  createdAt: Date;
+  updatedAt: Date;
+  deletedAt: Date | null;
+}
+
+export interface TestJobPhotoRecord {
+  id: string;
+  companyId: string;
+  jobId: string;
+  uploadedById: string | null;
+  url: string;
+  thumbnailUrl: string | null;
+  caption: string | null;
+  takenAt: Date | null;
+  photoType: JobPhotoType | null;
+  createdAt: Date;
+  updatedAt: Date;
+  deletedAt: Date | null;
+}
+
+export interface TestServiceAgreementTemplateRecord {
+  id: string;
+  companyId: string;
+  name: string;
+  description: string | null;
+  includedServices: string[] | null;
+  visitsPerYear: number;
+  frequency: MaintenancePlanFrequency;
+  monthlyPrice: string | null;
+  annualPrice: string | null;
+  stripeMthlyPriceId: string | null;
+  stripeAnnualPriceId: string | null;
+  sortOrder: number | null;
+  isActive: boolean;
+  applicableAssetTypes: string[] | null;
+  notes: string | null;
+  createdAt: Date;
+  updatedAt: Date;
+  deletedAt: Date | null;
+}
+
+export interface TestMaintenancePlanRecord {
+  id: string;
+  companyId: string;
+  customerId: string;
+  propertyId: string | null;
+  serviceAgreementTemplateId: string | null;
+  name: string;
+  description: string | null;
+  includedServices: string[] | null;
+  assetIds: string[] | null;
+  status: MaintenancePlanStatus;
+  frequency: MaintenancePlanFrequency;
+  price: string | null;
+  billingCycle: ServiceAgreementBillingCycle | null;
+  stripeSubscriptionId: string | null;
+  stripePriceId: string | null;
+  stripeCurrentPeriodStart: Date | null;
+  stripeCurrentPeriodEnd: Date | null;
+  stripeCancelAtPeriodEnd: boolean | null;
+  startDate: string;
+  endDate: string | null;
+  nextServiceDate: string | null;
+  lastServiceDate: string | null;
+  notes: string | null;
+  deletedAt: Date | null;
+  createdAt: Date;
+  updatedAt: Date;
+}
+
+export interface TestMaintenanceVisitRecord {
+  id: string;
+  companyId: string;
+  maintenancePlanId: string;
+  jobId: string | null;
+  scheduledDate: string | null;
+  completedDate: string | null;
+  notes: string | null;
+  createdAt: Date;
+  updatedAt: Date;
+  deletedAt: Date | null;
+}
+
+export interface TestAutomationRuleRecord {
+  id: string;
+  companyId: string;
+  ruleType: AutomationRuleType;
+  isEnabled: boolean;
+  delayHours: number | null;
+  thresholdDays: number | null;
+  config: Record<string, unknown>;
+  createdAt: Date;
+  updatedAt: Date;
+  deletedAt: Date | null;
+}
+
+export interface TestAiRecommendationRecord {
+  id: string;
+  companyId: string;
+  type: AiRecommendationType;
+  status: AiRecommendationStatus;
+  customerId: string | null;
+  propertyId: string | null;
+  assetId: string | null;
+  jobId: string | null;
+  estimateId: string | null;
+  invoiceId: string | null;
+  estimatedRevenue: string | null;
+  headline: string;
+  body: string;
+  suggestedAction: string | null;
+  suggestedMessage: string | null;
+  urgencyScore: number | null;
+  confidenceScore: number | null;
+  actionedAt: Date | null;
+  actionedById: string | null;
+  dismissedAt: Date | null;
+  snoozedUntil: Date | null;
+  expiresAt: Date | null;
+  sourceEventIds: string[] | null;
+  createdAt: Date;
+  updatedAt: Date;
+  deletedAt: Date | null;
+}
+
+export interface TestCampaignRecord {
+  id: string;
+  companyId: string;
+  createdById: string | null;
+  type: CampaignType;
+  status: CampaignStatus;
+  name: string;
+  subject: string | null;
+  body: string;
+  channel: MessageChannel;
+  isAiGenerated: boolean | null;
+  aiRecommendationId: string | null;
+  scheduledAt: Date | null;
+  sentAt: Date | null;
+  recipientCount: number | null;
+  deliveredCount: number | null;
+  openedCount: number | null;
+  repliedCount: number | null;
+  convertedCount: number | null;
+  revenueAttributed: string | null;
+  createdAt: Date;
+  updatedAt: Date;
+  deletedAt: Date | null;
+}
+
+export interface TestCampaignRecipientRecord {
+  id: string;
+  campaignId: string;
+  customerId: string;
+  companyId: string;
+  sentAt: Date | null;
+  deliveredAt: Date | null;
+  openedAt: Date | null;
+  repliedAt: Date | null;
+  convertedAt: Date | null;
+  conversionJobId: string | null;
+  sentToPhone: string | null;
+  sentToEmail: string | null;
+  unsubscribedAt: Date | null;
+  createdAt: Date;
+  updatedAt: Date;
+  deletedAt: Date | null;
+}
+
+export interface TestMessageLogRecord {
+  id: string;
+  companyId: string;
+  customerId: string | null;
+  jobId: string | null;
+  campaignId: string | null;
+  channel: MessageChannel;
+  direction: MessageDirection;
+  toAddress: string;
+  fromAddress: string | null;
+  subject: string | null;
+  body: string;
+  providerMessageId: string | null;
+  providerStatus: string | null;
+  sentAt: Date | null;
+  deliveredAt: Date | null;
+  failedAt: Date | null;
+  failureReason: string | null;
+  createdAt: Date;
+  updatedAt: Date;
+  deletedAt: Date | null;
+}
+
+export interface TestProductCatalogRecord {
+  id: string;
+  companyId: string;
+  name: string;
+  description: string | null;
+  category: ProductCategory;
+  sku: string | null;
+  unitPrice: string;
+  cost: string | null;
+  unit: string | null;
+  isTaxable: boolean | null;
+  isActive: boolean;
+  applicableAssetTypes: string[] | null;
+  sortOrder: number | null;
+  createdAt: Date;
+  updatedAt: Date;
+  deletedAt: Date | null;
+}
+
+export interface TestTechnicianRecord {
+  id: string;
+  companyId: string;
+  userId: string | null;
+  firstName: string;
+  lastName: string;
+  email: string | null;
+  phone: string;
+  avatarUrl: string | null;
+  skills: string[] | null;
+  serviceAreaIds: string[] | null;
+  serviceZipCodes: string[] | null;
+  availableDays: string[] | null;
+  hoursPerDay: string | null;
+  totalJobsCompleted: number | null;
+  avgJobDurationMinutes: number | null;
+  estimateCloseRate: string | null;
+  avgTicketValue: string | null;
+  status: TechnicianStatus;
+  calendarColor: string | null;
+  notes: string | null;
+  createdAt: Date;
+  updatedAt: Date;
+  deletedAt: Date | null;
+}
+
+export interface TestJobTaskRecord {
+  id: string;
+  companyId: string;
+  jobId: string;
+  assignedToId: string | null;
+  title: string;
+  description: string | null;
+  status: JobTaskStatus;
+  isRequired: boolean | null;
+  completedAt: Date | null;
+  completedById: string | null;
+  estimatedMinutes: number | null;
+  actualMinutes: number | null;
+  sortOrder: number | null;
+  notes: string | null;
+  createdAt: Date;
+  updatedAt: Date;
+  deletedAt: Date | null;
+}
+
+export interface TestJobProductRecord {
+  id: string;
+  companyId: string;
+  jobId: string;
+  productCatalogId: string | null;
+  name: string;
+  description: string | null;
+  category: ProductCategory;
+  quantity: string;
+  unitPrice: string;
+  total: string;
+  isTaxable: boolean | null;
+  addedById: string | null;
+  isUpsell: boolean | null;
+  upsellApproved: boolean | null;
+  upsellApprovedAt: Date | null;
+  createdAt: Date;
+  updatedAt: Date;
+  deletedAt: Date | null;
+}
+
+export interface TestScheduleSlotRecord {
+  id: string;
+  companyId: string;
+  technicianId: string;
+  jobId: string | null;
+  isBlockedTime: boolean | null;
+  blockReason: string | null;
+  startTime: Date;
+  endTime: Date;
+  travelMinutesBefore: number | null;
+  isConfirmed: boolean | null;
+  notes: string | null;
+  createdAt: Date;
+  updatedAt: Date;
+  deletedAt: Date | null;
+}
+
+export interface TestActivityEventRecord {
+  id: string;
+  companyId: string;
+  eventType: string;
+  actorId: string | null;
+  actorType: string | null;
+  actorName: string | null;
+  entityType: string;
+  entityId: string;
+  customerId: string | null;
+  jobId: string | null;
+  estimateId: string | null;
+  invoiceId: string | null;
+  payload: unknown;
+  summary: string;
+  occurredAt: Date;
+}
+
+export interface TestTimeEntryRecord {
+  id: string;
+  companyId: string;
+  jobId: string;
+  technicianId: string;
+  startedAt: Date;
+  endedAt: Date | null;
+  durationMinutes: number | null;
+  entryType: TimeEntryType | null;
+  notes: string | null;
+  travelFromAddress: string | null;
+  createdAt: Date;
+  updatedAt: Date;
+  deletedAt: Date | null;
+}
+
+export interface TestReviewRequestRecord {
+  id: string;
+  companyId: string;
+  jobId: string | null;
+  customerId: string;
+  technicianId: string | null;
+  referenceId: string;
+  status: ReviewRequestStatus;
+  channel: MessageChannel;
+  reviewUrl: string | null;
+  sentAt: Date | null;
+  clickedAt: Date | null;
+  completedAt: Date | null;
+  rating: number | null;
+  reviewText: string | null;
+  createdAt: Date;
+  updatedAt: Date;
+  deletedAt: Date | null;
+}
+
+export interface TestFileAttachmentRecord {
+  id: string;
+  companyId: string;
+  entityType: AttachmentEntityType;
+  entityId: string;
+  jobId: string | null;
+  customerId: string | null;
+  uploadedById: string | null;
+  fileName: string;
+  fileUrl: string;
+  thumbnailUrl: string | null;
+  mimeType: string | null;
+  fileSizeBytes: number | null;
+  fileType: AttachmentFileType | null;
+  caption: string | null;
+  photoType: JobPhotoType | null;
+  takenAt: Date | null;
+  createdAt: Date;
+  updatedAt: Date;
+  deletedAt: Date | null;
+}
+
+export interface TestOnTheWayNotificationRecord {
+  id: string;
+  companyId: string;
+  jobId: string;
+  technicianId: string;
+  customerId: string;
+  sentAt: Date | null;
+  channel: MessageChannel;
+  message: string | null;
+  estimatedArrivalMinutes: number | null;
+  technicianLat: string | null;
+  technicianLng: string | null;
+  createdAt: Date;
+  updatedAt: Date;
+  deletedAt: Date | null;
+}
+
+export interface TestBookingRequestRecord {
+  id: string;
+  companyId: string;
+  customerId: string | null;
+  jobId: string | null;
+  assignedTechnicianId: string | null;
+  firstName: string;
+  lastName: string;
+  phone: string;
+  email: string | null;
+  addressLine1: string;
+  addressLine2: string | null;
+  city: string;
+  state: string;
+  zip: string;
+  propertyType: string | null;
+  serviceCategory: string | null;
+  serviceType: string | null;
+  serviceDetail: string | null;
+  urgency: BookingUrgency | null;
+  customerNotes: string | null;
+  preferredDate: string | null;
+  preferredWindow: PreferredBookingWindow | null;
+  status: BookingRequestStatus;
+  source: BookingSource;
+  referenceNumber: string | null;
+  isPropertyOwner: boolean | null;
+  smsConsentAppointments: boolean | null;
+  smsConsentMarketing: boolean | null;
+  confirmedAt: Date | null;
+  confirmedById: string | null;
+  confirmationSentAt: Date | null;
+  cancelledAt: Date | null;
+  cancellationReason: string | null;
+  createdAt: Date;
+  updatedAt: Date;
+  deletedAt: Date | null;
+}
+
+export interface TestAgentActionRecord {
+  id: string;
+  companyId: string;
+  agentProduct: AgentProduct;
+  actionType: string;
+  parameters: Record<string, unknown>;
+  target: Record<string, unknown>;
+  sourceEventIds: string[];
+  idempotencyKey: string;
+  payloadHash: string;
+  policyVersion: string;
+  requiresApproval: boolean;
+  state: AgentActionState;
+  confidence: string | null;
+  reason: string | null;
+  expiresAt: Date;
+  reviewerId: string | null;
+  executionReceipt: Record<string, unknown> | null;
+  createdAt: Date;
+  updatedAt: Date;
+  deletedAt: Date | null;
+}
+
+export interface TestInquirySubmitIdempotencyRecord {
+  id: string;
+  companyId: string;
+  idempotencyKey: string;
+  payloadHash: string;
+  bookingRequestId: string;
+  responseSnapshot: Record<string, unknown>;
+  expiresAt: Date;
+  createdAt: Date;
+  updatedAt: Date;
+  deletedAt: Date | null;
+}
+
+
 export interface TestBookingSettingsRecord {
   id: string;
   companyId: string;
@@ -948,7 +1852,13 @@ type AnyTestRecord =
   | TestFileAttachmentRecord
   | TestOnTheWayNotificationRecord
   | TestBookingRequestRecord
-  | TestBookingSettingsRecord;
+  | TestBookingSettingsRecord
+  | TestAgentActionRecord
+  | TestInquirySubmitIdempotencyRecord
+  | TestGrowthIntakeCheckRecord
+  | TestGrowthIntakeIdentityCandidateRecord
+  | TestGrowthIntakeFindingRecord
+  | TestGrowthIntakeAuditEventRecord;
 
 type MockTable =
   | typeof companiesTable
@@ -985,7 +1895,13 @@ type MockTable =
   | typeof fileAttachmentsTable
   | typeof onTheWayNotificationsTable
   | typeof bookingRequestsTable
-  | typeof bookingSettingsTable;
+  | typeof bookingSettingsTable
+  | typeof agentActionsTable
+  | typeof inquirySubmitIdempotencyTable
+  | typeof growthIntakeChecksTable
+  | typeof growthIntakeIdentityCandidatesTable
+  | typeof growthIntakeFindingsTable
+  | typeof growthIntakeAuditEventsTable;
 
 interface TestState {
   companies: TestCompanyRecord[];
@@ -1023,6 +1939,12 @@ interface TestState {
   onTheWayNotifications: TestOnTheWayNotificationRecord[];
   bookingRequests: TestBookingRequestRecord[];
   bookingSettings: TestBookingSettingsRecord[];
+  agentActions: TestAgentActionRecord[];
+  inquirySubmitIdempotency: TestInquirySubmitIdempotencyRecord[];
+  growthIntakeChecks: TestGrowthIntakeCheckRecord[];
+  growthIntakeIdentityCandidates: TestGrowthIntakeIdentityCandidateRecord[];
+  growthIntakeFindings: TestGrowthIntakeFindingRecord[];
+  growthIntakeAuditEvents: TestGrowthIntakeAuditEventRecord[];
 }
 
 interface OrderByDefinition {
@@ -1817,6 +2739,119 @@ const bookingRequestsTable = {
   deletedAt: "deletedAt"
 } as const;
 
+const agentActionsTable = {
+  __name: "agentActions",
+  id: "id",
+  companyId: "companyId",
+  agentProduct: "agentProduct",
+  actionType: "actionType",
+  parameters: "parameters",
+  target: "target",
+  sourceEventIds: "sourceEventIds",
+  idempotencyKey: "idempotencyKey",
+  payloadHash: "payloadHash",
+  policyVersion: "policyVersion",
+  requiresApproval: "requiresApproval",
+  state: "state",
+  confidence: "confidence",
+  reason: "reason",
+  expiresAt: "expiresAt",
+  reviewerId: "reviewerId",
+  executionReceipt: "executionReceipt",
+  createdAt: "createdAt",
+  updatedAt: "updatedAt",
+  deletedAt: "deletedAt"
+} as const;
+
+const inquirySubmitIdempotencyTable = {
+  __name: "inquirySubmitIdempotency",
+  id: "id",
+  companyId: "companyId",
+  idempotencyKey: "idempotencyKey",
+  payloadHash: "payloadHash",
+  bookingRequestId: "bookingRequestId",
+  responseSnapshot: "responseSnapshot",
+  expiresAt: "expiresAt",
+  createdAt: "createdAt",
+  updatedAt: "updatedAt",
+  deletedAt: "deletedAt"
+} as const;
+
+const growthIntakeChecksTable = {
+  __name: "growthIntakeChecks",
+  id: "id",
+  companyId: "companyId",
+  status: "status",
+  ownerUserId: "ownerUserId",
+  createdById: "createdById",
+  reviewNeeded: "reviewNeeded",
+  lastScanAt: "lastScanAt",
+  businessName: "businessName",
+  websiteUrl: "websiteUrl",
+  industry: "industry",
+  trade: "trade",
+  city: "city",
+  state: "state",
+  zip: "zip",
+  contactName: "contactName",
+  contactEmail: "contactEmail",
+  contactPhone: "contactPhone",
+  targetMarket: "targetMarket",
+  googleBusinessProfileUrl: "googleBusinessProfileUrl",
+  facebookPageUrl: "facebookPageUrl",
+  intakeNotes: "intakeNotes",
+  createdAt: "createdAt",
+  updatedAt: "updatedAt",
+  deletedAt: "deletedAt"
+} as const;
+
+const growthIntakeIdentityCandidatesTable = {
+  __name: "growthIntakeIdentityCandidates",
+  id: "id",
+  companyId: "companyId",
+  growthIntakeCheckId: "growthIntakeCheckId",
+  displayName: "displayName",
+  domain: "domain",
+  source: "source",
+  confidenceScore: "confidenceScore",
+  isPrimary: "isPrimary",
+  metadata: "metadata",
+  createdAt: "createdAt",
+  updatedAt: "updatedAt",
+  deletedAt: "deletedAt"
+} as const;
+
+const growthIntakeFindingsTable = {
+  __name: "growthIntakeFindings",
+  id: "id",
+  companyId: "companyId",
+  growthIntakeCheckId: "growthIntakeCheckId",
+  category: "category",
+  severity: "severity",
+  status: "status",
+  title: "title",
+  description: "description",
+  recommendation: "recommendation",
+  evidence: "evidence",
+  createdAt: "createdAt",
+  updatedAt: "updatedAt",
+  deletedAt: "deletedAt"
+} as const;
+
+const growthIntakeAuditEventsTable = {
+  __name: "growthIntakeAuditEvents",
+  id: "id",
+  companyId: "companyId",
+  entityType: "entityType",
+  entityId: "entityId",
+  growthIntakeCheckId: "growthIntakeCheckId",
+  action: "action",
+  actorId: "actorId",
+  beforeState: "beforeState",
+  afterState: "afterState",
+  createdAt: "createdAt"
+} as const;
+
 const bookingSettingsTable = {
   __name: "bookingSettings",
   id: "id",
@@ -1877,7 +2912,13 @@ const state: TestState = {
   fileAttachments: [],
   onTheWayNotifications: [],
   bookingRequests: [],
-  bookingSettings: []
+  bookingSettings: [],
+  agentActions: [],
+  inquirySubmitIdempotency: [],
+  growthIntakeChecks: [],
+  growthIntakeIdentityCandidates: [],
+  growthIntakeFindings: [],
+  growthIntakeAuditEvents: []
 };
 
 function nextId(): string {
@@ -1928,6 +2969,20 @@ function restoreState(snapshot: TestState): void {
   );
   state.bookingRequests.splice(0, state.bookingRequests.length, ...snapshot.bookingRequests);
   state.bookingSettings.splice(0, state.bookingSettings.length, ...snapshot.bookingSettings);
+  state.agentActions.splice(0, state.agentActions.length, ...snapshot.agentActions);
+  state.inquirySubmitIdempotency.splice(
+    0,
+    state.inquirySubmitIdempotency.length,
+    ...snapshot.inquirySubmitIdempotency
+  );
+  state.growthIntakeChecks.splice(0, state.growthIntakeChecks.length, ...snapshot.growthIntakeChecks);
+  state.growthIntakeIdentityCandidates.splice(
+    0,
+    state.growthIntakeIdentityCandidates.length,
+    ...snapshot.growthIntakeIdentityCandidates
+  );
+  state.growthIntakeFindings.splice(0, state.growthIntakeFindings.length, ...snapshot.growthIntakeFindings);
+  state.growthIntakeAuditEvents.splice(0, state.growthIntakeAuditEvents.length, ...snapshot.growthIntakeAuditEvents);
 }
 
 function getRows(tableName: TableName): AnyTestRecord[] {
@@ -2002,6 +3057,18 @@ function getRows(tableName: TableName): AnyTestRecord[] {
       return state.bookingRequests;
     case "bookingSettings":
       return state.bookingSettings;
+    case "agentActions":
+      return state.agentActions;
+    case "inquirySubmitIdempotency":
+      return state.inquirySubmitIdempotency;
+    case "growthIntakeChecks":
+      return state.growthIntakeChecks;
+    case "growthIntakeIdentityCandidates":
+      return state.growthIntakeIdentityCandidates;
+    case "growthIntakeFindings":
+      return state.growthIntakeFindings;
+    case "growthIntakeAuditEvents":
+      return state.growthIntakeAuditEvents;
   }
 }
 
@@ -3049,6 +4116,173 @@ function createBookingSettingsRecord(
   };
 }
 
+function createInquirySubmitIdempotencyRecord(
+  values: Partial<TestInquirySubmitIdempotencyRecord> &
+    Pick<
+      TestInquirySubmitIdempotencyRecord,
+      "companyId" | "idempotencyKey" | "payloadHash" | "bookingRequestId" | "responseSnapshot" | "expiresAt"
+    >
+): TestInquirySubmitIdempotencyRecord {
+  const now = new Date();
+
+  return {
+    id: values.id ?? nextId(),
+    companyId: values.companyId,
+    idempotencyKey: values.idempotencyKey,
+    payloadHash: values.payloadHash,
+    bookingRequestId: values.bookingRequestId,
+    responseSnapshot: values.responseSnapshot,
+    expiresAt: values.expiresAt,
+    createdAt: values.createdAt ?? now,
+    updatedAt: values.updatedAt ?? now,
+    deletedAt: values.deletedAt ?? null
+  };
+}
+
+function createAgentActionRecord(
+  values: Partial<TestAgentActionRecord> &
+    Pick<
+      TestAgentActionRecord,
+      | "companyId"
+      | "agentProduct"
+      | "actionType"
+      | "target"
+      | "idempotencyKey"
+      | "payloadHash"
+      | "policyVersion"
+      | "requiresApproval"
+      | "state"
+      | "expiresAt"
+    >
+): TestAgentActionRecord {
+  const now = new Date();
+
+  return {
+    id: values.id ?? nextId(),
+    companyId: values.companyId,
+    agentProduct: values.agentProduct,
+    actionType: values.actionType,
+    parameters: values.parameters ?? {},
+    target: values.target,
+    sourceEventIds: values.sourceEventIds ?? [],
+    idempotencyKey: values.idempotencyKey,
+    payloadHash: values.payloadHash,
+    policyVersion: values.policyVersion,
+    requiresApproval: values.requiresApproval,
+    state: values.state,
+    confidence: values.confidence ?? null,
+    reason: values.reason ?? null,
+    expiresAt: values.expiresAt,
+    reviewerId: values.reviewerId ?? null,
+    executionReceipt: values.executionReceipt ?? null,
+    createdAt: values.createdAt ?? now,
+    updatedAt: values.updatedAt ?? now,
+    deletedAt: values.deletedAt ?? null
+  };
+}
+
+function createGrowthIntakeCheckRecord(
+  values: Partial<TestGrowthIntakeCheckRecord> &
+    Pick<TestGrowthIntakeCheckRecord, "companyId" | "ownerUserId" | "createdById" | "businessName">
+): TestGrowthIntakeCheckRecord {
+  const now = new Date();
+
+  return {
+    id: values.id ?? nextId(),
+    companyId: values.companyId,
+    status: values.status ?? "queued",
+    ownerUserId: values.ownerUserId,
+    createdById: values.createdById,
+    reviewNeeded: values.reviewNeeded ?? false,
+    lastScanAt: values.lastScanAt ?? null,
+    businessName: values.businessName,
+    websiteUrl: values.websiteUrl ?? null,
+    industry: values.industry ?? null,
+    trade: values.trade ?? null,
+    city: values.city ?? null,
+    state: values.state ?? null,
+    zip: values.zip ?? null,
+    contactName: values.contactName ?? null,
+    contactEmail: values.contactEmail ?? null,
+    contactPhone: values.contactPhone ?? null,
+    targetMarket: values.targetMarket ?? null,
+    googleBusinessProfileUrl: values.googleBusinessProfileUrl ?? null,
+    facebookPageUrl: values.facebookPageUrl ?? null,
+    intakeNotes: values.intakeNotes ?? null,
+    createdAt: values.createdAt ?? now,
+    updatedAt: values.updatedAt ?? now,
+    deletedAt: values.deletedAt ?? null
+  };
+}
+
+function createGrowthIntakeIdentityCandidateRecord(
+  values: Partial<TestGrowthIntakeIdentityCandidateRecord> &
+    Pick<TestGrowthIntakeIdentityCandidateRecord, "companyId" | "growthIntakeCheckId" | "displayName">
+): TestGrowthIntakeIdentityCandidateRecord {
+  const now = new Date();
+
+  return {
+    id: values.id ?? nextId(),
+    companyId: values.companyId,
+    growthIntakeCheckId: values.growthIntakeCheckId,
+    displayName: values.displayName,
+    domain: values.domain ?? null,
+    source: values.source ?? "manual",
+    confidenceScore: values.confidenceScore ?? null,
+    isPrimary: values.isPrimary ?? false,
+    metadata: values.metadata ?? {},
+    createdAt: values.createdAt ?? now,
+    updatedAt: values.updatedAt ?? now,
+    deletedAt: values.deletedAt ?? null
+  };
+}
+
+function createGrowthIntakeFindingRecord(
+  values: Partial<TestGrowthIntakeFindingRecord> &
+    Pick<TestGrowthIntakeFindingRecord, "companyId" | "growthIntakeCheckId" | "category" | "title">
+): TestGrowthIntakeFindingRecord {
+  const now = new Date();
+
+  return {
+    id: values.id ?? nextId(),
+    companyId: values.companyId,
+    growthIntakeCheckId: values.growthIntakeCheckId,
+    category: values.category,
+    severity: values.severity ?? "info",
+    status: values.status ?? "open",
+    title: values.title,
+    description: values.description ?? null,
+    recommendation: values.recommendation ?? null,
+    evidence: values.evidence ?? {},
+    createdAt: values.createdAt ?? now,
+    updatedAt: values.updatedAt ?? now,
+    deletedAt: values.deletedAt ?? null
+  };
+}
+
+function createGrowthIntakeAuditEventRecord(
+  values: Partial<TestGrowthIntakeAuditEventRecord> &
+    Pick<
+      TestGrowthIntakeAuditEventRecord,
+      "companyId" | "entityType" | "entityId" | "action"
+    >
+): TestGrowthIntakeAuditEventRecord {
+  const now = new Date();
+
+  return {
+    id: values.id ?? nextId(),
+    companyId: values.companyId,
+    entityType: values.entityType,
+    entityId: values.entityId,
+    growthIntakeCheckId: values.growthIntakeCheckId ?? null,
+    action: values.action,
+    actorId: values.actorId ?? null,
+    beforeState: values.beforeState ?? null,
+    afterState: values.afterState ?? null,
+    createdAt: values.createdAt ?? now
+  };
+}
+
 function createRow(tableName: TableName, values: Record<string, unknown>): AnyTestRecord {
   switch (tableName) {
     case "companies":
@@ -3214,6 +4448,51 @@ function createRow(tableName: TableName, values: Record<string, unknown>): AnyTe
     case "bookingSettings":
       return createBookingSettingsRecord(
         values as Partial<TestBookingSettingsRecord> & Pick<TestBookingSettingsRecord, "companyId">
+      );
+    case "inquirySubmitIdempotency":
+      return createInquirySubmitIdempotencyRecord(
+        values as Partial<TestInquirySubmitIdempotencyRecord> &
+          Pick<
+            TestInquirySubmitIdempotencyRecord,
+            "companyId" | "idempotencyKey" | "payloadHash" | "bookingRequestId" | "responseSnapshot" | "expiresAt"
+          >
+      );
+    case "agentActions":
+      return createAgentActionRecord(
+        values as Partial<TestAgentActionRecord> &
+          Pick<
+            TestAgentActionRecord,
+            | "companyId"
+            | "agentProduct"
+            | "actionType"
+            | "target"
+            | "idempotencyKey"
+            | "payloadHash"
+            | "policyVersion"
+            | "requiresApproval"
+            | "state"
+            | "expiresAt"
+          >
+      );
+    case "growthIntakeChecks":
+      return createGrowthIntakeCheckRecord(
+        values as Partial<TestGrowthIntakeCheckRecord> &
+          Pick<TestGrowthIntakeCheckRecord, "companyId" | "ownerUserId" | "createdById" | "businessName">
+      );
+    case "growthIntakeIdentityCandidates":
+      return createGrowthIntakeIdentityCandidateRecord(
+        values as Partial<TestGrowthIntakeIdentityCandidateRecord> &
+          Pick<TestGrowthIntakeIdentityCandidateRecord, "companyId" | "growthIntakeCheckId" | "displayName">
+      );
+    case "growthIntakeFindings":
+      return createGrowthIntakeFindingRecord(
+        values as Partial<TestGrowthIntakeFindingRecord> &
+          Pick<TestGrowthIntakeFindingRecord, "companyId" | "growthIntakeCheckId" | "category" | "title">
+      );
+    case "growthIntakeAuditEvents":
+      return createGrowthIntakeAuditEventRecord(
+        values as Partial<TestGrowthIntakeAuditEventRecord> &
+          Pick<TestGrowthIntakeAuditEventRecord, "companyId" | "entityType" | "entityId" | "action">
       );
   }
 }
@@ -3510,6 +4789,12 @@ export const fileAttachments = fileAttachmentsTable;
 export const onTheWayNotifications = onTheWayNotificationsTable;
 export const bookingRequests = bookingRequestsTable;
 export const bookingSettings = bookingSettingsTable;
+export const agentActions = agentActionsTable;
+export const inquirySubmitIdempotency = inquirySubmitIdempotencyTable;
+export const growthIntakeChecks = growthIntakeChecksTable;
+export const growthIntakeIdentityCandidates = growthIntakeIdentityCandidatesTable;
+export const growthIntakeFindings = growthIntakeFindingsTable;
+export const growthIntakeAuditEvents = growthIntakeAuditEventsTable;
 
 export async function emitEvent(event: Omit<TestActivityEventRecord, "id" | "occurredAt"> & {
   occurredAt?: Date;
@@ -3857,6 +5142,12 @@ export function createDbModuleMock() {
     onTheWayNotifications,
     bookingRequests,
     bookingSettings,
+    agentActions,
+    inquirySubmitIdempotency,
+    growthIntakeChecks,
+    growthIntakeIdentityCandidates,
+    growthIntakeFindings,
+    growthIntakeAuditEvents,
     emitEvent,
     emitEventWithExecutor,
     markInvoiceOverdueIfNeeded,
@@ -3903,7 +5194,15 @@ export function resetTestState(): void {
   state.onTheWayNotifications.length = 0;
   state.bookingRequests.length = 0;
   state.bookingSettings.length = 0;
+  state.agentActions.length = 0;
+  state.inquirySubmitIdempotency.length = 0;
+  state.growthIntakeChecks.length = 0;
+  state.growthIntakeIdentityCandidates.length = 0;
+  state.growthIntakeFindings.length = 0;
+  state.growthIntakeAuditEvents.length = 0;
 }
+
+export const RENAVANI_INTERNAL_TEST_COMPANY_ID = "00000000-0000-4000-8000-000000000053";
 
 export function seedCompany(
   values: Partial<TestCompanyRecord> & Pick<TestCompanyRecord, "name" | "slug">
@@ -4217,6 +5516,15 @@ export function seedBookingSettings(
 ): TestBookingSettingsRecord {
   const record = createBookingSettingsRecord(values);
   state.bookingSettings.push(record);
+  return record;
+}
+
+export function seedGrowthIntakeCheck(
+  values: Partial<TestGrowthIntakeCheckRecord> &
+    Pick<TestGrowthIntakeCheckRecord, "companyId" | "ownerUserId" | "createdById" | "businessName">
+): TestGrowthIntakeCheckRecord {
+  const record = createGrowthIntakeCheckRecord(values);
+  state.growthIntakeChecks.push(record);
   return record;
 }
 

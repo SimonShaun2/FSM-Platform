@@ -4,6 +4,7 @@ import { BrandedPriceWidget } from "@/src/components/growth/BrandedPriceWidget";
 import { BrandedStorefrontNav } from "@/src/components/growth/BrandedStorefrontNav";
 import {
   buildBookPath,
+  buildInquirePath,
   type BrandedStorefrontViewModel
 } from "@/src/components/growth/branded-storefront.utils";
 
@@ -16,6 +17,7 @@ const PRIMARY = "bg-[#2f7d4f] hover:bg-[#286b44]";
 
 export function BrandedStorefront({ model, previewBanner }: BrandedStorefrontProps) {
   const bookHref = buildBookPath(model.bookingSlug);
+  const inquireHref = buildInquirePath(model.bookingSlug);
   const showReviewsLink = model.reviewLinks.length > 0;
 
   return (
@@ -38,6 +40,7 @@ export function BrandedStorefront({ model, previewBanner }: BrandedStorefrontPro
 
         <BrandedStorefrontNav
           bookHref={bookHref}
+          inquireHref={inquireHref}
           showReviewsLink={showReviewsLink}
           primaryClassName={PRIMARY}
         />
@@ -88,10 +91,38 @@ export function BrandedStorefront({ model, previewBanner }: BrandedStorefrontPro
       </section>
 
       <section id="areas" className="px-6 py-8 md:px-16">
-        <p className="text-sm text-[#5e6684]">
-          Service area and live slot availability are confirmed in the booking flow — we never show unverified
-          appointments.
+        <h2 className="text-xl font-semibold text-[#0f1530]">Areas we serve</h2>
+        <p className="mt-2 text-sm leading-6 text-[#5e6684]">{model.serviceAreaSummary}</p>
+        <p className="mt-3 text-sm text-[#5e6684]">
+          Live slot availability is confirmed in the booking flow — we never show unverified appointments. Prefer a
+          callback?{" "}
+          <Link href={inquireHref} className="font-medium text-[#2f7d4f] hover:underline">
+            Send a direct inquiry
+          </Link>
+          .
         </p>
+        <p className="mt-4 text-xs text-[#5e6684]">
+          This Renvani-hosted page works alongside your existing website and domain — no incumbent sync or migration
+          required.
+        </p>
+      </section>
+
+      <section id="inquire" className="border-t border-[#e6dccb] bg-white px-6 py-10 md:px-16">
+        <div className="mx-auto flex max-w-4xl flex-col gap-4 md:flex-row md:items-center md:justify-between">
+          <div>
+            <h2 className="text-2xl font-semibold text-[#0f1530]">Not ready to book online?</h2>
+            <p className="mt-2 max-w-xl text-sm text-[#5e6684]">
+              Send a direct inquiry to the Revenue Agent queue. Your team reviews every request before anything is
+              scheduled.
+            </p>
+          </div>
+          <Link
+            href={inquireHref}
+            className="inline-flex h-12 shrink-0 items-center justify-center rounded-[10px] border border-[#2f7d4f] px-6 text-sm font-semibold text-[#2f7d4f] hover:bg-[#e4f1e8]"
+          >
+            Request a quote
+          </Link>
+        </div>
       </section>
 
       {showReviewsLink ? (

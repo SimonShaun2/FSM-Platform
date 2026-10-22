@@ -2,6 +2,7 @@ import { beforeAll, beforeEach, describe, expect, it, vi } from "vitest";
 
 import { ErrorCode } from "@fsm/types";
 
+import { resetBookingHoldTokenJtiStateForTests } from "../lib/booking-hold-token-store.js";
 import { generateBookingHoldToken } from "../lib/booking-hold-token.js";
 import { setupTestEnv } from "../test-support/env-setup.js";
 
@@ -41,6 +42,7 @@ beforeAll(async () => {
 
 beforeEach(() => {
   fakeDb.resetTestState();
+  resetBookingHoldTokenJtiStateForTests();
 });
 
 const SLOT_START = "2026-05-12T13:00:00.000Z";
