@@ -34,6 +34,7 @@ import stripeRoutes from "./routes/stripe/index.js";
 import technicianExtensionRoutes from "./routes/technician-extensions/index.js";
 import technicianRoutes from "./routes/technicians/index.js";
 import timeRoutes from "./routes/time/index.js";
+import healthRoutes from "./routes/health/index.js";
 
 export async function buildApp() {
   const logger = pino({
@@ -46,6 +47,7 @@ export async function buildApp() {
 
   await app.register(requestLoggerPlugin);
   await app.register(errorHandlerPlugin);
+  await app.register(healthRoutes);
   await app.register(authenticatePlugin);
 
   await app.register(activityEventRoutes, { prefix: "/api/v1" });
