@@ -19,9 +19,11 @@ import {
   type FieldWorkSyncOperationOutcome,
   type SubmitFieldWorkSyncBatchBody,
   type SubmitFieldWorkSyncBatchResponse,
+  buildFieldWorkSyncVersionConflict,
   buildRecordVersionV1,
   isStaleRecordVersion,
-  parseRecordVersionV1,
+  resolveFieldWorkSyncClientOperationReplay,
+  validateJobTaskBaseRecordVersion,
   type UserRole
 } from "@fsm/types";
 
@@ -183,20 +185,6 @@ async function resolveBatch(
   return batch;
 }
 
-function conflictResult(
-  sequence: number,
-  clientOperationId: string,
-  liveRecordVersion: string,
-  reason: string
-) {
-  return {
-    clientOperationId,
-    sequence,
-    outcome: "conflict" as const,
-    conflict: { liveRecordVersion, reason }
-  };
-}
-
 async function applyOperation(
   actor: FieldWorkSyncActor,
   operation: FieldWorkSyncOperationInput
@@ -236,15 +224,7 @@ async function applyOperation(
 
       const liveVersion = buildRecordVersionV1("job", job.id, job.updatedAt);
       if (isStaleRecordVersion(operation.baseRecordVersion, liveVersion)) {
-        return {
-          outcome: "conflict",
-          resultPayload: {
-            conflict: {
-              liveRecordVersion: liveVersion,
-              reason: "Job recordVersion is stale"
-            }
-          }
-        };
+        return buildFieldWorkSyncVersionConflict(liveVersion, "Job recordVersion is stale");
       }
 
       const updated = await transitionStatus(
@@ -264,12 +244,12 @@ async function applyOperation(
       };
     }
     case "job.task.update": {
-      const parsed = parseRecordVersionV1(operation.baseRecordVersion);
-      if (!parsed || parsed.entityType !== "job_task" || parsed.entityId !== operation.payload.taskId) {
-        return {
-          outcome: "rejected",
-          resultPayload: { message: "baseRecordVersion must target the job task being updated" }
-        };
+      const versionCheck = validateJobTaskBaseRecordVersion(
+        operation.baseRecordVersion,
+        operation.payload.taskId
+      );
+      if (!versionCheck.ok) {
+        return { outcome: "rejected", resultPayload: { message: versionCheck.message } };
       }
 
       const [task] = await db
@@ -291,15 +271,7 @@ async function applyOperation(
 
       const liveVersion = buildRecordVersionV1("job_task", task.id, task.updatedAt);
       if (isStaleRecordVersion(operation.baseRecordVersion, liveVersion)) {
-        return {
-          outcome: "conflict",
-          resultPayload: {
-            conflict: {
-              liveRecordVersion: liveVersion,
-              reason: "Task recordVersion is stale"
-            }
-          }
-        };
+        return buildFieldWorkSyncVersionConflict(liveVersion, "Task recordVersion is stale");
       }
 
       const taskUpdateInput = {
@@ -331,27 +303,14 @@ async function applyOperation(
 
       const liveVersion = buildRecordVersionV1("job", job.id, job.updatedAt);
       if (isStaleRecordVersion(operation.baseRecordVersion, liveVersion)) {
-        return {
-          outcome: "conflict",
-          resultPayload: {
-            conflict: {
-              liveRecordVersion: liveVersion,
-              reason: "Job recordVersion is stale"
-            }
-          }
-        };
+        return buildFieldWorkSyncVersionConflict(liveVersion, "Job recordVersion is stale");
       }
 
       if (job.signatureUrl && job.signatureUrl !== operation.payload.signatureUrl) {
-        return {
-          outcome: "conflict",
-          resultPayload: {
-            conflict: {
-              liveRecordVersion: liveVersion,
-              reason: "Job already has a different signature on file"
-            }
-          }
-        };
+        return buildFieldWorkSyncVersionConflict(
+          liveVersion,
+          "Job already has a different signature on file"
+        );
       }
 
       if (job.signatureUrl === operation.payload.signatureUrl) {
@@ -440,8 +399,24 @@ export async function submitFieldWorkSyncBatch(
     if (existing) {
       const storedHash = existing.payloadHash;
       const incomingHash = hashPayload(operation);
-      const outcome =
-        existing.outcome === "applied" && storedHash === incomingHash ? "duplicate" : existing.outcome;
+      const replay = resolveFieldWorkSyncClientOperationReplay({
+        storedPayloadHash: storedHash,
+        incomingPayloadHash: incomingHash,
+        storedOutcome: existing.outcome as FieldWorkSyncOperationOutcome
+      });
+
+      if (replay.action === "reject") {
+        results.push({
+          clientOperationId: operation.clientOperationId,
+          sequence: operation.sequence,
+          outcome: "rejected",
+          serverOperationId: existing.id,
+          message: replay.message
+        });
+        continue;
+      }
+
+      const outcome = replay.action === "duplicate" ? "duplicate" : replay.outcome;
       const mapped = toOperationResult(existing);
       results.push({ ...mapped, outcome });
       lastAcknowledgedSequence = Math.max(lastAcknowledgedSequence, operation.sequence);
