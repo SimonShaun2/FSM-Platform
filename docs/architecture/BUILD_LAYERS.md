@@ -81,6 +81,8 @@ Exit criterion: one button or approved workflow can reliably put a reviewed buil
 
 Do not treat a provider's managed feature as proof that Renvani's product-level controls are complete. The repository currently contains a Next.js web app, a Fastify API, BullMQ/Redis workers, a webhook app, PostgreSQL/Drizzle, an in-house JWT flow, and storage/payment adapters. Keep that inventory as the baseline until the platform/account audit and an approved ADR establish actual deployed state. FS-93 owns the provider decision and deployment-document reconciliation; it does not authorize account changes, migration, deployment, or live money.
 
+**Founder decision packet (ready for Shaun):** [FS-93-founder-decision-proposal.md](../decisions/FS-93-founder-decision-proposal.md) (Options A/B/C, recommendation, costs, unblock list). **SQL migration order across open PRs:** [MIGRATION_NUMBERING_REGISTRY.md](../platform/MIGRATION_NUMBERING_REGISTRY.md).
+
 | Responsibility | Candidate managed service contribution | Renvani remains accountable for |
 |---|---|---|
 | Web delivery | Vercel may host Next.js, preview, and production web deployments | Exact-head review, approved batch CI, environment separation, app behavior, release approval, rollback evidence |
