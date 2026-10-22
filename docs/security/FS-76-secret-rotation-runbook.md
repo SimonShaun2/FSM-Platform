@@ -31,6 +31,7 @@
 | Credential | Blast radius | Rotation notes |
 | --- | --- | --- |
 | `JWT_SECRET` / `JWT_REFRESH_SECRET` | All sessions invalid | Schedule operator comms; deploy all API instances together. |
+| `BOOKING_HOLD_TOKEN_SECRET` | In-flight slot holds invalid | API-only deploy; no staff logout. |
 | `STRIPE_WEBHOOK_SECRET` | Webhooks fail until endpoint updated | Update Stripe dashboard endpoint + deploy webhook service same window. |
 | `STRIPE_SECRET_KEY` | Payments API | Prefer restricted keys; rotate in staging with test mode first. |
 | `TWILIO_AUTH_TOKEN` | SMS/voice | Update token in store; replay failed outbox after deploy (FS-15). |

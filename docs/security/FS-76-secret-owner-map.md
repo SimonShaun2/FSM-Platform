@@ -31,6 +31,7 @@ Names match `@fsm/config` (`packages/config/src/env.ts`) and `.env.example`. **V
 | **Email** | `SENDGRID_API_KEY`, `SENDGRID_FROM_EMAIL` | Notifications worker | Shaun | |
 | **Object storage** | `R2_ACCOUNT_ID`, `R2_ACCESS_KEY_ID`, `R2_SECRET_ACCESS_KEY`, `R2_BUCKET_NAME` | Import/uploads adapters | Shaun | Access key pair is secret. |
 | **Auth / session** | `JWT_SECRET`, `JWT_REFRESH_SECRET` | `apps/api` auth | Shaun | Rotation invalidates active sessions — planned window required. |
+| **Auth / public holds** | `BOOKING_HOLD_TOKEN_SECRET` | `apps/api` booking holds | Shaun | Distinct from session JWT; rotate on API only. |
 | **Auth (TTL)** | `ACCESS_TOKEN_TTL_SECONDS`, `REFRESH_TOKEN_TTL_SECONDS`, `RESET_TOKEN_TTL_SECONDS` | API auth | Engineering (config) | Not secrets; document per environment. |
 | **App URLs** | `APP_URL`, `NEXT_PUBLIC_API_URL`, `API_URL` (web only) | `apps/web`, API links, webhooks | Engineering (config) | Public or server-origin; not signing secrets. |
 | **Runtime** | `NODE_ENV`, `API_PORT`, `WEBHOOK_PORT` | All Node services | Engineering (config) | |
