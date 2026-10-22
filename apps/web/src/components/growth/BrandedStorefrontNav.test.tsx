@@ -31,7 +31,12 @@ describe("BrandedStorefrontNav mobile menu", () => {
 
   it("moves focus into the panel when opened", () => {
     render(
-      <BrandedStorefrontNav bookHref="/book/demo" showReviewsLink={false} primaryClassName="bg-green" />
+      <BrandedStorefrontNav
+        bookHref="/book/demo"
+        inquireHref="/site/demo/inquire"
+        showReviewsLink={false}
+        primaryClassName="bg-green"
+      />
     );
 
     const toggle = screen.getByRole("button", { name: "Open menu" });
@@ -43,7 +48,12 @@ describe("BrandedStorefrontNav mobile menu", () => {
 
   it("closes on Escape and returns focus to the toggle", () => {
     render(
-      <BrandedStorefrontNav bookHref="/book/demo" showReviewsLink={false} primaryClassName="bg-green" />
+      <BrandedStorefrontNav
+        bookHref="/book/demo"
+        inquireHref="/site/demo/inquire"
+        showReviewsLink={false}
+        primaryClassName="bg-green"
+      />
     );
 
     const toggle = screen.getByRole("button", { name: "Open menu" });
@@ -57,7 +67,12 @@ describe("BrandedStorefrontNav mobile menu", () => {
 
   it("keeps focus inside the panel when tabbing from the last item", () => {
     render(
-      <BrandedStorefrontNav bookHref="/book/demo" showReviewsLink={false} primaryClassName="bg-green" />
+      <BrandedStorefrontNav
+        bookHref="/book/demo"
+        inquireHref="/site/demo/inquire"
+        showReviewsLink={false}
+        primaryClassName="bg-green"
+      />
     );
 
     fireEvent.click(screen.getByRole("button", { name: "Open menu" }));

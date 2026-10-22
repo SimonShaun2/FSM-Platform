@@ -26,6 +26,7 @@ import { PipelineMetrics } from "./PipelineMetrics";
 import { RecentActivityFeed } from "./RecentActivityFeed";
 import { RevenueChart } from "./RevenueChart";
 import { ReviewScore } from "./ReviewScore";
+import { JobSourceReportingSection } from "./JobSourceReportingSection";
 import { TechUtilization } from "./TechUtilization";
 
 const PRESET_OPTIONS: Array<{ value: ReportingPreset; label: string }> = [
@@ -214,6 +215,8 @@ export function ReportingDashboardClient() {
           <ConversionDonut summary={conversionQuery.data} isLoading={conversionQuery.isLoading} />
           <ReviewScore summary={reviewScoreQuery.data} isLoading={reviewScoreQuery.isLoading} />
         </div>
+
+        <JobSourceReportingSection />
 
         <RecentActivityFeed items={activityQuery.data ?? []} isLoading={activityQuery.isLoading} />
       </div>

@@ -7,7 +7,12 @@ import { ContextResolveParamsV1Schema } from "./tools/context-resolve.params.js"
 import { MessageDraftParamsV1Schema } from "./tools/message-draft.params.js";
 import { MessageSendProposedParamsV1Schema } from "./tools/message-send-proposed.params.js";
 import { AgentToolNameV1Schema } from "./tools/registry.js";
-import { ContractVersionV1Schema, IsoDateTimeSchema, UuidSchema } from "./zod-shared.js";
+import {
+  ContractVersionV1Schema,
+  IdempotencyKeyV1Schema,
+  IsoDateTimeSchema,
+  UuidSchema
+} from "./zod-shared.js";
 
 export const ExecutionReceiptV1Schema = z.object({
   outcome: z.enum(["succeeded", "failed", "dry_run"]),
@@ -23,7 +28,7 @@ const AgentActionProposalBaseV1Schema = z.object({
   agentProduct: AgentProductV1Schema,
   target: CanonicalEntityRefV1Schema,
   sourceEventIds: z.array(UuidSchema),
-  idempotencyKey: z.string().min(1).max(256),
+  idempotencyKey: IdempotencyKeyV1Schema,
   policyVersion: z.string().min(1),
   requiresApproval: z.boolean(),
   expiresAt: IsoDateTimeSchema,
