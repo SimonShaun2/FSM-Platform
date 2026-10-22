@@ -11,12 +11,34 @@ export type RetentionBlockReasonCode =
   | "OPEN_SERVICE_ISSUE"
   | "POLICY_DENIED";
 
+export function defaultRetentionCustomerPrefs(
+  overrides: Partial<RetentionCustomerChannelPrefs> = {}
+): RetentionCustomerChannelPrefs {
+  return {
+    prefersSms: true,
+    prefersEmail: false,
+    doNotContact: false,
+    marketingOptIn: true,
+    appointmentOptIn: true,
+    consentVersion: 1,
+    currentConsentVersion: 1,
+    consentCapturedAt: "2026-10-01T12:00:00.000Z",
+    consentRevokedAt: null,
+    ...overrides
+  };
+}
+
 export interface RetentionCustomerChannelPrefs {
   prefersSms: boolean;
   prefersEmail: boolean;
   doNotContact: boolean;
   marketingOptIn: boolean;
   appointmentOptIn: boolean;
+  /** FS-13 — consent record version at outreach enqueue time. */
+  consentVersion: number;
+  currentConsentVersion: number;
+  consentCapturedAt: string;
+  consentRevokedAt: string | null;
 }
 
 export interface RetentionAutomationRuleSnapshot {
@@ -45,6 +67,8 @@ export interface RetentionTouchpointDecision {
   allowed: boolean;
   reasonCode?: RetentionBlockReasonCode;
   automationRuleId: string | null;
+  policyVersion: string;
+  reason: string;
 }
 
 export interface RetentionGatesEvaluationResult {

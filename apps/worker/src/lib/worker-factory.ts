@@ -1,8 +1,8 @@
-import type { Processor } from "bullmq";
+import type { Job, Processor } from "bullmq";
 import { Worker } from "bullmq";
 import pino from "pino";
 
-import { queueBaseOptions } from "@fsm/jobs";
+import { buildDefaultWorkerOptions, handleWorkerJobFailed } from "@fsm/jobs";
 
 const workerLogger = pino({
   name: "fsm-worker"
@@ -45,9 +45,7 @@ export function createWorker<TData extends Record<string, unknown>>(
         throw error;
       }
     },
-    {
-      ...queueBaseOptions
-    }
+    buildDefaultWorkerOptions()
   );
 
   worker.on("failed", (job, error) => {
@@ -58,6 +56,20 @@ export function createWorker<TData extends Record<string, unknown>>(
       },
       "Worker failure event received"
     );
+
+    void handleWorkerJobFailed(
+      queueName,
+      job as Job<Record<string, unknown>> | undefined,
+      error
+    ).catch((dlqError) => {
+      logger.error(
+        {
+          err: dlqError,
+          jobId: job?.id ?? null
+        },
+        "Failed to forward job to dead-letter queue"
+      );
+    });
   });
 
   return worker;

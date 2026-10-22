@@ -191,6 +191,16 @@ export const importSessionStatusEnum = pgEnum("import_session_status", [
   "rolled_back",
 ]);
 
+export const dataExportStatusEnum = pgEnum("data_export_status", [
+  "pending",
+  "processing",
+  "completed",
+  "failed",
+  "expired"
+]);
+
+export const dataExportFormatEnum = pgEnum("data_export_format", ["json", "csv_bundle"]);
+
 export const importEntityTypeEnum = pgEnum("import_entity_type", [
   "customers",
   "properties",
@@ -314,6 +324,19 @@ export const activityEventTypeEnum = pgEnum("activity_event_type", [
   "import.completed",
   "import.rolled_back",
   "import.failed",
+<<<<<<< HEAD
+  // Data export (FS-89)
+  "export.requested",
+  "export.completed",
+  "export.failed",
+  "export.downloaded",
+  "export.expired",
+=======
+  // Growth check (FS-55)
+  "growth.check_scan_enqueued",
+  "growth.check_scan_completed",
+  "growth.check_scan_failed",
+>>>>>>> origin/dev
   // Booking
   "booking.requested",
   "booking.confirmed",
@@ -323,9 +346,12 @@ export const activityEventTypeEnum = pgEnum("activity_event_type", [
   "agent.proposal_created",
   "agent.proposal_approved",
   "agent.proposal_rejected",
+  "agent.proposal_edited",
   "agent.execution_succeeded",
   "agent.execution_failed",
   "revenue.inquiry_qualified",
+  "revenue.inquiry_received",
+  "revenue.inquiry_escalated",
 ]);
 
 export const aiRecommendationTypeEnum = pgEnum("ai_recommendation_type", [
@@ -1248,6 +1274,26 @@ export const importSessions = pgTable("import_sessions", {
   entityTypeIdx: index("import_sessions_entity_type_idx").on(t.entityType),
 }));
 
+export const dataExportSessions = pgTable("data_export_sessions", {
+  id: id(),
+  companyId: companyId(),
+  requestedById: uuid("requested_by_id").references(() => users.id),
+  status: dataExportStatusEnum("status").notNull().default("pending"),
+  format: dataExportFormatEnum("format").notNull().default("json"),
+  manifestVersion: varchar("manifest_version", { length: 64 }).notNull().default("fsm.data-export.v1"),
+  progressPercent: integer("progress_percent").notNull().default(0),
+  fileName: varchar("file_name", { length: 255 }),
+  fileUrl: text("file_url"),
+  recordCounts: jsonb("record_counts").notNull().default({}),
+  expiresAt: timestamp("expires_at"),
+  completedAt: timestamp("completed_at"),
+  errorMessage: text("error_message"),
+  ...timestamps
+}, (t) => ({
+  companyIdx: index("data_export_sessions_company_idx").on(t.companyId),
+  statusIdx: index("data_export_sessions_status_idx").on(t.status)
+}));
+
 export const automationRuleTypeEnum = pgEnum("automation_rule_type", [
   "estimate_follow_up",
   "estimate_declined",
@@ -1467,6 +1513,25 @@ export const bookingRequests = pgTable("booking_requests", {
   phoneIdx: index("booking_requests_phone_idx").on(t.phone),
 }));
 
+export const inquirySubmitIdempotency = pgTable("inquiry_submit_idempotency", {
+  id: id(),
+  companyId: companyId(),
+  idempotencyKey: varchar("idempotency_key", { length: 128 }).notNull(),
+  payloadHash: varchar("payload_hash", { length: 64 }).notNull(),
+  bookingRequestId: uuid("booking_request_id")
+    .notNull()
+    .references(() => bookingRequests.id),
+  responseSnapshot: jsonb("response_snapshot").notNull(),
+  expiresAt: timestamp("expires_at").notNull(),
+  ...timestamps,
+}, (t) => ({
+  companyKeyUnique: uniqueIndex("inquiry_submit_idempotency_company_key_idx").on(
+    t.companyId,
+    t.idempotencyKey
+  ),
+  expiresIdx: index("inquiry_submit_idempotency_expires_idx").on(t.expiresAt)
+}));
+
 export const agentActionStateEnum = pgEnum("agent_action_state", [
   "proposed",
   "policy_evaluated",
@@ -1565,6 +1630,7 @@ export const agentActions = pgTable(
     reason: text("reason"),
     expiresAt: timestamp("expires_at").notNull(),
     reviewerId: uuid("reviewer_id"),
+    approvedParameters: jsonb("approved_parameters"),
     executionReceipt: jsonb("execution_receipt"),
     ...timestamps,
   },
@@ -1574,6 +1640,165 @@ export const agentActions = pgTable(
       t.idempotencyKey
     ),
     companyStateIdx: index("agent_actions_company_state_idx").on(t.companyId, t.state),
+  })
+);
+
+export const growthIntakeCheckStatusEnum = pgEnum("growth_intake_check_status", [
+  "intake_draft",
+  "queued",
+  "scanning",
+  "review_needed",
+  "completed",
+  "archived",
+]);
+
+export const growthIntakeIdentitySourceEnum = pgEnum("growth_intake_identity_source", [
+  "manual",
+  "website",
+  "google_business",
+  "facebook",
+  "import",
+  "ai",
+]);
+
+export const growthIntakeFindingSeverityEnum = pgEnum("growth_intake_finding_severity", [
+  "info",
+  "low",
+  "medium",
+  "high",
+  "critical",
+]);
+
+export const growthIntakeFindingStatusEnum = pgEnum("growth_intake_finding_status", [
+  "open",
+  "acknowledged",
+  "resolved",
+  "dismissed",
+]);
+
+export const growthIntakeAuditEntityTypeEnum = pgEnum("growth_intake_audit_entity_type", [
+  "growth_intake_check",
+  "growth_intake_identity_candidate",
+  "growth_intake_finding",
+]);
+
+export const growthIntakeAuditActionEnum = pgEnum("growth_intake_audit_action", [
+  "created",
+  "updated",
+  "deleted",
+]);
+
+export const growthIntakeChecks = pgTable(
+  "growth_intake_checks",
+  {
+    id: id(),
+    companyId: companyId(),
+    status: growthIntakeCheckStatusEnum("status").notNull().default("queued"),
+    ownerUserId: uuid("owner_user_id")
+      .notNull()
+      .references(() => users.id, { onDelete: "restrict" }),
+    createdById: uuid("created_by_id")
+      .notNull()
+      .references(() => users.id, { onDelete: "restrict" }),
+    reviewNeeded: boolean("review_needed").notNull().default(false),
+    lastScanAt: timestamp("last_scan_at"),
+    businessName: varchar("business_name", { length: 255 }).notNull(),
+    websiteUrl: varchar("website_url", { length: 500 }),
+    industry: varchar("industry", { length: 120 }),
+    trade: varchar("trade", { length: 120 }),
+    city: varchar("city", { length: 100 }),
+    state: varchar("state", { length: 50 }),
+    zip: varchar("zip", { length: 20 }),
+    contactName: varchar("contact_name", { length: 255 }),
+    contactEmail: varchar("contact_email", { length: 255 }),
+    contactPhone: varchar("contact_phone", { length: 30 }),
+    targetMarket: text("target_market"),
+    googleBusinessProfileUrl: varchar("google_business_profile_url", { length: 500 }),
+    facebookPageUrl: varchar("facebook_page_url", { length: 500 }),
+    intakeNotes: text("intake_notes"),
+    ...timestamps,
+  },
+  (t) => ({
+    companyStatusIdx: index("growth_intake_checks_company_status_idx").on(t.companyId, t.status),
+    companyOwnerIdx: index("growth_intake_checks_company_owner_idx").on(t.companyId, t.ownerUserId),
+    companyReviewIdx: index("growth_intake_checks_company_review_idx").on(t.companyId, t.reviewNeeded),
+  })
+);
+
+export const growthIntakeIdentityCandidates = pgTable(
+  "growth_intake_identity_candidates",
+  {
+    id: id(),
+    companyId: companyId(),
+    growthIntakeCheckId: uuid("growth_intake_check_id")
+      .notNull()
+      .references(() => growthIntakeChecks.id, { onDelete: "cascade" }),
+    displayName: varchar("display_name", { length: 255 }).notNull(),
+    domain: varchar("domain", { length: 255 }),
+    source: growthIntakeIdentitySourceEnum("source").notNull().default("manual"),
+    confidenceScore: decimal("confidence_score", { precision: 5, scale: 4 }),
+    isPrimary: boolean("is_primary").notNull().default(false),
+    metadata: jsonb("metadata").notNull().default({}),
+    ...timestamps,
+  },
+  (t) => ({
+    checkIdx: index("growth_intake_identity_candidates_check_idx").on(t.growthIntakeCheckId),
+    companyCheckIdx: index("growth_intake_identity_candidates_company_check_idx").on(
+      t.companyId,
+      t.growthIntakeCheckId
+    ),
+  })
+);
+
+export const growthIntakeFindings = pgTable(
+  "growth_intake_findings",
+  {
+    id: id(),
+    companyId: companyId(),
+    growthIntakeCheckId: uuid("growth_intake_check_id")
+      .notNull()
+      .references(() => growthIntakeChecks.id, { onDelete: "cascade" }),
+    category: varchar("category", { length: 100 }).notNull(),
+    severity: growthIntakeFindingSeverityEnum("severity").notNull().default("info"),
+    status: growthIntakeFindingStatusEnum("status").notNull().default("open"),
+    title: varchar("title", { length: 255 }).notNull(),
+    description: text("description"),
+    recommendation: text("recommendation"),
+    evidence: jsonb("evidence").notNull().default({}),
+    ...timestamps,
+  },
+  (t) => ({
+    checkIdx: index("growth_intake_findings_check_idx").on(t.growthIntakeCheckId),
+    companyCheckIdx: index("growth_intake_findings_company_check_idx").on(t.companyId, t.growthIntakeCheckId),
+  })
+);
+
+export const growthIntakeAuditEvents = pgTable(
+  "growth_intake_audit_events",
+  {
+    id: id(),
+    companyId: companyId(),
+    entityType: growthIntakeAuditEntityTypeEnum("entity_type").notNull(),
+    entityId: uuid("entity_id").notNull(),
+    growthIntakeCheckId: uuid("growth_intake_check_id").references(() => growthIntakeChecks.id, {
+      onDelete: "set null",
+    }),
+    action: growthIntakeAuditActionEnum("action").notNull(),
+    actorId: uuid("actor_id").references(() => users.id, { onDelete: "set null" }),
+    beforeState: jsonb("before_state"),
+    afterState: jsonb("after_state"),
+    createdAt: timestamp("created_at").notNull().defaultNow(),
+  },
+  (t) => ({
+    companyEntityIdx: index("growth_intake_audit_events_company_entity_idx").on(
+      t.companyId,
+      t.entityType,
+      t.entityId
+    ),
+    companyCheckIdx: index("growth_intake_audit_events_company_check_idx").on(
+      t.companyId,
+      t.growthIntakeCheckId
+    ),
   })
 );
 
@@ -1603,6 +1828,74 @@ export const bookingSettings = pgTable("booking_settings", {
   companyIdx: uniqueIndex("booking_settings_company_idx").on(t.companyId),
   slugIdx: uniqueIndex("booking_settings_slug_idx").on(t.bookingSlug),
 }));
+
+export const growthCheckScanStatusEnum = pgEnum("growth_check_scan_status", [
+  "queued",
+  "running",
+  "completed",
+  "failed",
+]);
+
+export const growthCheckFindingStatusEnum = pgEnum("growth_check_finding_status", [
+  "pass",
+  "fail",
+  "warning",
+  "unknown",
+]);
+
+export const growthCheckFindingConfidenceEnum = pgEnum("growth_check_finding_confidence", [
+  "high",
+  "medium",
+  "low",
+]);
+
+export const growthCheckScans = pgTable(
+  "growth_check_scans",
+  {
+    id: id(),
+    companyId: companyId(),
+    requestedByUserId: uuid("requested_by_user_id").references(() => users.id),
+    targetUrl: text("target_url").notNull(),
+    rubricId: varchar("rubric_id", { length: 64 }).notNull(),
+    rubricVersion: varchar("rubric_version", { length: 32 }).notNull(),
+    status: growthCheckScanStatusEnum("status").notNull().default("queued"),
+    progress: jsonb("progress").notNull().default({}),
+    idempotencyKey: varchar("idempotency_key", { length: 128 }).notNull(),
+    failureReason: text("failure_reason"),
+    ...timestamps,
+  },
+  (t) => ({
+    companyIdx: index("growth_check_scans_company_idx").on(t.companyId),
+    companyIdempotencyUnique: uniqueIndex("growth_check_scans_company_idempotency_idx").on(
+      t.companyId,
+      t.idempotencyKey
+    ),
+  })
+);
+
+export const growthCheckFindings = pgTable(
+  "growth_check_findings",
+  {
+    id: id(),
+    companyId: companyId(),
+    scanId: uuid("scan_id")
+      .notNull()
+      .references(() => growthCheckScans.id, { onDelete: "cascade" }),
+    areaId: varchar("area_id", { length: 64 }).notNull(),
+    checkId: varchar("check_id", { length: 64 }).notNull(),
+    sourceUrl: text("source_url").notNull(),
+    observedAt: timestamp("observed_at").notNull(),
+    status: growthCheckFindingStatusEnum("status").notNull(),
+    confidence: growthCheckFindingConfidenceEnum("confidence").notNull(),
+    summary: text("summary").notNull(),
+    ...timestamps,
+  },
+  (t) => ({
+    companyIdx: index("growth_check_findings_company_idx").on(t.companyId),
+    scanIdx: index("growth_check_findings_scan_idx").on(t.scanId),
+    scanCheckUnique: uniqueIndex("growth_check_findings_scan_check_idx").on(t.scanId, t.checkId),
+  })
+);
 
 // ─────────────────────────────────────────────
 // RELATIONS

@@ -14,9 +14,11 @@ if [[ -z "${BOOKING_SLUG}" ]]; then
 fi
 
 STOREFRONT="${WEB_URL}/site/${BOOKING_SLUG}"
+INQUIRE="${WEB_URL}/site/${BOOKING_SLUG}/inquire?src=website"
 BOOKING="${WEB_URL}/book/${BOOKING_SLUG}?src=website"
 
 echo "Branded storefront: ${STOREFRONT}"
+echo "Direct inquiry:     ${INQUIRE}"
 echo "Public booking:     ${BOOKING}"
 echo ""
 echo "Checking public booking settings API..."

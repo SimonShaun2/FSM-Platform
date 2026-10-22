@@ -2,9 +2,18 @@ import { z } from "zod";
 
 const envSchema = z.object({
   NODE_ENV: z.enum(["development", "test", "production"]).default("development"),
+  /** Injected by Render (and similar hosts); prefer over service-specific ports when set. */
+  PORT: z.coerce.number().int().positive().optional(),
   API_PORT: z.coerce.number().int().positive().default(3001),
   WEBHOOK_PORT: z.coerce.number().int().positive().default(3002),
   DATABASE_URL: z.string().min(1, "DATABASE_URL is required"),
+  DATABASE_POOL_MAX: z.coerce.number().int().positive().optional(),
+  DATABASE_IDLE_TIMEOUT_SECONDS: z.coerce.number().int().nonnegative().default(20),
+  DATABASE_CONNECT_TIMEOUT_SECONDS: z.coerce.number().int().positive().default(10),
+  /** Documented ceiling for aggregate pool budgeting; not enforced at runtime until FS-93 sets service limits. */
+  DATABASE_SERVICE_MAX_CONNECTIONS: z.coerce.number().int().positive().optional(),
+  DATABASE_TRANSACTION_MAX_RETRIES: z.coerce.number().int().nonnegative().default(3),
+  DATABASE_TRANSACTION_RETRY_BASE_MS: z.coerce.number().int().positive().default(25),
   REDIS_URL: z.string().min(1, "REDIS_URL is required"),
   STRIPE_SECRET_KEY: z.string().min(1, "STRIPE_SECRET_KEY is required"),
   STRIPE_WEBHOOK_SECRET: z.string().min(1, "STRIPE_WEBHOOK_SECRET is required"),
@@ -29,11 +38,25 @@ const envSchema = z.object({
   RESET_TOKEN_TTL_SECONDS: z.coerce.number().int().positive("RESET_TOKEN_TTL_SECONDS must be greater than zero"),
   ESTIMATE_EXPIRY_DAYS: z.coerce.number().int().positive("ESTIMATE_EXPIRY_DAYS must be greater than zero").default(30),
   INVOICE_DUE_DAYS: z.coerce.number().int().positive("INVOICE_DUE_DAYS must be greater than zero").default(30),
-  NEXT_PUBLIC_API_URL: z.string().url("NEXT_PUBLIC_API_URL must be a valid URL").default("http://localhost:3001")
+  NEXT_PUBLIC_API_URL: z.string().url("NEXT_PUBLIC_API_URL must be a valid URL").default("http://localhost:3001"),
+  RENVANI_INTERNAL_COMPANY_ID: z
+    .string()
+    .uuid("RENAVANI_INTERNAL_COMPANY_ID must be a valid UUID")
+    .default("00000000-0000-4000-8000-000000000053")
 });
 
 export type Env = z.infer<typeof envSchema>;
 export type PublicEnv = Pick<Env, "NEXT_PUBLIC_API_URL">;
+
+/** Render sets `PORT`; local dev uses `API_PORT`. */
+export function resolveApiListenPort(config: Env): number {
+  return config.PORT ?? config.API_PORT;
+}
+
+/** Render sets `PORT`; local dev uses `WEBHOOK_PORT`. */
+export function resolveWebhookListenPort(config: Env): number {
+  return config.PORT ?? config.WEBHOOK_PORT;
+}
 
 const publicEnvSchema = envSchema.pick({
   NEXT_PUBLIC_API_URL: true
