@@ -11,6 +11,9 @@ export interface BrandedReviewLink {
   href: string;
 }
 
+/** Query `src` for branded acquisition pages → `booking_requests.source` + FS-22 `own_website`. */
+export const BRANDED_ACQUISITION_SOURCE = "website";
+
 export interface BrandedStorefrontViewModel {
   companyName: string;
   bookingSlug: string;
@@ -18,9 +21,21 @@ export interface BrandedStorefrontViewModel {
   phone: string | null;
   logoUrl: string | null;
   serviceCards: BrandedServiceCard[];
+  serviceAreaSummary: string;
+  serviceAreaZips: string[];
   /** Staff preview status line only — never fabricated ratings on the public site. */
   trustLine: string | null;
   reviewLinks: BrandedReviewLink[];
+}
+
+export interface LocalBusinessJsonLd {
+  "@context": "https://schema.org";
+  "@type": "LocalBusiness";
+  name: string;
+  description: string;
+  url: string;
+  telephone?: string;
+  areaServed: string[];
 }
 
 const CLEANING_FALLBACK_CARDS: BrandedServiceCard[] = [
@@ -112,6 +127,20 @@ export function buildServiceCards(offeredServices: Array<Record<string, unknown>
   return cards.slice(0, 4);
 }
 
+export function buildServiceAreaSummary(zips: string[]): string {
+  const unique = Array.from(new Set(zips.map((zip) => zip.trim()).filter((zip) => zip.length > 0))).sort();
+
+  if (unique.length === 0) {
+    return "Service area confirmed during booking or inquiry.";
+  }
+
+  if (unique.length <= 6) {
+    return `Serving ZIP codes ${unique.join(", ")}.`;
+  }
+
+  return `Serving ${unique.length} ZIP codes in your area (including ${unique.slice(0, 3).join(", ")}).`;
+}
+
 export function buildBrandedStorefrontViewModel(
   settings: PublicBookingSettingsRecord,
   options?: { staffPreviewLine?: string }
@@ -120,6 +149,7 @@ export function buildBrandedStorefrontViewModel(
   const tagline =
     settings.tagline?.trim() ||
     "Instant prices, real crew availability, and booking in under a minute. Same trusted crew every visit.";
+  const serviceAreaZips = settings.serviceAreaZipCodes ?? [];
 
   return {
     companyName,
@@ -128,12 +158,34 @@ export function buildBrandedStorefrontViewModel(
     phone: settings.phone ?? null,
     logoUrl: settings.logoUrl ?? null,
     serviceCards: buildServiceCards(settings.offeredServices),
+    serviceAreaSummary: buildServiceAreaSummary(serviceAreaZips),
+    serviceAreaZips: serviceAreaZips,
     trustLine: options?.staffPreviewLine?.trim() || null,
     reviewLinks: buildReviewLinks(settings)
   };
 }
 
-export function buildBookPath(slug: string, source = "website"): string {
+export function buildBookPath(slug: string, source = BRANDED_ACQUISITION_SOURCE): string {
   const query = new URLSearchParams({ src: source });
   return `/book/${encodeURIComponent(slug)}?${query.toString()}`;
+}
+
+export function buildInquirePath(slug: string, source = BRANDED_ACQUISITION_SOURCE): string {
+  const query = new URLSearchParams({ src: source });
+  return `/site/${encodeURIComponent(slug)}/inquire?${query.toString()}`;
+}
+
+export function buildLocalBusinessJsonLd(
+  model: BrandedStorefrontViewModel,
+  sitePath: string
+): LocalBusinessJsonLd {
+  return {
+    "@context": "https://schema.org",
+    "@type": "LocalBusiness",
+    name: model.companyName,
+    description: model.tagline,
+    url: sitePath,
+    ...(model.phone ? { telephone: model.phone } : {}),
+    areaServed: model.serviceAreaZips.length > 0 ? model.serviceAreaZips : ["Local service area"]
+  };
 }

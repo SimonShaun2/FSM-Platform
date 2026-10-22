@@ -8,9 +8,9 @@ import {
   getBookingAvailability,
   getBookingConfirmation,
   getPublicBookingSettingsBySlug,
-  holdPublicBookingSlot,
-  submitBookingRequest
+  holdPublicBookingSlot
 } from "../../../services/booking.service.js";
+import { submitPublicInquiryIntake } from "../../../services/revenue-inquiry-intake.service.js";
 import type {
   BookingConfirmationParams,
   BookingSlugParams,
@@ -61,17 +61,17 @@ export async function submitBookingRequestHandler(
 ): Promise<FastifyReply> {
   const params = request.params as BookingSlugParams;
   const query = request.query as BookingSubmitQuery;
-  const result = await submitBookingRequest(params.slug, request.body as SubmitBookingRequestInput, query.src);
+  const idempotencyKey = typeof request.headers["idempotency-key"] === "string"
+    ? request.headers["idempotency-key"]
+    : undefined;
+  const { created, result } = await submitPublicInquiryIntake(
+    params.slug,
+    request.body as SubmitBookingRequestInput,
+    query.src,
+    idempotencyKey
+  );
 
-  return reply.status(201).send({
-    bookingRequest: {
-      id: result.bookingRequest.id,
-      referenceNumber: result.bookingRequest.referenceNumber,
-      status: result.bookingRequest.status
-    },
-    confirmation: result.confirmation,
-    holdToken: result.holdToken
-  });
+  return reply.status(created ? 201 : 200).send(result);
 }
 
 export async function captureBookingInterestHandler(
