@@ -1,4 +1,4 @@
-import type { FastifyReply, FastifyRequest } from "fastify";
+import type { FastifyError, FastifyReply, FastifyRequest } from "fastify";
 
 import type { ListImportsQuery } from "@fsm/types";
 import { AppError, ErrorCode } from "@fsm/types";
@@ -12,6 +12,12 @@ import {
   rollbackImport,
   startImport
 } from "../../services/import.service.js";
+import { abortImportUploadRequest } from "./upload-guards.js";
+import {
+  CSV_IMPORT_MAX_FILES,
+  CSV_IMPORT_TOO_MANY_FILES_MESSAGE,
+  csvImportMultipartParserOptions
+} from "./upload-limits.js";
 import type {
   ConfirmMappingBody,
   ImportSessionIdParams,
@@ -42,20 +48,56 @@ export async function createImportHandler(
   request: FastifyRequest,
   reply: FastifyReply
 ): Promise<FastifyReply> {
-  const filePart = await request.file();
+  let fileName: string | undefined;
+  let mimeType: string | undefined;
+  let fileBuffer: Buffer | undefined;
+  let fileCount = 0;
 
-  if (!filePart) {
+  try {
+    for await (const part of request.parts(csvImportMultipartParserOptions)) {
+      if (part.type === "file") {
+        fileCount += 1;
+
+        if (fileCount > CSV_IMPORT_MAX_FILES) {
+          await part.toBuffer().catch(() => undefined);
+          throw new AppError(ErrorCode.VALIDATION_ERROR, CSV_IMPORT_TOO_MANY_FILES_MESSAGE);
+        }
+
+        fileName = part.filename;
+        mimeType = part.mimetype;
+        fileBuffer = await part.toBuffer();
+        continue;
+      }
+
+      await part.value;
+    }
+  } catch (error: unknown) {
+    const fastifyError = error as FastifyError;
+    const multipartLimitCode = fastifyError.code;
+
+    if (
+      error instanceof AppError ||
+      multipartLimitCode === "FST_FILES_LIMIT" ||
+      multipartLimitCode === "FST_REQ_FILE_TOO_LARGE"
+    ) {
+      throw error;
+    }
+
+    abortImportUploadRequest(request);
+    throw error;
+  }
+
+  if (!fileBuffer || !fileName) {
     throw new AppError(ErrorCode.VALIDATION_ERROR, "A CSV file is required");
   }
 
-  const fileBuffer = await filePart.toBuffer();
   const importSession = await createImportSession(
     request.company.id,
     request.user.id,
-    filePart.filename,
+    fileName,
     fileBuffer,
     {
-      mimeType: filePart.mimetype,
+      mimeType: mimeType ?? "text/csv",
       entityType: "customers"
     }
   );

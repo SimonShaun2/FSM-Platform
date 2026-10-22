@@ -1,3 +1,6 @@
+/** Maximum inclusive calendar-day span for job source reporting queries. */
+export const JOB_SOURCE_REPORTING_MAX_RANGE_DAYS = 366;
+
 export type JobGrowthChannel =
   | "own_website"
   | "booking"
