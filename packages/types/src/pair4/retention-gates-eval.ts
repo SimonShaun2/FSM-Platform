@@ -9,6 +9,8 @@ import {
   buildRetentionAttributionKey,
   defaultConsentScopeForTouchpoint
 } from "./proposal-factory-v0_1_2.js";
+import { evaluateOutboundAuthorization } from "../outbound-policy/evaluate.js";
+import { OUTBOUND_AUTHORIZATION_POLICY_V1 } from "../outbound-policy/types.js";
 import {
   RETENTION_ELIGIBLE_JOB_STATUSES,
   type RetentionAutomationRuleSnapshot,
@@ -19,7 +21,48 @@ import {
   type RetentionTouchpointDecision
 } from "./retention-gates.js";
 
-const DEFAULT_POLICY_VERSION = "fs-8-draft";
+const DEFAULT_POLICY_VERSION = OUTBOUND_AUTHORIZATION_POLICY_V1;
+
+const BLOCK_REASON_MESSAGES: Record<RetentionBlockReasonCode, string> = {
+  FEATURE_DISABLED: "Retention gates feature is disabled for this company",
+  PREREQUISITE_NOT_APPROVED: "Job completion confirmation prerequisite is not approved",
+  JOB_STATUS_INELIGIBLE: "Job status is not eligible for retention outreach",
+  DO_NOT_CONTACT: "Customer is marked do not contact",
+  CONSENT_REQUIRED: "Required channel or scope consent is missing",
+  AUTOMATION_DISABLED: "Automation rule for this touchpoint is disabled",
+  OPEN_SERVICE_ISSUE: "Open service issue suppresses this touchpoint",
+  POLICY_DENIED: "Retention policy denied this touchpoint"
+};
+
+function blocked(
+  touchpoint: CustomerMessageTouchpoint,
+  reasonCode: RetentionBlockReasonCode,
+  automationRuleId: string | null,
+  reason?: string
+): RetentionTouchpointDecision {
+  return {
+    touchpoint,
+    allowed: false,
+    reasonCode,
+    automationRuleId,
+    policyVersion: DEFAULT_POLICY_VERSION,
+    reason: reason ?? BLOCK_REASON_MESSAGES[reasonCode]
+  };
+}
+
+function allowed(
+  touchpoint: CustomerMessageTouchpoint,
+  automationRuleId: string | null,
+  reason: string
+): RetentionTouchpointDecision {
+  return {
+    touchpoint,
+    allowed: true,
+    automationRuleId,
+    policyVersion: DEFAULT_POLICY_VERSION,
+    reason
+  };
+}
 
 function isPrerequisiteSatisfied(
   status: RetentionGatesEvaluationInput["prerequisiteStatus"]
@@ -73,66 +116,68 @@ function evaluateTouchpoint(
   input: RetentionGatesEvaluationInput
 ): RetentionTouchpointDecision {
   const automationRule = automationRuleForTouchpoint(touchpoint, input.automationRules);
+  const automationRuleId = automationRule?.id ?? null;
 
   if (!input.retentionGatesEnabled) {
-    return {
-      touchpoint,
-      allowed: false,
-      reasonCode: "FEATURE_DISABLED",
-      automationRuleId: automationRule?.id ?? null
-    };
+    return blocked(touchpoint, "FEATURE_DISABLED", automationRuleId);
   }
 
   if (!isPrerequisiteSatisfied(input.prerequisiteStatus)) {
-    return {
-      touchpoint,
-      allowed: false,
-      reasonCode: "PREREQUISITE_NOT_APPROVED",
-      automationRuleId: automationRule?.id ?? null
-    };
+    return blocked(touchpoint, "PREREQUISITE_NOT_APPROVED", automationRuleId);
   }
 
   if (!RETENTION_ELIGIBLE_JOB_STATUSES.includes(input.jobStatus)) {
-    return {
-      touchpoint,
-      allowed: false,
-      reasonCode: "JOB_STATUS_INELIGIBLE",
-      automationRuleId: automationRule?.id ?? null
-    };
+    return blocked(touchpoint, "JOB_STATUS_INELIGIBLE", automationRuleId);
   }
 
   if (input.openServiceIssue && touchpoint !== "retention_issue_check") {
-    return {
-      touchpoint,
-      allowed: false,
-      reasonCode: "OPEN_SERVICE_ISSUE",
-      automationRuleId: automationRule?.id ?? null
-    };
+    return blocked(touchpoint, "OPEN_SERVICE_ISSUE", automationRuleId);
   }
 
   if (automationRule && !automationRule.isEnabled) {
-    return {
-      touchpoint,
-      allowed: false,
-      reasonCode: "AUTOMATION_DISABLED",
-      automationRuleId: automationRule.id
-    };
+    return blocked(touchpoint, "AUTOMATION_DISABLED", automationRule.id);
+  }
+
+  const consentScope = defaultConsentScopeForTouchpoint(touchpoint);
+  const channel = input.customer.prefersSms ? "sms" : "email";
+  const outboundDecision = evaluateOutboundAuthorization({
+    policyVersion: DEFAULT_POLICY_VERSION,
+    kind: "queued_outreach",
+    resourceCompanyId: input.companyId,
+    actor: {
+      companyId: input.companyId,
+      actorId: "retention-gates",
+      actorType: "system"
+    },
+    channel,
+    actionType: "customer_message",
+    consent: {
+      consentScope,
+      capturedAt: input.customer.consentCapturedAt,
+      consentVersion: input.customer.consentVersion,
+      appointmentOptIn: input.customer.appointmentOptIn,
+      marketingOptIn: input.customer.marketingOptIn,
+      revokedAt: input.customer.consentRevokedAt,
+      currentConsentVersion: input.customer.currentConsentVersion
+    },
+    customer: {
+      doNotContact: input.customer.doNotContact,
+      prefersSms: input.customer.prefersSms,
+      prefersEmail: input.customer.prefersEmail
+    }
+  });
+
+  if (!outboundDecision.allowed) {
+    const reasonCode: RetentionBlockReasonCode =
+      outboundDecision.failureCode === "POLICY_DENIED" ? "POLICY_DENIED" : "CONSENT_REQUIRED";
+    return blocked(touchpoint, reasonCode, automationRuleId, outboundDecision.reason);
   }
 
   if (!consentAllowsTouchpoint(touchpoint, input.customer)) {
-    return {
-      touchpoint,
-      allowed: false,
-      reasonCode: "CONSENT_REQUIRED",
-      automationRuleId: automationRule?.id ?? null
-    };
+    return blocked(touchpoint, "CONSENT_REQUIRED", automationRuleId);
   }
 
-  return {
-    touchpoint,
-    allowed: true,
-    automationRuleId: automationRule?.id ?? null
-  };
+  return allowed(touchpoint, automationRuleId, outboundDecision.reason);
 }
 
 export function evaluateRetentionGates(

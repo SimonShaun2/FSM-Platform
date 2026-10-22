@@ -1,6 +1,7 @@
 export * from "./errors.js";
 export * from "./error-http.js";
 export * from "./agent-control-plane/v1/index.js";
+export * from "./outbound-policy/index.js";
 export * from "./ai-revenue.types.js";
 export * from "./automation-rule.types.js";
 export * from "./campaign.types.js";
@@ -32,3 +33,4 @@ export * from "./pair4/proposal-factory-v0_1_2.js";
 export * from "./pair4/operator-queue-jobs.js";
 export * from "./pair4/retention-gates.js";
 export * from "./pair4/retention-gates-eval.js";
+export * from "./operator-inbox.js";

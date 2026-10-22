@@ -9,6 +9,7 @@ import {
   Package,
   Settings,
   ShieldCheck,
+  Inbox,
   Sparkles,
   UserRound,
   Upload,
@@ -38,7 +39,8 @@ const ownerAdminNavigation: RoleNavigation = {
     { label: "Estimates", href: "/estimates", icon: FileText },
     { label: "Invoices", href: "/invoices", icon: CreditCard },
     { label: "Service Agreements", href: "/service-agreements", icon: ShieldCheck },
-    { label: "AI Revenue Center", href: "/ai-revenue-center", icon: Sparkles }
+    { label: "AI Revenue Center", href: "/ai-revenue-center", icon: Sparkles },
+    { label: "Command Center", href: "/command-center", icon: Inbox }
   ],
   growth: [{ label: "Settings", href: "/settings", icon: Settings }]
 };
@@ -49,7 +51,8 @@ const dispatcherNavigation: RoleNavigation = {
     { label: "Customers", href: "/customers", icon: Users },
     { label: "Jobs", href: "/jobs", icon: BriefcaseBusiness },
     { label: "Estimates", href: "/estimates", icon: FileText },
-    { label: "Invoices", href: "/invoices", icon: CreditCard }
+    { label: "Invoices", href: "/invoices", icon: CreditCard },
+    { label: "Command Center", href: "/command-center", icon: Inbox }
   ],
   growth: [{ label: "Settings", href: "/settings", icon: Settings }]
 };
