@@ -15,8 +15,12 @@
 |-------|------|---------|---------|
 | `GET /health` | Liveness (process up) | 200 | — |
 | `GET /health/live` | Liveness alias | 200 | — |
-| `GET /health/ready` | Readiness (DB + Redis) | 200 | 503 |
+| `GET /health/ready` | Readiness (DB + Redis + object storage) | 200 | 503 |
 | `GET /health/db` | Database probe only | 200 | 503 |
+| `GET /health/redis` | Redis probe only | 200 | 503 |
+| `GET /health/storage` | Object storage (`HeadBucket`) only | 200 | 503 |
+
+`apps/webhook` exposes `GET /health` → `{ status: "ok", service: "webhook" }` (liveness only).
 
 Platform wiring (post–FS-93): point liveness to `/health` or `/health/live`; readiness to `/health/ready`.
 

@@ -1,6 +1,7 @@
 import {
   DeleteObjectCommand,
   GetObjectCommand,
+  HeadBucketCommand,
   PutObjectCommand,
   S3Client
 } from "@aws-sdk/client-s3";
@@ -87,4 +88,13 @@ export function getFileKeyFromUrl(fileUrl: string): string {
   }
 
   return decodeURIComponent(url.pathname.slice(prefix.length));
+}
+
+/** FS-79: lightweight bucket reachability check for staging health probes. */
+export async function pingObjectStorageBucket(): Promise<void> {
+  await client.send(
+    new HeadBucketCommand({
+      Bucket: env.R2_BUCKET_NAME
+    })
+  );
 }
