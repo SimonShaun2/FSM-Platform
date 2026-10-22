@@ -1,0 +1,220 @@
+services:
+  - type: web
+    name: renvani-web
+    runtime: node
+    region: ohio
+    plan: 0.5c-512mb
+    buildCommand: corepack enable && corepack pnpm install --frozen-lockfile && corepack pnpm exec turbo run build --filter=@fsm/web...
+    startCommand: corepack pnpm --filter @fsm/web start
+    envVars:
+      - key: NODE_ENV
+        value: production
+      - key: NEXT_PUBLIC_API_URL
+        fromService:
+          type: web
+          name: renvani-api
+          envVarKey: RENDER_EXTERNAL_URL
+
+  - type: web
+    name: renvani-api
+    runtime: node
+    region: ohio
+    plan: 0.5c-512mb
+    buildCommand: corepack enable && corepack pnpm install --frozen-lockfile && corepack pnpm exec turbo run build --filter=@fsm/api...
+    preDeployCommand: corepack pnpm --filter @fsm/db db:migrate
+    startCommand: corepack pnpm --filter @fsm/api start
+    healthCheckPath: /health
+    envVars:
+      - key: NODE_ENV
+        value: production
+      - key: DATABASE_URL
+        fromDatabase:
+          name: renvani-postgres
+          property: connectionString
+      - key: REDIS_URL
+        fromService:
+          type: keyvalue
+          name: renvani-key-value
+          property: connectionString
+      - key: APP_URL
+        fromService:
+          type: web
+          name: renvani-web
+          envVarKey: RENDER_EXTERNAL_URL
+      - key: STRIPE_SECRET_KEY
+        sync: false
+      - key: STRIPE_WEBHOOK_SECRET
+        sync: false
+      - key: STRIPE_CONNECT_CLIENT_ID
+        sync: false
+      - key: STRIPE_PLATFORM_FEE_PERCENT
+        sync: false
+      - key: OPENAI_API_KEY
+        sync: false
+      - key: TWILIO_ACCOUNT_SID
+        sync: false
+      - key: TWILIO_AUTH_TOKEN
+        sync: false
+      - key: TWILIO_FROM_NUMBER
+        sync: false
+      - key: SENDGRID_API_KEY
+        sync: false
+      - key: SENDGRID_FROM_EMAIL
+        sync: false
+      - key: R2_ACCOUNT_ID
+        sync: false
+      - key: R2_ACCESS_KEY_ID
+        sync: false
+      - key: R2_SECRET_ACCESS_KEY
+        sync: false
+      - key: R2_BUCKET_NAME
+        sync: false
+      - key: JWT_SECRET
+        sync: false
+      - key: JWT_REFRESH_SECRET
+        sync: false
+      - key: ACCESS_TOKEN_TTL_SECONDS
+        sync: false
+      - key: REFRESH_TOKEN_TTL_SECONDS
+        sync: false
+      - key: RESET_TOKEN_TTL_SECONDS
+        sync: false
+
+  - type: web
+    name: renvani-webhook
+    runtime: node
+    region: ohio
+    plan: 0.5c-512mb
+    buildCommand: corepack enable && corepack pnpm install --frozen-lockfile && corepack pnpm exec turbo run build --filter=@fsm/webhook...
+    startCommand: corepack pnpm --filter @fsm/webhook start
+    envVars:
+      - key: NODE_ENV
+        value: production
+      - key: DATABASE_URL
+        fromDatabase:
+          name: renvani-postgres
+          property: connectionString
+      - key: REDIS_URL
+        fromService:
+          type: keyvalue
+          name: renvani-key-value
+          property: connectionString
+      - key: APP_URL
+        fromService:
+          type: web
+          name: renvani-web
+          envVarKey: RENDER_EXTERNAL_URL
+      - key: STRIPE_SECRET_KEY
+        sync: false
+      - key: STRIPE_WEBHOOK_SECRET
+        sync: false
+      - key: STRIPE_CONNECT_CLIENT_ID
+        sync: false
+      - key: STRIPE_PLATFORM_FEE_PERCENT
+        sync: false
+      - key: OPENAI_API_KEY
+        sync: false
+      - key: TWILIO_ACCOUNT_SID
+        sync: false
+      - key: TWILIO_AUTH_TOKEN
+        sync: false
+      - key: TWILIO_FROM_NUMBER
+        sync: false
+      - key: SENDGRID_API_KEY
+        sync: false
+      - key: SENDGRID_FROM_EMAIL
+        sync: false
+      - key: R2_ACCOUNT_ID
+        sync: false
+      - key: R2_ACCESS_KEY_ID
+        sync: false
+      - key: R2_SECRET_ACCESS_KEY
+        sync: false
+      - key: R2_BUCKET_NAME
+        sync: false
+      - key: JWT_SECRET
+        sync: false
+      - key: JWT_REFRESH_SECRET
+        sync: false
+      - key: ACCESS_TOKEN_TTL_SECONDS
+        sync: false
+      - key: REFRESH_TOKEN_TTL_SECONDS
+        sync: false
+      - key: RESET_TOKEN_TTL_SECONDS
+        sync: false
+
+  - type: worker
+    name: renvani-worker
+    runtime: node
+    region: ohio
+    plan: 0.5c-512mb
+    buildCommand: corepack enable && corepack pnpm install --frozen-lockfile && corepack pnpm exec turbo run build --filter=@fsm/worker...
+    startCommand: corepack pnpm --filter @fsm/worker start
+    envVars:
+      - key: NODE_ENV
+        value: production
+      - key: DATABASE_URL
+        fromDatabase:
+          name: renvani-postgres
+          property: connectionString
+      - key: REDIS_URL
+        fromService:
+          type: keyvalue
+          name: renvani-key-value
+          property: connectionString
+      - key: APP_URL
+        fromService:
+          type: web
+          name: renvani-web
+          envVarKey: RENDER_EXTERNAL_URL
+      - key: STRIPE_SECRET_KEY
+        sync: false
+      - key: STRIPE_WEBHOOK_SECRET
+        sync: false
+      - key: STRIPE_CONNECT_CLIENT_ID
+        sync: false
+      - key: STRIPE_PLATFORM_FEE_PERCENT
+        sync: false
+      - key: OPENAI_API_KEY
+        sync: false
+      - key: TWILIO_ACCOUNT_SID
+        sync: false
+      - key: TWILIO_AUTH_TOKEN
+        sync: false
+      - key: TWILIO_FROM_NUMBER
+        sync: false
+      - key: SENDGRID_API_KEY
+        sync: false
+      - key: SENDGRID_FROM_EMAIL
+        sync: false
+      - key: R2_ACCOUNT_ID
+        sync: false
+      - key: R2_ACCESS_KEY_ID
+        sync: false
+      - key: R2_SECRET_ACCESS_KEY
+        sync: false
+      - key: R2_BUCKET_NAME
+        sync: false
+      - key: JWT_SECRET
+        sync: false
+      - key: JWT_REFRESH_SECRET
+        sync: false
+      - key: ACCESS_TOKEN_TTL_SECONDS
+        sync: false
+      - key: REFRESH_TOKEN_TTL_SECONDS
+        sync: false
+      - key: RESET_TOKEN_TTL_SECONDS
+        sync: false
+
+  - type: keyvalue
+    name: renvani-key-value
+    region: ohio
+    plan: 256mb
+    ipAllowList: []
+    maxmemoryPolicy: noeviction
+
+databases:
+  - name: renvani-postgres
+    region: ohio
+    plan: 0.1c-256mb
+    ipAllowList: []
