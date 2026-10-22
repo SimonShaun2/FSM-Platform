@@ -12,6 +12,7 @@ type TableName =
   | "assets"
   | "jobs"
   | "importSessions"
+  | "dataExportSessions"
   | "estimates"
   | "estimateItems"
   | "invoices"
@@ -78,6 +79,8 @@ type MaintenancePlanStatus = "active" | "paused" | "expired" | "cancelled";
 type MaintenancePlanFrequency = "monthly" | "bi_monthly" | "quarterly" | "bi_annual" | "annual";
 type ServiceAgreementBillingCycle = "monthly" | "annual";
 type ImportSessionStatus = "uploaded" | "mapping" | "preview" | "importing" | "completed" | "failed" | "rolled_back";
+type DataExportStatus = "pending" | "processing" | "completed" | "failed" | "expired";
+type DataExportFormat = "json" | "csv_bundle";
 type ImportEntityType = "customers" | "properties" | "assets" | "jobs" | "estimates" | "invoices";
 type AutomationRuleType =
   | "estimate_follow_up"
@@ -314,6 +317,25 @@ export interface TestImportValidationError {
   field: string;
   message: string;
   value: string;
+}
+
+export interface TestDataExportSessionRecord {
+  id: string;
+  companyId: string;
+  requestedById: string | null;
+  status: DataExportStatus;
+  format: DataExportFormat;
+  manifestVersion: string;
+  progressPercent: number;
+  fileName: string | null;
+  fileUrl: string | null;
+  recordCounts: Record<string, number>;
+  expiresAt: Date | null;
+  completedAt: Date | null;
+  errorMessage: string | null;
+  createdAt: Date;
+  updatedAt: Date;
+  deletedAt: Date | null;
 }
 
 export interface TestImportSessionRecord {
@@ -959,6 +981,7 @@ type AnyTestRecord =
   | TestAssetRecord
   | TestJobRecord
   | TestImportSessionRecord
+  | TestDataExportSessionRecord
   | TestEstimateRecord
   | TestEstimateItemRecord
   | TestInvoiceRecord
@@ -997,6 +1020,7 @@ type MockTable =
   | typeof assetsTable
   | typeof jobsTable
   | typeof importSessionsTable
+  | typeof dataExportSessionsTable
   | typeof estimatesTable
   | typeof estimateItemsTable
   | typeof invoicesTable
@@ -1035,6 +1059,7 @@ interface TestState {
   assets: TestAssetRecord[];
   jobs: TestJobRecord[];
   importSessions: TestImportSessionRecord[];
+  dataExportSessions: TestDataExportSessionRecord[];
   estimates: TestEstimateRecord[];
   estimateItems: TestEstimateItemRecord[];
   invoices: TestInvoiceRecord[];
@@ -1265,6 +1290,26 @@ const importSessionsTable = {
   aiInferences: "aiInferences",
   rolledBackAt: "rolledBackAt",
   rolledBackById: "rolledBackById",
+  completedAt: "completedAt",
+  errorMessage: "errorMessage",
+  createdAt: "createdAt",
+  updatedAt: "updatedAt",
+  deletedAt: "deletedAt"
+} as const;
+
+const dataExportSessionsTable = {
+  __name: "dataExportSessions",
+  id: "id",
+  companyId: "companyId",
+  requestedById: "requestedById",
+  status: "status",
+  format: "format",
+  manifestVersion: "manifestVersion",
+  progressPercent: "progressPercent",
+  fileName: "fileName",
+  fileUrl: "fileUrl",
+  recordCounts: "recordCounts",
+  expiresAt: "expiresAt",
   completedAt: "completedAt",
   errorMessage: "errorMessage",
   createdAt: "createdAt",
@@ -1915,6 +1960,7 @@ const state: TestState = {
   assets: [],
   jobs: [],
   importSessions: [],
+  dataExportSessions: [],
   estimates: [],
   estimateItems: [],
   invoices: [],
@@ -1962,6 +2008,7 @@ function restoreState(snapshot: TestState): void {
   state.assets.splice(0, state.assets.length, ...snapshot.assets);
   state.jobs.splice(0, state.jobs.length, ...snapshot.jobs);
   state.importSessions.splice(0, state.importSessions.length, ...snapshot.importSessions);
+  state.dataExportSessions.splice(0, state.dataExportSessions.length, ...snapshot.dataExportSessions);
   state.estimates.splice(0, state.estimates.length, ...snapshot.estimates);
   state.estimateItems.splice(0, state.estimateItems.length, ...snapshot.estimateItems);
   state.invoices.splice(0, state.invoices.length, ...snapshot.invoices);
@@ -2014,6 +2061,8 @@ function getRows(tableName: TableName): AnyTestRecord[] {
       return state.jobs;
     case "importSessions":
       return state.importSessions;
+    case "dataExportSessions":
+      return state.dataExportSessions;
     case "estimates":
       return state.estimates;
     case "estimateItems":
@@ -2304,6 +2353,31 @@ function createJobRecord(
     parentJobId: values.parentJobId ?? null,
     tags: values.tags ?? [],
     importSessionId: values.importSessionId ?? null,
+    createdAt: values.createdAt ?? now,
+    updatedAt: values.updatedAt ?? now,
+    deletedAt: values.deletedAt ?? null
+  };
+}
+
+function createDataExportSessionRecord(
+  values: Partial<TestDataExportSessionRecord> & Pick<TestDataExportSessionRecord, "companyId">
+): TestDataExportSessionRecord {
+  const now = new Date();
+
+  return {
+    id: values.id ?? nextId(),
+    companyId: values.companyId,
+    requestedById: values.requestedById ?? null,
+    status: values.status ?? "pending",
+    format: values.format ?? "json",
+    manifestVersion: values.manifestVersion ?? "fsm.data-export.v1",
+    progressPercent: values.progressPercent ?? 0,
+    fileName: values.fileName ?? null,
+    fileUrl: values.fileUrl ?? null,
+    recordCounts: values.recordCounts ?? {},
+    expiresAt: values.expiresAt ?? null,
+    completedAt: values.completedAt ?? null,
+    errorMessage: values.errorMessage ?? null,
     createdAt: values.createdAt ?? now,
     updatedAt: values.updatedAt ?? now,
     deletedAt: values.deletedAt ?? null
@@ -3193,6 +3267,10 @@ function createRow(tableName: TableName, values: Record<string, unknown>): AnyTe
         values as Partial<TestImportSessionRecord> &
           Pick<TestImportSessionRecord, "companyId" | "fileName" | "fileUrl">
       );
+    case "dataExportSessions":
+      return createDataExportSessionRecord(
+        values as Partial<TestDataExportSessionRecord> & Pick<TestDataExportSessionRecord, "companyId">
+      );
     case "estimates":
       return createEstimateRecord(
         values as Partial<TestEstimateRecord> & Pick<TestEstimateRecord, "companyId" | "customerId">
@@ -3610,6 +3688,7 @@ export const properties = propertiesTable;
 export const assets = assetsTable;
 export const jobs = jobsTable;
 export const importSessions = importSessionsTable;
+export const dataExportSessions = dataExportSessionsTable;
 export const estimates = estimatesTable;
 export const estimateItems = estimateItemsTable;
 export const invoices = invoicesTable;
@@ -3958,6 +4037,7 @@ export function createDbModuleMock() {
     assets,
     jobs,
     importSessions,
+    dataExportSessions,
     estimates,
     estimateItems,
     invoices,
@@ -4005,6 +4085,7 @@ export function resetTestState(): void {
   state.assets.length = 0;
   state.jobs.length = 0;
   state.importSessions.length = 0;
+  state.dataExportSessions.length = 0;
   state.estimates.length = 0;
   state.estimateItems.length = 0;
   state.invoices.length = 0;
@@ -4102,6 +4183,14 @@ export function seedImportSession(
 ): TestImportSessionRecord {
   const record = createImportSessionRecord(values);
   state.importSessions.push(record);
+  return record;
+}
+
+export function seedDataExportSession(
+  values: Partial<TestDataExportSessionRecord> & Pick<TestDataExportSessionRecord, "companyId">
+): TestDataExportSessionRecord {
+  const record = createDataExportSessionRecord(values);
+  state.dataExportSessions.push(record);
   return record;
 }
 
