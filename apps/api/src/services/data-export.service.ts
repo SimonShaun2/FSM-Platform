@@ -83,7 +83,7 @@ export async function createDataExportSession(
   const format = input.format ?? "json";
   const expiresAt = addRetentionDays(new Date(), DATA_EXPORT_RETENTION_DAYS);
 
-  const [session] = await db
+  const insertedSessions = await db
     .insert(dataExportSessions)
     .values({
       companyId,
@@ -96,6 +96,11 @@ export async function createDataExportSession(
       recordCounts: {}
     })
     .returning();
+  const session = insertedSessions[0];
+
+  if (!session) {
+    throw new AppError(ErrorCode.INTERNAL_ERROR, "Failed to create data export session");
+  }
 
   await emitEvent({
     companyId,
@@ -173,7 +178,7 @@ export async function retryDataExportSession(
     throw new AppError(ErrorCode.CONFLICT, "Export retention window has passed");
   }
 
-  const [updated] = await db
+  const updatedSessions = await db
     .update(dataExportSessions)
     .set({
       status: "pending",
@@ -183,15 +188,20 @@ export async function retryDataExportSession(
     })
     .where(eq(dataExportSessions.id, session.id))
     .returning();
+  const updated = updatedSessions[0];
+
+  if (!updated) {
+    throw new AppError(ErrorCode.NOT_FOUND, "Export session not found");
+  }
 
   const jobData: TenantDataExportJobData = {
     companyId,
-    exportSessionId: session.id,
+    exportSessionId: updated.id,
     requestedById
   };
 
   await exportsQueue.add(EXPORT_QUEUE_JOB_NAMES.tenantDataExport, jobData, {
-    jobId: `tenant-export:${session.id}`,
+    jobId: `tenant-export:${updated.id}`,
     removeOnComplete: true,
     removeOnFail: false
   });
