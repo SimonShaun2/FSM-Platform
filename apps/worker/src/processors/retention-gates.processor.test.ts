@@ -1,7 +1,7 @@
 import type { Job } from "bullmq";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
-import { OPERATOR_QUEUE_JOB_NAMES } from "@fsm/types";
+import { OPERATOR_QUEUE_JOB_NAMES, defaultRetentionCustomerPrefs } from "@fsm/types";
 
 vi.mock("@fsm/jobs", () => ({
   operatorQueue: {
@@ -50,13 +50,7 @@ describe("retention-gates.processor", () => {
       prerequisiteProposalId: "p1",
       prerequisiteStatus: "approved",
       jobCompletedActivityEventId: "e1",
-      customer: {
-        prefersSms: true,
-        prefersEmail: false,
-        doNotContact: false,
-        marketingOptIn: true,
-        appointmentOptIn: true
-      },
+      customer: defaultRetentionCustomerPrefs(),
       automationRules: [
         { id: "r1", ruleType: "job_follow_up", isEnabled: true },
         { id: "r2", ruleType: "review_request", isEnabled: true }
@@ -80,5 +74,37 @@ describe("retention-gates.processor", () => {
     const firstCall = vi.mocked(dependencies.enqueueProposalCreate).mock.calls[0]?.[0];
     expect(firstCall?.dryRun).toBe(true);
     expect(firstCall?.metadata.domain).toBe("retention");
+  });
+
+  it("does not enqueue outreach when consent was revoked (FS-13)", async () => {
+    vi.mocked(dependencies.loadEvaluationInput).mockResolvedValue({
+      companyId: "c1",
+      jobId: "j1",
+      customerId: "cust1",
+      jobStatus: "completed",
+      prerequisiteProposalId: "p1",
+      prerequisiteStatus: "approved",
+      jobCompletedActivityEventId: "e1",
+      customer: defaultRetentionCustomerPrefs({
+        consentCapturedAt: "2026-10-01T12:00:00.000Z",
+        consentRevokedAt: "2026-10-02T00:00:00.000Z"
+      }),
+      automationRules: [{ id: "r1", ruleType: "job_follow_up", isEnabled: true }],
+      openServiceIssue: false,
+      retentionGatesEnabled: true
+    });
+
+    await processRetentionGatesAfterCompletionConfirm(
+      createJob({
+        companyId: "c1",
+        jobId: "j1",
+        customerId: "cust1",
+        prerequisiteProposalId: "p1",
+        jobCompletedActivityEventId: "e1"
+      }) as never,
+      dependencies
+    );
+
+    expect(dependencies.enqueueProposalCreate).not.toHaveBeenCalled();
   });
 });

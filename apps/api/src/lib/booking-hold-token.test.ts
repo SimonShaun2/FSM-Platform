@@ -1,12 +1,21 @@
+import jwt from "jsonwebtoken";
 import { describe, expect, it } from "vitest";
 
+import { env } from "@fsm/config";
+import { ErrorCode } from "@fsm/types";
+
 import { setupTestEnv } from "../test-support/env-setup.js";
-import { generateBookingHoldToken, verifyBookingHoldToken } from "./booking-hold-token.js";
+import { resetBookingHoldTokenJtiStateForTests } from "./booking-hold-token-store.js";
+import {
+  generateBookingHoldToken,
+  verifyAndClaimBookingHoldToken,
+  verifyBookingHoldToken
+} from "./booking-hold-token.js";
 
 setupTestEnv();
 
 describe("booking-hold-token", () => {
-  it("round-trips hold token claims", () => {
+  it("round-trips hold token claims with jti", () => {
     const payload = {
       companyId: "550e8400-e29b-41d4-a716-446655440000",
       bookingRequestId: "6ba7b810-9dad-11d1-80b4-00c04fd430c8",
@@ -17,5 +26,37 @@ describe("booking-hold-token", () => {
     const verified = verifyBookingHoldToken(token);
 
     expect(verified).toMatchObject(payload);
+    expect(verified.jti).toMatch(/^[0-9a-f-]{36}$/u);
+  });
+
+  it("rejects tokens signed with JWT_SECRET instead of BOOKING_HOLD_TOKEN_SECRET", () => {
+    const token = jwt.sign(
+      {
+        companyId: "550e8400-e29b-41d4-a716-446655440000",
+        bookingRequestId: "6ba7b810-9dad-11d1-80b4-00c04fd430c8",
+        referenceNumber: "BK-20260512-aB3xY9zQ",
+        jti: "6ba7b810-9dad-11d1-80b4-00c04fd430c8",
+        tokenType: "booking_hold"
+      },
+      env.JWT_SECRET,
+      { expiresIn: 3600 }
+    );
+
+    expect(() => verifyBookingHoldToken(token)).toThrow();
+  });
+
+  it("rejects replayed jti on second claim", async () => {
+    resetBookingHoldTokenJtiStateForTests();
+    const token = generateBookingHoldToken({
+      companyId: "550e8400-e29b-41d4-a716-446655440000",
+      bookingRequestId: "6ba7b810-9dad-11d1-80b4-00c04fd430c8",
+      referenceNumber: "BK-20260512-aB3xY9zQ"
+    });
+
+    await verifyAndClaimBookingHoldToken(token);
+
+    await expect(verifyAndClaimBookingHoldToken(token)).rejects.toMatchObject({
+      code: ErrorCode.CONFLICT
+    });
   });
 });

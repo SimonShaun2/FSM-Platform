@@ -23,7 +23,7 @@ import {
   updateGrowthCheck,
   updateGrowthCheckFinding,
   updateGrowthCheckIdentityCandidate
-} from "../../services/growth-check.service.js";
+} from "../../services/growth-intake-foundation.service.js";
 import type {
   GrowthCheckCandidateParams,
   GrowthCheckFindingParams,

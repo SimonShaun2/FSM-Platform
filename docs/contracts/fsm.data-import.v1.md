@@ -37,7 +37,7 @@ Cell values that begin with `=`, `+`, `-`, `@`, tab, or contain carriage returns
 
 | Method | Path | Role |
 |--------|------|------|
-| `POST` | `/imports` | Owner/admin upload CSV → `201` + session `uploaded` (max **10MB**) |
+| `POST` | `/imports` | Owner/admin upload CSV → `201` + session `uploaded` (multipart `limits.fileSize` **10MB**, `limits.files` **1**; **413** if too large, **400** if too many files) |
 | `GET` | `/imports` | Paginated list (tenant-scoped) |
 | `GET` | `/imports/:id` | Session detail |
 | `GET` | `/imports/:id/errors` | `validationErrors[]` for operator review (sanitized values) |

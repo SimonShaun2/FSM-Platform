@@ -1,20 +1,13 @@
-import { z } from "zod";
-
-import { CANONICAL_ENTITY_TYPES_V1 } from "@fsm/types";
+import {
+  BookingRequestIdParamsV1Schema,
+  ResolveEntityBodyV1Schema,
+  type ResolveEntityBodyV1
+} from "@fsm/types";
 
 import { withZodValidation } from "../shared/validation.js";
 
-export const resolveEntityBodySchema = z.object({
-  entityType: z.enum(CANONICAL_ENTITY_TYPES_V1),
-  entityId: z.string().uuid()
-});
+export type ResolveEntityBody = ResolveEntityBodyV1;
 
-export type ResolveEntityBody = z.infer<typeof resolveEntityBodySchema>;
+export const resolveEntityValidation = withZodValidation({ body: ResolveEntityBodyV1Schema });
 
-export const resolveEntityValidation = withZodValidation({ body: resolveEntityBodySchema });
-
-export const inquiryAnchorParamsSchema = z.object({
-  bookingRequestId: z.string().uuid()
-});
-
-export const inquiryAnchorParamsValidation = withZodValidation({ params: inquiryAnchorParamsSchema });
+export const inquiryAnchorParamsValidation = withZodValidation({ params: BookingRequestIdParamsV1Schema });

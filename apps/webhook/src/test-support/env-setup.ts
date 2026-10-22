@@ -23,6 +23,7 @@ const TEST_ENV_VALUES = {
   APP_URL: "http://localhost:3000",
   JWT_SECRET: "jwt_secret",
   JWT_REFRESH_SECRET: "jwt_refresh_secret",
+  BOOKING_HOLD_TOKEN_SECRET: "booking_hold_token_secret",
   ACCESS_TOKEN_TTL_SECONDS: "900",
   REFRESH_TOKEN_TTL_SECONDS: "2592000",
   RESET_TOKEN_TTL_SECONDS: "3600",
