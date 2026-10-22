@@ -147,6 +147,34 @@ Keep this as infrastructure work attached to the accepted FS build sequence; do 
 
 The database is the load-bearing slab. Preserve a single source of truth for companies, users and roles, customers, service locations, assets, work, agreements, estimates, invoices, payments, communication consent, and event history. A company owns its own records and permissions. Company boundaries must be enforced in service queries and writes, including bulk imports and background jobs. [G2]
 
+## Login and account lifecycle
+
+Authentication is a platform capability shared by the office web app, field experience and APIs. Public branded booking pages and customer payment links remain deliberately low-friction; only their sensitive actions require an expiring, scoped link or verified identity. Do not treat a hidden URL as authorization.
+
+Build the lifecycle as one tested path: invite owner → verify email → create account → authenticate → select company/workspace → enforce role → operate → revoke session or membership. Include secure sign-in, email verification, password reset, invite expiry and resend, account recovery, session listing/revocation, role changes, user deactivation and audit events. Tenant membership is many-to-many: a person may belong to multiple service companies, and every request must bind to the selected, verified membership.
+
+Use a maintained authentication implementation rather than custom cryptography. Apply secure password hashing, login and recovery rate limits, anti-enumeration responses, CSRF defenses where cookie sessions are used, and secure session rotation/revocation. Browser credentials must not be exposed to JavaScript storage; use appropriately scoped secure, HttpOnly, SameSite cookies or a reviewed backend-for-frontend design. Require MFA for privileged operators and make it available for business owners; define recovery codes and support-assisted recovery with strong identity checks. Follow the [OWASP Authentication](https://cheatsheetseries.owasp.org/cheatsheets/Authentication_Cheat_Sheet.html), [Session Management](https://cheatsheetseries.owasp.org/cheatsheets/Session_Management_Cheat_Sheet.html), and [Password Storage](https://cheatsheetseries.owasp.org/cheatsheets/Password_Storage_Cheat_Sheet.html) guidance.
+
+**Login acceptance gate:** test invite and expiry, verified account creation, correct company selection, role and tenant denial, password reset, session expiry/revocation, MFA recovery, credential stuffing/rate limits, CSRF/session protections and audit events. Verify public booking/payment links cannot access staff data, and a removed employee loses access promptly across API and worker-triggered actions.
+
+## Payments: two ledgers, two customer journeys
+
+Keep Renvani's subscription billing separate from the service company's collection of its own customer invoices. They have different merchants, fee rules, disputes, refunds, ledgers and support paths. Never blend a Renvani subscription charge with a plumber's or cleaner's job invoice.
+
+| Payment flow | What the system must own | Required decision or control |
+|---|---|---|
+| Renvani subscription | Plan, billing account, subscription state, invoices, tax/receipts, failed renewal and cancellation | Flex and Flat pricing rules, billing dates, proration/refund policy, delinquency and grace behavior |
+| Service-business invoice | Quote/invoice, payment intent, tender, settlement, refund, dispute, processor fee and payout reconciliation | Stripe Connect charge model, merchant of record, connected-account onboarding and responsibility for losses |
+| Platform fee | Flex per-invoice shop fee and Flat no-shop-fee rule | Calculate once from versioned policy; distinguish the Renvani fee from processor fees and any customer-paid processor fee |
+
+Preserve the founder's current pricing direction in configuration and acceptance tests: Flex is $299/month plus 1% of in-app-paid invoices, capped at $39 per invoice; Flat is $799/month with no shop fee. Both include the full product and unlimited users. Processor fees remain separate and must be disclosed. Do not create seat entitlements, feature gates or hidden add-ons. Treat prices and fee rules as effective-dated policy, not constants copied into UI code. Confirm tax handling and final fee presentation before production.
+
+Before live service-business payments, record an ADR for the Stripe Connect account and charge model. Decide who is merchant of record, whose statement descriptor appears, which account pays processor fees, how application fees are collected, who owns refunds/disputes/negative balances, connected-account onboarding/KYC, payout visibility and tax/reporting responsibilities. Stripe documents that Connect charge type affects these responsibilities and fund flow; compare [charge types](https://docs.stripe.com/connect/charges) and [connected-account models](https://docs.stripe.com/connect/accounts) against Renvani's actual business/legal model. Do not select direct, destination or separate charges and transfers by implementation convenience.
+
+Use a provider-hosted/tokenized payment UI where appropriate; Renvani should not store raw card numbers or security codes. A service invoice progresses through explicit states such as draft → issued → partially paid/paid → refunded or disputed. Store provider references and exact decimal amounts; keep immutable ledger entries for charges, fees, refunds and adjustments. Create payment intents idempotently, never infer payment from a browser redirect, and mark settlement only from verified provider events plus reconciliation. Webhooks require signature checks, durable inbox, deduplication, replay handling and operator-visible exceptions. Handle partial payments, failed/declined payments, duplicate callbacks, refunds, disputes, chargebacks, payout mismatches and offline/manual tenders deliberately.
+
+**Payment acceptance gate:** in provider test mode, prove both subscription plans and the complete service invoice path, including fee cap/no-fee rules, separate processor fees, partial payment, retry, duplicate/out-of-order webhook, refund, dispute state, payout reconciliation and subscription renewal failure/cancellation. Totals must reconcile from invoice to provider event to ledger/report. Test that a payment cannot be collected twice under concurrency and that no UI success screen can mark funds settled. Live credentials, live sends and live-money changes stay behind the existing founder authorization rule.
+
 | Subsystem | Structural requirement | Acceptance test |
 |---|---|---|
 | Identity and access | Roles, session lifecycle, least privilege, MFA-ready design | One role cannot read or perform another's sensitive action |
