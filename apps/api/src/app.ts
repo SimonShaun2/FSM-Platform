@@ -17,7 +17,11 @@ import companyRoutes from "./routes/company/index.js";
 import campaignRoutes from "./routes/campaigns/index.js";
 import customerRoutes from "./routes/customers/index.js";
 import dispatchRoutes from "./routes/dispatch/index.js";
+<<<<<<< HEAD
+import healthRoutes from "./routes/health/index.js";
+=======
 import growthCheckRoutes from "./routes/growth-checks/index.js";
+>>>>>>> origin/dev
 import estimateRoutes from "./routes/estimates/index.js";
 import growthCheckRoutes from "./routes/growth-check/index.js";
 import invoiceRoutes from "./routes/invoices/index.js";
@@ -50,6 +54,7 @@ export async function buildApp() {
 
   await app.register(requestLoggerPlugin);
   await app.register(errorHandlerPlugin);
+  await app.register(healthRoutes);
   await app.register(authenticatePlugin);
 
   await app.register(activityEventRoutes, { prefix: "/api/v1" });
