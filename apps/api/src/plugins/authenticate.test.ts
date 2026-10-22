@@ -89,4 +89,31 @@ describe("authenticate plugin", () => {
       code: ErrorCode.FORBIDDEN
     });
   });
+
+  it("derives role from the database, not from JWT claims", async () => {
+    const company = fakeDb.seedCompany({ name: "Company A", slug: "company-a" });
+    const user = fakeDb.seedUser({
+      companyId: company.id,
+      email: "tech@example.com",
+      firstName: "Tech",
+      lastName: "User",
+      role: "technician"
+    });
+
+    const token = jwt.sign(
+      {
+        userId: user.id,
+        companyId: company.id,
+        role: "owner",
+        tokenType: "access"
+      },
+      JWT_SECRET,
+      { expiresIn: 3600 }
+    );
+
+    const request = buildRequest(`Bearer ${token}`);
+    await app.authenticate(request, {} as never);
+
+    expect(request.user.role).toBe("technician");
+  });
 });

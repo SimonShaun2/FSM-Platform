@@ -2,8 +2,8 @@
 
 **Ticket:** [FS-84](https://app.notion.com/p/401317b92d1581bf8c25ef10aebae676)  
 **Author:** Backend Dev 1 (Pair 1)  
-**Status:** PROPOSED — implementation slice on branch `cursor/fs-84-staff-identity-session`  
-**Blocked by:** [FS-93](https://app.notion.com/p/401317b92d1581bf8c25ef10aebae676) identity-provider ADR (not started in repo); multi-company membership ADR (ADR-0002 Proposed)
+**Status:** Ready for peer review — provider-neutral slice complete on `cursor/fs-84-staff-identity-session`  
+**Blocked (follow-on work):** FS-93 / PR #59 identity-provider ADR (Security ACK before schema, transport, vendor); ADR-0002 membership (invites)
 
 ## Objective
 
@@ -28,10 +28,10 @@ Shared contract (no provider): `packages/types/src/staff-identity/v0/` — `STAF
 |---|-----------|-------------|------------------------|
 | 1 | Approved ADR for identity source, session model, membership, revocation | **BLOCKED — FS-93** | No ADR file; TL + Security before schema/provider |
 | 2 | No access before invite accepted + valid membership | **BLOCKED — membership model** | Today: self-serve `register` only; no `user_invites` |
-| 3 | Revoked / expired / disabled / wrong-tenant / insufficient role denied | **Partial** | Refresh revoke + logout; inactive user; cross-company JWT → 403; role via DB on each request. Access JWT until TTL after deactivate — **documented gap** |
+| 3 | Revoked / expired / disabled / wrong-tenant / insufficient role denied | **Partial (slice done)** | Tests: inactive login/refresh/authorize; cross-company JWT → 403; JWT role escalation ignored (DB role). Access JWT until TTL after deactivate — **documented gap** (FS-93) |
 | 4 | Rate limits + non-enumerating login/invite/recovery | **Partial** | Forgot-password non-enumerating (tests). Login/invite limits **BLOCKED** post-FS-93 |
 | 5 | HttpOnly cookies + CSRF where cookie sessions | **BLOCKED — transport ADR** | Web uses JS-readable cookies (`apps/web/src/lib/auth.ts`); no API change in FS-84 |
-| 6 | Security review + lifecycle integration tests | **In progress** | Negative tests added; Security sign-off pending |
+| 6 | Security review + lifecycle integration tests | **Ready for Security** | Provider-neutral negatives in place; full lifecycle blocked on FS-93 |
 
 ## In scope (this branch)
 
