@@ -17,27 +17,27 @@ describe("runTransactionWithRetry", () => {
   });
 
   it("retries on retryable errors and succeeds", async () => {
-    vi.stubEnv("DATABASE_TRANSACTION_MAX_RETRIES", "2");
-    vi.stubEnv("DATABASE_TRANSACTION_RETRY_BASE_MS", "1");
-
     const transactionMock = vi.mocked(db.transaction);
     transactionMock
       .mockRejectedValueOnce({ code: "40P01" })
       .mockImplementationOnce(async (callback) => callback(db as never));
 
-    const result = await runTransactionWithRetry(async () => "ok");
+    const result = await runTransactionWithRetry(async () => "ok", {
+      maxRetries: 2,
+      baseDelayMs: 1
+    });
 
     expect(result).toBe("ok");
     expect(transactionMock).toHaveBeenCalledTimes(2);
   });
 
   it("does not retry validation failures", async () => {
-    vi.stubEnv("DATABASE_TRANSACTION_MAX_RETRIES", "3");
-
     const transactionMock = vi.mocked(db.transaction);
     transactionMock.mockRejectedValueOnce(new Error("validation failed"));
 
-    await expect(runTransactionWithRetry(async () => "ok")).rejects.toThrow("validation failed");
+    await expect(
+      runTransactionWithRetry(async () => "ok", { maxRetries: 3, baseDelayMs: 1 })
+    ).rejects.toThrow("validation failed");
     expect(transactionMock).toHaveBeenCalledTimes(1);
   });
 });
