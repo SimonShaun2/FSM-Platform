@@ -77,6 +77,40 @@ Staging deployment should prove a fresh database migration, worker startup, webh
 
 Exit criterion: one button or approved workflow can reliably put a reviewed build in staging; founder promotion releases the tested artifact to production with observable health and a documented recovery step. Platform 1 owns environment/CI implementation; Platform 2 owns observability and recovery; Security reviews gate authority and secret boundaries.
 
+# Managed-platform responsibility boundary: decision required
+
+Do not treat a provider's managed feature as proof that Renvani's product-level controls are complete. The repository currently contains a Next.js web app, a Fastify API, BullMQ/Redis workers, a webhook app, PostgreSQL/Drizzle, an in-house JWT flow, and storage/payment adapters. Keep that inventory as the baseline until the platform/account audit and an approved ADR establish actual deployed state. FS-93 owns the provider decision and deployment-document reconciliation; it does not authorize account changes, migration, deployment, or live money.
+
+| Responsibility | Candidate managed service contribution | Renvani remains accountable for |
+|---|---|---|
+| Web delivery | Vercel may host Next.js, preview, and production web deployments | Exact-head review, approved batch CI, environment separation, app behavior, release approval, rollback evidence |
+| API and webhooks | Vercel functions or another stateless runtime may host compatible handlers | Decide runtime fit for existing Fastify API and webhook app; authZ, tenant context, rate limits, signature validation, idempotency, and runtime limits |
+| Workers and queues | Managed queue options may provide durable delivery/retry primitives; existing BullMQ/Redis can remain | Decide whether persistent consumers are required; own idempotency, ordering assumptions, dead-letter review/replay, tenant-safe work claims, saturation controls, and reconciliation |
+| Database | Supabase or another managed PostgreSQL service may provide managed database operations, pooling, backup/PITR options | Schema and transaction correctness, migration locks/compatibility, connection budgets, least privilege, private-network policy, tested restore and recovery objectives |
+| Authentication | Supabase Auth is an option to evaluate alongside current JWT/session code | Choose identity source/session model; enforce staff lifecycle, company membership, roles, revocation, secure recovery, MFA policy, and server-derived context |
+| Object storage | Supabase Storage or an existing private object store may provide private objects and signed access | Tenant-safe object ownership, authorization, malware/size policy, retention, deletion, separate backup/restore evidence, and signed-link lifetime |
+| Secrets and observability | Hosting/database vendors can supply secret stores, logs, traces, metrics, and alerts | Secret ownership/rotation, redaction, retention, alert response, audit trail, and proving that production credentials never reach previews |
+| CI/CD and recovery | GitHub/Vercel integrations can build and preview revisions | Renvani's branch protection, required checks, reviewer authority, migration gate, provenance, staging acceptance, founder production promotion, and tested rollback |
+
+## Platform decisions and guardrails
+
+- Supabase is a candidate, not an assumption. If selected, decide whether PostgreSQL only, Auth, and/or Storage are adopted separately. Review actual plan capabilities and limits before relying on pooling, backups/PITR, or recovery guarantees.
+- Database row-level security is a defense layer only when policies are complete and application credentials are correctly scoped. A privileged/service credential that bypasses RLS belongs only in server-side secret storage. Never expose it to browser code, previews, logs, or customer-controlled input.
+- If Vercel is selected, assess the existing Fastify API, webhook delivery, BullMQ consumers, migration runner, connection pool, function duration/concurrency, and background scheduling as separate workloads. Function/queue delivery does not remove duplicate or delayed events; consumers and payment/webhook handlers must remain idempotent.
+- Decide whether to retain the current JWT flow or migrate to a managed identity provider only through an ADR, compatibility plan, session/revocation tests, and staged rollout. Do not combine a provider migration with unrelated schema or tenant-policy changes.
+- Treat managed database backups and object/file recovery as distinct. A database restore does not establish that customer photos, documents, or other stored objects can be recovered.
+- Keep pricing invariant across deployment choices: approved Flex and Flat options include the product's full feature set and unlimited users. No seat metering, feature gates, tiered upsells, or provider-driven entitlement changes.
+- Stripe and other payment providers have two distinct Renvani contexts: **FS-94** is Renvani charging a field-service company for its subscription; **FS-88** is that company collecting from its own customer for field work. Keep their accounts/configuration, ledgers, webhooks, reconciliation, and tenant access boundaries distinct.
+
+## Required proof before claiming isolation
+
+FS-92 must demonstrate both questions with independent evidence:
+
+1. Can an anonymous person read or alter tenant data, including by connecting directly to the database or object store? Prove denial at the public API, database/network boundary, and object-access boundary where applicable.
+2. Can a signed-in user from company A read or alter company B's records, files, payment state, or queued work? Prove denial through API and worker paths, and through database policy tests where RLS is used.
+
+Tests should use separate companies, roles, and unauthenticated requests, assert both read and write denial, and exercise privileged server paths. Route tests alone cannot prove direct database/network exposure. Attach the policy configuration, sanitized infrastructure evidence, and negative-test results. Security review remains independent for security-sensitive changes.
+
 # Infrastructure design: what we build and where it runs
 
 This is the production infrastructure target to validate against the team's current host and account configuration before implementation. Keep the existing TypeScript monorepo and modular services. The repository names Railway as a deployment target; confirm what is actually provisioned before treating a target as a live environment. Prefer managed platform capabilities for ingress, TLS, health checks and service replicas when they meet the requirements. A separate load balancer or Kubernetes cluster is not a starting requirement. [G2]
