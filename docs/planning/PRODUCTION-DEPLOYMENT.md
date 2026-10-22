@@ -1,6 +1,6 @@
 # ServiceRev — Production Deployment
 
-**Version:** v3.1.0 (Render reconciliation — docs only; see [ADR-FS-93](../adr/ADR-FS-93-managed-platform-boundaries.md) when merged)  
+**Version:** v3.1.0 (Render reconciliation — docs only; aligns with FS-93 / ADR-FS-93 on PR #59)  
 **Repo:** SimonShaun2/Renvani (formerly FSM-Platform)  
 **Platform decision:** Vercel (web) + Render (API, worker, webhook, Postgres, Key Value) + Cloudflare R2 + in-repo JWT. Key Value **`maxmemoryPolicy: noeviction`** required for BullMQ.
 
@@ -25,7 +25,7 @@
 **Total estimated monthly cost at launch:** ~$50–120/mo  
 (Render web + worker + webhook + Postgres + Key Value + Vercel Pro + R2 ~$0–5 + Twilio/SendGrid usage)
 
-**Reference runbook (FS-93):** [FS-93 Render runbook](../platform/FS-93-render-runbook.md) and [blueprint draft](../infrastructure/render-blueprint.render.yaml) (not applied until founder authorizes staging).
+**Reference runbook (FS-93, PR #59):** `docs/platform/FS-93-render-runbook.md` and `docs/infrastructure/render-blueprint.render.yaml` (blueprint not applied until founder authorizes staging).
 
 ---
 
@@ -63,9 +63,9 @@ Render Dashboard → **New** → **Web Service** → connect GitHub repo `SimonS
 | Root directory | Repository root (monorepo) |
 | Build command | `corepack enable && corepack pnpm install --frozen-lockfile && corepack pnpm build` |
 | Start command | `corepack pnpm --filter @fsm/api start` |
-| Health check path | `/health` (after Step 7b) |
+| Health check path | `/health` (FS-79 **liveness**; use `/health/ready` for readiness probes when supported) |
 
-Render sets `PORT`; ensure the API listens on `process.env.PORT`.
+**Render `PORT` → `API_PORT`:** Render injects `PORT` on web services. `@fsm/config` validates **`API_PORT`**, not `PORT` (`apps/api/src/server.ts` listens on `env.API_PORT`). On the API service set **`API_PORT` to the same value as `PORT`** (Render Dashboard: set `API_PORT` from the `PORT` env var reference, or use a start wrapper that exports `API_PORT=$PORT` before `pnpm --filter @fsm/api start`).
 
 ### Add background worker
 
@@ -89,86 +89,78 @@ Render Dashboard → **New** → **Web Service** (same repo)
 
 Routes: `POST /stripe`, `POST /twilio` (see `apps/webhook`). Assign a public URL (e.g. `webhooks.servicerev.app`).
 
+**Render `PORT` → `WEBHOOK_PORT`:** Same pattern as the API — set **`WEBHOOK_PORT` to match Render `PORT`** (`apps/webhook` listens on `env.WEBHOOK_PORT`). `@fsm/config` still requires **`API_PORT`** on the webhook service (use any valid port number, e.g. `3001`; it is unused for HTTP on this service).
+
 ### Environment variables (API + Worker + Webhook)
 
-Set in Render → each service → **Environment**. API and worker share the full app surface; webhook needs DB, Redis, Stripe, and Twilio vars at minimum.
+Set in Render → each service → **Environment**.
 
-**API and Worker (both):**
+**Source of truth:** `packages/config/src/env.ts` (and `.env.example`). Any service that imports `@fsm/config` (API, worker, webhook) must satisfy this schema at boot.
+
+#### A. `@fsm/config` — required on API, worker, and webhook
 
 ```
-# Database
-DATABASE_URL=postgresql://...  (from Render Postgres — internal URL)
-
-# Redis / BullMQ
-REDIS_URL=redis://...  (from Render Key Value — internal URL)
-
-# App
 NODE_ENV=production
+
+# Ports (see PORT mapping above on web services)
+API_PORT=10000                    # API: same as Render PORT
+WEBHOOK_PORT=10000                # Webhook only: same as Render PORT
+
+DATABASE_URL=postgresql://...     # Render Postgres — internal URL
+REDIS_URL=redis://...             # Render Key Value — internal URL
+
 APP_URL=https://app.servicerev.app
-API_URL=https://api.servicerev.app
-CORS_ORIGINS=https://servicerev.app,https://app.servicerev.app
 
-# Auth
-JWT_SECRET=<generate: openssl rand -hex 64>
-JWT_EXPIRES_IN=7d
+JWT_SECRET=<openssl rand -hex 64>
+JWT_REFRESH_SECRET=<openssl rand -hex 64>
+BOOKING_HOLD_TOKEN_SECRET=<openssl rand -hex 64>
 
-# Stripe
+ACCESS_TOKEN_TTL_SECONDS=900
+REFRESH_TOKEN_TTL_SECONDS=2592000
+RESET_TOKEN_TTL_SECONDS=3600
+
+ESTIMATE_EXPIRY_DAYS=30           # optional; default 30 in env.ts
+INVOICE_DUE_DAYS=30               # optional; default 30 in env.ts
+
 STRIPE_SECRET_KEY=sk_live_...
 STRIPE_WEBHOOK_SECRET=whsec_...
+STRIPE_CONNECT_CLIENT_ID=ca_...
 STRIPE_PLATFORM_FEE_PERCENT=2.9
 
-# Twilio
+OPENAI_API_KEY=sk-...
+
 TWILIO_ACCOUNT_SID=AC...
 TWILIO_AUTH_TOKEN=...
 TWILIO_FROM_NUMBER=+1...
 
-# SendGrid
 SENDGRID_API_KEY=SG....
 SENDGRID_FROM_EMAIL=noreply@servicerev.app
-SENDGRID_FROM_NAME=ServiceRev
 
-# Cloudflare R2
 R2_ACCOUNT_ID=...
 R2_ACCESS_KEY_ID=...
 R2_SECRET_ACCESS_KEY=...
 R2_BUCKET_NAME=servicerev-production
-R2_PUBLIC_URL=https://files.servicerev.app
 
-# OpenAI (AI features)
-OPENAI_API_KEY=sk-...
-
-# Web Push (VAPID)
-VAPID_PUBLIC_KEY=...
-VAPID_PRIVATE_KEY=...
-VAPID_SUBJECT=mailto:hello@servicerev.app
-
-# Worker only
-WORKER_CONCURRENCY=5
+NEXT_PUBLIC_API_URL=https://api.servicerev.app
 ```
 
-**Webhook service (add / overlap):**
+Worker: set the same block (including `API_PORT`; worker does not bind HTTP but env validation still runs). Webhook: full block plus `WEBHOOK_PORT` mapped from `PORT`.
 
-```
-DATABASE_URL=...
-REDIS_URL=...
-NODE_ENV=production
-STRIPE_SECRET_KEY=sk_live_...
-STRIPE_WEBHOOK_SECRET=whsec_...
-TWILIO_AUTH_TOKEN=...
-```
+#### B. Not in `env.ts` — scope labels (do not assume `@fsm/config` reads these)
 
-### Generate VAPID keys (run once locally)
+| Variable | Where set | Scope |
+| --- | --- | --- |
+| `API_URL` | **Vercel** (optional) | Server-side Next.js origin for `/api/v1/public/*` rewrites (`apps/web/next.config.ts`). Defaults to `NEXT_PUBLIC_API_URL`. Not required on Render API. |
+| `CORS_ORIGINS` | **Render API** (when implemented) | Fastify CORS allowlist for browser calls to the API — production config / TICKET-039; **not** in `env.ts` today. Example: `https://servicerev.app,https://app.servicerev.app` |
+
+#### C. Vercel-only (see Step 2)
+
+`NEXT_PUBLIC_*` keys for the browser; must stay consistent with `NEXT_PUBLIC_API_URL` above.
+
+### Generate secrets (run once locally)
 
 ```bash
-npx web-push generate-vapid-keys
-# Copy output into Render env vars (API / worker)
-```
-
-### Generate JWT secret (run once locally)
-
-```bash
-openssl rand -hex 64
-# Copy output into JWT_SECRET
+openssl rand -hex 64   # JWT_SECRET, JWT_REFRESH_SECRET, BOOKING_HOLD_TOKEN_SECRET (separate values)
 ```
 
 ---
@@ -228,8 +220,8 @@ or middleware to handle `servicerev.app` → landing, `app.servicerev.app` → a
 2. Name: `servicerev-production`
 3. Region: Auto
 4. Create API token with R2 Read+Write permissions
-5. Set up custom domain: `files.servicerev.app` → R2 public bucket
-6. CORS settings for the bucket:
+5. Keep the bucket **private** (no public access / no open listing). Tenant objects are read through the API (authorization + signed URLs or server-mediated download) — see `packages/config/src/storage.ts`. A custom domain such as `files.servicerev.app` is optional **controlled delivery** (CDN in front of authorized objects), not a publicly writable bucket.
+6. CORS on the bucket (if browser uploads hit R2 directly in a future flow) — today restrict origins to production web apps:
 
 ```json
 [
@@ -254,7 +246,7 @@ A       servicerev.app          76.76.21.21 (Vercel)        ✅ Proxied
 CNAME   app                     cname.vercel-dns.com        ✅ Proxied
 CNAME   api                     [Render API service host]   ✅ Proxied
 CNAME   webhooks                [Render webhook service host] ✅ Proxied
-CNAME   files                   [R2 public bucket domain]   ✅ Proxied
+CNAME   files                   [optional CDN / custom domain for authorized object delivery] ✅ Proxied
 ```
 
 ### Email sending (SendGrid)
@@ -328,17 +320,16 @@ These code changes must be made before deploying:
 trustProxy: true,
 ```
 
-### 7b. API: Health check endpoint
+### 7b. API: FS-79 liveness and readiness
 
-`apps/api/src/routes/health/index.ts`
+Implement per **FS-79** (do not use ad-hoc `/health/db`):
 
-```typescript
-fastify.get('/health', async () => ({
-  status: 'ok',
-  version: process.env.npm_package_version,
-  timestamp: new Date().toISOString(),
-}));
-```
+| Probe | Path | Purpose |
+| --- | --- | --- |
+| **Liveness** | `GET /health` | Process up; use for Render health check path |
+| **Readiness** | `GET /health/ready` | Dependencies ready (e.g. Postgres + Redis); use for deploy gates and uptime monitors |
+
+Contract and handler behavior live in the FS-79 ticket/PR — this runbook only names the paths operators should curl after deploy.
 
 ### 7c. Worker: Graceful shutdown
 
@@ -375,15 +366,9 @@ const nextConfig = {
 };
 ```
 
-### 7e. CORS: Add production origins
+### 7e. CORS: Production origins (adjunct env — not `env.ts`)
 
-`packages/config/src/index.ts` (or wherever CORS is configured)
-
-```typescript
-const CORS_ORIGINS = process.env.CORS_ORIGINS?.split(',') ?? [
-  'http://localhost:3000',
-];
-```
+When Fastify CORS is wired (TICKET-039 / production config PR), set **`CORS_ORIGINS`** on the **Render API service only** to comma-separated production web origins. This variable is **not** validated by `@fsm/config` today.
 
 ### 7f. Run migrations automatically on deploy
 
@@ -413,13 +398,11 @@ git push origin main
 
 # 3. Vercel auto-deploys web from main branch
 
-# 4. Verify health check
-curl https://api.servicerev.app/health
-# Expected: { "status": "ok", "version": "...", "timestamp": "..." }
+# 4. FS-79 liveness
+curl -sf https://api.servicerev.app/health
 
-# 5. Verify database migration ran
-curl https://api.servicerev.app/health/db
-# (Add this endpoint to check DB connectivity)
+# 5. FS-79 readiness (Postgres + Redis)
+curl -sf https://api.servicerev.app/health/ready
 
 # 6. Test auth flow end to end
 # Create test company → login → verify JWT → check dashboard loads
@@ -441,17 +424,17 @@ Complete every item before sending real traffic:
 
 ### Security
 
-- [ ] JWT_SECRET is 64+ random hex chars (not a word or phrase)
+- [ ] `JWT_SECRET`, `JWT_REFRESH_SECRET`, and `BOOKING_HOLD_TOKEN_SECRET` are independent 64+ hex secrets
 - [ ] STRIPE_SECRET_KEY is `sk_live_` (not `sk_test_`)
 - [ ] Stripe webhook secret is from the live webhook endpoint
-- [ ] CORS_ORIGINS only includes production domains
-- [ ] R2 bucket is NOT public by default (only served via CDN domain)
+- [ ] `CORS_ORIGINS` (API adjunct) only includes production web origins when enabled
+- [ ] R2 bucket remains **private**; no public bucket policy; customer files only via authorized API paths
 - [ ] No `.env` files committed to git
 - [ ] Render Key Value uses **`noeviction`** (BullMQ)
 
 ### Infrastructure
 
-- [ ] `GET /health` returns 200 on API
+- [ ] `GET /health` (liveness) and `GET /health/ready` (readiness) return 200 on API (FS-79)
 - [ ] Database migration ran — all migrations applied
 - [ ] Redis connected — worker processing jobs; Key Value memory monitored
 - [ ] Worker service running — Render logs show worker startup
@@ -488,7 +471,7 @@ Complete every item before sending real traffic:
 
 - [ ] Set up Render notifications: deploy failures, instance health
 - [ ] Set up Vercel analytics (free tier)
-- [ ] Set up UptimeRobot (free): ping `/health` every 5 min
+- [ ] Set up UptimeRobot (free): ping `/health/ready` every 5 min (or `/health` for liveness-only)
 
 ---
 
@@ -520,35 +503,26 @@ Complete every item before sending real traffic:
 
 ## Environment Variables Summary
 
-Quick reference — all values needed before deploy:
+**Validated by `@fsm/config` (`packages/config/src/env.ts`):** set on every Render service that boots `@fsm/config`.
 
-```
-# Generate locally:
-JWT_SECRET          openssl rand -hex 64
-VAPID keys          npx web-push generate-vapid-keys
+| Variable | Notes |
+| --- | --- |
+| `NODE_ENV` | `production` |
+| `API_PORT` | API: = Render `PORT`; worker/webhook: required by schema |
+| `WEBHOOK_PORT` | Webhook service: = Render `PORT` |
+| `DATABASE_URL` | Render Postgres internal URL |
+| `REDIS_URL` | Render Key Value internal URL |
+| `APP_URL` | Canonical app origin (staff UI) |
+| `JWT_SECRET` / `JWT_REFRESH_SECRET` / `BOOKING_HOLD_TOKEN_SECRET` | `openssl rand -hex 64` each |
+| `ACCESS_TOKEN_TTL_SECONDS` / `REFRESH_TOKEN_TTL_SECONDS` / `RESET_TOKEN_TTL_SECONDS` | See `.env.example` |
+| `ESTIMATE_EXPIRY_DAYS` / `INVOICE_DUE_DAYS` | Optional defaults in env.ts |
+| `STRIPE_SECRET_KEY` / `STRIPE_WEBHOOK_SECRET` / `STRIPE_CONNECT_CLIENT_ID` / `STRIPE_PLATFORM_FEE_PERCENT` | Stripe Dashboard |
+| `OPENAI_API_KEY` | OpenAI platform |
+| `TWILIO_*` | Twilio Console |
+| `SENDGRID_API_KEY` / `SENDGRID_FROM_EMAIL` | SendGrid |
+| `R2_*` | Cloudflare R2 API token + bucket name |
+| `NEXT_PUBLIC_API_URL` | Public API base URL (also set on Vercel) |
 
-# From Render (auto-generated):
-DATABASE_URL        Postgres → Internal Connection String
-REDIS_URL           Key Value → Internal Connection String
+**Adjunct (not in env.ts):** `API_URL` (Vercel server rewrites), `CORS_ORIGINS` (Render API when implemented).
 
-# From Stripe Dashboard:
-STRIPE_SECRET_KEY               Developers → API keys → Secret key
-STRIPE_WEBHOOK_SECRET           Developers → Webhooks → Signing secret
-NEXT_PUBLIC_STRIPE_PUBLISHABLE  Developers → API keys → Publishable key
-
-# From Twilio Console:
-TWILIO_ACCOUNT_SID      Console Dashboard
-TWILIO_AUTH_TOKEN       Console Dashboard
-TWILIO_FROM_NUMBER      Phone Numbers → Active Numbers
-
-# From SendGrid:
-SENDGRID_API_KEY        Settings → API Keys → Create API Key
-
-# From Cloudflare R2:
-R2_ACCOUNT_ID           Workers & Pages → Overview (Account ID)
-R2_ACCESS_KEY_ID        R2 → Manage R2 API Tokens
-R2_SECRET_ACCESS_KEY    R2 → Manage R2 API Tokens
-
-# From OpenAI:
-OPENAI_API_KEY          platform.openai.com → API Keys
-```
+**Vercel-only examples:** `NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY`, `NEXT_PUBLIC_APP_URL`, etc. (Step 2).
