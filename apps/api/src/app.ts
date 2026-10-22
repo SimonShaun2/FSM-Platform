@@ -1,4 +1,3 @@
-import fastifyMultipart from "@fastify/multipart";
 import Fastify from "fastify";
 import pino from "pino";
 
@@ -19,6 +18,7 @@ import campaignRoutes from "./routes/campaigns/index.js";
 import customerRoutes from "./routes/customers/index.js";
 import dispatchRoutes from "./routes/dispatch/index.js";
 import estimateRoutes from "./routes/estimates/index.js";
+import growthCheckRoutes from "./routes/growth-check/index.js";
 import invoiceRoutes from "./routes/invoices/index.js";
 import importRoutes from "./routes/imports/index.js";
 import jobEngagementRoutes from "./routes/job-engagement/index.js";
@@ -49,13 +49,13 @@ export async function buildApp() {
   await app.register(requestLoggerPlugin);
   await app.register(errorHandlerPlugin);
   await app.register(authenticatePlugin);
-  await app.register(fastifyMultipart);
 
   await app.register(activityEventRoutes, { prefix: "/api/v1" });
   await app.register(agentActionRoutes, { prefix: "/api/v1" });
   await app.register(operatorRoutes, { prefix: "/api/v1" });
   await app.register(tenantContextRoutes, { prefix: "/api/v1" });
   await app.register(revenueInquiryRoutes, { prefix: "/api/v1" });
+  await app.register(growthCheckRoutes, { prefix: "/api/v1" });
   await app.register(aiRoutes, { prefix: "/api/v1/ai" });
   await app.register(automationRuleRoutes, { prefix: "/api/v1" });
   await app.register(authRoutes, { prefix: "/api/v1/auth" });

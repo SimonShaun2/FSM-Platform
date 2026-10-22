@@ -6,6 +6,7 @@ import { agentActions, db, emitEventWithExecutor } from "@fsm/db";
 import {
   AppError,
   ErrorCode,
+  type AgentActionStateV1,
   type CanonicalEntityRefV1,
   assertAgentActionApprovable,
   assertAgentActionExecutable,
@@ -42,17 +43,7 @@ export function agentActionScopedWhere(companyId: string, actionId: string) {
   );
 }
 
-export type AgentActionState =
-  | "proposed"
-  | "policy_evaluated"
-  | "awaiting_approval"
-  | "approved"
-  | "executing"
-  | "succeeded"
-  | "failed"
-  | "expired"
-  | "cancelled"
-  | "escalated";
+export type AgentActionState = AgentActionStateV1;
 
 export interface CreateAgentActionInput {
   companyId: string;

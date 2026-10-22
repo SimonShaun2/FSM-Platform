@@ -9,6 +9,7 @@ export * from "./agent-action-state.js";
 export * from "./agent-action-state-machine.js";
 export * from "./agent-action-proposal.js";
 export * from "./queue-envelope.js";
+export * from "./http-route-schemas.js";
 export * from "./tools/registry.js";
 export * from "./tools/context-resolve.params.js";
 export * from "./tools/message-draft.params.js";
