@@ -16,6 +16,7 @@ describe("public-api-path-security", () => {
     expect(hasPublicApiPathTraversal("/api/v1/public/booking/../secrets")).toBe(true);
     expect(hasPublicApiPathTraversal("/api/v1/public/booking/%2e%2e/secrets")).toBe(true);
     expect(hasPublicApiPathTraversal("/api/v1/public/booking/%2E%2E/secrets")).toBe(true);
+    expect(hasPublicApiPathTraversal("/api/v1/public/booking/%252e%252e/secrets")).toBe(true);
   });
 
   it("detects traversal in raw request URL when pathname is normalized", () => {

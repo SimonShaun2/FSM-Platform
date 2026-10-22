@@ -23,6 +23,7 @@ const envSchema = z.object({
   APP_URL: z.string().url("APP_URL must be a valid URL"),
   JWT_SECRET: z.string().min(1, "JWT_SECRET is required"),
   JWT_REFRESH_SECRET: z.string().min(1, "JWT_REFRESH_SECRET is required"),
+  BOOKING_HOLD_TOKEN_SECRET: z.string().min(1, "BOOKING_HOLD_TOKEN_SECRET is required"),
   ACCESS_TOKEN_TTL_SECONDS: z.coerce.number().int().positive("ACCESS_TOKEN_TTL_SECONDS must be greater than zero"),
   REFRESH_TOKEN_TTL_SECONDS: z.coerce.number().int().positive("REFRESH_TOKEN_TTL_SECONDS must be greater than zero"),
   RESET_TOKEN_TTL_SECONDS: z.coerce.number().int().positive("RESET_TOKEN_TTL_SECONDS must be greater than zero"),
@@ -57,6 +58,10 @@ function parseEnv(): Env {
 }
 
 let cachedEnv: Env | null = null;
+
+export function resetEnvCacheForTests(): void {
+  cachedEnv = null;
+}
 
 function getEnv(): Env {
   if (cachedEnv) {

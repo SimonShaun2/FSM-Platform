@@ -1,6 +1,10 @@
 import type { FastifyPluginAsync, FastifyReply, FastifyRequest } from "fastify";
 
 import {
+  checkPublicBookingIpRateLimit,
+  checkPublicSlotHoldReferenceRateLimit
+} from "../../../lib/public-booking-rate-limit.js";
+import {
   captureBookingInterestHandler,
   checkZipCoverageHandler,
   getBookingConfirmationHandler,
@@ -26,28 +30,14 @@ import {
   zipCheckValidation
 } from "./schemas.js";
 
-import {
-  bookingRequestTimesByIp,
-  getRateLimitWindowMs,
-  slotHoldTimesByReference
-} from "./rate-limit-state.js";
-
-const RATE_LIMIT = 10;
-const SLOT_HOLD_REF_RATE_LIMIT = 15;
-const RATE_LIMIT_WINDOW_MS = getRateLimitWindowMs();
-
 async function bookingRateLimit(request: FastifyRequest, reply: FastifyReply): Promise<void> {
   if (request.method !== "POST") {
     return;
   }
 
-  const ipAddress = request.ip;
-  const now = Date.now();
-  const cutoff = now - RATE_LIMIT_WINDOW_MS;
-  const requestTimes = bookingRequestTimesByIp.get(ipAddress) ?? [];
-  const activeTimes = requestTimes.filter((timestamp) => timestamp > cutoff);
+  const allowed = await checkPublicBookingIpRateLimit(request.ip);
 
-  if (activeTimes.length >= RATE_LIMIT) {
+  if (!allowed) {
     await reply.status(429).send({
       error: "RATE_LIMITED",
       message: "Too many booking submissions. Please try again later.",
@@ -55,9 +45,6 @@ async function bookingRateLimit(request: FastifyRequest, reply: FastifyReply): P
     });
     return;
   }
-
-  activeTimes.push(now);
-  bookingRequestTimesByIp.set(ipAddress, activeTimes);
 }
 
 async function bookingSlotHoldReferenceRateLimit(
@@ -76,13 +63,9 @@ async function bookingSlotHoldReferenceRateLimit(
     return;
   }
 
-  const key = `${slug}:${ref}`;
-  const now = Date.now();
-  const cutoff = now - RATE_LIMIT_WINDOW_MS;
-  const requestTimes = slotHoldTimesByReference.get(key) ?? [];
-  const activeTimes = requestTimes.filter((timestamp) => timestamp > cutoff);
+  const allowed = await checkPublicSlotHoldReferenceRateLimit(slug, ref);
 
-  if (activeTimes.length >= SLOT_HOLD_REF_RATE_LIMIT) {
+  if (!allowed) {
     await reply.status(429).send({
       error: "RATE_LIMITED",
       message: "Too many slot hold attempts for this booking reference. Please try again later.",
@@ -90,9 +73,6 @@ async function bookingSlotHoldReferenceRateLimit(
     });
     return;
   }
-
-  activeTimes.push(now);
-  slotHoldTimesByReference.set(key, activeTimes);
 }
 
 const publicBookingRoutes: FastifyPluginAsync = async (fastify) => {
@@ -102,14 +82,12 @@ const publicBookingRoutes: FastifyPluginAsync = async (fastify) => {
   }, getPublicBookingSettingsHandler);
 
   fastify.post("/:slug/check-zip", {
-    preHandler: bookingRateLimit,
-    preValidation: [zipCheckValidation],
+    preValidation: [bookingRateLimit, zipCheckValidation],
     schema: zipCheckRouteSchema
   }, checkZipCoverageHandler);
 
   fastify.post("/:slug/email-capture", {
-    preHandler: bookingRateLimit,
-    preValidation: [emailCaptureValidation],
+    preValidation: [bookingRateLimit, emailCaptureValidation],
     schema: emailCaptureRouteSchema
   }, captureBookingInterestHandler);
 
@@ -119,8 +97,7 @@ const publicBookingRoutes: FastifyPluginAsync = async (fastify) => {
   }, getPublicAvailabilityHandler);
 
   fastify.post("/:slug/submit", {
-    preHandler: bookingRateLimit,
-    preValidation: [submitBookingValidation],
+    preValidation: [bookingRateLimit, submitBookingValidation],
     schema: submitBookingRouteSchema
   }, submitBookingRequestHandler);
 
@@ -130,7 +107,7 @@ const publicBookingRoutes: FastifyPluginAsync = async (fastify) => {
   }, getBookingConfirmationHandler);
 
   fastify.post("/:slug/requests/:ref/slot-hold", {
-    preValidation: [bookingSlotHoldReferenceRateLimit, publicHoldBookingSlotValidation],
+    preValidation: [bookingRateLimit, bookingSlotHoldReferenceRateLimit, publicHoldBookingSlotValidation],
     schema: publicSlotHoldRouteSchema
   }, holdPublicBookingSlotHandler);
 };
