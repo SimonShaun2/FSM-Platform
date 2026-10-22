@@ -93,8 +93,19 @@ export const AttachmentIdParamsSchema = z.object({
   id: uuidSchema
 }).strict();
 
+export const CreateAttachmentUploadUrlBodySchema = z
+  .object({
+    entityType: entityTypeSchema,
+    entityId: uuidSchema,
+    fileName: z.string().trim().min(1).max(255),
+    mimeType: z.string().trim().min(1).max(100),
+    fileSizeBytes: z.number().int().positive().max(50 * 1024 * 1024)
+  })
+  .strict();
+
 export type AttachmentListQuery = z.infer<typeof AttachmentListQuerySchema>;
 export type AttachmentIdParams = z.infer<typeof AttachmentIdParamsSchema>;
+export type CreateAttachmentUploadUrlBody = z.infer<typeof CreateAttachmentUploadUrlBodySchema>;
 
 export const attachmentListValidation = withZodValidation({
   query: AttachmentListQuerySchema
@@ -102,6 +113,21 @@ export const attachmentListValidation = withZodValidation({
 export const attachmentIdValidation = withZodValidation({
   params: AttachmentIdParamsSchema
 });
+
+export const createAttachmentUploadUrlValidation = withZodValidation({
+  body: CreateAttachmentUploadUrlBodySchema
+});
+
+const signedUrlSchema = {
+  type: "object",
+  additionalProperties: false,
+  required: ["url", "expiresAt", "objectKey"],
+  properties: {
+    url: { type: "string" },
+    expiresAt: { type: "string", format: "date-time" },
+    objectKey: { type: "string" }
+  }
+} as const;
 
 export const uploadAttachmentRouteSchema = {
   tags: ["attachments"],
@@ -141,6 +167,51 @@ export const listAttachmentsRouteSchema = {
     },
     400: errorResponseSchema,
     401: errorResponseSchema
+  }
+} as const;
+
+export const mintAttachmentDownloadUrlRouteSchema = {
+  tags: ["attachments"],
+  response: {
+    200: {
+      type: "object",
+      additionalProperties: false,
+      required: ["download"],
+      properties: {
+        download: signedUrlSchema
+      }
+    },
+    401: errorResponseSchema,
+    404: errorResponseSchema
+  }
+} as const;
+
+export const createAttachmentUploadUrlRouteSchema = {
+  tags: ["attachments"],
+  body: {
+    type: "object",
+    additionalProperties: false,
+    required: ["entityType", "entityId", "fileName", "mimeType", "fileSizeBytes"],
+    properties: {
+      entityType: { type: "string" },
+      entityId: { type: "string" },
+      fileName: { type: "string" },
+      mimeType: { type: "string" },
+      fileSizeBytes: { type: "integer" }
+    }
+  },
+  response: {
+    201: {
+      type: "object",
+      additionalProperties: false,
+      required: ["upload"],
+      properties: {
+        upload: signedUrlSchema
+      }
+    },
+    400: errorResponseSchema,
+    401: errorResponseSchema,
+    404: errorResponseSchema
   }
 } as const;
 

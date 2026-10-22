@@ -22,6 +22,8 @@ const TEST_ENV_VALUES = {
   R2_ACCESS_KEY_ID: "r2_access",
   R2_SECRET_ACCESS_KEY: "r2_secret",
   R2_BUCKET_NAME: "fsm-bucket",
+  OBJECT_STORAGE_PROVIDER: "memory",
+  MEDIA_SIGNED_URL_TTL_SECONDS: "900",
   APP_URL: "http://localhost:3000",
   JWT_SECRET: "jwt_secret",
   JWT_REFRESH_SECRET: "jwt_refresh_secret",
