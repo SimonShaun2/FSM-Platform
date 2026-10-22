@@ -29,4 +29,11 @@ describe("publicApi path security", () => {
       payload: { error: ErrorCode.VALIDATION_ERROR }
     });
   });
+
+  it("rejects double-encoded traversal before fetch", async () => {
+    await expect(publicApi.get("/api/v1/public/booking/%252e%252e/secrets")).rejects.toMatchObject({
+      status: 400,
+      payload: { error: ErrorCode.VALIDATION_ERROR }
+    });
+  });
 });
