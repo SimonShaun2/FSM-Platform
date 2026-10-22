@@ -1,4 +1,24 @@
 export { db } from "./client.js";
+export type { Database } from "./client.js";
+export {
+  buildPostgresClientOptions,
+  computeConnectionBudget,
+  resolveDatabasePoolMax,
+  type ConnectionBudgetInput,
+  type ConnectionBudgetResult,
+  type ProcessConnectionRole
+} from "./connection-config.js";
+export { isRetryablePostgresError } from "./postgres-errors.js";
+export {
+  loadMigrationJournalFromFile,
+  scanMigrationSqlForDestructiveStatements,
+  validateMigrationBundle,
+  validateRepoMigrationBundle,
+  type MigrationSafetyIssue,
+  type MigrationSafetyResult
+} from "./migration-safety.js";
+export { runWithPostgresRetry, type RunWithPostgresRetryOptions } from "./postgres-retry.js";
+export { runTransactionWithRetry, type RunTransactionWithRetryOptions, type TransactionCallback } from "./transactions.js";
 export {
   REVENUE_SUMMARY_CACHE_TTL_SECONDS,
   buildRevenueSummaryCacheKey,

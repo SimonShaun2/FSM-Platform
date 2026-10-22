@@ -46,4 +46,5 @@ Use [ADR-TEMPLATE.md](ADR-TEMPLATE.md) for new records.
 | [ADR-0002](ADR-0002-tenant-model.md) | Tenant model | **Proposed** | TL-01 | Sprint 2 |
 | [ADR-0003](ADR-0003-stripe-connect-charge-model.md) | Stripe Connect charge model | **Proposed** | BE-02 / TL-01 | Sprint 8 |
 | [ADR-0004](ADR-0004-modular-architecture.md) | Modular architecture over microservices | Accepted | TL-01 | - |
+| [ADR-FS-41](ADR-FS-41-renvani-sor-integrations-addendum.md) | Renvani SoR, CSV/import-only, integration non-goals | **Proposed** | Tech Lead | FS-41 |
 | [ADR-FS-93](ADR-FS-93-managed-platform-boundaries.md) | Managed platform boundaries (Option A) | **Accepted** (founder); PO + Security ACK pending | Tech Lead | FS-93 |

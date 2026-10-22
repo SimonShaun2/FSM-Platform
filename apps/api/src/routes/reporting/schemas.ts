@@ -67,7 +67,7 @@ const errorResponseSchema = {
 export const jobSourceReportingRouteSchema = {
   tags: ["reporting"],
   summary:
-    "Job source reporting summary. Calendar dates (YYYY-MM-DD) use the company IANA timezone; full ISO date-times are interpreted as UTC instants.",
+    "Job source reporting summary. Calendar dates (YYYY-MM-DD) use the company IANA timezone; full ISO date-times are interpreted as UTC instants. Date range is inclusive and cannot exceed 366 days; startDate must be on or before endDate.",
   querystring: {
     type: "object",
     additionalProperties: false,

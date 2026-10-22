@@ -37,7 +37,11 @@ import {
   ErrorCode
 } from "@fsm/types";
 
-import { generateBookingHoldToken, verifyBookingHoldToken } from "../lib/booking-hold-token.js";
+import {
+  finalizeBookingHoldTokenClaim,
+  generateBookingHoldToken,
+  verifyAndClaimBookingHoldToken
+} from "../lib/booking-hold-token.js";
 import { generateJobNumber } from "../lib/job-number.js";
 import { assertNonTerminalBookingRequest } from "./booking-request-guards.js";
 import { invalidateDispatchCache } from "./dispatch.service.js";
@@ -119,6 +123,12 @@ function normalizeBookingSlug(value: string): string {
 
 function normalizePhone(value: string): string {
   return value.trim();
+}
+
+/** Phone used only for matching/creating customers — not placeholder inbox values. */
+function isUsableContactPhone(phone: string): boolean {
+  const trimmed = normalizePhone(phone);
+  return trimmed.length > 0 && trimmed !== "+10000000000";
 }
 
 function normalizeOptionalEmail(value: string | null | undefined): string | null | undefined {
@@ -458,10 +468,21 @@ async function findCustomerByContact(
     .from(customers)
     .where(and(eq(customers.companyId, companyId), isNull(customers.deletedAt)));
 
-  return (
-    companyCustomers.find((customer) => customer.phone === phone) ??
-    (email ? companyCustomers.find((customer) => customer.email === email) ?? null : null)
-  );
+  const normalizedEmail = email ? normalizeOptionalEmail(email) ?? null : null;
+
+  if (isUsableContactPhone(phone)) {
+    const normalizedPhone = normalizePhone(phone);
+    const byPhone = companyCustomers.find((customer) => customer.phone === normalizedPhone);
+    if (byPhone) {
+      return byPhone;
+    }
+  }
+
+  if (normalizedEmail) {
+    return companyCustomers.find((customer) => customer.email === normalizedEmail) ?? null;
+  }
+
+  return null;
 }
 
 async function findPropertyForCustomer(
@@ -498,7 +519,7 @@ async function createCustomerForBooking(
       firstName: input.firstName.trim(),
       lastName: input.lastName.trim(),
       email: normalizeOptionalEmail(input.email) ?? null,
-      phone: normalizePhone(input.phone),
+      phone: isUsableContactPhone(input.phone) ? normalizePhone(input.phone) : null,
       prefersSms: input.smsConsentAppointments ?? true,
       prefersEmail: Boolean(input.email),
       doNotContact: false
@@ -746,6 +767,11 @@ function buildAvailabilityWindowsForDay(
       technicianIds: availableTechnicianIds
     }];
   });
+}
+
+export async function resolvePublicBookingCompanyId(slug: string): Promise<string> {
+  const { settings } = await getCompanyByBookingSlug(slug, db);
+  return settings.companyId;
 }
 
 export async function getPublicBookingSettingsBySlug(slug: string): Promise<PublicBookingSettings> {
@@ -1039,47 +1065,53 @@ export async function holdPublicBookingSlot(
   input: PublicHoldBookingSlotInput
 ): Promise<{ bookingRequest: BookingRequest; hold: BookingSlotHoldView }> {
   const normalizedRef = referenceNumber.trim();
-  const claims = verifyBookingHoldToken(input.holdToken);
-  const { settings } = await getCompanyByBookingSlug(slug, db);
+  const claims = await verifyAndClaimBookingHoldToken(input.holdToken);
 
-  if (claims.companyId !== settings.companyId) {
-    throw new AppError(ErrorCode.FORBIDDEN, "Hold token is not valid for this booking page");
+  try {
+    const { settings } = await getCompanyByBookingSlug(slug, db);
+
+    if (claims.companyId !== settings.companyId) {
+      throw new AppError(ErrorCode.FORBIDDEN, "Hold token is not valid for this booking page");
+    }
+
+    if (claims.referenceNumber !== normalizedRef) {
+      throw new AppError(ErrorCode.FORBIDDEN, "Hold token does not match booking reference");
+    }
+
+    const bookingRequest = await getBookingRequestRecord(settings.companyId, claims.bookingRequestId, db);
+
+    if (bookingRequest.referenceNumber !== normalizedRef) {
+      throw new AppError(ErrorCode.NOT_FOUND, "Booking request not found");
+    }
+
+    const coverage = await checkZipCoverage(slug, bookingRequest.zip);
+
+    if (!coverage.covered) {
+      throw new AppError(ErrorCode.CONFLICT, "This zip code is outside the current booking area");
+    }
+
+    const scheduledStart = parseIsoDateTime(input.scheduledStart, "scheduledStart");
+    const scheduledEnd = parseIsoDateTime(input.scheduledEnd, "scheduledEnd");
+
+    await assertHoldSlotMatchesPublishedAvailability(
+      slug,
+      bookingRequest.zip,
+      input.technicianId,
+      scheduledStart,
+      scheduledEnd
+    );
+
+    const { holdToken: _holdToken, ...holdInput } = input;
+
+    return await holdBookingSlot(settings.companyId, bookingRequest.id, holdInput, {
+      id: null,
+      type: "customer",
+      name: `${bookingRequest.firstName} ${bookingRequest.lastName}`.trim()
+    });
+  } catch (error) {
+    await finalizeBookingHoldTokenClaim(claims, error);
+    throw error;
   }
-
-  if (claims.referenceNumber !== normalizedRef) {
-    throw new AppError(ErrorCode.FORBIDDEN, "Hold token does not match booking reference");
-  }
-
-  const bookingRequest = await getBookingRequestRecord(settings.companyId, claims.bookingRequestId, db);
-
-  if (bookingRequest.referenceNumber !== normalizedRef) {
-    throw new AppError(ErrorCode.NOT_FOUND, "Booking request not found");
-  }
-
-  const coverage = await checkZipCoverage(slug, bookingRequest.zip);
-
-  if (!coverage.covered) {
-    throw new AppError(ErrorCode.CONFLICT, "This zip code is outside the current booking area");
-  }
-
-  const scheduledStart = parseIsoDateTime(input.scheduledStart, "scheduledStart");
-  const scheduledEnd = parseIsoDateTime(input.scheduledEnd, "scheduledEnd");
-
-  await assertHoldSlotMatchesPublishedAvailability(
-    slug,
-    bookingRequest.zip,
-    input.technicianId,
-    scheduledStart,
-    scheduledEnd
-  );
-
-  const { holdToken: _holdToken, ...holdInput } = input;
-
-  return holdBookingSlot(settings.companyId, bookingRequest.id, holdInput, {
-    id: null,
-    type: "customer",
-    name: `${bookingRequest.firstName} ${bookingRequest.lastName}`.trim()
-  });
 }
 
 export async function holdBookingSlotForOperator(
@@ -1754,4 +1786,114 @@ export async function getBookingConfirmation(slug: string, referenceNumber: stri
     : [];
 
   return buildConfirmationView(company.name, bookingRequest, job ?? null);
+}
+
+export interface CompanyInquiryBookingInput {
+  firstName: string;
+  lastName: string;
+  phone: string;
+  email?: string | null;
+  addressLine1: string;
+  city: string;
+  state: string;
+  zip: string;
+  customerNotes: string | null;
+  source: BookingRequest["source"];
+  smsConsentAppointments?: boolean;
+  smsConsentMarketing?: boolean;
+}
+
+/** Staff/inbox inquiry intake — no zip gate, no outbound notification enqueue (FS-17). */
+export async function createCompanyScopedInquiryBooking(
+  companyId: string,
+  input: CompanyInquiryBookingInput,
+  actor: BookingActor
+): Promise<{ bookingRequest: BookingRequest; customerId: string }> {
+  const normalizedInput: NormalizedBookingInput = {
+    firstName: input.firstName.trim(),
+    lastName: input.lastName.trim(),
+    phone: normalizePhone(input.phone),
+    email: normalizeOptionalEmail(input.email) ?? null,
+    addressLine1: input.addressLine1.trim(),
+    addressLine2: null,
+    city: input.city.trim(),
+    state: input.state.trim(),
+    zip: input.zip.trim(),
+    propertyType: null,
+    serviceCategory: null,
+    serviceType: null,
+    serviceDetail: null,
+    urgency: "flexible",
+    customerNotes: normalizeOptionalString(input.customerNotes) ?? null,
+    preferredDate: null,
+    preferredWindow: "first_available",
+    isPropertyOwner: true,
+    smsConsentAppointments: input.smsConsentAppointments ?? false,
+    smsConsentMarketing: input.smsConsentMarketing ?? false
+  };
+
+  const result = await db.transaction(async (tx) => {
+    const existingCustomer = await findCustomerByContact(
+      companyId,
+      normalizedInput.phone,
+      normalizedInput.email,
+      tx
+    );
+    const customer =
+      existingCustomer ??
+      (await createCustomerForBooking(companyId, normalizedInput, tx, actor));
+    const property =
+      (await findPropertyForCustomer(companyId, customer.id, normalizedInput, tx)) ??
+      (await createPropertyForBooking(companyId, customer.id, normalizedInput, tx, actor));
+
+    const insertedRows = await tx
+      .insert(bookingRequests)
+      .values({
+        companyId,
+        customerId: customer.id,
+        firstName: normalizedInput.firstName,
+        lastName: normalizedInput.lastName,
+        phone: normalizedInput.phone,
+        email: normalizedInput.email,
+        addressLine1: normalizedInput.addressLine1,
+        addressLine2: normalizedInput.addressLine2,
+        city: normalizedInput.city,
+        state: normalizedInput.state,
+        zip: normalizedInput.zip,
+        customerNotes: normalizedInput.customerNotes,
+        status: "pending",
+        source: input.source,
+        referenceNumber: buildReferenceNumber(new Date()),
+        isPropertyOwner: true,
+        smsConsentAppointments: normalizedInput.smsConsentAppointments ?? false,
+        smsConsentMarketing: normalizedInput.smsConsentMarketing ?? false
+      })
+      .returning();
+    const bookingRequest = insertedRows[0];
+
+    if (!bookingRequest) {
+      throw new AppError(ErrorCode.INTERNAL_ERROR, "Failed to create inquiry booking request");
+    }
+
+    await emitEventWithExecutor(tx, {
+      companyId,
+      eventType: "booking.requested",
+      actorId: actor.id ?? undefined,
+      actorType: actor.type,
+      actorName: actor.name,
+      entityType: "booking_request",
+      entityId: bookingRequest.id,
+      customerId: customer.id,
+      payload: {
+        source: input.source,
+        zip: bookingRequest.zip,
+        intakePath: "direct_inquiry"
+      },
+      summary: `Inquiry ${bookingRequest.referenceNumber ?? bookingRequest.id} captured`
+    });
+
+    return { bookingRequest: toBookingRequest(bookingRequest), customerId: customer.id };
+  });
+
+  return result;
 }

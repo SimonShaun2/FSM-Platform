@@ -11,6 +11,7 @@ import type {
 } from "@fsm/types";
 
 import { api } from "@/src/lib/api";
+import { publicApi } from "@/src/lib/public-api";
 
 interface PaginatedResponse<TItem> {
   data: TItem[];
@@ -496,7 +497,7 @@ export function useDeleteEstimateItem(estimateId: string) {
 export function usePublicEstimate(token: string | null) {
   return useQuery({
     queryKey: token ? estimateKeys.publicView(token) : estimateKeys.publicView("pending"),
-    queryFn: () => api.get<PublicEstimateResponse>(`/api/v1/public/estimates/${token}`),
+    queryFn: () => publicApi.get<PublicEstimateResponse>(`/api/v1/public/estimates/${token}`),
     enabled: Boolean(token)
   });
 }
@@ -506,7 +507,7 @@ export function usePublicApproveEstimate(token: string) {
 
   return useMutation({
     mutationFn: (input: { approvedByName: string; selectedEstimateNumber?: string }) =>
-      api.post<{ success: boolean }>(`/api/v1/public/estimates/${token}/approve`, input),
+      publicApi.post<{ success: boolean }>(`/api/v1/public/estimates/${token}/approve`, input),
     onSuccess: async () => {
       await queryClient.invalidateQueries({ queryKey: estimateKeys.publicView(token) });
     }
@@ -518,7 +519,7 @@ export function usePublicDeclineEstimate(token: string) {
 
   return useMutation({
     mutationFn: (reason?: string) =>
-      api.post<{ success: boolean }>(`/api/v1/public/estimates/${token}/decline`, {
+      publicApi.post<{ success: boolean }>(`/api/v1/public/estimates/${token}/decline`, {
         ...(reason ? { reason } : {})
       }),
     onSuccess: async () => {

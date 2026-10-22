@@ -12,6 +12,7 @@ import type {
 } from "@fsm/types";
 
 import { api } from "@/src/lib/api";
+import { publicApi } from "@/src/lib/public-api";
 import { useBookingSettings, useUpdateBookingSettings, type BookingSettingsRecord } from "@/src/hooks/booking.hooks";
 
 export interface ReviewRequestListRecord {
@@ -217,7 +218,7 @@ export function useUpdateReviewSettings() {
 export function usePublicReview(token: string | null) {
   return useQuery({
     queryKey: token ? reviewRequestKeys.publicReview(token) : reviewRequestKeys.publicReview("pending"),
-    queryFn: () => api.get<PublicReviewResponse>(`/api/v1/public/reviews/${token}`),
+    queryFn: () => publicApi.get<PublicReviewResponse>(`/api/v1/public/reviews/${token}`),
     enabled: Boolean(token),
     retry: false
   });
@@ -228,7 +229,7 @@ export function useCompleteReview(token: string) {
 
   return useMutation({
     mutationFn: (input: CompleteReviewRequestInput) =>
-      api.post<ReviewRequestResponse>(`/api/v1/public/reviews/${token}/complete`, input),
+      publicApi.post<ReviewRequestResponse>(`/api/v1/public/reviews/${token}/complete`, input),
     onSuccess: async () => {
       await Promise.all([
         queryClient.invalidateQueries({ queryKey: reviewRequestKeys.publicReview(token) }),
