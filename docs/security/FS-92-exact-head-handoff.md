@@ -3,7 +3,7 @@
 **Agent:** Backend Dev 3  
 **Branch:** `cursor/fs-92-tenant-isolation-proof`  
 **Base:** `dev` (branch created from current `dev` at start of work)  
-**Head SHA:** `1b0eeade93afa01786ab85c48c2e8f438f6ef65a`
+**Head SHA:** `ad22fe180f27a86e8451c9e3cd99d68eac2b61e6`
 
 ## What changed
 
