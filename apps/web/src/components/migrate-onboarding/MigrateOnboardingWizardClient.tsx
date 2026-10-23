@@ -1,264 +1,256 @@
 "use client";
 
-import type { ColumnMapping } from "@fsm/types";
-import type { MigrateOnboardingSourceCatalogEntry, MigrateSourceSystemId } from "@fsm/types";
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo } from "react";
+import { Loader2, RefreshCw } from "lucide-react";
+
+import type { ImportDuplicateAction, MigrateOnboardingWizardStep } from "@fsm/types";
 
 import { PageLayout } from "@/src/components/layout/PageLayout";
-import { SkeletonCard } from "@/src/components/ui/SkeletonCard";
-import { useCompany } from "@/src/hooks/company.hooks";
-import { useImportSession } from "@/src/hooks/imports.hooks";
+import { ApiError } from "@/src/lib/api";
+import { toPlainLanguageImportIssue } from "@/src/lib/migrate-onboarding-plain-language";
+import { formatHistoryDepthSummary } from "@/src/lib/migrate-relational-preview-summary";
 import {
-  uploadImportFileForMigrate,
-  useCreateMigrateOnboardingSession,
-  useLinkMigrateOnboardingFiles,
+  useAcknowledgeMigratePreview,
+  useApplyMigrateDedupeDecisions,
+  useCommitMigrateBundle,
+  useConfirmMigrateMappings,
+  useMigrateDedupePreview,
   useMigrateOnboardingBundle,
-  useMigrateOnboardingSources,
-  useSetMigrateOnboardingSource
+  useMigrateRelationalPreview,
+  useResumeMigrateOnboardingSession
 } from "@/src/hooks/migrate-onboarding.hooks";
-import { api, ApiError } from "@/src/lib/api";
-import { mergeServerMappings } from "@/src/lib/csv-import";
-import { getStoredSession } from "@/src/lib/auth";
+import { useImportErrors } from "@/src/hooks/imports.hooks";
+import { useMigrateOnboardingWizardStore } from "@/src/stores/migrate-onboarding-wizard.store";
 import { showToast } from "@/src/stores/toast.store";
 
-import { MigrateOnboardingStep1Source } from "./MigrateOnboardingStep1Source";
-import {
-  MigrateOnboardingStep2UploadMapping,
-  type MigrateUploadedFile
-} from "./MigrateOnboardingStep2UploadMapping";
+import { MigrateAiIssuesPanel } from "./MigrateAiIssuesPanel";
+import { MigrateOnboardingStepsOneTwo } from "./MigrateOnboardingStepsOneTwo";
+
+const WIZARD_STEPS: { id: MigrateOnboardingWizardStep; label: string }[] = [
+  { id: 1, label: "Source" },
+  { id: 2, label: "Upload" },
+  { id: 3, label: "Mappings" },
+  { id: 4, label: "Preview" },
+  { id: 5, label: "Commit" }
+];
 
 function formatError(error: unknown): string {
   if (error instanceof ApiError) {
     return error.message;
   }
-
   if (error instanceof Error) {
     return error.message;
   }
-
   return "Something went wrong.";
 }
 
 export function MigrateOnboardingWizardClient() {
-  const companyQuery = useCompany();
-  const authSession = useMemo(() => getStoredSession(), []);
-  const sourcesQuery = useMigrateOnboardingSources();
-  const createSession = useCreateMigrateOnboardingSession();
-  const [bundleId, setBundleId] = useState<string | null>(null);
+  const { bundleId, setBundle } = useMigrateOnboardingWizardStore();
+  const resumeQuery = useResumeMigrateOnboardingSession();
   const bundleQuery = useMigrateOnboardingBundle(bundleId);
-  const setSource = useSetMigrateOnboardingSource(bundleId);
-  const linkFiles = useLinkMigrateOnboardingFiles(bundleId);
-
-  const [localFiles, setLocalFiles] = useState<MigrateUploadedFile[]>([]);
-  const [activeFileId, setActiveFileId] = useState<string | null>(null);
-  const [isUploading, setIsUploading] = useState(false);
-  const [selectedSourceId, setSelectedSourceId] = useState<MigrateSourceSystemId | null>(null);
-
-  const bundle = bundleQuery.data;
-  const wizardStep = bundle?.wizardStep ?? 1;
+  const bundle = bundleQuery.data ?? resumeQuery.data ?? null;
+  const activeStep = bundle?.wizardStep ?? 1;
+  const resolvedBundleId = bundle?.id ?? null;
 
   useEffect(() => {
-    if (!bundleId && !createSession.isPending && !createSession.isSuccess) {
-      createSession.mutate(true, {
-        onSuccess: (created) => {
-          setBundleId(created.id);
-          if (created.stepState.sourceSystem) {
-            setSelectedSourceId(created.stepState.sourceSystem);
-          }
-        },
-        onError: (error) => {
-          showToast({ tone: "error", title: "Could not start migration", description: formatError(error) });
-        }
-      });
+    if (bundle) {
+      setBundle(bundle.id, bundle.wizardStep);
     }
-  }, [bundleId, createSession]);
+  }, [bundle, setBundle]);
 
-  useEffect(() => {
-    if (!bundle) {
-      return;
-    }
+  const confirmMappings = useConfirmMigrateMappings(resolvedBundleId);
+  const acknowledgePreview = useAcknowledgeMigratePreview(resolvedBundleId);
+  const commitBundle = useCommitMigrateBundle(resolvedBundleId);
+  const applyDedupe = useApplyMigrateDedupeDecisions(resolvedBundleId);
 
-    setSelectedSourceId(bundle.stepState.sourceSystem ?? selectedSourceId);
-  }, [bundle]);
+  const relationalPreview = useMigrateRelationalPreview(resolvedBundleId, activeStep >= 4);
+  const dedupePreview = useMigrateDedupePreview(resolvedBundleId, activeStep >= 4);
 
-  const sources: MigrateOnboardingSourceCatalogEntry[] = sourcesQuery.data?.sources ?? [];
-  const sourceLabel =
-    sources.find((entry) => entry.id === bundle?.stepState.sourceSystem)?.label ?? "Generic CSV";
+  const firstSessionId = bundle?.stepState.files[0]?.importSessionId ?? null;
+  const importErrors = useImportErrors(firstSessionId, activeStep === 3 && Boolean(firstSessionId));
 
-  async function handleSelectSource(sourceId: MigrateSourceSystemId) {
-    setSelectedSourceId(sourceId);
+  const plainIssues = useMemo(
+    () => (importErrors.data?.errors ?? []).map(toPlainLanguageImportIssue),
+    [importErrors.data?.errors]
+  );
 
-    try {
-      const updated = await setSource.mutateAsync(sourceId);
-      setBundleId(updated.id);
-      showToast({
-        tone: "success",
-        title: "Source saved",
-        description: "Upload your export files in the next step."
-      });
-    } catch (error: unknown) {
-      showToast({ tone: "error", title: "Could not save source", description: formatError(error) });
-    }
-  }
+  const refresh = () => {
+    void resumeQuery.refetch();
+    void bundleQuery.refetch();
+  };
 
-  async function handleUpload(file: File, entityType: MigrateUploadedFile["ref"]["entityType"]) {
-    setIsUploading(true);
-
-    try {
-      const { importSession } = await uploadImportFileForMigrate(file, entityType);
-      const headers = Object.keys(importSession.columnMappings);
-      const mappingOverrides = mergeServerMappings(headers, {}, importSession.columnMappings);
-
-      const ref = {
-        importSessionId: importSession.id,
-        entityType,
-        fileName: importSession.fileName,
-        label: importSession.fileName
-      };
-
-      setLocalFiles((current) => {
-        const next = [
-          ...current.filter((item) => item.ref.importSessionId !== importSession.id),
-          { ref, session: importSession, mappingOverrides }
-        ];
-        return next;
-      });
-      setActiveFileId(importSession.id);
-    } catch (error: unknown) {
-      showToast({ tone: "error", title: "Upload failed", description: formatError(error) });
-    } finally {
-      setIsUploading(false);
-    }
-  }
-
-  function handleUpdateMapping(importSessionId: string, header: string, fieldName: string | null) {
-    setLocalFiles((current) =>
-      current.map((file) => {
-        if (file.ref.importSessionId !== importSessionId) {
-          return file;
-        }
-
-        const mappingOverrides: ColumnMapping = {
-          ...file.mappingOverrides,
-          [header]: fieldName
-        };
-
-        return { ...file, mappingOverrides };
-      })
+  if (resumeQuery.isLoading) {
+    return (
+      <PageLayout title="Migration wizard" subtitle="Resuming your session…">
+        <Loader2 className="h-6 w-6 animate-spin text-neutral-500" />
+      </PageLayout>
     );
   }
-
-  const activeSessionQuery = useImportSession(activeFileId, {
-    enabled: Boolean(activeFileId) && wizardStep === 2,
-    refetchInterval: wizardStep === 2 ? 1500 : false
-  });
-
-  useEffect(() => {
-    const importSession = activeSessionQuery.data?.importSession;
-    if (!importSession || !activeFileId) {
-      return;
-    }
-
-    setLocalFiles((current) =>
-      current.map((file) => {
-        if (file.ref.importSessionId !== activeFileId) {
-          return file;
-        }
-
-        const headers = Object.keys(importSession.columnMappings);
-        const merged = mergeServerMappings(headers, file.mappingOverrides, importSession.columnMappings);
-        const mappingOverrides =
-          Object.keys(file.mappingOverrides).length > 0 ? file.mappingOverrides : merged;
-
-        return {
-          ...file,
-          session: importSession,
-          mappingOverrides
-        };
-      })
-    );
-  }, [activeFileId, activeSessionQuery.data?.importSession]);
-
-  async function handleCompleteStep2() {
-    if (!bundle || localFiles.length === 0) {
-      showToast({
-        tone: "error",
-        title: "Add at least one file",
-        description: "Upload a CSV export before continuing."
-      });
-      return;
-    }
-
-    try {
-      for (const file of localFiles) {
-        await api.post(`/api/v1/imports/${file.ref.importSessionId}/confirm-mapping`, {
-          mappingOverrides: file.mappingOverrides
-        });
-      }
-
-      const updated = await linkFiles.mutateAsync({
-        files: localFiles.map((file) => file.ref)
-      });
-
-      setBundleId(updated.id);
-      showToast({
-        tone: "success",
-        title: "Mappings saved",
-        description: "Steps 3–5 (preview, dedupe, commit) resume in the same bundle — Pair 5 continues from here."
-      });
-    } catch (error: unknown) {
-      showToast({ tone: "error", title: "Could not finish step 2", description: formatError(error) });
-    }
-  }
-
-  const isLoading = companyQuery.isLoading || sourcesQuery.isLoading || createSession.isPending || !bundle;
-
-  const companyName = companyQuery.data?.company.name ?? "your company";
-  const workEmail = authSession?.user.email ?? "your work email";
 
   return (
     <PageLayout
-      title="Migrate your data"
-      subtitle={`${companyName} · signed in as ${workEmail}`}
+      title="Migration wizard"
+      subtitle="Import multi-year history with relational preview, dedupe controls, and resumable commit."
     >
-      {isLoading ? (
-        <SkeletonCard className="min-h-[320px]" />
-      ) : wizardStep >= 3 ? (
-        <section className="rounded-[30px] border border-neutral-200 bg-white px-6 py-8 shadow-sm">
-          <p className="text-xs font-semibold uppercase tracking-[0.18em] text-brand-accent">Steps 3–5</p>
-          <h2 className="mt-2 text-xl font-semibold text-neutral-900">Preview & commit (next slice)</h2>
-          <p className="mt-2 text-sm leading-6 text-neutral-500">
-            Bundle <span className="font-mono text-xs">{bundle?.id}</span> is on wizard step {wizardStep}. Ben/Leo
-            own relational preview, dedupe decisions, and commit UI.
+      <div className="mb-6 flex flex-wrap items-center justify-between gap-3">
+        <ol className="flex flex-wrap gap-2 text-sm">
+          {WIZARD_STEPS.map((step) => (
+            <li
+              key={step.id}
+              className={`rounded-full px-3 py-1 ${
+                step.id === activeStep ? "bg-brand-primary text-white" : "bg-neutral-100 text-neutral-600"
+              }`}
+            >
+              {step.id}. {step.label}
+            </li>
+          ))}
+        </ol>
+        <button
+          type="button"
+          className="inline-flex items-center gap-1 text-sm text-neutral-600 hover:text-neutral-900"
+          onClick={refresh}
+        >
+          <RefreshCw className="h-4 w-4" />
+          Refresh session
+        </button>
+      </div>
+
+      {bundle && bundle.id ? (
+        <p className="mb-4 font-mono text-xs text-neutral-500">Bundle {bundle.id} · step {bundle.wizardStep}</p>
+      ) : null}
+
+      {activeStep < 3 ? <MigrateOnboardingStepsOneTwo bundle={bundle} onRefresh={refresh} /> : null}
+
+      {activeStep === 3 && bundle ? (
+        <div className="space-y-4">
+          <MigrateAiIssuesPanel issues={plainIssues} isLoading={importErrors.isLoading} />
+          <ul className="rounded-lg border border-neutral-200 bg-white p-4 text-sm">
+            {bundle.stepState.files.map((file) => (
+              <li key={file.importSessionId} className="py-1">
+                {file.fileName} ({file.entityType})
+              </li>
+            ))}
+          </ul>
+          <button
+            type="button"
+            className="rounded-md bg-brand-primary px-4 py-2 text-sm font-medium text-white disabled:opacity-50"
+            disabled={confirmMappings.isPending}
+            onClick={() =>
+              confirmMappings.mutate(undefined, {
+                onSuccess: () => showToast({ tone: "success", title: "Mappings confirmed" }),
+                onError: (error) =>
+                  showToast({ tone: "error", title: "Could not confirm", description: formatError(error) })
+              })
+            }
+          >
+            Confirm mappings &amp; continue
+          </button>
+        </div>
+      ) : null}
+
+      {activeStep === 4 && bundle ? (
+        <div className="space-y-4">
+          {relationalPreview.isLoading ? <p className="text-sm text-neutral-600">Loading relational preview…</p> : null}
+          {relationalPreview.data ? (
+            <section className="rounded-lg border border-neutral-200 bg-white p-4 text-sm">
+              <h3 className="font-semibold text-neutral-900">Customer → property → job graph</h3>
+              <p className="mt-2 text-neutral-700">
+                {relationalPreview.data.graph.stats.customerCount} customers ·{" "}
+                {relationalPreview.data.graph.stats.propertyCount} properties ·{" "}
+                {relationalPreview.data.graph.stats.jobCount} jobs ·{" "}
+                {relationalPreview.data.graph.stats.estimateCount} estimates
+              </p>
+              <p className="mt-2 text-neutral-600">
+                {formatHistoryDepthSummary(relationalPreview.data.graph.historyDepth)}
+              </p>
+              {relationalPreview.data.graph.joinIssues.length > 0 ? (
+                <ul className="mt-3 list-disc pl-5 text-amber-800">
+                  {relationalPreview.data.graph.joinIssues.slice(0, 5).map((issue, index) => (
+                    <li key={`${issue.code}-${index}`}>{issue.message}</li>
+                  ))}
+                </ul>
+              ) : (
+                <p className="mt-2 text-green-700">No join issues detected in this preview.</p>
+              )}
+            </section>
+          ) : null}
+
+          {dedupePreview.data && dedupePreview.data.collisions.length > 0 ? (
+            <section className="rounded-lg border border-neutral-200 bg-white p-4 text-sm">
+              <h3 className="font-semibold">Duplicate customers</h3>
+              <ul className="mt-2 space-y-2">
+                {dedupePreview.data.collisions.map((collision) => (
+                  <li key={collision.collisionKey} className="flex flex-wrap items-center justify-between gap-2">
+                    <span>
+                      Row {collision.rowNumber}: {collision.rowLabel} ↔ {collision.matchedCustomerName}
+                    </span>
+                    <select
+                      className="rounded border border-neutral-300 px-2 py-1 text-xs"
+                      defaultValue={collision.action}
+                      onChange={(event) =>
+                        applyDedupe.mutate({
+                          decisions: [
+                            {
+                              collisionKey: collision.collisionKey,
+                              action: event.target.value as ImportDuplicateAction
+                            }
+                          ]
+                        })
+                      }
+                    >
+                      <option value="skip">Skip row</option>
+                      <option value="update_existing">Update existing</option>
+                      <option value="import_new">Import as new</option>
+                    </select>
+                  </li>
+                ))}
+              </ul>
+            </section>
+          ) : null}
+
+          <button
+            type="button"
+            className="rounded-md bg-brand-primary px-4 py-2 text-sm font-medium text-white"
+            disabled={acknowledgePreview.isPending}
+            onClick={() =>
+              acknowledgePreview.mutate(undefined, {
+                onSuccess: () => showToast({ tone: "success", title: "Preview reviewed" }),
+                onError: (error) =>
+                  showToast({ tone: "error", title: "Could not continue", description: formatError(error) })
+              })
+            }
+          >
+            Continue to commit
+          </button>
+        </div>
+      ) : null}
+
+      {activeStep === 5 && bundle ? (
+        <div className="space-y-4">
+          <p className="text-sm text-neutral-700">
+            Commit is resumable: refresh the page and we restore bundle <span className="font-mono">{bundle.id}</span> from
+            your browser session.
           </p>
-        </section>
-      ) : wizardStep === 2 ? (
-        <MigrateOnboardingStep2UploadMapping
-          sourceLabel={sourceLabel}
-          files={localFiles}
-          activeFileId={activeFileId}
-          isUploading={isUploading}
-          isLinking={linkFiles.isPending}
-          onSelectFile={setActiveFileId}
-          onUpload={handleUpload}
-          onUpdateMapping={handleUpdateMapping}
-          onBack={() => {
-            showToast({
-              tone: "info",
-              title: "Source locked for this bundle",
-              description: "Start a new onboarding session to change the source system."
-            });
-          }}
-          onCompleteStep2={() => void handleCompleteStep2()}
-        />
-      ) : (
-        <MigrateOnboardingStep1Source
-          sources={sources}
-          selectedSourceId={selectedSourceId}
-          isSubmitting={setSource.isPending}
-          onSelectSource={(sourceId) => void handleSelectSource(sourceId)}
-        />
-      )}
+          <p className="text-sm text-neutral-600">Status: {bundle.status}</p>
+          <button
+            type="button"
+            className="rounded-md bg-brand-primary px-4 py-2 text-sm font-medium text-white disabled:opacity-50"
+            disabled={commitBundle.isPending || bundle.status === "committing"}
+            onClick={() =>
+              commitBundle.mutate(undefined, {
+                onSuccess: () => {
+                  showToast({ tone: "success", title: "Import commit started" });
+                  void bundleQuery.refetch();
+                },
+                onError: (error) =>
+                  showToast({ tone: "error", title: "Commit failed", description: formatError(error) })
+              })
+            }
+          >
+            {bundle.status === "committing" ? "Commit in progress…" : "Start resumable commit"}
+          </button>
+        </div>
+      ) : null}
     </PageLayout>
   );
 }

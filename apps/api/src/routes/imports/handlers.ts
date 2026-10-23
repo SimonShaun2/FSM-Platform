@@ -12,17 +12,26 @@ import {
   rollbackImport,
   startImport
 } from "../../services/import.service.js";
+import {
+  getMigrateFileBatchOperatorStatus,
+  retryMigrateFileBatchFailedObjects
+} from "../../services/import-migrate-file-batch-operator.service.js";
 import { abortImportUploadRequest } from "./upload-guards.js";
 import {
   CSV_IMPORT_MAX_FILES,
   CSV_IMPORT_TOO_MANY_FILES_MESSAGE,
   csvImportMultipartParserOptions
 } from "./upload-limits.js";
-import type {
-  ConfirmMappingBody,
-  ImportSessionIdParams,
-  StartImportBody
+import type { z } from "zod";
+
+import {
+  type ConfirmMappingBody,
+  ImportFileBatchParamsSchema,
+  type ImportSessionIdParams,
+  type StartImportBody
 } from "./schemas.js";
+
+type ImportFileBatchParams = z.infer<typeof ImportFileBatchParamsSchema>;
 
 function toImportSessionResponse(importSession: Awaited<ReturnType<typeof getImportSession>>) {
   return {
@@ -203,4 +212,32 @@ export async function getImportErrorsHandler(
   return reply.send({
     errors
   });
+}
+
+export async function getMigrateFileBatchStatusHandler(
+  request: FastifyRequest,
+  reply: FastifyReply
+): Promise<FastifyReply> {
+  const params = request.params as ImportFileBatchParams;
+  const status = await getMigrateFileBatchOperatorStatus(
+    request.company.id,
+    params.id,
+    params.batchIndex
+  );
+
+  return reply.send({ fileBatch: status });
+}
+
+export async function retryMigrateFileBatchHandler(
+  request: FastifyRequest,
+  reply: FastifyReply
+): Promise<FastifyReply> {
+  const params = request.params as ImportFileBatchParams;
+  const result = await retryMigrateFileBatchFailedObjects(
+    request.company.id,
+    params.id,
+    params.batchIndex
+  );
+
+  return reply.send({ fileBatchRetry: result });
 }

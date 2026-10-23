@@ -58,11 +58,10 @@ export function MigrateOnboardingStep1Source({
   const [showOptional, setShowOptional] = useState(false);
 
   const grouped = useMemo(() => {
-    const generic = sources.filter((entry) => entry.catalogSection === "generic");
-    const quickbooks = sources.filter((entry) => entry.catalogSection === "quickbooks");
-    const legacy = sources.filter((entry) => entry.catalogSection === "legacy_vendor");
-    const uncategorized = sources.filter((entry) => !entry.catalogSection);
-    return { generic, quickbooks, legacy, uncategorized };
+    const generic = sources.filter((entry) => entry.id === "manual_csv");
+    const quickbooks = sources.filter((entry) => entry.importPath === "quickbooks_file_export");
+    const legacy = sources.filter((entry) => entry.catalogTier === "export_tips");
+    return { generic, quickbooks, legacy };
   }, [sources]);
 
   return (
@@ -77,7 +76,7 @@ export function MigrateOnboardingStep1Source({
       </div>
 
       <div className="grid gap-3">
-        {[...grouped.generic, ...grouped.uncategorized].map((entry) => (
+        {grouped.generic.map((entry) => (
           <SourceCard
             key={entry.id}
             entry={entry}

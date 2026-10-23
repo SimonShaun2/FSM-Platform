@@ -14,7 +14,6 @@ import {
 } from "@fsm/db";
 import { AppError, ErrorCode } from "@fsm/types";
 
-import { sendPasswordResetEmail } from "../lib/email.js";
 import {
   compareToken,
   generateAccessToken,
@@ -396,7 +395,13 @@ export async function forgotPassword(email: string): Promise<void> {
   const resetUrl = `${env.APP_URL}/reset-password?token=${encodeURIComponent(resetToken)}`;
 
   try {
-    await sendPasswordResetEmail(user.email, resetUrl, user.firstName);
+    const { notificationsQueue } = await import("@fsm/jobs");
+    await notificationsQueue.add("send-password-reset-email", {
+      companyId: user.companyId,
+      toEmail: user.email,
+      firstName: user.firstName,
+      resetUrl
+    });
   } catch (error) {
     logger.debug(
       {
@@ -405,7 +410,7 @@ export async function forgotPassword(email: string): Promise<void> {
         companyId: user.companyId,
         recipient: "[redacted]"
       },
-      "Password reset email dispatch failed"
+      "Password reset email enqueue failed"
     );
   }
 }
