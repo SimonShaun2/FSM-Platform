@@ -1,6 +1,6 @@
 "use client";
 
-/** FS-43: env-gated Sentry + PostHog browser init. */
+/** FS-43: env-gated Sentry + PostHog browser init (batch 5 / #142). */
 
 import * as Sentry from "@sentry/react";
 import posthog from "posthog-js";
