@@ -6,6 +6,10 @@ import Papa from "papaparse";
 import pino from "pino";
 
 import { mapCsvColumns } from "@fsm/ai";
+import {
+  buildPresetColumnMapping,
+  inferImportVendorPresetForSession
+} from "@fsm/config/import-vendor-presets";
 import { downloadFile, getFileKeyFromUrl } from "@fsm/config/storage";
 import {
   customers,
@@ -479,24 +483,34 @@ export async function handleMapCsvColumns(job: Job<Record<string, unknown>>): Pr
   try {
     const fileBuffer = await downloadFile(getFileKeyFromUrl(importSession.fileUrl));
     const parsedCsv = parseCsv(fileBuffer);
-    let columnMapping: ColumnMapping;
+    const vendorPresetId = inferImportVendorPresetForSession(
+      parsedCsv.headers,
+      importSession.entityType
+    );
+    const presetMapping = vendorPresetId
+      ? buildPresetColumnMapping(parsedCsv.headers, vendorPresetId)
+      : {};
+    let columnMapping: ColumnMapping = { ...presetMapping };
 
     try {
-      columnMapping = await mapCsvColumns(
+      const aiMapping = await mapCsvColumns(
         parsedCsv.headers,
         parsedCsv.rows.slice(0, 5).map((row) => row.values),
         importSession.entityType
       );
+      columnMapping = { ...aiMapping, ...presetMapping };
     } catch (error: unknown) {
       logger.error(
         {
           err: error,
           companyId,
-          importSessionId
+          importSessionId,
+          vendorPresetId
         },
-        "AI column mapping failed; falling back to empty mapping"
+        "AI column mapping failed; falling back to vendor preset or empty mapping"
       );
-      columnMapping = buildEmptyMapping(parsedCsv.headers);
+      columnMapping =
+        Object.keys(presetMapping).length > 0 ? presetMapping : buildEmptyMapping(parsedCsv.headers);
     }
 
     await db
