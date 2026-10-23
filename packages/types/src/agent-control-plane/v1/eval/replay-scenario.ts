@@ -93,23 +93,25 @@ function replayOutboundStep(fixture: AgentEvalScenarioFixture): string[] {
   }
 
   const step = fixture.outbound;
-  const decision = evaluateOutboundAuthorization({
+  const outboundInput = {
     policyVersion: OUTBOUND_AUTHORIZATION_POLICY_V1,
     kind: step.kind,
     resourceCompanyId: step.resourceCompanyId,
     actor: {
       companyId: step.actorCompanyId,
       actorId: "eval-actor",
-      actorType: "user"
+      actorType: "user" as const
     },
     channel: step.channel,
     actionType: step.actionType,
     consent: EVAL_CONSENT,
     customer: EVAL_CUSTOMER,
-    approval: step.approvalRequired
-      ? { required: true, approved: step.approvalGranted }
-      : undefined
-  });
+    ...(step.approvalRequired
+      ? { approval: { required: true, approved: step.approvalGranted } }
+      : {})
+  };
+
+  const decision = evaluateOutboundAuthorization(outboundInput);
 
   const failures: string[] = [];
   if (decision.allowed !== step.expectAllowed) {
