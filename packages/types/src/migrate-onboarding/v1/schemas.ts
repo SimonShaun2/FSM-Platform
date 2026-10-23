@@ -211,11 +211,22 @@ export const migrateOnboardingCommitResponseSchema = z.object({
 
 export type MigrateOnboardingCommitResponse = z.infer<typeof migrateOnboardingCommitResponseSchema>;
 
+export const migrateOnboardingSourceCatalogSectionSchema = z.enum([
+  "generic",
+  "quickbooks",
+  "legacy_vendor"
+]);
+
+export type MigrateOnboardingSourceCatalogSection = z.infer<
+  typeof migrateOnboardingSourceCatalogSectionSchema
+>;
+
 export const migrateOnboardingSourceCatalogEntrySchema = z.object({
   id: migrateSourceSystemIdSchema,
   label: z.string(),
   description: z.string(),
-  recommendedExports: z.array(z.string())
+  recommendedExports: z.array(z.string()),
+  catalogSection: migrateOnboardingSourceCatalogSectionSchema.optional()
 });
 
 export type MigrateOnboardingSourceCatalogEntry = z.infer<typeof migrateOnboardingSourceCatalogEntrySchema>;

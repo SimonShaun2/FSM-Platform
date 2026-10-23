@@ -1,7 +1,7 @@
 import type { FastifyError, FastifyReply, FastifyRequest } from "fastify";
 
-import type { ListImportsQuery } from "@fsm/types";
-import { AppError, ErrorCode } from "@fsm/types";
+import type { ImportEntityType, ListImportsQuery } from "@fsm/types";
+import { AppError, ErrorCode, importEntityTypeSchema } from "@fsm/types";
 
 import {
   confirmMapping,
@@ -52,6 +52,7 @@ export async function createImportHandler(
   let mimeType: string | undefined;
   let fileBuffer: Buffer | undefined;
   let fileCount = 0;
+  let entityType: ImportEntityType = "customers";
 
   try {
     for await (const part of request.parts(csvImportMultipartParserOptions)) {
@@ -66,6 +67,16 @@ export async function createImportHandler(
         fileName = part.filename;
         mimeType = part.mimetype;
         fileBuffer = await part.toBuffer();
+        continue;
+      }
+
+      if (part.type === "field" && part.fieldname === "entityType") {
+        const parsedEntityType = importEntityTypeSchema.safeParse(String(await part.value));
+        if (parsedEntityType.success) {
+          entityType = parsedEntityType.data as ImportEntityType;
+        } else {
+          throw new AppError(ErrorCode.VALIDATION_ERROR, "entityType must be customers, properties, or jobs");
+        }
         continue;
       }
 
@@ -98,7 +109,7 @@ export async function createImportHandler(
     fileBuffer,
     {
       mimeType: mimeType ?? "text/csv",
-      entityType: "customers"
+      entityType
     }
   );
 
