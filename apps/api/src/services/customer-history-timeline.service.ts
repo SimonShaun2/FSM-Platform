@@ -1,0 +1,359 @@
+import { and, eq, isNull } from "drizzle-orm";
+
+import {
+  customerNotes,
+  customers,
+  db,
+  estimates,
+  invoices,
+  jobs,
+  messageLogs,
+  payments
+} from "@fsm/db";
+import {
+  AppError,
+  ErrorCode,
+  customerHistoryTimelineItemTypeSchema,
+  type CustomerHistoryTimelineItem,
+  type CustomerHistoryTimelineItemType,
+  type CustomerHistoryTimelineResponse,
+  type ListCustomerHistoryTimelineQuery
+} from "@fsm/types";
+
+const MAX_ROWS_PER_SOURCE = 500;
+
+type TimelineCursor = {
+  occurredAt: string;
+  type: CustomerHistoryTimelineItemType;
+  id: string;
+};
+
+function lineageFromImportSession(importSessionId: string | null): "native" | "imported" {
+  return importSessionId ? "imported" : "native";
+}
+
+function encodeCursor(cursor: TimelineCursor): string {
+  return Buffer.from(JSON.stringify(cursor), "utf8").toString("base64url");
+}
+
+function decodeCursor(value: string): TimelineCursor {
+  try {
+    const parsed = JSON.parse(Buffer.from(value, "base64url").toString("utf8")) as TimelineCursor;
+    if (
+      typeof parsed.occurredAt !== "string" ||
+      typeof parsed.type !== "string" ||
+      typeof parsed.id !== "string"
+    ) {
+      throw new Error("invalid cursor shape");
+    }
+    customerHistoryTimelineItemTypeSchema.parse(parsed.type);
+    return parsed;
+  } catch {
+    throw new AppError(ErrorCode.VALIDATION_ERROR, "Invalid history timeline cursor");
+  }
+}
+
+function compareItemsDesc(left: CustomerHistoryTimelineItem, right: CustomerHistoryTimelineItem): number {
+  const timeCompare = right.occurredAt.localeCompare(left.occurredAt);
+  if (timeCompare !== 0) {
+    return timeCompare;
+  }
+  const typeCompare = right.type.localeCompare(left.type);
+  if (typeCompare !== 0) {
+    return typeCompare;
+  }
+  return right.id.localeCompare(left.id);
+}
+
+function isBeforeCursor(item: CustomerHistoryTimelineItem, cursor: TimelineCursor): boolean {
+  return compareItemsDesc(item, {
+    id: cursor.id,
+    type: cursor.type,
+    occurredAt: cursor.occurredAt,
+    title: "",
+    subtitle: null,
+    status: null,
+    amount: null,
+    lineage: "native",
+    sourceSystem: null,
+    sourceId: null,
+    importSessionId: null,
+    href: null
+  }) > 0;
+}
+
+function parseTypeFilter(types: string | undefined): Set<CustomerHistoryTimelineItemType> | null {
+  if (!types) {
+    return null;
+  }
+
+  const parsed = types
+    .split(",")
+    .map((entry) => entry.trim())
+    .filter((entry) => entry.length > 0)
+    .map((entry) => customerHistoryTimelineItemTypeSchema.parse(entry));
+
+  return new Set(parsed);
+}
+
+function jobOccurredAt(job: {
+  actualEnd: Date | null;
+  scheduledStart: Date | null;
+  createdAt: Date;
+}): Date {
+  return job.actualEnd ?? job.scheduledStart ?? job.createdAt;
+}
+
+function estimateOccurredAt(estimate: {
+  approvedAt: Date | null;
+  sentAt: Date | null;
+  createdAt: Date;
+}): Date {
+  return estimate.approvedAt ?? estimate.sentAt ?? estimate.createdAt;
+}
+
+function invoiceOccurredAt(invoice: {
+  paidAt: Date | null;
+  issuedAt: Date | null;
+  createdAt: Date;
+}): Date {
+  return invoice.paidAt ?? invoice.issuedAt ?? invoice.createdAt;
+}
+
+async function assertCustomerInTenant(companyId: string, customerId: string): Promise<void> {
+  const [customer] = await db
+    .select({ id: customers.id })
+    .from(customers)
+    .where(
+      and(eq(customers.companyId, companyId), eq(customers.id, customerId), isNull(customers.deletedAt))
+    )
+    .limit(1);
+
+  if (!customer) {
+    throw new AppError(ErrorCode.NOT_FOUND, "Customer not found");
+  }
+}
+
+export async function listCustomerHistoryTimeline(
+  companyId: string,
+  customerId: string,
+  query: ListCustomerHistoryTimelineQuery
+): Promise<CustomerHistoryTimelineResponse> {
+  await assertCustomerInTenant(companyId, customerId);
+
+  const typeFilter = parseTypeFilter(query.types);
+  const limit = query.limit;
+  const cursor = query.cursor ? decodeCursor(query.cursor) : null;
+
+  const items: CustomerHistoryTimelineItem[] = [];
+
+  if (!typeFilter || typeFilter.has("job")) {
+    const jobRows = await db
+      .select()
+      .from(jobs)
+      .where(
+        and(eq(jobs.companyId, companyId), eq(jobs.customerId, customerId), isNull(jobs.deletedAt))
+      )
+      .limit(MAX_ROWS_PER_SOURCE);
+
+    for (const job of jobRows) {
+      items.push({
+        id: job.id,
+        type: "job",
+        occurredAt: jobOccurredAt(job).toISOString(),
+        title: `${job.jobNumber} · ${job.title}`,
+        subtitle: job.status,
+        status: job.status,
+        amount: job.invoiceTotal,
+        lineage: lineageFromImportSession(job.importSessionId),
+        sourceSystem: job.sourceSystem,
+        sourceId: job.sourceId,
+        importSessionId: job.importSessionId,
+        href: `/jobs/${job.id}`
+      });
+    }
+  }
+
+  if (!typeFilter || typeFilter.has("estimate")) {
+    const estimateRows = await db
+      .select()
+      .from(estimates)
+      .where(
+        and(
+          eq(estimates.companyId, companyId),
+          eq(estimates.customerId, customerId),
+          isNull(estimates.deletedAt)
+        )
+      )
+      .limit(MAX_ROWS_PER_SOURCE);
+
+    for (const estimate of estimateRows) {
+      items.push({
+        id: estimate.id,
+        type: "estimate",
+        occurredAt: estimateOccurredAt(estimate).toISOString(),
+        title: estimate.title
+          ? `${estimate.estimateNumber} · ${estimate.title}`
+          : estimate.estimateNumber,
+        subtitle: estimate.status,
+        status: estimate.status,
+        amount: estimate.total,
+        lineage: lineageFromImportSession(estimate.importSessionId),
+        sourceSystem: estimate.sourceSystem,
+        sourceId: estimate.sourceId,
+        importSessionId: estimate.importSessionId,
+        href: `/estimates/${estimate.id}`
+      });
+    }
+  }
+
+  if (!typeFilter || typeFilter.has("invoice")) {
+    const invoiceRows = await db
+      .select()
+      .from(invoices)
+      .where(
+        and(
+          eq(invoices.companyId, companyId),
+          eq(invoices.customerId, customerId),
+          isNull(invoices.deletedAt)
+        )
+      )
+      .limit(MAX_ROWS_PER_SOURCE);
+
+    for (const invoice of invoiceRows) {
+      items.push({
+        id: invoice.id,
+        type: "invoice",
+        occurredAt: invoiceOccurredAt(invoice).toISOString(),
+        title: invoice.title
+          ? `${invoice.invoiceNumber} · ${invoice.title}`
+          : invoice.invoiceNumber,
+        subtitle: invoice.status,
+        status: invoice.status,
+        amount: invoice.total,
+        lineage: lineageFromImportSession(invoice.importSessionId),
+        sourceSystem: invoice.sourceSystem,
+        sourceId: invoice.sourceId,
+        importSessionId: invoice.importSessionId,
+        href: `/invoices/${invoice.id}`
+      });
+    }
+  }
+
+  if (!typeFilter || typeFilter.has("payment")) {
+    const paymentRows = await db
+      .select()
+      .from(payments)
+      .where(
+        and(
+          eq(payments.companyId, companyId),
+          eq(payments.customerId, customerId),
+          isNull(payments.deletedAt)
+        )
+      )
+      .limit(MAX_ROWS_PER_SOURCE);
+
+    for (const payment of paymentRows) {
+      items.push({
+        id: payment.id,
+        type: "payment",
+        occurredAt: (payment.paidAt ?? payment.createdAt).toISOString(),
+        title: `Payment · ${payment.method}`,
+        subtitle: payment.status,
+        status: payment.status,
+        amount: payment.amount,
+        lineage: lineageFromImportSession(payment.importSessionId),
+        sourceSystem: payment.sourceSystem,
+        sourceId: payment.sourceId,
+        importSessionId: payment.importSessionId,
+        href: payment.invoiceId ? `/invoices/${payment.invoiceId}` : null
+      });
+    }
+  }
+
+  if (!typeFilter || typeFilter.has("note")) {
+    const noteRows = await db
+      .select()
+      .from(customerNotes)
+      .where(
+        and(
+          eq(customerNotes.companyId, companyId),
+          eq(customerNotes.customerId, customerId),
+          isNull(customerNotes.deletedAt)
+        )
+      )
+      .limit(MAX_ROWS_PER_SOURCE);
+
+    for (const note of noteRows) {
+      const preview =
+        note.content.length > 120 ? `${note.content.slice(0, 117)}...` : note.content;
+      items.push({
+        id: note.id,
+        type: "note",
+        occurredAt: (note.notedAt ?? note.createdAt).toISOString(),
+        title: preview,
+        subtitle: note.isInternal ? "Internal note" : "Customer note",
+        status: null,
+        amount: null,
+        lineage: lineageFromImportSession(note.importSessionId),
+        sourceSystem: note.sourceSystem,
+        sourceId: note.sourceId,
+        importSessionId: note.importSessionId,
+        href: null
+      });
+    }
+  }
+
+  if (!typeFilter || typeFilter.has("communication")) {
+    const messageRows = await db
+      .select()
+      .from(messageLogs)
+      .where(
+        and(
+          eq(messageLogs.companyId, companyId),
+          eq(messageLogs.customerId, customerId),
+          isNull(messageLogs.deletedAt)
+        )
+      )
+      .limit(MAX_ROWS_PER_SOURCE);
+
+    for (const message of messageRows) {
+      const preview =
+        message.body.length > 120 ? `${message.body.slice(0, 117)}...` : message.body;
+      items.push({
+        id: message.id,
+        type: "communication",
+        occurredAt: (message.sentAt ?? message.createdAt).toISOString(),
+        title: message.subject?.trim() || `${message.channel} ${message.direction}`,
+        subtitle: preview,
+        status: message.providerStatus,
+        amount: null,
+        lineage: lineageFromImportSession(message.importSessionId),
+        sourceSystem: message.sourceSystem,
+        sourceId: message.sourceId,
+        importSessionId: message.importSessionId,
+        href: message.jobId ? `/jobs/${message.jobId}` : null
+      });
+    }
+  }
+
+  const sorted = items.sort(compareItemsDesc);
+  const filtered = cursor ? sorted.filter((item) => isBeforeCursor(item, cursor)) : sorted;
+  const page = filtered.slice(0, limit);
+  const hasMore = filtered.length > limit;
+  const lastItem = page.at(-1);
+  const nextCursor =
+    hasMore && lastItem
+      ? encodeCursor({
+          occurredAt: lastItem.occurredAt,
+          type: lastItem.type,
+          id: lastItem.id
+        })
+      : null;
+
+  return {
+    customerId,
+    items: page,
+    nextCursor
+  };
+}
