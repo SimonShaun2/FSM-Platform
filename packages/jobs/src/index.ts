@@ -60,6 +60,15 @@ export {
 export type { ImportEquipmentCommitPayload } from "./import-equipment-commit.js";
 export { enqueueImportEquipmentCommitJob } from "./enqueue-import-equipment-commit.js";
 export {
+  SEND_VIP_MEMBERSHIP_EMAIL_JOB_NAME,
+  buildVipDunningEmailJobId,
+  buildVipRenewalEmailJobId,
+  buildVipWelcomeEmailJobId,
+  cancelScheduledVipMembershipDunning,
+  enqueueVipMembershipEmail,
+  scheduleVipMembershipDunningEmails
+} from "./vip-membership-email.js";
+export {
   QUEUE_PREFIX,
   QUEUE_NAMES,
   queueBaseOptions,

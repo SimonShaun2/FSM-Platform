@@ -76,6 +76,32 @@ export interface BookingDeclineEmailParams {
   reason: string | null;
 }
 
+interface VipMembershipWelcomeEmailParams {
+  firstName: string;
+  companyName: string;
+  planName: string;
+  portalUrl: string | null;
+}
+
+interface VipMembershipRenewalEmailParams {
+  firstName: string;
+  companyName: string;
+  planName: string;
+  amount: string;
+  renewalDateLabel: string | null;
+}
+
+interface VipMembershipPaymentFailedEmailParams {
+  firstName: string;
+  companyName: string;
+  planName: string;
+  amount: string;
+  paymentUrl: string | null;
+  graceEndsAtLabel: string | null;
+  nextRetryAtLabel: string | null;
+  dunningStepIndex: number;
+}
+
 function formatEmailDate(value: string | null): string | null {
   if (!value) {
     return null;
@@ -264,4 +290,66 @@ export async function sendBookingDeclineEmail(to: string, params: BookingDecline
   );
 
   logger.debug({ recipient: "[redacted]" }, "Booking decline email sent");
+}
+
+export async function sendVipMembershipWelcomeEmail(
+  to: string,
+  params: VipMembershipWelcomeEmailParams
+): Promise<void> {
+  await sendRenderedTemplateEmail(
+    to,
+    EMAIL_TEMPLATE_IDS.vipMembershipWelcome,
+    {
+      firstName: params.firstName,
+      companyName: params.companyName,
+      planName: params.planName,
+      portalUrl: params.portalUrl ?? ""
+    },
+    ["vip_membership.welcome"]
+  );
+
+  logger.debug({ recipient: "[redacted]" }, "VIP membership welcome email sent");
+}
+
+export async function sendVipMembershipRenewalEmail(
+  to: string,
+  params: VipMembershipRenewalEmailParams
+): Promise<void> {
+  await sendRenderedTemplateEmail(
+    to,
+    EMAIL_TEMPLATE_IDS.vipMembershipRenewal,
+    {
+      firstName: params.firstName,
+      companyName: params.companyName,
+      planName: params.planName,
+      amount: params.amount,
+      renewalDateLabel: params.renewalDateLabel ?? ""
+    },
+    ["vip_membership.renewal_receipt"]
+  );
+
+  logger.debug({ recipient: "[redacted]" }, "VIP membership renewal email sent");
+}
+
+export async function sendVipMembershipPaymentFailedEmail(
+  to: string,
+  params: VipMembershipPaymentFailedEmailParams
+): Promise<void> {
+  await sendRenderedTemplateEmail(
+    to,
+    EMAIL_TEMPLATE_IDS.vipMembershipPaymentFailed,
+    {
+      firstName: params.firstName,
+      companyName: params.companyName,
+      planName: params.planName,
+      amount: params.amount,
+      paymentUrl: params.paymentUrl ?? "",
+      graceEndsAtLabel: params.graceEndsAtLabel ?? "",
+      nextRetryAtLabel: params.nextRetryAtLabel ?? "",
+      dunningStepIndex: String(params.dunningStepIndex)
+    },
+    ["vip_membership.payment_failed_dunning"]
+  );
+
+  logger.debug({ recipient: "[redacted]" }, "VIP membership dunning email sent");
 }
