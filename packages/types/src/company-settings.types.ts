@@ -23,9 +23,15 @@ export interface CompanyBillingSettings {
   smsCreditsLimit?: number | null;
 }
 
+export interface CompanyClerkSettings {
+  organizationId?: string | null;
+}
+
 export interface CompanySettings {
   tradingName?: string | null;
   currency?: string | null;
   notifications?: CompanyNotificationSettings | null;
   billing?: CompanyBillingSettings | null;
+  /** STACK-02 — maps Clerk org to tenant company */
+  clerk?: CompanyClerkSettings | null;
 }
