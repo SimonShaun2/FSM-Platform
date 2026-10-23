@@ -130,9 +130,19 @@ export type MigrateDedupePreviewResponse = z.infer<typeof migrateDedupePreviewRe
 
 const relationalPreviewNodeSchema = z.object({
   id: z.string(),
-  kind: z.enum(["customer", "property", "job"]),
+  kind: z.enum(["customer", "property", "job", "estimate"]),
   label: z.string(),
   sourceRow: z.number().int().positive()
+});
+
+const relationalHistoryDepthSchema = z.object({
+  entity: z.enum(["jobs", "estimates"]),
+  datedRowCount: z.number().int().nonnegative(),
+  undatedRowCount: z.number().int().nonnegative(),
+  earliestBusinessDate: z.string().nullable(),
+  latestBusinessDate: z.string().nullable(),
+  spanYears: z.number().nullable(),
+  meetsMultiYearThreshold: z.boolean()
 });
 
 const relationalJoinIssueSchema = z.object({
@@ -140,9 +150,12 @@ const relationalJoinIssueSchema = z.object({
     "duplicate_customer_key",
     "duplicate_property_key",
     "duplicate_job_key",
+    "duplicate_estimate_key",
     "missing_join_key",
+    "missing_business_date",
     "orphan_property",
-    "orphan_job"
+    "orphan_job",
+    "orphan_estimate"
   ]),
   message: z.string(),
   sourceRow: z.number().int().positive().optional(),
@@ -155,7 +168,7 @@ export const migrateRelationalPreviewResponseSchema = z.object({
   files: z.array(
     z.object({
       importSessionId: z.string().uuid(),
-      kind: z.enum(["customers", "properties", "jobs"]),
+      kind: z.enum(["customers", "properties", "jobs", "estimates"]),
       fileName: z.string()
     })
   ),
@@ -163,6 +176,7 @@ export const migrateRelationalPreviewResponseSchema = z.object({
     customers: z.array(relationalPreviewNodeSchema),
     properties: z.array(relationalPreviewNodeSchema),
     jobs: z.array(relationalPreviewNodeSchema),
+    estimates: z.array(relationalPreviewNodeSchema),
     edges: z.array(
       z.object({
         fromCustomerId: z.string(),
@@ -177,17 +191,29 @@ export const migrateRelationalPreviewResponseSchema = z.object({
         joinKey: z.string()
       })
     ),
+    jobEstimateEdges: z.array(
+      z.object({
+        fromJobId: z.string(),
+        toEstimateId: z.string(),
+        joinKey: z.string()
+      })
+    ),
     orphanPropertyCount: z.number().int().nonnegative(),
     orphanJobCount: z.number().int().nonnegative(),
+    orphanEstimateCount: z.number().int().nonnegative(),
     unmatchedCustomerKeys: z.array(z.string()),
     unmatchedPropertyKeys: z.array(z.string()),
+    unmatchedJobKeys: z.array(z.string()),
+    historyDepth: z.array(relationalHistoryDepthSchema),
     joinIssues: z.array(relationalJoinIssueSchema),
     stats: z.object({
       customerCount: z.number().int().nonnegative(),
       propertyCount: z.number().int().nonnegative(),
       jobCount: z.number().int().nonnegative(),
+      estimateCount: z.number().int().nonnegative(),
       linkedPropertyCount: z.number().int().nonnegative(),
-      linkedJobCount: z.number().int().nonnegative()
+      linkedJobCount: z.number().int().nonnegative(),
+      linkedEstimateCount: z.number().int().nonnegative()
     })
   })
 });

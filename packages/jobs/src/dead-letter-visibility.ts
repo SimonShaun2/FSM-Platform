@@ -52,7 +52,7 @@ function parseCursor(cursor: string | undefined): number {
 export async function listDeadLetterJobs(
   sourceQueue: PlatformQueueNameV1,
   deadLetterQueue: DeadLetterListProbe,
-  options: { start?: number; limit?: number } = {}
+  options: { start?: number; limit?: number; companyId?: string } = {}
 ): Promise<DeadLetterJobListV1> {
   const start = options.start ?? 0;
   const limit = Math.min(Math.max(options.limit ?? 25, 1), 100);
@@ -62,7 +62,14 @@ export async function listDeadLetterJobs(
   const page = hasMore ? waiting.slice(0, limit) : waiting;
   const jobs = page
     .map((job) => envelopeToSummary(sourceQueue, job))
-    .filter((row): row is DeadLetterJobSummaryV1 => row !== null);
+    .filter((row): row is DeadLetterJobSummaryV1 => row !== null)
+    .filter((row) => {
+      if (!options.companyId) {
+        return true;
+      }
+
+      return row.companyId === options.companyId;
+    });
 
   const nextCursor = hasMore ? String(start + limit) : null;
 
