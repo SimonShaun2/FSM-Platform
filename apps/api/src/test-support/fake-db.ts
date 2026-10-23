@@ -5281,12 +5281,32 @@ function resolveFieldKey(field: unknown): string {
   return typeof field === "string" ? field : String(field);
 }
 
+function readClerkOrganizationIdFromCompanySettings(settings: Record<string, unknown>): string | null {
+  const clerk = settings.clerk;
+  if (!clerk || typeof clerk !== "object" || Array.isArray(clerk)) {
+    return null;
+  }
+  const orgId = (clerk as { organizationId?: unknown }).organizationId;
+  return typeof orgId === "string" && orgId.length > 0 ? orgId : null;
+}
+
 export function createDrizzleModuleMock() {
-  const sqlTag = (strings: TemplateStringsArray, ..._values: unknown[]) => {
+  const sqlTag = (strings: TemplateStringsArray, ...values: unknown[]) => {
     const template = strings.join("");
 
     if (template.includes("COALESCE")) {
       return JOB_ACTIVITY_AT_MARKER;
+    }
+
+    if (template.includes("clerk") && template.includes("organizationId")) {
+      const clerkOrganizationId = values.at(-1);
+      if (typeof clerkOrganizationId !== "string") {
+        return {};
+      }
+      return <T extends { settings?: Record<string, unknown> }>(row: T) => {
+        const settings = row.settings ?? {};
+        return readClerkOrganizationIdFromCompanySettings(settings) === clerkOrganizationId;
+      };
     }
 
     return {};
@@ -5342,9 +5362,22 @@ export function createDrizzleModuleMock() {
   };
 }
 
+async function runTransactionWithRetry<T>(callback: (tx: TestDb) => Promise<T>): Promise<T> {
+  return db.transaction(callback);
+}
+
+async function runTransactionWithTenantSession<T>(
+  _companyId: string,
+  callback: (tx: TestDb) => Promise<T>
+): Promise<T> {
+  return db.transaction(callback);
+}
+
 export function createDbModuleMock() {
   return {
     db,
+    runTransactionWithRetry,
+    runTransactionWithTenantSession,
     companies,
     users,
     refreshTokens,
