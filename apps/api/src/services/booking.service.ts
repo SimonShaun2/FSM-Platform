@@ -40,6 +40,8 @@ import {
 import {
   finalizeBookingHoldTokenClaim,
   generateBookingHoldToken,
+  inspectBookingHoldToken,
+  type BookingHoldTokenInspection,
   verifyAndClaimBookingHoldToken
 } from "../lib/booking-hold-token.js";
 import { generateJobNumber } from "../lib/job-number.js";
@@ -1101,6 +1103,27 @@ async function holdBookingSlot(
       }
     };
   });
+}
+
+export async function inspectPublicBookingHoldToken(
+  slug: string,
+  holdToken: string
+): Promise<BookingHoldTokenInspection & { slugMatches: boolean }> {
+  const inspection = inspectBookingHoldToken(holdToken);
+
+  if (inspection.status === "invalid" || !inspection.companyId) {
+    return {
+      ...inspection,
+      slugMatches: false
+    };
+  }
+
+  const { settings } = await getCompanyByBookingSlug(slug, db);
+
+  return {
+    ...inspection,
+    slugMatches: settings.companyId === inspection.companyId
+  };
 }
 
 export async function holdPublicBookingSlot(
