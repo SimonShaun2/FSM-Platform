@@ -29,6 +29,14 @@
     "./deployment-environment": {
       "types": "./dist/deployment-environment.d.ts",
       "import": "./dist/deployment-environment.js"
+    },
+    "./import-bundle-storage": {
+      "types": "./dist/import-bundle-storage.d.ts",
+      "import": "./dist/import-bundle-storage.js"
+    },
+    "./sentry": {
+      "types": "./dist/sentry.d.ts",
+      "import": "./dist/sentry.js"
     }
   },
   "scripts": {
@@ -37,6 +45,7 @@
     "test": "vitest run"
   },
   "dependencies": {
+    "@sentry/node": "^9.46.0",
     "@aws-sdk/client-s3": "^3.931.0",
     "@aws-sdk/s3-request-presigner": "3.1038.0",
     "zod": "^3.25.76"

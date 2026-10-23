@@ -9,6 +9,10 @@
     ".": {
       "types": "./dist/index.d.ts",
       "import": "./dist/index.js"
+    },
+    "./enqueue-migrate-file-batch": {
+      "types": "./dist/enqueue-migrate-file-batch.d.ts",
+      "import": "./dist/enqueue-migrate-file-batch.js"
     }
   },
   "scripts": {

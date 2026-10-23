@@ -19,12 +19,15 @@ import {
   properties
 } from "@fsm/db";
 import { aiQueue } from "@fsm/jobs";
+import { IMPORT_QUEUE_JOB_NAMES } from "@fsm/types";
 import {
   sanitizeSpreadsheetCell,
   type ColumnMapping,
   type ImportCustomerUpdateSnapshotV1,
   type ValidationError
 } from "@fsm/types";
+
+import { handleMigrateFileBatch } from "./migrate-file-batch.processor.js";
 
 type ImportSessionRow = typeof importSessions.$inferSelect;
 type CustomerRow = typeof customers.$inferSelect;
@@ -915,6 +918,9 @@ export function createCsvImportProcessor(): Processor<Record<string, unknown>, v
         return;
       case "execute-import":
         await handleExecuteImport(job);
+        return;
+      case IMPORT_QUEUE_JOB_NAMES.migrateFileBatch:
+        await handleMigrateFileBatch(job as Parameters<typeof handleMigrateFileBatch>[0]);
         return;
       default:
         logger.warn({ jobId: job.id ?? null, jobName: job.name }, "Unknown CSV import job received");

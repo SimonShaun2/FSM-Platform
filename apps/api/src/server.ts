@@ -1,4 +1,7 @@
 import { env, resolveApiListenPort } from "@fsm/config";
+import { initSentry } from "@fsm/config/sentry";
+
+initSentry("api");
 
 import { buildApp } from "./app.js";
 
