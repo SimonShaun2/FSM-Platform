@@ -34,14 +34,18 @@ describe("company-scoped-transaction", () => {
   });
 
   it("runCompanyScopedTransaction delegates to tenant session helper", async () => {
-    const result = await runCompanyScopedTransaction(companyId, async (tx) => tx.marker);
+    const result = await runCompanyScopedTransaction(companyId, async (tx) =>
+      (tx as unknown as { marker: string }).marker
+    );
     expect(result).toBe("tenant");
     expect(runTransactionWithTenantSession).toHaveBeenCalledWith(companyId, expect.any(Function));
   });
 
   it("runTenantAwareTransaction uses plain transaction when flag is off", async () => {
     expect(isTenantSessionScopedWritesEnabled()).toBe(featureFlags.tenantSessionScopedWrites);
-    const result = await runTenantAwareTransaction(companyId, async (tx) => tx.marker);
+    const result = await runTenantAwareTransaction(companyId, async (tx) =>
+      (tx as unknown as { marker: string }).marker
+    );
     expect(result).toBe("plain");
     expect(runTransactionWithRetry).toHaveBeenCalled();
     expect(runTransactionWithTenantSession).not.toHaveBeenCalled();
