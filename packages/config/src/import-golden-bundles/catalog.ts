@@ -297,6 +297,21 @@ export const GOLDEN_IMPORT_BUNDLE_MANIFESTS: GoldenImportBundleManifest[] = [
           parentColumn: "customer_id"
         },
         businessDateColumn: "completed_at"
+      },
+      {
+        relativePath: "vip_tiers.csv",
+        entityType: "vip_membership_tiers",
+        presetEntityHint: "products"
+      },
+      {
+        relativePath: "vip_memberships.csv",
+        entityType: "vip_memberships",
+        presetEntityHint: "customers",
+        joinLink: {
+          parentFile: "customers.csv",
+          localColumn: "customer_id",
+          parentColumn: "customer_id"
+        }
       }
     ]
   }

@@ -15,7 +15,9 @@ export const goldenBundleEntityTypeSchema = z.enum([
   "maintenance_plans",
   "notes",
   "communications",
-  "report_snapshot"
+  "report_snapshot",
+  "vip_membership_tiers",
+  "vip_memberships"
 ]);
 
 export type GoldenBundleEntityType = z.infer<typeof goldenBundleEntityTypeSchema>;
