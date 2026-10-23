@@ -16,6 +16,7 @@
   "dependencies": {
     "@aws-sdk/client-s3": "^3.931.0",
     "@fsm/ai": "workspace:*",
+    "@fsm/comms": "workspace:*",
     "@fsm/config": "workspace:*",
     "@fsm/db": "workspace:*",
     "@fsm/jobs": "workspace:*",

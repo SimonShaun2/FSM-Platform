@@ -284,6 +284,9 @@ importers:
       '@fsm/ai':
         specifier: workspace:*
         version: link:../../packages/ai
+      '@fsm/comms':
+        specifier: workspace:*
+        version: link:../../packages/comms
       '@fsm/config':
         specifier: workspace:*
         version: link:../../packages/config

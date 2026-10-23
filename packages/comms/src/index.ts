@@ -8,3 +8,10 @@ export type {
 } from "./channels.js";
 export { createResendEmailChannel, type ResendEmailAdapterConfig } from "./resend-email.adapter.js";
 export { createDisabledSmsChannel, sendSmsDisabled } from "./sms-disabled.stub.js";
+export {
+  EMAIL_TEMPLATE_IDS,
+  renderTransactionalEmail,
+  resolveOutboundEmailFromAddress,
+  type EmailTemplateId,
+  type RenderedTransactionalEmail
+} from "./email-templates.js";

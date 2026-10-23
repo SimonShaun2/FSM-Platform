@@ -94,7 +94,7 @@ Credentials and billing stay with **Shaun**. Engineering documents env var **nam
 | --- | --- | --- | --- |
 | **PostgreSQL host** | ADR-FS-93, FS-93 runbook, `docs/env/README.md` → Render Postgres | **Neon** | STACK-01: connection strings, pool limits (FS-80), staging seed |
 | **Identity** | `apps/api/src/lib/tokens.ts`, JWT env in `@fsm/config`, FS-84 contract | **Clerk** | STACK-02: BFF/session bridge; phased cutover ADR addendum |
-| **Email** | `SENDGRID_*`, SendGrid adapter references | **Resend** via `@fsm/comms` channel interface | STACK-08 (Leo): Resend adapter + migrate worker templates; SendGrid interim until cutover |
+| **Email** | `SENDGRID_*`, SendGrid adapter references | **Resend** via `@fsm/comms` channel interface | STACK-08 (Leo): channel-agnostic templates + Resend adapter; worker/API route through `@fsm/comms` (`resendEmailEnabled` toggles Resend vs SendGrid) |
 | **SMS** | Twilio live adapter | **Disabled stub** | `outboundSmsEnabled: false`; no live Twilio calls |
 | **Deploy docs** | `PRODUCTION-DEPLOYMENT.md`, Railway wording in `docs/env/README.md`, `AGENTS.md` § deployment | Vercel + Render + **Neon** | STACK-00 (this ADR) + doc sweep PR after acceptance |
 | **Observability** | `pino` only in places | **Sentry + PostHog** | STACK-04 |
