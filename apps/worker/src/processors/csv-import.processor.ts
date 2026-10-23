@@ -8,8 +8,8 @@ import pino from "pino";
 import { mapCsvColumns } from "@fsm/ai";
 import {
   buildPresetColumnMapping,
-  inferImportVendorPresetForSession
-} from "@fsm/config/import-vendor-presets";
+  inferImportSourcePresetForSession
+} from "@fsm/config/import-source-presets";
 import { downloadFile, getFileKeyFromUrl } from "@fsm/config/storage";
 import {
   customers,
@@ -485,12 +485,12 @@ export async function handleMapCsvColumns(job: Job<Record<string, unknown>>): Pr
   try {
     const fileBuffer = await downloadFile(getFileKeyFromUrl(importSession.fileUrl));
     const parsedCsv = parseCsv(fileBuffer);
-    const vendorPresetId = inferImportVendorPresetForSession(
+    const sourcePresetId = inferImportSourcePresetForSession(
       parsedCsv.headers,
       importSession.entityType
     );
-    const presetMapping = vendorPresetId
-      ? buildPresetColumnMapping(parsedCsv.headers, vendorPresetId)
+    const presetMapping = sourcePresetId
+      ? buildPresetColumnMapping(parsedCsv.headers, sourcePresetId)
       : {};
     let columnMapping: ColumnMapping = { ...presetMapping };
 
@@ -507,7 +507,7 @@ export async function handleMapCsvColumns(job: Job<Record<string, unknown>>): Pr
           err: error,
           companyId,
           importSessionId,
-          vendorPresetId
+          sourcePresetId
         },
         "AI column mapping failed; falling back to vendor preset or empty mapping"
       );
