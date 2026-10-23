@@ -33,6 +33,10 @@
     "./render-neon-region": {
       "types": "./dist/render-neon-region.d.ts",
       "import": "./dist/render-neon-region.js"
+    },
+    "./fs93-render-blueprint": {
+      "types": "./dist/fs93-render-blueprint.d.ts",
+      "import": "./dist/fs93-render-blueprint.js"
     }
   },
   "scripts": {

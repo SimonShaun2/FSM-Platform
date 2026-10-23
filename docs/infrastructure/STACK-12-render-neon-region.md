@@ -20,6 +20,11 @@ Neon PostgreSQL must be provisioned in the **same cloud region** as the Render *
 
 When `batch-ci` uses Neon **per-PR branches**, preview Render services (if any) must point at the matching ephemeral branch URL — not shared dev.
 
+## Blueprint reference (not applied)
+
+- Draft: [`render-blueprint.render.yaml`](./render-blueprint.render.yaml) — API, worker, webhook, and Key Value (`noeviction`); `DATABASE_URL` from Neon only.
+- Contract tests: `@fsm/config/fs93-render-blueprint` (`validateFs93RenderBlueprintYaml`).
+
 ## Related
 
 - [FS-93 Render runbook](../platform/FS-93-render-runbook.md)
