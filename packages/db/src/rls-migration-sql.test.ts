@@ -1,4 +1,4 @@
-import { existsSync, readFileSync } from "node:fs";
+import { readFileSync } from "node:fs";
 import { join } from "node:path";
 
 import { describe, expect, it } from "vitest";
@@ -19,12 +19,9 @@ describe("renderStack10RlsMigrationSql", () => {
     }
   });
 
-  it("matches committed migration file when present (owned by STACK-10 SQL PR #102)", () => {
+  it("matches committed migration file", () => {
     const packageRoot = join(import.meta.dirname, "..");
     const migrationPath = join(packageRoot, "migrations", `${MIGRATION_TAG}.sql`);
-    if (!existsSync(migrationPath)) {
-      return;
-    }
     const committed = readFileSync(migrationPath, "utf8");
     expect(renderStack10RlsMigrationSql()).toBe(committed);
   });

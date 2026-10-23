@@ -42,5 +42,6 @@ export {
   readTenantCompanyIdFromGucRow
 } from "./tenant-session.js";
 export { FS_MIGRATE_RLS_POLICY_CATALOG, type RlsPolicySpec } from "./rls-policy-catalog.js";
+export { renderRlsPolicyStatements, renderStack10RlsMigrationSql } from "./rls-migration-sql.js";
 export { runTransactionWithTenantSession } from "./run-with-tenant-session.js";
 export * from "./schema.js";
