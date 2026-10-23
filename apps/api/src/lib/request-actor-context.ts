@@ -29,10 +29,12 @@ export function bindRequestActorOrgLogContext(request: FastifyRequest): void {
     return;
   }
 
-  request.log = request.log.child({
-    companyId: context.companyId,
-    userId: context.userId,
-    role: context.role,
-    authProvider: context.authProvider
-  });
+  if (typeof request.log?.child === "function") {
+    request.log = request.log.child({
+      companyId: context.companyId,
+      userId: context.userId,
+      role: context.role,
+      authProvider: context.authProvider
+    });
+  }
 }
