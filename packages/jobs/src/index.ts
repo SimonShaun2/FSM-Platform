@@ -10,7 +10,12 @@ export {
   fsmRetainFailedJobsForDlq
 } from "./queue-policy.js";
 export { enqueueMigrateFileBatchJob } from "./enqueue-migrate-file-batch.js";
+<<<<<<< HEAD
 export { enqueueImportChunkCommitJob } from "./enqueue-import-chunk-commit.js";
+=======
+export { logMigrateFileBatchTrace } from "./migrate-file-batch-trace-log.js";
+export type { LogMigrateFileBatchTraceInput } from "./migrate-file-batch-trace-log.js";
+>>>>>>> origin/dev
 export { redisConnection } from "./connection.js";
 export {
   buildDeadLetterQueueName,
@@ -38,6 +43,13 @@ export {
 } from "./import-invoice-balance-commit.js";
 export type { ImportInvoiceBalanceCommitPayload } from "./import-invoice-balance-commit.js";
 export {
+  IMPORT_EQUIPMENT_COMMIT_JOB_NAME,
+  ImportEquipmentCommitPayloadSchema,
+  buildImportEquipmentCommitJobId,
+} from "./import-equipment-commit.js";
+export type { ImportEquipmentCommitPayload } from "./import-equipment-commit.js";
+export { enqueueImportEquipmentCommitJob } from "./enqueue-import-equipment-commit.js";
+export {
   QUEUE_PREFIX,
   QUEUE_NAMES,
   queueBaseOptions,
@@ -51,3 +63,13 @@ export {
   exportsQueue,
   growthQueue
 } from "./queues.js";
+export {
+  collectPlatformQueueMonitoringSnapshot,
+  type PlatformQueueMonitoringDeps,
+  type QueueMonitoringProbe
+} from "./queue-monitoring.js";
+export {
+  createDefaultPlatformQueueMonitoringDeps,
+  getPlatformQueueMonitoringSnapshot,
+  platformQueuesByName
+} from "./platform-queue-registry.js";
