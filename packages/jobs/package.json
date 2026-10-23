@@ -13,6 +13,10 @@
     "./enqueue-migrate-file-batch": {
       "types": "./dist/enqueue-migrate-file-batch.d.ts",
       "import": "./dist/enqueue-migrate-file-batch.js"
+    },
+    "./enqueue-import-chunk-commit": {
+      "types": "./dist/enqueue-import-chunk-commit.d.ts",
+      "import": "./dist/enqueue-import-chunk-commit.js"
     }
   },
   "scripts": {

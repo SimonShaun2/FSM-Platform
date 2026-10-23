@@ -27,6 +27,7 @@ import {
 } from "@fsm/types";
 
 import { scheduleMigrateFileBatchesFromSessionAiInferences } from "./import-migrate-file-batch.service.js";
+import { scheduleImportChunkCommitsFromSessionAiInferences } from "./import-workflow-runtime.service.js";
 import { uploadCsvToR2 } from "./file-upload.service.js";
 
 type ImportSessionRow = typeof importSessions.$inferSelect;
@@ -484,21 +485,29 @@ export async function startImport(
   }
 
   try {
-    await importsQueue.add(
-      "execute-import",
-      {
-        companyId,
-        importSessionId
-      },
-      {
-        attempts: 3,
-        backoff: {
-          type: "exponential",
-          delay: 5000
-        },
-        jobId: `execute-import-${importSessionId}-${now.getTime()}`
-      }
+    const chunkedSteps = await scheduleImportChunkCommitsFromSessionAiInferences(
+      companyId,
+      _actorId,
+      importSessionId
     );
+
+    if (chunkedSteps === 0) {
+      await importsQueue.add(
+        "execute-import",
+        {
+          companyId,
+          importSessionId
+        },
+        {
+          attempts: 3,
+          backoff: {
+            type: "exponential",
+            delay: 5000
+          },
+          jobId: `execute-import-${importSessionId}-${now.getTime()}`
+        }
+      );
+    }
 
     await scheduleMigrateFileBatchesFromSessionAiInferences(companyId, importSessionId);
   } catch (error: unknown) {

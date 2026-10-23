@@ -10,6 +10,7 @@ export {
   fsmRetainFailedJobsForDlq
 } from "./queue-policy.js";
 export { enqueueMigrateFileBatchJob } from "./enqueue-migrate-file-batch.js";
+export { enqueueImportChunkCommitJob } from "./enqueue-import-chunk-commit.js";
 export { redisConnection } from "./connection.js";
 export {
   buildDeadLetterQueueName,
