@@ -44,6 +44,15 @@ export {
 export { FS_MIGRATE_RLS_POLICY_CATALOG, type RlsPolicySpec } from "./rls-policy-catalog.js";
 export { renderRlsPolicyStatements, renderStack10RlsMigrationSql } from "./rls-migration-sql.js";
 export { runTransactionWithTenantSession } from "./run-with-tenant-session.js";
+export { listM8ReactivationSignalsFromImportedJobHistory } from "./m8-job-history-reactivation-read.js";
+export {
+  evaluateLoyaltyReminderCandidatesForCompany,
+  type EvaluateLoyaltyReminderCandidatesInput
+} from "./loyalty-reminder-candidates-evaluate.js";
+export {
+  syncLoyaltyReminderDryRunRecommendations,
+  type SyncLoyaltyDryRunRecommendationsResult
+} from "./loyalty-reminder-dry-run-sync.js";
 export * from "./schema.js";
 export {
   commitPriceBookRows,
@@ -68,3 +77,14 @@ export {
   createDbHistoryChunkResolver,
   type ImportHistoryChunkEntityResolver,
 } from "./import-history-chunk-commit.service.js";
+export {
+  normalizeImportedAssetType,
+  normalizeImportedIsoDate,
+  parseImportedBoolean,
+  pickLastServiceDate,
+} from "./import-equipment-commit.logic.js";
+export {
+  buildLineageEquipmentResolver,
+  commitImportedEquipmentRows,
+  type ImportEquipmentEntityResolver,
+} from "./import-equipment-commit.service.js";
