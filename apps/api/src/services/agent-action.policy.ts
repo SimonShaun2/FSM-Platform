@@ -9,11 +9,7 @@ const REVENUE_ALLOWED_ACTION_TYPES = new Set([
   "revenue.inquiry.qualify"
 ]);
 
-<<<<<<< HEAD
-const RETENTION_ALLOWED_ACTION_TYPES = new Set(["loyalty.reminder.propose"]);
-=======
 const LOYALTY_ALLOWED_ACTION_TYPES = new Set(["loyalty.reminder.propose"]);
->>>>>>> origin/dev
 
 const AUTO_APPROVED_ACTION_TYPES = new Set(["context.resolve", "message.draft"]);
 
@@ -51,15 +47,9 @@ export function assertActionAllowedForProduct(
     return;
   }
 
-<<<<<<< HEAD
-  if (agentProduct === "retention") {
-    if (!RETENTION_ALLOWED_ACTION_TYPES.has(actionType)) {
-      throw new AppError(ErrorCode.POLICY_DENIED, "Action type is not allowed for retention agent");
-=======
   if (agentProduct === "loyalty") {
     if (!LOYALTY_ALLOWED_ACTION_TYPES.has(actionType)) {
       throw new AppError(ErrorCode.POLICY_DENIED, "Action type is not allowed for loyalty agent");
->>>>>>> origin/dev
     }
 
     if (actorType === "ai") {

@@ -20,15 +20,6 @@ describe("agent-action.policy", () => {
     ).not.toThrow();
   });
 
-<<<<<<< HEAD
-  it("allows AI retention loyalty reminder proposals (FS-72)", () => {
-    expect(() =>
-      assertActionAllowedForProduct("retention", "loyalty.reminder.propose", "ai")
-    ).not.toThrow();
-    expect(requiresHumanApproval("loyalty.reminder.propose")).toBe(true);
-  });
-
-=======
   it("allows AI loyalty reminder proposals", () => {
     expect(() =>
       assertActionAllowedForProduct("loyalty", "loyalty.reminder.propose", "ai")
@@ -49,7 +40,6 @@ describe("agent-action.policy", () => {
     expect(parsed.ruleFamily).toBe("plan_cadence");
   });
 
->>>>>>> origin/dev
   it("denies unknown revenue tools", () => {
     try {
       assertActionAllowedForProduct("revenue", "invoice.charge", "user");
