@@ -769,6 +769,8 @@ export async function handleExecuteImport(job: Job<Record<string, unknown>>): Pr
             prefersEmail: false,
             doNotContact: false,
             stripeCustomerId: null,
+            sourceSystem: null,
+            sourceId: null,
             importSessionId,
             createdAt: new Date(),
             updatedAt: new Date(),
