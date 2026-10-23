@@ -22,7 +22,11 @@ export const featureFlags = {
   // FEATURE FLAG: outbound-sms-enabled — when false, SMS sends are stubbed/disabled
   outboundSmsEnabled: true,
   // FEATURE FLAG: stripe-platform-billing-mvp — STACK-13 platform subscription checkout
-  stripePlatformBillingMvp: false
+  stripePlatformBillingMvp: false,
+  // FEATURE FLAG: stripe-renvani-embedded-checkout — invoice pay on Renvani (embedded Checkout vs Stripe redirect)
+  stripeRenvaniEmbeddedCheckout: true,
+  // FEATURE FLAG: stripe-renvani-connect-embedded — Connect Account Session in settings (vs Account Links)
+  stripeRenvaniConnectEmbedded: true
 } as const;
 
 export type FeatureFlags = typeof featureFlags;

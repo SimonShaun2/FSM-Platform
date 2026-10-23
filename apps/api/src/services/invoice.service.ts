@@ -50,7 +50,12 @@ import {
 
 import { generateInvoiceNumber } from "../lib/invoice-number.js";
 import { resolveCompanyConnectApplicationFeeFraction } from "../lib/company-renvani-plan.js";
-import { createInvoiceCheckoutSession, expireInvoiceCheckoutSession } from "../lib/stripe.js";
+import { featureFlags } from "@fsm/config/feature-flags";
+import {
+  createInvoiceCheckoutSession,
+  expireInvoiceCheckoutSession,
+  retrieveInvoiceCheckoutClientSecret
+} from "../lib/stripe.js";
 import { listItems, recalculateTotals } from "./invoice-items.service.js";
 
 type CompanyRow = typeof companies.$inferSelect;
@@ -728,10 +733,15 @@ export async function getInvoice(companyId: string, invoiceId: string): Promise<
   return buildInvoiceDetail(companyId, invoice, db);
 }
 
+function buildPublicPaymentPageUrl(paymentToken: string): string {
+  const appBaseUrl = env.APP_URL.replace(/\/$/, "");
+  return `${appBaseUrl}/pay/${paymentToken}`;
+}
+
 export async function getPublicInvoicePaymentLink(token: string): Promise<PublicInvoicePaymentLink> {
   const invoice = await getInvoiceByPaymentToken(token, db);
 
-  if (!invoice.stripePaymentLinkUrl) {
+  if (!invoice.stripePaymentLinkId && !invoice.stripePaymentLinkUrl) {
     throw new AppError(ErrorCode.CONFLICT, "Invoice payment link is unavailable");
   }
 
@@ -740,10 +750,20 @@ export async function getPublicInvoicePaymentLink(token: string): Promise<Public
   const breakdown = computeCustomerPaidPlatformFee(invoice.balanceDue, feeFraction);
 
   const disclosure = customerPlatformFeeDisclosure();
+  const paymentLinkUrl =
+    invoice.stripePaymentLinkUrl?.includes("/pay/") === true
+      ? invoice.stripePaymentLinkUrl
+      : buildPublicPaymentPageUrl(token);
+
+  let checkoutClientSecret: string | null = null;
+  if (featureFlags.stripeRenvaniEmbeddedCheckout && invoice.stripePaymentLinkId) {
+    checkoutClientSecret = await retrieveInvoiceCheckoutClientSecret(invoice.stripePaymentLinkId);
+  }
 
   return {
     invoiceNumber: invoice.invoiceNumber,
-    paymentLinkUrl: invoice.stripePaymentLinkUrl,
+    paymentLinkUrl,
+    checkoutClientSecret,
     invoiceAmount: breakdown.invoiceAmount,
     platformFeeAmount: breakdown.platformFeeAmount,
     totalDue: breakdown.totalDue,
@@ -966,6 +986,7 @@ export async function sendInvoice(
     new Date(sentAt.getTime() + env.INVOICE_DUE_DAYS * 24 * 60 * 60 * 1000);
 
   let checkoutSessionId: string | null = null;
+  const paymentToken = existingInvoice.paymentToken ?? generatePaymentToken();
 
   try {
     const checkoutSession = await createInvoiceCheckoutSession({
@@ -974,8 +995,10 @@ export async function sendInvoice(
       customerId: existingInvoice.customerId,
       customerEmail: customer.email,
       companyStripeAccountId: company.stripeAccountId,
+      companyName: company.name,
       invoiceNumber: existingInvoice.invoiceNumber,
       total: existingInvoice.balanceDue,
+      paymentToken,
       connectApplicationFeeFraction: resolveCompanyConnectApplicationFeeFraction(company),
       items: items.map((item) => ({
         name: item.name,
@@ -985,6 +1008,7 @@ export async function sendInvoice(
       }))
     });
     checkoutSessionId = checkoutSession.id;
+    const customerPaymentUrl = buildPublicPaymentPageUrl(paymentToken);
 
     const sentInvoice = await db.transaction(async (tx) => {
       const actor = await getUserRecord(companyId, actorId, tx);
@@ -992,8 +1016,8 @@ export async function sendInvoice(
         .update(invoices)
         .set({
           stripePaymentLinkId: checkoutSession.id,
-          stripePaymentLinkUrl: checkoutSession.url,
-          paymentToken: existingInvoice.paymentToken ?? generatePaymentToken(),
+          stripePaymentLinkUrl: checkoutSession.url ?? customerPaymentUrl,
+          paymentToken,
           issuedAt: sentAt,
           sentAt,
           dueAt,

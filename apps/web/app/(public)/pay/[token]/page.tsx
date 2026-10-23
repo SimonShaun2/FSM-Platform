@@ -1,9 +1,9 @@
 "use client";
 
-import { useState } from "react";
-import { useParams } from "next/navigation";
+import { useParams, useSearchParams } from "next/navigation";
 import { Loader2 } from "lucide-react";
 
+import { StripeEmbeddedInvoiceCheckout } from "@/src/components/stripe/StripeEmbeddedInvoiceCheckout";
 import { EmptyState } from "@/src/components/ui/EmptyState";
 import { usePublicPaymentLink } from "@/src/hooks/invoices.hooks";
 
@@ -18,8 +18,9 @@ function formatUsd(amount: string): string {
 
 export default function PublicPaymentPage() {
   const params = useParams<{ token: string }>();
+  const searchParams = useSearchParams();
   const paymentQuery = usePublicPaymentLink(params.token);
-  const [redirecting, setRedirecting] = useState(false);
+  const status = searchParams.get("status");
 
   if (paymentQuery.isError) {
     return (
@@ -44,19 +45,25 @@ export default function PublicPaymentPage() {
   }
 
   const payment = paymentQuery.data;
+  const useEmbedded = Boolean(payment.checkoutClientSecret);
 
-  const handleContinue = () => {
-    setRedirecting(true);
-    window.location.replace(payment.paymentLinkUrl);
-  };
+  if (status === "success") {
+    return (
+      <div className="flex min-h-screen items-center justify-center bg-neutral-50 px-4 py-12">
+        <div className="w-full max-w-md rounded-[32px] border border-neutral-200 bg-white px-8 py-10 text-center shadow-sm">
+          <p className="text-xs font-semibold uppercase tracking-[0.18em] text-neutral-400">Renvani</p>
+          <h1 className="mt-3 text-2xl font-semibold tracking-tight text-neutral-900">Payment received</h1>
+          <p className="mt-3 text-sm text-neutral-500">Thank you — your receipt will arrive from Renvani shortly.</p>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="flex min-h-screen items-center justify-center bg-neutral-50 px-4 py-12">
-      <div className="w-full max-w-md rounded-[32px] border border-neutral-200 bg-white px-8 py-10 shadow-[0_24px_80px_rgba(16,33,99,0.08)]">
-        <p className="text-xs font-semibold uppercase tracking-[0.18em] text-neutral-400">Invoice payment</p>
-        <h1 className="mt-3 text-2xl font-semibold tracking-tight text-neutral-900">
-          {payment.invoiceNumber}
-        </h1>
+      <div className="w-full max-w-lg rounded-[32px] border border-neutral-200 bg-white px-8 py-10 shadow-[0_24px_80px_rgba(16,33,99,0.08)]">
+        <p className="text-xs font-semibold uppercase tracking-[0.18em] text-neutral-400">Renvani · secure payment</p>
+        <h1 className="mt-3 text-2xl font-semibold tracking-tight text-neutral-900">{payment.invoiceNumber}</h1>
 
         <dl className="mt-8 space-y-4 border-t border-neutral-100 pt-6 text-sm">
           <div className="flex items-center justify-between gap-4">
@@ -84,14 +91,18 @@ export default function PublicPaymentPage() {
           <p className="mt-4 text-xs leading-5 text-neutral-500">{payment.platformFeeDisclosure}</p>
         ) : null}
 
-        <button
-          type="button"
-          className="mt-8 w-full rounded-full bg-brand-accent px-6 py-3 text-sm font-semibold text-white transition hover:opacity-90 disabled:cursor-not-allowed disabled:opacity-60"
-          disabled={redirecting}
-          onClick={handleContinue}
-        >
-          {redirecting ? "Redirecting…" : "Continue to secure payment"}
-        </button>
+        {useEmbedded && payment.checkoutClientSecret ? (
+          <div className="mt-8">
+            <StripeEmbeddedInvoiceCheckout clientSecret={payment.checkoutClientSecret} />
+          </div>
+        ) : (
+          <a
+            href={payment.paymentLinkUrl}
+            className="mt-8 inline-flex w-full items-center justify-center rounded-full bg-brand-accent px-6 py-3 text-sm font-semibold text-white transition hover:opacity-90"
+          >
+            Continue to secure payment
+          </a>
+        )}
       </div>
     </div>
   );

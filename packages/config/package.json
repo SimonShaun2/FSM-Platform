@@ -54,6 +54,10 @@
       "types": "./dist/stripe-pricing.d.ts",
       "import": "./dist/stripe-pricing.js"
     },
+    "./stripe-branding": {
+      "types": "./dist/stripe-branding.d.ts",
+      "import": "./dist/stripe-branding.js"
+    },
     "./langfuse-env": {
       "types": "./dist/langfuse-env.d.ts",
       "import": "./dist/langfuse-env.js"

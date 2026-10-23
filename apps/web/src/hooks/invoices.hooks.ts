@@ -113,6 +113,7 @@ interface InvoiceItemResponse {
 interface PublicPaymentLinkResponse {
   invoiceNumber: string;
   paymentLinkUrl: string;
+  checkoutClientSecret: string | null;
   invoiceAmount: string;
   platformFeeAmount: string;
   totalDue: string;

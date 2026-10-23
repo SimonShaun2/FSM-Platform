@@ -2,12 +2,14 @@ import type { FastifyPluginAsync } from "fastify";
 
 import { requireRole } from "../../lib/authorize.js";
 import {
+  createConnectAccountSessionHandler,
   createDashboardLinkHandler,
   createOnboardingLinkHandler,
   getConnectStatusHandler,
   handleOnboardingReturnHandler
 } from "./handlers.js";
 import {
+  stripeConnectAccountSessionSchema,
   stripeConnectOnboardSchema,
   stripeConnectReturnSchema,
   stripeConnectStatusRouteSchema,
@@ -36,6 +38,11 @@ const stripeRoutes: FastifyPluginAsync = async (fastify) => {
     preHandler: [authenticate, requireRole(["owner"])],
     schema: stripeDashboardLinkSchema
   }, createDashboardLinkHandler);
+
+  fastify.post("/connect/account-session", {
+    preHandler: [authenticate, requireRole(["owner"])],
+    schema: stripeConnectAccountSessionSchema
+  }, createConnectAccountSessionHandler);
 };
 
 export default stripeRoutes;

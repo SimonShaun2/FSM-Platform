@@ -242,10 +242,13 @@ export interface ListPaymentsQuery {
   limit?: number;
 }
 
-/** Public customer payment page (token link) before Stripe Checkout redirect. */
+/** Public customer payment page (token link); payment completes on Renvani when embedded Checkout is enabled. */
 export interface PublicInvoicePaymentLink {
   invoiceNumber: string;
+  /** Renvani-hosted pay page URL (not a Stripe-hosted redirect). */
   paymentLinkUrl: string;
+  /** Present when invoice Checkout uses embedded UI on the pay page. */
+  checkoutClientSecret: string | null;
   invoiceAmount: string;
   platformFeeAmount: string;
   totalDue: string;

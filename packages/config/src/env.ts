@@ -18,6 +18,11 @@ const envSchema = z.object({
   STRIPE_SECRET_KEY: z.string().min(1, "STRIPE_SECRET_KEY is required"),
   STRIPE_WEBHOOK_SECRET: z.string().min(1, "STRIPE_WEBHOOK_SECRET is required"),
   STRIPE_CONNECT_CLIENT_ID: z.string().min(1, "STRIPE_CONNECT_CLIENT_ID is required"),
+  /** Card statement prefix when shop name is too long (founder may tune in live mode). */
+  STRIPE_RENVANI_STATEMENT_PREFIX: z.string().default("RENAVANI"),
+  /** Optional — set after founder approves live branding assets (Stripe Dashboard / hosted pages). */
+  STRIPE_BRANDING_LOGO_URL: z.string().default(""),
+  STRIPE_BRANDING_ICON_URL: z.string().default(""),
   /** Decimal fraction (e.g. 0.05 = 5%) — Flex Connect shop fee only; see stripe-pricing.ts */
   STRIPE_PLATFORM_FEE_PERCENT: z.coerce.number().nonnegative("STRIPE_PLATFORM_FEE_PERCENT must be zero or greater"),
   /** Optional customer-facing platform-fee disclosure (Terms/surcharge copy). Empty = omit in UI. */
@@ -57,6 +62,8 @@ const envSchema = z.object({
   ESTIMATE_EXPIRY_DAYS: z.coerce.number().int().positive("ESTIMATE_EXPIRY_DAYS must be greater than zero").default(30),
   INVOICE_DUE_DAYS: z.coerce.number().int().positive("INVOICE_DUE_DAYS must be greater than zero").default(30),
   NEXT_PUBLIC_API_URL: z.string().url("NEXT_PUBLIC_API_URL must be a valid URL").default("http://localhost:3001"),
+  /** Web — Stripe.js / Connect embedded (pk_test_* or pk_live_*; founder approves live). */
+  NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY: z.string().default(""),
   RENVANI_INTERNAL_COMPANY_ID: z
     .string()
     .uuid("RENAVANI_INTERNAL_COMPANY_ID must be a valid UUID")
@@ -66,7 +73,7 @@ const envSchema = z.object({
 });
 
 export type Env = z.infer<typeof envSchema>;
-export type PublicEnv = Pick<Env, "NEXT_PUBLIC_API_URL">;
+export type PublicEnv = Pick<Env, "NEXT_PUBLIC_API_URL" | "NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY">;
 
 /** Render sets `PORT`; local dev uses `API_PORT`. */
 export function resolveApiListenPort(config: Env): number {
@@ -79,7 +86,8 @@ export function resolveWebhookListenPort(config: Env): number {
 }
 
 const publicEnvSchema = envSchema.pick({
-  NEXT_PUBLIC_API_URL: true
+  NEXT_PUBLIC_API_URL: true,
+  NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY: true
 });
 
 function formatValidationErrors(error: z.ZodError): string {

@@ -34,6 +34,7 @@ export const getPublicPaymentLinkSchema = {
       required: [
         "invoiceNumber",
         "paymentLinkUrl",
+        "checkoutClientSecret",
         "invoiceAmount",
         "platformFeeAmount",
         "totalDue",
@@ -43,6 +44,7 @@ export const getPublicPaymentLinkSchema = {
       properties: {
         invoiceNumber: { type: "string" },
         paymentLinkUrl: { type: "string" },
+        checkoutClientSecret: { type: ["string", "null"] },
         invoiceAmount: { type: "string" },
         platformFeeAmount: { type: "string" },
         totalDue: { type: "string" },

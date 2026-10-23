@@ -2,6 +2,13 @@ import { Decimal } from "decimal.js";
 import Stripe from "stripe";
 
 import { env } from "@fsm/config";
+import { featureFlags } from "@fsm/config/feature-flags";
+import {
+  buildCardStatementDescriptor,
+  buildInvoicePaymentReturnUrl,
+  buildStripeAccountBrandingPatch,
+  RENVANI_STRIPE_BRAND
+} from "@fsm/config/stripe-branding";
 import {
   computeCustomerPaidPlatformFee,
   formatCustomerPlatformFeeLineItemName
@@ -22,16 +29,21 @@ export interface CreateInvoiceCheckoutSessionInput {
   customerId: string;
   customerEmail: string | null;
   companyStripeAccountId: string;
+  companyName: string;
   invoiceNumber: string;
   total: string;
   items: InvoiceCheckoutLineItem[];
+  /** Public pay token — embedded Checkout return URL stays on Renvani. */
+  paymentToken: string;
   /** Decimal fraction (0.05 = 5%). Customer-paid on top of invoice; 0 for Flat. */
   connectApplicationFeeFraction: number;
 }
 
 export interface InvoiceCheckoutSessionResult {
   id: string;
-  url: string;
+  /** Stripe-hosted URL; null when using embedded Checkout on Renvani. */
+  url: string | null;
+  clientSecret: string | null;
 }
 
 export interface CreateServiceAgreementPriceInput {
@@ -168,14 +180,18 @@ export async function createInvoiceCheckoutSession(
   const feeBreakdown = computeCustomerPaidPlatformFee(input.total, input.connectApplicationFeeFraction);
   const applicationFeeAmount = toCents(feeBreakdown.platformFeeAmount);
   const appBaseUrl = env.APP_URL.replace(/\/$/, "");
+  const statementDescriptor = buildCardStatementDescriptor(input.companyName);
+  const useEmbeddedCheckout = featureFlags.stripeRenvaniEmbeddedCheckout;
   const paymentIntentData: Stripe.Checkout.SessionCreateParams.PaymentIntentData = {
     transfer_data: {
       destination: input.companyStripeAccountId
     },
+    statement_descriptor: statementDescriptor,
     metadata: {
       companyId: input.companyId,
       invoiceId: input.invoiceId,
-      customerId: input.customerId
+      customerId: input.customerId,
+      renvaniReceiptChannel: "resend"
     }
   };
 
@@ -213,20 +229,67 @@ export async function createInvoiceCheckoutSession(
     });
   }
 
-  const session = await stripe.checkout.sessions.create({
-    mode: "payment",
-    ...(input.customerEmail ? { customer_email: input.customerEmail } : {}),
-    line_items: lineItems,
-    payment_intent_data: paymentIntentData,
-    success_url: `${appBaseUrl}/invoices/${input.invoiceId}?status=success`,
-    cancel_url: `${appBaseUrl}/invoices/${input.invoiceId}?status=cancelled`,
-    metadata: {
-      companyId: input.companyId,
-      invoiceId: input.invoiceId,
-      customerId: input.customerId,
-      invoiceNumber: input.invoiceNumber
+  const sharedMetadata = {
+    companyId: input.companyId,
+    invoiceId: input.invoiceId,
+    customerId: input.customerId,
+    invoiceNumber: input.invoiceNumber
+  };
+
+  const brandingPatch = buildStripeAccountBrandingPatch();
+
+  const session = await stripe.checkout.sessions.create(
+    useEmbeddedCheckout
+      ? {
+          mode: "payment",
+          ui_mode: "embedded",
+          redirect_on_completion: "if_required",
+          line_items: lineItems,
+          payment_intent_data: paymentIntentData,
+          return_url: buildInvoicePaymentReturnUrl(appBaseUrl, input.paymentToken),
+          metadata: sharedMetadata,
+          custom_text: {
+            submit: {
+              message: `Secure payment processed by ${RENVANI_STRIPE_BRAND.platformName}. Receipts are sent from Renvani, not Stripe.`
+            }
+          },
+          branding_settings: {
+            background_color: "#ffffff",
+            button_color: brandingPatch.primary_color,
+            font_family: "inter"
+          }
+        }
+      : {
+          mode: "payment",
+          line_items: lineItems,
+          payment_intent_data: paymentIntentData,
+          success_url: buildInvoicePaymentReturnUrl(appBaseUrl, input.paymentToken),
+          cancel_url: `${appBaseUrl}/pay/${input.paymentToken}?status=cancelled`,
+          metadata: sharedMetadata,
+          custom_text: {
+            submit: {
+              message: `Secure payment processed by ${RENVANI_STRIPE_BRAND.platformName}.`
+            }
+          },
+          branding_settings: {
+            background_color: "#ffffff",
+            button_color: brandingPatch.primary_color,
+            font_family: "inter"
+          }
+        }
+  );
+
+  if (useEmbeddedCheckout) {
+    if (!session.client_secret) {
+      throw new Error("Stripe embedded checkout session did not return client_secret");
     }
-  });
+
+    return {
+      id: session.id,
+      url: null,
+      clientSecret: session.client_secret
+    };
+  }
 
   if (!session.url) {
     throw new Error("Stripe checkout session did not return a hosted URL");
@@ -234,8 +297,19 @@ export async function createInvoiceCheckoutSession(
 
   return {
     id: session.id,
-    url: session.url
+    url: session.url,
+    clientSecret: null
   };
+}
+
+export async function retrieveInvoiceCheckoutClientSecret(sessionId: string): Promise<string | null> {
+  const session = await stripe.checkout.sessions.retrieve(sessionId);
+
+  if (session.ui_mode === "embedded" && session.client_secret) {
+    return session.client_secret;
+  }
+
+  return null;
 }
 
 export async function expireInvoiceCheckoutSession(sessionId: string): Promise<void> {
@@ -277,7 +351,11 @@ export async function createStripeCustomer(input: CreateStripeCustomerInput): Pr
     name: input.name,
     metadata: {
       companyId: input.companyId,
-      customerId: input.customerId
+      customerId: input.customerId,
+      renvaniTransactionalEmail: "true"
+    },
+    invoice_settings: {
+      footer: `${RENVANI_STRIPE_BRAND.platformName} — invoice and receipts are delivered by your service provider via Renvani.`
     }
   });
 
@@ -373,17 +451,95 @@ export async function retrieveServiceAgreementSubscriptionSnapshot(
   };
 }
 
-export async function createExpressConnectedAccount(companyId: string): Promise<{ id: string }> {
+export async function createExpressConnectedAccount(companyId: string, companyName?: string): Promise<{ id: string }> {
+  const appBaseUrl = env.APP_URL.replace(/\/$/, "");
+  const statementDescriptor = buildCardStatementDescriptor(companyName);
+  const brandingPatch = buildStripeAccountBrandingPatch();
+
   const account = await stripe.accounts.create({
     type: "express",
     metadata: {
       companyId
+    },
+    business_profile: {
+      name: companyName ?? RENVANI_STRIPE_BRAND.platformName,
+      support_url: appBaseUrl,
+      url: appBaseUrl
+    },
+    settings: {
+      branding: brandingPatch,
+      payments: {
+        statement_descriptor: statementDescriptor
+      }
     }
   });
 
   return {
     id: account.id
   };
+}
+
+export async function applyConnectAccountBranding(accountId: string, companyName?: string | null): Promise<void> {
+  const appBaseUrl = env.APP_URL.replace(/\/$/, "");
+  const statementDescriptor = buildCardStatementDescriptor(companyName);
+  const brandingPatch = buildStripeAccountBrandingPatch();
+
+  await stripe.accounts.update(accountId, {
+    business_profile: {
+      ...(companyName ? { name: companyName } : {}),
+      support_url: appBaseUrl,
+      url: appBaseUrl
+    },
+    settings: {
+      branding: brandingPatch,
+      payments: {
+        statement_descriptor: statementDescriptor
+      }
+    }
+  });
+}
+
+export type ConnectEmbeddedComponent = "account_onboarding" | "payments" | "payouts";
+
+export async function createConnectAccountSession(
+  accountId: string,
+  components: ConnectEmbeddedComponent[]
+): Promise<{ clientSecret: string }> {
+  const componentConfig: Stripe.AccountSessionCreateParams.Components = {};
+
+  if (components.includes("account_onboarding")) {
+    componentConfig.account_onboarding = { enabled: true };
+  }
+  if (components.includes("payments")) {
+    componentConfig.payments = {
+      enabled: true,
+      features: {
+        refund_management: true,
+        dispute_management: true,
+        capture_payments: true
+      }
+    };
+  }
+  if (components.includes("payouts")) {
+    componentConfig.payouts = {
+      enabled: true,
+      features: {
+        instant_payouts: true,
+        standard_payouts: true
+      }
+    };
+  }
+
+  const session = await stripe.accountSessions.create({
+    account: accountId,
+    components: componentConfig
+  });
+
+  if (!session.client_secret) {
+    throw new Error("Stripe Account Session missing client_secret");
+  }
+
+  return { clientSecret: session.client_secret };
 }
 
 export async function createConnectOnboardingLink(accountId: string): Promise<{ url: string }> {
@@ -446,10 +602,10 @@ export async function createPlatformBillingCheckoutSession(
   input: CreatePlatformBillingCheckoutInput
 ): Promise<PlatformBillingCheckoutResult> {
   const appBaseUrl = env.APP_URL.replace(/\/$/, "");
+  const brandingPatch = buildStripeAccountBrandingPatch();
   const session = await stripe.checkout.sessions.create({
     mode: "subscription",
     customer: input.stripeCustomerId,
-    ...(input.customerEmail ? { customer_email: input.customerEmail } : {}),
     line_items: [{ price: input.priceId, quantity: 1 }],
     success_url: `${appBaseUrl}/settings/billing?checkout=success`,
     cancel_url: `${appBaseUrl}/settings/billing?checkout=cancel`,
@@ -464,6 +620,16 @@ export async function createPlatformBillingCheckoutSession(
         billingKind: "platform_mvp",
         planTier: input.planTier
       }
+    },
+    custom_text: {
+      submit: {
+        message: `${RENVANI_STRIPE_BRAND.platformName} subscription — billing notices come from Renvani.`
+      }
+    },
+    branding_settings: {
+      background_color: "#ffffff",
+      button_color: brandingPatch.primary_color,
+      font_family: "inter"
     }
   });
 
