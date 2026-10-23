@@ -294,6 +294,50 @@ function buildDeclinedCustomerMessage(
     : `${companyName}: booking ${referenceNumber} was declined. Please contact our office to reschedule.`;
 }
 
+function formatBookingScheduledLabel(scheduledStart: Date): string {
+  return scheduledStart.toLocaleString("en-US", {
+    timeZone: BOOKING_TIME_ZONE,
+    month: "short",
+    day: "numeric",
+    hour: "numeric",
+    minute: "2-digit"
+  });
+}
+
+type BookingNotificationContact = {
+  id: string;
+  referenceNumber: string | null;
+  firstName: string;
+  email: string | null;
+  phone: string;
+};
+
+function buildBookingCustomerNotificationJobData(input: {
+  companyId: string;
+  bookingRequest: BookingNotificationContact;
+  customerId: string;
+  companyName: string;
+  body: string;
+  scheduledStart?: Date | null;
+  reason?: string | null;
+}): Record<string, unknown> {
+  const referenceNumber = input.bookingRequest.referenceNumber ?? input.bookingRequest.id;
+
+  return {
+    companyId: input.companyId,
+    bookingRequestId: input.bookingRequest.id,
+    customerId: input.customerId,
+    toEmail: input.bookingRequest.email ?? null,
+    firstName: input.bookingRequest.firstName,
+    companyName: input.companyName,
+    referenceNumber,
+    scheduledLabel: input.scheduledStart ? formatBookingScheduledLabel(input.scheduledStart) : null,
+    reason: input.reason ?? null,
+    toPhone: input.bookingRequest.phone,
+    body: input.body
+  };
+}
+
 function buildDispatcherAlertMessage(companyName: string, request: BookingRequestRow): string {
   return `${companyName}: new booking request ${request.referenceNumber ?? request.id} from ${request.firstName} ${request.lastName} (${request.zip}).`;
 }
@@ -1374,13 +1418,14 @@ export async function submitBookingRequest(
 
       queueJobs.push({
         name: "send-booking-confirmation",
-        data: {
+        data: buildBookingCustomerNotificationJobData({
           companyId: company.id,
-          bookingRequestId: bookingRequest.id,
+          bookingRequest,
           customerId: customer.id,
-          toPhone: bookingRequest.phone,
-          body: buildConfirmedCustomerMessage(company.name, bookingRequest.referenceNumber ?? bookingRequest.id, scheduledStart)
-        }
+          companyName: company.name,
+          body: buildConfirmedCustomerMessage(company.name, bookingRequest.referenceNumber ?? bookingRequest.id, scheduledStart),
+          scheduledStart
+        })
       });
     } else {
       if (settings.notifyOnNewBooking) {
@@ -1401,13 +1446,13 @@ export async function submitBookingRequest(
 
       queueJobs.push({
         name: "send-booking-confirmation",
-        data: {
+        data: buildBookingCustomerNotificationJobData({
           companyId: company.id,
-          bookingRequestId: bookingRequest.id,
+          bookingRequest,
           customerId: customer.id,
-          toPhone: bookingRequest.phone,
+          companyName: company.name,
           body: buildPendingCustomerMessage(company.name, bookingRequest.referenceNumber ?? bookingRequest.id)
-        }
+        })
       });
     }
 
@@ -1567,17 +1612,21 @@ export async function confirmBookingRequest(
     };
   });
 
-  await notificationsQueue.add("send-booking-confirmation", {
-    companyId,
-    bookingRequestId: result.bookingRequest.id,
-    customerId: result.bookingRequest.customerId,
-    toPhone: result.bookingRequest.phone,
-    body: buildConfirmedCustomerMessage(
-      result.companyName,
-      result.bookingRequest.referenceNumber ?? result.bookingRequest.id,
-      result.scheduledStart
-    )
-  });
+  await notificationsQueue.add(
+    "send-booking-confirmation",
+    buildBookingCustomerNotificationJobData({
+      companyId,
+      bookingRequest: result.bookingRequest,
+      customerId: result.bookingRequest.customerId ?? "",
+      companyName: result.companyName,
+      body: buildConfirmedCustomerMessage(
+        result.companyName,
+        result.bookingRequest.referenceNumber ?? result.bookingRequest.id,
+        result.scheduledStart
+      ),
+      scheduledStart: result.scheduledStart
+    })
+  );
   await invalidateDispatchCache(companyId, formatDateOnly(result.scheduledStart));
   return result.bookingRequest;
 }
@@ -1639,17 +1688,21 @@ export async function declineBookingRequest(
     };
   });
 
-  await notificationsQueue.add("send-booking-decline", {
-    companyId,
-    bookingRequestId: result.bookingRequest.id,
-    customerId: result.bookingRequest.customerId,
-    toPhone: result.bookingRequest.phone,
-    body: buildDeclinedCustomerMessage(
-      result.companyName,
-      result.bookingRequest.referenceNumber ?? result.bookingRequest.id,
-      normalizeOptionalString(reason) ?? null
-    )
-  });
+  await notificationsQueue.add(
+    "send-booking-decline",
+    buildBookingCustomerNotificationJobData({
+      companyId,
+      bookingRequest: result.bookingRequest,
+      customerId: result.bookingRequest.customerId ?? "",
+      companyName: result.companyName,
+      body: buildDeclinedCustomerMessage(
+        result.companyName,
+        result.bookingRequest.referenceNumber ?? result.bookingRequest.id,
+        normalizeOptionalString(reason) ?? null
+      ),
+      reason: normalizeOptionalString(reason) ?? null
+    })
+  );
 
   return result.bookingRequest;
 }

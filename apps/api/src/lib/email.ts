@@ -1,7 +1,8 @@
 import pino from "pino";
-import sgMail from "@sendgrid/mail";
 
-import { env } from "@fsm/config";
+import { EMAIL_TEMPLATE_IDS } from "@fsm/comms";
+
+import { sendRenderedTemplateEmail } from "./outbound-email.js";
 
 const logger = pino({
   name: "email"
@@ -61,6 +62,20 @@ interface CampaignEmailParams {
   companyName: string;
 }
 
+export interface BookingConfirmationEmailParams {
+  firstName: string;
+  companyName: string;
+  referenceNumber: string;
+  scheduledLabel: string | null;
+}
+
+export interface BookingDeclineEmailParams {
+  firstName: string;
+  companyName: string;
+  referenceNumber: string;
+  reason: string | null;
+}
+
 function formatEmailDate(value: string | null): string | null {
   if (!value) {
     return null;
@@ -75,211 +90,109 @@ function formatEmailDate(value: string | null): string | null {
 }
 
 export async function sendPasswordResetEmail(to: string, resetUrl: string, firstName: string): Promise<void> {
-  sgMail.setApiKey(env.SENDGRID_API_KEY);
-
-  const greetingName = firstName.trim().length > 0 ? firstName.trim() : "there";
-
-  try {
-    await sgMail.send({
-      to,
-      from: env.SENDGRID_FROM_EMAIL,
-      subject: "Reset your FSM password",
-      html: `
-        <div style="font-family: Arial, sans-serif; line-height: 1.6; color: #111827;">
-          <p>Hi ${greetingName},</p>
-          <p>We received a request to reset your password.</p>
-          <p>
-            <a href="${resetUrl}" style="display: inline-block; padding: 12px 18px; background: #111827; color: #ffffff; text-decoration: none; border-radius: 6px;">
-              Reset password
-            </a>
-          </p>
-          <p>If you did not request this, you can safely ignore this email.</p>
-        </div>
-      `
-    });
-
-    logger.debug({ recipient: "[redacted]" }, "Password reset email sent");
-  } catch (error) {
-    logger.debug({ err: error, recipient: "[redacted]" }, "Password reset email failed");
-    throw error;
-  }
+  await sendRenderedTemplateEmail(to, EMAIL_TEMPLATE_IDS.passwordReset, {
+    firstName,
+    resetUrl
+  });
+  logger.debug({ recipient: "[redacted]" }, "Password reset email sent");
 }
 
 export async function sendEstimateEmail(to: string, params: EstimateEmailParams): Promise<void> {
-  sgMail.setApiKey(env.SENDGRID_API_KEY);
-  const greetingName = params.firstName.trim().length > 0 ? params.firstName.trim() : "there";
   const formattedExpiryDate = formatEmailDate(params.expiresAt);
 
-  try {
-    await sgMail.send({
-      to,
-      from: env.SENDGRID_FROM_EMAIL,
-      subject: `Estimate ${params.estimateNumber} from ${params.companyName}`,
-      html: `
-        <div style="font-family: Arial, sans-serif; line-height: 1.6; color: #111827;">
-          <p>Hi ${greetingName},</p>
-          <p>${params.companyName} sent you estimate <strong>${params.estimateNumber}</strong>.</p>
-          ${params.title ? `<p><strong>Title:</strong> ${params.title}</p>` : ""}
-          <p><strong>Total:</strong> $${params.total}</p>
-          ${formattedExpiryDate ? `<p><strong>Expires:</strong> ${formattedExpiryDate}</p>` : ""}
-          <p>
-            <a href="${params.approvalUrl}" style="display: inline-block; padding: 12px 18px; background: #111827; color: #ffffff; text-decoration: none; border-radius: 6px;">
-              Review / Approve
-            </a>
-          </p>
-        </div>
-      `
-    });
+  await sendRenderedTemplateEmail(
+    to,
+    EMAIL_TEMPLATE_IDS.estimateSent,
+    {
+      firstName: params.firstName,
+      estimateNumber: params.estimateNumber,
+      title: params.title ?? "",
+      total: params.total,
+      expiresAtLabel: formattedExpiryDate ?? "",
+      approvalUrl: params.approvalUrl,
+      companyName: params.companyName
+    },
+    ["estimate.sent"]
+  );
 
-    logger.debug({ recipient: "[redacted]" }, "Estimate email sent");
-  } catch (error) {
-    logger.debug({ err: error, recipient: "[redacted]" }, "Estimate email failed");
-    throw error;
-  }
+  logger.debug({ recipient: "[redacted]" }, "Estimate email sent");
 }
 
 export async function sendInvoiceEmail(to: string, params: InvoiceEmailParams): Promise<void> {
-  sgMail.setApiKey(env.SENDGRID_API_KEY);
-
-  const greetingName = params.firstName.trim().length > 0 ? params.firstName.trim() : "there";
   const formattedDueDate = formatEmailDate(params.dueAt);
 
-  try {
-    await sgMail.send({
-      to,
-      from: env.SENDGRID_FROM_EMAIL,
-      subject: `Invoice ${params.invoiceNumber} from ${params.companyName}`,
-      html: `
-        <div style="font-family: Arial, sans-serif; line-height: 1.6; color: #111827;">
-          <p>Hi ${greetingName},</p>
-          <p>${params.companyName} sent you invoice <strong>${params.invoiceNumber}</strong>.</p>
-          <p><strong>Total:</strong> $${params.total}</p>
-          ${formattedDueDate ? `<p><strong>Due:</strong> ${formattedDueDate}</p>` : ""}
-          <p>
-            <a href="${params.paymentLinkUrl}" style="display: inline-block; padding: 12px 18px; background: #111827; color: #ffffff; text-decoration: none; border-radius: 6px;">
-              Pay invoice
-            </a>
-          </p>
-          <p>If you've already paid, you can ignore this message.</p>
-        </div>
-      `
-    });
+  await sendRenderedTemplateEmail(
+    to,
+    EMAIL_TEMPLATE_IDS.invoiceSent,
+    {
+      firstName: params.firstName,
+      invoiceNumber: params.invoiceNumber,
+      total: params.total,
+      dueAtLabel: formattedDueDate ?? "",
+      paymentLinkUrl: params.paymentLinkUrl,
+      companyName: params.companyName
+    },
+    ["invoice.sent"]
+  );
 
-    logger.debug({ recipient: "[redacted]" }, "Invoice email sent");
-  } catch (error) {
-    logger.debug({ err: error, recipient: "[redacted]" }, "Invoice email failed");
-    throw error;
-  }
+  logger.debug({ recipient: "[redacted]" }, "Invoice email sent");
 }
 
 export async function sendInvoiceReminderEmail(
   to: string,
   params: InvoiceReminderEmailParams
 ): Promise<void> {
-  sgMail.setApiKey(env.SENDGRID_API_KEY);
-
-  const greetingName = params.firstName.trim().length > 0 ? params.firstName.trim() : "there";
   const formattedDueDate = formatEmailDate(params.dueAt);
-  const reminderCopyByLevel: Record<InvoiceReminderEmailParams["reminderLevel"], string> = {
-    1: "Just a friendly reminder that your invoice is still open.",
-    2: "Your invoice is still unpaid and needs attention soon.",
-    3: "This is the final reminder before the balance is escalated internally."
-  };
 
-  try {
-    await sgMail.send({
-      to,
-      from: env.SENDGRID_FROM_EMAIL,
-      subject: `Reminder ${params.invoiceNumber} from ${params.companyName}`,
-      html: `
-        <div style="font-family: Arial, sans-serif; line-height: 1.6; color: #111827;">
-          <p>Hi ${greetingName},</p>
-          <p>${reminderCopyByLevel[params.reminderLevel]}</p>
-          <p><strong>Invoice:</strong> ${params.invoiceNumber}</p>
-          <p><strong>Total:</strong> $${params.total}</p>
-          <p><strong>Balance due:</strong> $${params.balanceDue}</p>
-          ${formattedDueDate ? `<p><strong>Due:</strong> ${formattedDueDate}</p>` : ""}
-          <p>
-            <a href="${params.paymentLinkUrl}" style="display: inline-block; padding: 12px 18px; background: #111827; color: #ffffff; text-decoration: none; border-radius: 6px;">
-              Pay invoice
-            </a>
-          </p>
-        </div>
-      `
-    });
+  await sendRenderedTemplateEmail(
+    to,
+    EMAIL_TEMPLATE_IDS.invoiceReminder,
+    {
+      firstName: params.firstName,
+      invoiceNumber: params.invoiceNumber,
+      total: params.total,
+      balanceDue: params.balanceDue,
+      dueAtLabel: formattedDueDate ?? "",
+      paymentLinkUrl: params.paymentLinkUrl,
+      companyName: params.companyName,
+      reminderLevel: String(params.reminderLevel)
+    },
+    ["invoice.reminder"]
+  );
 
-    logger.debug({ recipient: "[redacted]" }, "Invoice reminder email sent");
-  } catch (error) {
-    logger.debug({ err: error, recipient: "[redacted]" }, "Invoice reminder email failed");
-    throw error;
-  }
+  logger.debug({ recipient: "[redacted]" }, "Invoice reminder email sent");
 }
 
 export async function sendInvoiceReminderOwnerAlertEmail(
   to: string,
   params: InvoiceReminderOwnerAlertParams
 ): Promise<void> {
-  sgMail.setApiKey(env.SENDGRID_API_KEY);
+  await sendRenderedTemplateEmail(to, EMAIL_TEMPLATE_IDS.invoiceReminderOwnerAlert, {
+    ownerFirstName: params.ownerFirstName,
+    customerName: params.customerName,
+    invoiceNumber: params.invoiceNumber,
+    balanceDue: params.balanceDue,
+    paymentLinkUrl: params.paymentLinkUrl,
+    companyName: params.companyName
+  });
 
-  const greetingName = params.ownerFirstName.trim().length > 0 ? params.ownerFirstName.trim() : "there";
-
-  try {
-    await sgMail.send({
-      to,
-      from: env.SENDGRID_FROM_EMAIL,
-      subject: `Final invoice reminder sent for ${params.invoiceNumber}`,
-      html: `
-        <div style="font-family: Arial, sans-serif; line-height: 1.6; color: #111827;">
-          <p>Hi ${greetingName},</p>
-          <p>A final invoice reminder was sent to <strong>${params.customerName}</strong>.</p>
-          <p><strong>Invoice:</strong> ${params.invoiceNumber}</p>
-          <p><strong>Balance due:</strong> $${params.balanceDue}</p>
-          <p>${params.companyName} may need manual follow-up if payment is still not received.</p>
-          <p>
-            <a href="${params.paymentLinkUrl}" style="display: inline-block; padding: 12px 18px; background: #111827; color: #ffffff; text-decoration: none; border-radius: 6px;">
-              View payment link
-            </a>
-          </p>
-        </div>
-      `
-    });
-
-    logger.debug({ recipient: "[redacted]" }, "Invoice reminder owner alert email sent");
-  } catch (error) {
-    logger.debug({ err: error, recipient: "[redacted]" }, "Invoice reminder owner alert email failed");
-    throw error;
-  }
+  logger.debug({ recipient: "[redacted]" }, "Invoice reminder owner alert email sent");
 }
 
 export async function sendServiceAgreementRenewalReminderEmail(
   to: string,
   params: ServiceAgreementRenewalReminderEmailParams
 ): Promise<void> {
-  sgMail.setApiKey(env.SENDGRID_API_KEY);
-
-  const greetingName = params.firstName.trim().length > 0 ? params.firstName.trim() : "there";
   const formattedServiceDate = formatEmailDate(params.nextServiceDate);
 
-  try {
-    await sgMail.send({
-      to,
-      from: env.SENDGRID_FROM_EMAIL,
-      subject: `${params.planName} service is coming up`,
-      html: `
-        <div style="font-family: Arial, sans-serif; line-height: 1.6; color: #111827;">
-          <p>Hi ${greetingName},</p>
-          <p>Your <strong>${params.planName}</strong> service agreement is coming up soon.</p>
-          ${formattedServiceDate ? `<p><strong>Next service date:</strong> ${formattedServiceDate}</p>` : ""}
-          <p>${params.companyName} will reach out if any scheduling updates are needed.</p>
-        </div>
-      `
-    });
+  await sendRenderedTemplateEmail(to, EMAIL_TEMPLATE_IDS.serviceAgreementRenewal, {
+    firstName: params.firstName,
+    planName: params.planName,
+    nextServiceDateLabel: formattedServiceDate ?? "",
+    companyName: params.companyName
+  });
 
-    logger.debug({ recipient: "[redacted]" }, "Service agreement renewal reminder email sent");
-  } catch (error) {
-    logger.debug({ err: error, recipient: "[redacted]" }, "Service agreement renewal reminder email failed");
-    throw error;
-  }
+  logger.debug({ recipient: "[redacted]" }, "Service agreement renewal reminder email sent");
 }
 
 export async function sendServiceAgreementPaymentFailedEmail(to: string, params: {
@@ -290,60 +203,65 @@ export async function sendServiceAgreementPaymentFailedEmail(to: string, params:
   manageUrl: string;
   companyName: string;
 }): Promise<void> {
-  sgMail.setApiKey(env.SENDGRID_API_KEY);
+  await sendRenderedTemplateEmail(to, EMAIL_TEMPLATE_IDS.serviceAgreementPaymentFailed, {
+    ownerFirstName: params.ownerFirstName,
+    customerName: params.customerName,
+    planName: params.planName,
+    amount: params.amount,
+    manageUrl: params.manageUrl,
+    companyName: params.companyName
+  });
 
-  const greetingName = params.ownerFirstName.trim().length > 0 ? params.ownerFirstName.trim() : "there";
-
-  try {
-    await sgMail.send({
-      to,
-      from: env.SENDGRID_FROM_EMAIL,
-      subject: "Service agreement payment failed",
-      html: `
-        <div style="font-family: Arial, sans-serif; line-height: 1.6; color: #111827;">
-          <p>Hi ${greetingName},</p>
-          <p>A service agreement renewal payment failed for <strong>${params.customerName}</strong>.</p>
-          <p><strong>Plan:</strong> ${params.planName}</p>
-          <p><strong>Amount:</strong> $${params.amount}</p>
-          <p>${params.companyName} should review the subscription and payment method details.</p>
-          <p>
-            <a href="${params.manageUrl}" style="display: inline-block; padding: 12px 18px; background: #111827; color: #ffffff; text-decoration: none; border-radius: 6px;">
-              Manage service agreements
-            </a>
-          </p>
-        </div>
-      `
-    });
-
-    logger.debug({ recipient: "[redacted]" }, "Service agreement payment failed email sent");
-  } catch (error) {
-    logger.debug({ err: error, recipient: "[redacted]" }, "Service agreement payment failed email failed");
-    throw error;
-  }
+  logger.debug({ recipient: "[redacted]" }, "Service agreement payment failed email sent");
 }
 
 export async function sendCampaignEmail(to: string, params: CampaignEmailParams): Promise<void> {
-  sgMail.setApiKey(env.SENDGRID_API_KEY);
-
-  const greetingName = params.firstName.trim().length > 0 ? params.firstName.trim() : "there";
-
-  try {
-    await sgMail.send({
-      to,
-      from: env.SENDGRID_FROM_EMAIL,
+  await sendRenderedTemplateEmail(
+    to,
+    EMAIL_TEMPLATE_IDS.campaignMessage,
+    {
+      firstName: params.firstName,
       subject: params.subject,
-      html: `
-        <div style="font-family: Arial, sans-serif; line-height: 1.6; color: #111827;">
-          <p>Hi ${greetingName},</p>
-          <p>${params.body}</p>
-          <p>Reply to this email if you'd like to connect with ${params.companyName}.</p>
-        </div>
-      `
-    });
+      body: params.body,
+      companyName: params.companyName
+    },
+    ["campaign.message"]
+  );
 
-    logger.debug({ recipient: "[redacted]" }, "Campaign email sent");
-  } catch (error) {
-    logger.debug({ err: error, recipient: "[redacted]" }, "Campaign email failed");
-    throw error;
-  }
+  logger.debug({ recipient: "[redacted]" }, "Campaign email sent");
+}
+
+export async function sendBookingConfirmationEmail(
+  to: string,
+  params: BookingConfirmationEmailParams
+): Promise<void> {
+  await sendRenderedTemplateEmail(
+    to,
+    EMAIL_TEMPLATE_IDS.bookingConfirmation,
+    {
+      firstName: params.firstName,
+      companyName: params.companyName,
+      referenceNumber: params.referenceNumber,
+      scheduledLabel: params.scheduledLabel ?? ""
+    },
+    ["booking.confirmation"]
+  );
+
+  logger.debug({ recipient: "[redacted]" }, "Booking confirmation email sent");
+}
+
+export async function sendBookingDeclineEmail(to: string, params: BookingDeclineEmailParams): Promise<void> {
+  await sendRenderedTemplateEmail(
+    to,
+    EMAIL_TEMPLATE_IDS.bookingDecline,
+    {
+      firstName: params.firstName,
+      companyName: params.companyName,
+      referenceNumber: params.referenceNumber,
+      reason: params.reason ?? ""
+    },
+    ["booking.decline"]
+  );
+
+  logger.debug({ recipient: "[redacted]" }, "Booking decline email sent");
 }

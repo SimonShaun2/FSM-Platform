@@ -1,22 +1,22 @@
 import pino from "pino";
-import twilio from "twilio";
 
-import { env } from "@fsm/config";
+import { sendSmsDisabled } from "@fsm/comms";
+import { featureFlags } from "@fsm/config/feature-flags";
 
 const logger = pino({
   name: "sms"
 });
 
-const twilioClient = twilio(env.TWILIO_ACCOUNT_SID, env.TWILIO_AUTH_TOKEN);
-
+/**
+ * Outbound SMS — disabled for MVP (no Twilio/Bird spend). Returns a stub provider id for message_logs.
+ */
 export async function sendSms(to: string, body: string): Promise<string> {
-  const message = await twilioClient.messages.create({
-    to,
-    from: env.TWILIO_FROM_NUMBER,
-    body
-  });
+  // FEATURE FLAG: outbound-sms-enabled
+  if (!featureFlags.outboundSmsEnabled) {
+    const providerMessageId = await sendSmsDisabled({ to, body });
+    logger.debug({ providerMessageId, toLength: to.length }, "SMS skipped (policy stub)");
+    return providerMessageId;
+  }
 
-  logger.debug({ messageSid: message.sid }, "Twilio SMS sent");
-
-  return message.sid;
+  throw new Error("OUTBOUND_SMS_DISABLED_BY_POLICY");
 }

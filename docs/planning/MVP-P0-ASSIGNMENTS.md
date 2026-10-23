@@ -39,7 +39,7 @@
 | **P0** | **STACK-10** | **Sam** | RLS policies using session `company_id`; pairs with STACK-02 | `cursor/stack-rls-design-1f27` |
 | **P0** | **STACK-13** | **Aria** | **Stripe Billing** MVP subscriptions (test mode); Connect explicitly **deferred** | `cursor/stack-stripe-billing-mvp-1f27` |
 | **P0** | **STACK-05** | **Hana** | BullMQ queue monitoring + DLQ | `cursor/fs-migrate-queue-hardening-1f27` |
-| **P0** | **STACK-08** | **Leo** | Resend adapter; Twilio sandbox only until 10DLC | `cursor/stack-resend-adapter-1f27` |
+| **P0** | **STACK-08** | **Leo** | `@fsm/comms` Resend adapter + channel-agnostic templates (email-first MVP); SMS stub only — **no Twilio/A2P** | `cursor/stack-email-first-comms-1f27` |
 | **P1** | **STACK-14** | **Aria** | Stripe **Connect** onboarding/payouts (after Billing unless Elena 12-05 escalation) | `cursor/stack-stripe-connect-1f27` |
 | **P1** | **STACK-04** | **Ezra** | Sentry + PostHog SDK | `cursor/stack-observability-1f27` |
 | **P1** | **STACK-07** | **Marcus** | Langfuse + eval hooks | `cursor/stack-langfuse-eval-1f27` |

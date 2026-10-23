@@ -2,7 +2,9 @@ import { and, eq, isNull } from "drizzle-orm";
 import type { Job, Processor } from "bullmq";
 import pino from "pino";
 
+import { resolveOutboundEmailFromAddress } from "@fsm/comms";
 import { env } from "@fsm/config";
+import { featureFlags } from "@fsm/config/feature-flags";
 import {
   automationRules,
   campaignRecipients,
@@ -103,6 +105,24 @@ interface EmailModule {
       subject: string;
       body: string;
       companyName: string;
+    }
+  ): Promise<void>;
+  sendBookingConfirmationEmail(
+    to: string,
+    params: {
+      firstName: string;
+      companyName: string;
+      referenceNumber: string;
+      scheduledLabel: string | null;
+    }
+  ): Promise<void>;
+  sendBookingDeclineEmail(
+    to: string,
+    params: {
+      firstName: string;
+      companyName: string;
+      referenceNumber: string;
+      reason: string | null;
     }
   ): Promise<void>;
 }
@@ -263,6 +283,14 @@ function getReminderLevel(data: Record<string, unknown>): ReminderLevel | null {
 function getAgreementEmailType(data: Record<string, unknown>): AgreementEmailType | null {
   const value = data.emailType;
   return value === "renewal_reminder" || value === "payment_failed" ? value : null;
+}
+
+function getOutboundEmailFromAddress(): string {
+  return resolveOutboundEmailFromAddress({
+    resendEmailEnabled: featureFlags.resendEmailEnabled,
+    resendFromEmail: env.RESEND_FROM_EMAIL,
+    sendgridFromEmail: env.SENDGRID_FROM_EMAIL
+  });
 }
 
 async function handleSmsNotificationJob(
@@ -664,7 +692,7 @@ function createProductionDependencies(): Promise<NotificationsDependencies> {
         channel: input.channel,
         direction: "outbound",
         toAddress: input.toAddress,
-        fromAddress: input.channel === "sms" ? env.TWILIO_FROM_NUMBER : env.SENDGRID_FROM_EMAIL,
+        fromAddress: input.channel === "sms" ? env.TWILIO_FROM_NUMBER : getOutboundEmailFromAddress(),
         subject: input.subject,
         body: input.body,
         providerMessageId: input.providerMessageId,
@@ -701,7 +729,7 @@ function createProductionDependencies(): Promise<NotificationsDependencies> {
         channel: input.channel,
         direction: "outbound",
         toAddress: input.toAddress,
-        fromAddress: input.channel === "sms" ? env.TWILIO_FROM_NUMBER : env.SENDGRID_FROM_EMAIL,
+        fromAddress: input.channel === "sms" ? env.TWILIO_FROM_NUMBER : getOutboundEmailFromAddress(),
         subject: input.subject,
         body: input.body,
         failedAt: now,
@@ -1115,9 +1143,57 @@ export async function handleSendBookingNotification(
   job: Job<Record<string, unknown>>,
   dependencies: NotificationsDependencies
 ): Promise<void> {
-  await handleSmsNotificationJob(job, dependencies, {
-    jobLabel: "Booking notification"
-  });
+  const companyId = getJobString(job.data, "companyId");
+  const toEmail = getJobString(job.data, "toEmail");
+  const firstName = getJobString(job.data, "firstName") ?? "there";
+  const companyName = getJobString(job.data, "companyName");
+  const referenceNumber = getJobString(job.data, "referenceNumber");
+  const scheduledLabel = getJobString(job.data, "scheduledLabel");
+  const reason = getJobString(job.data, "reason");
+
+  if (toEmail && companyName && referenceNumber) {
+    if (job.name === "send-booking-decline") {
+      await dependencies.email.sendBookingDeclineEmail(toEmail, {
+        firstName,
+        companyName,
+        referenceNumber,
+        reason: reason ?? null
+      });
+    } else {
+      await dependencies.email.sendBookingConfirmationEmail(toEmail, {
+        firstName,
+        companyName,
+        referenceNumber,
+        scheduledLabel: scheduledLabel ?? null
+      });
+    }
+
+    logger.info(
+      {
+        companyId,
+        jobName: job.name,
+        bookingRequestId: getJobString(job.data, "bookingRequestId")
+      },
+      "Booking notification email sent"
+    );
+    return;
+  }
+
+  if (job.name === "send-booking-request-alert") {
+    await handleSmsNotificationJob(job, dependencies, {
+      jobLabel: "Booking notification"
+    });
+    return;
+  }
+
+  logger.info(
+    {
+      companyId,
+      jobName: job.name,
+      bookingRequestId: getJobString(job.data, "bookingRequestId")
+    },
+    "Booking customer notification skipped (email-first; no customer email on file)"
+  );
 }
 
 export function createNotificationsProcessor(

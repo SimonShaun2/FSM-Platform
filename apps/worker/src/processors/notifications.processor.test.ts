@@ -55,7 +55,9 @@ function createDependencies(): notificationsProcessor.NotificationsDependencies 
       sendInvoiceReminderEmail: vi.fn(async () => undefined),
       sendInvoiceReminderOwnerAlertEmail: vi.fn(async () => undefined),
       sendServiceAgreementRenewalReminderEmail: vi.fn(async () => undefined),
-      sendServiceAgreementPaymentFailedEmail: vi.fn(async () => undefined)
+      sendServiceAgreementPaymentFailedEmail: vi.fn(async () => undefined),
+      sendBookingConfirmationEmail: vi.fn(async () => undefined),
+      sendBookingDeclineEmail: vi.fn(async () => undefined)
     },
     sms: {
       sendSms: vi.fn(async () => "SM123")
@@ -627,20 +629,26 @@ describe("notifications.processor", () => {
     );
   });
 
-  it("send-booking-confirmation sends queued booking SMS messages", async () => {
+  it("send-booking-confirmation sends email when customer email is present", async () => {
     await notificationsProcessor.handleSendBookingNotification(
       createJob("send-booking-confirmation", {
         companyId: "company-1",
         bookingRequestId: "booking-1",
-        toPhone: "555-0100",
-        body: "Acme HVAC: your booking BK-20260428-0001 is confirmed for Apr 30 at 8:00 AM."
+        toEmail: "customer@example.com",
+        firstName: "Chris",
+        companyName: "Acme HVAC",
+        referenceNumber: "BK-20260428-0001",
+        scheduledLabel: "Apr 30 at 8:00 AM"
       }),
       dependencies
     );
 
-    expect(dependencies.sms.sendSms).toHaveBeenCalledWith(
-      "555-0100",
-      "Acme HVAC: your booking BK-20260428-0001 is confirmed for Apr 30 at 8:00 AM."
-    );
+    expect(dependencies.email.sendBookingConfirmationEmail).toHaveBeenCalledWith("customer@example.com", {
+      firstName: "Chris",
+      companyName: "Acme HVAC",
+      referenceNumber: "BK-20260428-0001",
+      scheduledLabel: "Apr 30 at 8:00 AM"
+    });
+    expect(dependencies.sms.sendSms).not.toHaveBeenCalled();
   });
 });
