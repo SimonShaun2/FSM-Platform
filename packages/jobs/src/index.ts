@@ -25,6 +25,11 @@ export {
 } from "./queue-retry-policy.js";
 export { handleWorkerJobFailed } from "./worker-terminal-failure.js";
 export {
+  IMPORT_INVOICE_BALANCE_COMMIT_JOB_NAME,
+  ImportInvoiceBalanceCommitPayloadSchema,
+  type ImportInvoiceBalanceCommitPayload,
+} from "./import-invoice-balance-commit.js";
+export {
   QUEUE_PREFIX,
   QUEUE_NAMES,
   queueBaseOptions,

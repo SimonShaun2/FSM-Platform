@@ -2,7 +2,7 @@
 
 **Purpose:** One linear Drizzle journal (`packages/db/migrations/meta/_journal.json`). Prevent colliding `00xx_*.sql` tags across open PRs.  
 **Canonical tip on `dev` @ `9313130` (post-#86):** idx **25** — `0025_agent_action_reversed_state`.  
-**Next allocatable index:** **0026** — **reserved** for [ADR-FS-MIGRATE](../adr/ADR-FS-MIGRATE-import-lineage.md) (`0026_fs_migrate_import_lineage`); no other work without Tech Lead release.  
+**Next allocatable index:** **0028** (after **0027** `fs_migrate_invoice_payment_import` on FS-MIGRATE-M6). **0026** remains **reserved** for [ADR-FS-MIGRATE](../adr/ADR-FS-MIGRATE-import-lineage.md) (`0026_fs_migrate_import_lineage`).  
 **Owner:** Tech Lead — pairs request slots in PR description before `drizzle-kit generate`.
 
 **Rules**
@@ -29,6 +29,7 @@
 | 25 | `0025_agent_action_reversed_state` | Agent action enum `reversed` (#81) |
 
 | 26 | `0026_fs_migrate_import_lineage` | **Reserved** — FS-MIGRATE lineage + chunk runs (ADR-FS-MIGRATE); implementation PR only |
+| 27 | `0027_fs_migrate_invoice_payment_import` | FS-MIGRATE-M6 invoice/payment import lineage columns + `payments` entity |
 
 **FS-94 platform billing:** **⏸** per `BATCH-PLAN-5-9.md` §0 — do not allocate idx until founder/CoS budget gate.
 

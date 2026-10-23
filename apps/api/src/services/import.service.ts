@@ -7,7 +7,9 @@ import {
   db,
   emitEventWithExecutor,
   importSessions,
+  invoices,
   jobs,
+  payments,
   properties
 } from "@fsm/db";
 import { importsQueue } from "@fsm/jobs";
@@ -618,6 +620,36 @@ export async function rollbackImport(
           eq(jobs.companyId, companyId),
           eq(jobs.importSessionId, importSessionId),
           isNull(jobs.deletedAt)
+        )
+      )
+      .returning();
+
+    await tx
+      .update(payments)
+      .set({
+        deletedAt: now,
+        updatedAt: now
+      })
+      .where(
+        and(
+          eq(payments.companyId, companyId),
+          eq(payments.importSessionId, importSessionId),
+          isNull(payments.deletedAt)
+        )
+      )
+      .returning();
+
+    await tx
+      .update(invoices)
+      .set({
+        deletedAt: now,
+        updatedAt: now
+      })
+      .where(
+        and(
+          eq(invoices.companyId, companyId),
+          eq(invoices.importSessionId, importSessionId),
+          isNull(invoices.deletedAt)
         )
       )
       .returning();

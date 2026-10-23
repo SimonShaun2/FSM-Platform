@@ -36,4 +36,10 @@ export type { EmitEventContext } from "./events.js";
 export { emitEventWithExecutor } from "./events.js";
 export { markInvoiceOverdueIfNeeded } from "./invoice-helpers.js";
 export type { InvoiceOverdueRecord } from "./invoice-helpers.js";
+export * from "./import-invoice-balance-commit.logic.js";
+export {
+  commitImportedInvoiceRows,
+  commitImportedPaymentRows,
+  type ImportInvoiceBalanceEntityResolver,
+} from "./import-invoice-balance-commit.service.js";
 export * from "./schema.js";

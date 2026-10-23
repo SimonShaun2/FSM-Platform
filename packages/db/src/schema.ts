@@ -208,6 +208,7 @@ export const importEntityTypeEnum = pgEnum("import_entity_type", [
   "jobs",
   "estimates",
   "invoices",
+  "payments",
 ]);
 
 export const technicianStatusEnum = pgEnum("technician_status", [
@@ -854,6 +855,9 @@ export const invoices = pgTable("invoices", {
   title: varchar("title", { length: 255 }),
   messageToCustomer: text("message_to_customer"),
   internalNotes: text("internal_notes"),
+  sourceSystem: varchar("source_system", { length: 64 }),
+  sourceId: varchar("source_id", { length: 256 }),
+  importSessionId: uuid("import_session_id").references(() => importSessions.id),
   ...timestamps,
 }, (t) => ({
   companyIdx: index("invoices_company_idx").on(t.companyId),
@@ -861,6 +865,11 @@ export const invoices = pgTable("invoices", {
   statusIdx: index("invoices_status_idx").on(t.status),
   dueIdx: index("invoices_due_idx").on(t.dueAt),
   numberIdx: uniqueIndex("invoices_number_company_idx").on(t.invoiceNumber, t.companyId),
+  importLineageIdx: uniqueIndex("invoices_import_lineage_idx").on(
+    t.companyId,
+    t.sourceSystem,
+    t.sourceId,
+  ),
 }));
 
 export const invoiceItems = pgTable("invoice_items", {
@@ -896,11 +905,19 @@ export const payments = pgTable("payments", {
   referenceNumber: varchar("reference_number", { length: 100 }),
   notes: text("notes"),
   paidAt: timestamp("paid_at"),
+  sourceSystem: varchar("source_system", { length: 64 }),
+  sourceId: varchar("source_id", { length: 256 }),
+  importSessionId: uuid("import_session_id").references(() => importSessions.id),
   ...timestamps,
 }, (t) => ({
   companyIdx: index("payments_company_idx").on(t.companyId),
   invoiceIdx: index("payments_invoice_idx").on(t.invoiceId),
   stripeIntentIdx: index("payments_stripe_intent_idx").on(t.stripePaymentIntentId),
+  importLineageIdx: uniqueIndex("payments_import_lineage_idx").on(
+    t.companyId,
+    t.sourceSystem,
+    t.sourceId,
+  ),
 }));
 
 // ─────────────────────────────────────────────

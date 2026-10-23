@@ -18,7 +18,8 @@ import {
   importSessions,
   properties
 } from "@fsm/db";
-import { aiQueue } from "@fsm/jobs";
+import { aiQueue, IMPORT_INVOICE_BALANCE_COMMIT_JOB_NAME } from "@fsm/jobs";
+import { handleImportInvoiceBalanceCommit } from "./import-invoice-balance-chunk.processor.js";
 import {
   sanitizeSpreadsheetCell,
   type ColumnMapping,
@@ -915,6 +916,9 @@ export function createCsvImportProcessor(): Processor<Record<string, unknown>, v
         return;
       case "execute-import":
         await handleExecuteImport(job);
+        return;
+      case IMPORT_INVOICE_BALANCE_COMMIT_JOB_NAME:
+        await handleImportInvoiceBalanceCommit(job);
         return;
       default:
         logger.warn({ jobId: job.id ?? null, jobName: job.name }, "Unknown CSV import job received");

@@ -88,7 +88,14 @@ type ServiceAgreementBillingCycle = "monthly" | "annual";
 type ImportSessionStatus = "uploaded" | "mapping" | "preview" | "importing" | "completed" | "failed" | "rolled_back";
 type DataExportStatus = "pending" | "processing" | "completed" | "failed" | "expired";
 type DataExportFormat = "json" | "csv_bundle";
-type ImportEntityType = "customers" | "properties" | "assets" | "jobs" | "estimates" | "invoices";
+type ImportEntityType =
+  | "customers"
+  | "properties"
+  | "assets"
+  | "jobs"
+  | "estimates"
+  | "invoices"
+  | "payments";
 type AutomationRuleType =
   | "estimate_follow_up"
   | "estimate_declined"
@@ -422,6 +429,9 @@ export interface TestInvoiceRecord {
   title: string | null;
   messageToCustomer: string | null;
   internalNotes: string | null;
+  sourceSystem: string | null;
+  sourceId: string | null;
+  importSessionId: string | null;
   createdAt: Date;
   updatedAt: Date;
   deletedAt: Date | null;
@@ -459,6 +469,9 @@ export interface TestPaymentRecord {
   referenceNumber: string | null;
   notes: string | null;
   paidAt: Date | null;
+  sourceSystem: string | null;
+  sourceId: string | null;
+  importSessionId: string | null;
   createdAt: Date;
   updatedAt: Date;
   deletedAt: Date | null;
@@ -1302,6 +1315,9 @@ export interface TestInvoiceRecord {
   title: string | null;
   messageToCustomer: string | null;
   internalNotes: string | null;
+  sourceSystem: string | null;
+  sourceId: string | null;
+  importSessionId: string | null;
   createdAt: Date;
   updatedAt: Date;
   deletedAt: Date | null;
@@ -1339,6 +1355,9 @@ export interface TestPaymentRecord {
   referenceNumber: string | null;
   notes: string | null;
   paidAt: Date | null;
+  sourceSystem: string | null;
+  sourceId: string | null;
+  importSessionId: string | null;
   createdAt: Date;
   updatedAt: Date;
   deletedAt: Date | null;
@@ -2326,6 +2345,9 @@ const invoicesTable = {
   title: "title",
   messageToCustomer: "messageToCustomer",
   internalNotes: "internalNotes",
+  sourceSystem: "sourceSystem",
+  sourceId: "sourceId",
+  importSessionId: "importSessionId",
   createdAt: "createdAt",
   updatedAt: "updatedAt",
   deletedAt: "deletedAt"
@@ -2365,6 +2387,9 @@ const paymentsTable = {
   referenceNumber: "referenceNumber",
   notes: "notes",
   paidAt: "paidAt",
+  sourceSystem: "sourceSystem",
+  sourceId: "sourceId",
+  importSessionId: "importSessionId",
   createdAt: "createdAt",
   updatedAt: "updatedAt",
   deletedAt: "deletedAt"
@@ -3600,6 +3625,9 @@ function createInvoiceRecord(
     title: values.title ?? null,
     messageToCustomer: values.messageToCustomer ?? null,
     internalNotes: values.internalNotes ?? null,
+    sourceSystem: values.sourceSystem ?? null,
+    sourceId: values.sourceId ?? null,
+    importSessionId: values.importSessionId ?? null,
     createdAt: values.createdAt ?? now,
     updatedAt: values.updatedAt ?? now,
     deletedAt: values.deletedAt ?? null
@@ -3651,6 +3679,9 @@ function createPaymentRecord(
     referenceNumber: values.referenceNumber ?? null,
     notes: values.notes ?? null,
     paidAt: values.paidAt ?? null,
+    sourceSystem: values.sourceSystem ?? null,
+    sourceId: values.sourceId ?? null,
+    importSessionId: values.importSessionId ?? null,
     createdAt: values.createdAt ?? now,
     updatedAt: values.updatedAt ?? now,
     deletedAt: values.deletedAt ?? null
