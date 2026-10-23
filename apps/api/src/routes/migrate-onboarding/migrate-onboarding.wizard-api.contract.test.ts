@@ -14,9 +14,15 @@ function extractRegisteredRoutes(source: string): Array<{ method: string; path: 
     /fastify\.(get|post|patch)\("([^"]+)"/gu;
 
   for (const match of source.matchAll(pattern)) {
+    const method = match[1];
+    const pathSuffix = match[2];
+    if (!method || !pathSuffix) {
+      continue;
+    }
+
     routes.push({
-      method: match[1].toUpperCase(),
-      path: `/api/v1${match[2]}`
+      method: method.toUpperCase(),
+      path: `/api/v1${pathSuffix}`
     });
   }
 
