@@ -1,17 +1,20 @@
 import { and, eq, isNull } from "drizzle-orm";
 
 import {
+  bookingRequests,
   customers,
+  db,
   emitEventWithExecutor,
-  jobs,
   maintenancePlans,
   maintenanceVisits
 } from "@fsm/db";
-import type { db as DbClient } from "@fsm/db";
 
 type BookingRequestRow = typeof bookingRequests.$inferSelect;
-type JobRow = typeof jobs.$inferSelect;
-type TransactionExecutor = Pick<DbClient, "select" | "insert" | "update">;
+type RecurringScheduleJobContext = {
+  id: string;
+  scheduledStart: Date | null;
+};
+type TransactionExecutor = Pick<typeof db, "select" | "insert" | "update">;
 
 type BookingActor = {
   id: string | null;
@@ -66,7 +69,7 @@ export async function attachConfirmedBookingToRecurringSchedules(
   companyId: string,
   bookingRequest: BookingRequestRow,
   customerId: string,
-  job: JobRow,
+  job: RecurringScheduleJobContext,
   executor: TransactionExecutor,
   actor: BookingActor
 ): Promise<RecurringScheduleLinkResult> {
