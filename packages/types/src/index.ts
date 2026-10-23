@@ -31,6 +31,7 @@ export * from "./data-export/v1/index.js";
 export * from "./import-outbox-attribution/v1/index.js";
 export * from "./migrate-onboarding/v1/index.js";
 export * from "./migrate-onboarding/wizard-import-entity.contract.js";
+export * from "./saved-card-migration/v1/index.js";
 export * from "./spreadsheet-sanitize.js";
 export * from "./invoice.types.js";
 export * from "./job.types.js";

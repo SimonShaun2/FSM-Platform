@@ -376,6 +376,11 @@ export const activityEventTypeEnum = pgEnum("activity_event_type", [
   "revenue.inquiry_qualified",
   "revenue.inquiry_received",
   "revenue.inquiry_escalated",
+  // Saved card migration (FS-138)
+  "payment_method_migration.requested",
+  "payment_method_migration.mappings_applied",
+  "payment_method_migration.completed",
+  "payment_method_migration.fallback_sent",
 ]);
 
 export const aiRecommendationTypeEnum = pgEnum("ai_recommendation_type", [
@@ -1387,6 +1392,39 @@ export const importBundles = pgTable("import_bundles", {
   ...timestamps,
 }, (t) => ({
   companyIdx: index("import_bundles_company_idx").on(t.companyId),
+}));
+
+export const savedCardMigrationStatusEnum = pgEnum("saved_card_migration_status", [
+  "requested",
+  "awaiting_stripe_import",
+  "mapping",
+  "completed",
+  "failed",
+  "fallback_required"
+]);
+
+/** Stripe PAN import orchestration (FS-138); no raw card data stored. */
+export const savedCardMigrations = pgTable("saved_card_migrations", {
+  id: id(),
+  companyId: companyId(),
+  importBundleId: uuid("import_bundle_id").references(() => importBundles.id),
+  createdById: uuid("created_by_id").references(() => users.id),
+  status: savedCardMigrationStatusEnum("status").notNull().default("requested"),
+  priorProcessorName: varchar("prior_processor_name", { length: 120 }).notNull(),
+  /** Stripe-side import reference (job/file id); never PAN or full card numbers. */
+  stripeImportReference: varchar("stripe_import_reference", { length: 255 }),
+  mappingSummary: jsonb("mapping_summary")
+    .notNull()
+    .default({ matched: 0, unmatched: 0, failed: 0, total: 0 }),
+  customerMappings: jsonb("customer_mappings").notNull().default([]),
+  lastError: text("last_error"),
+  fallbackEmailSentAt: timestamp("fallback_email_sent_at"),
+  completedAt: timestamp("completed_at"),
+  ...timestamps,
+}, (t) => ({
+  companyIdx: index("saved_card_migrations_company_idx").on(t.companyId),
+  bundleIdx: index("saved_card_migrations_bundle_idx").on(t.importBundleId),
+  statusIdx: index("saved_card_migrations_status_idx").on(t.status),
 }));
 
 // Tracks a single CSV import session from upload through completion

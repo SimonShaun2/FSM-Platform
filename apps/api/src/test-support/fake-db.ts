@@ -13,6 +13,7 @@ type TableName =
   | "jobs"
   | "importSessions"
   | "importBundles"
+  | "savedCardMigrations"
   | "importChunkRuns"
   | "dataExportSessions"
   | "estimates"
@@ -2083,6 +2084,7 @@ interface TestState {
   jobs: TestJobRecord[];
   importSessions: TestImportSessionRecord[];
   importBundles: Array<Record<string, unknown> & { id: string; companyId: string }>;
+  savedCardMigrations: Array<Record<string, unknown> & { id: string; companyId: string }>;
   importChunkRuns: TestImportChunkRunRecord[];
   dataExportSessions: TestDataExportSessionRecord[];
   estimates: TestEstimateRecord[];
@@ -2319,6 +2321,25 @@ const importChunkRunsTable = {
   rowsOk: "rowsOk",
   rowsFailed: "rowsFailed",
   errorMessage: "errorMessage",
+  completedAt: "completedAt",
+  createdAt: "createdAt",
+  updatedAt: "updatedAt",
+  deletedAt: "deletedAt"
+} as const;
+
+const savedCardMigrationsTable = {
+  __name: "savedCardMigrations",
+  id: "id",
+  companyId: "companyId",
+  importBundleId: "importBundleId",
+  createdById: "createdById",
+  status: "status",
+  priorProcessorName: "priorProcessorName",
+  stripeImportReference: "stripeImportReference",
+  mappingSummary: "mappingSummary",
+  customerMappings: "customerMappings",
+  lastError: "lastError",
+  fallbackEmailSentAt: "fallbackEmailSentAt",
   completedAt: "completedAt",
   createdAt: "createdAt",
   updatedAt: "updatedAt",
@@ -3182,6 +3203,7 @@ const state: TestState = {
   jobs: [],
   importSessions: [],
   importBundles: [],
+  savedCardMigrations: [],
   importChunkRuns: [],
   dataExportSessions: [],
   estimates: [],
@@ -3310,6 +3332,8 @@ function getRows(tableName: TableName): AnyTestRecord[] {
       return state.importSessions;
     case "importBundles":
       return state.importBundles as unknown as AnyTestRecord[];
+    case "savedCardMigrations":
+      return state.savedCardMigrations as unknown as AnyTestRecord[];
     case "importChunkRuns":
       return state.importChunkRuns;
     case "dataExportSessions":
@@ -4765,6 +4789,11 @@ function createRow(tableName: TableName, values: Record<string, unknown>): AnyTe
         values as Partial<Parameters<typeof seedImportBundle>[0]> &
           Pick<Parameters<typeof seedImportBundle>[0], "companyId">
       ) as unknown as AnyTestRecord;
+    case "savedCardMigrations":
+      return seedSavedCardMigration(
+        values as Partial<Parameters<typeof seedSavedCardMigration>[0]> &
+          Pick<Parameters<typeof seedSavedCardMigration>[0], "companyId" | "priorProcessorName">
+      ) as unknown as AnyTestRecord;
     case "importChunkRuns":
       return createImportChunkRunRecord(
         values as Partial<TestImportChunkRunRecord> &
@@ -5268,6 +5297,7 @@ export const assets = assetsTable;
 export const jobs = jobsTable;
 export const importSessions = importSessionsTable;
 export const importBundles = importBundlesTable;
+export const savedCardMigrations = savedCardMigrationsTable;
 export const importChunkRuns = importChunkRunsTable;
 export const dataExportSessions = dataExportSessionsTable;
 export const estimates = estimatesTable;
@@ -5660,6 +5690,7 @@ export function createDbModuleMock() {
     jobs,
     importSessions,
     importBundles,
+    savedCardMigrations,
     importChunkRuns,
     dataExportSessions,
     estimates,
@@ -5718,6 +5749,7 @@ export function resetTestState(): void {
   state.jobs.length = 0;
   state.importSessions.length = 0;
   state.importBundles.length = 0;
+  state.savedCardMigrations.length = 0;
   state.importChunkRuns.length = 0;
   state.dataExportSessions.length = 0;
   state.estimates.length = 0;
@@ -6113,6 +6145,45 @@ export function seedAgentAction(
     ...values
   });
   state.agentActions.push(record);
+  return record;
+}
+
+export function seedSavedCardMigration(
+  values: Partial<{
+    id: string;
+    companyId: string;
+    importBundleId: string | null;
+    createdById: string | null;
+    status: string;
+    priorProcessorName: string;
+    stripeImportReference: string | null;
+    mappingSummary: Record<string, unknown>;
+    customerMappings: unknown[];
+    lastError: string | null;
+    fallbackEmailSentAt: Date | null;
+    completedAt: Date | null;
+  }> &
+    Pick<{ companyId: string; priorProcessorName: string }, "companyId" | "priorProcessorName">
+) {
+  const now = new Date();
+  const record = {
+    id: values.id ?? randomUUID(),
+    companyId: values.companyId,
+    importBundleId: values.importBundleId ?? null,
+    createdById: values.createdById ?? null,
+    status: values.status ?? "requested",
+    priorProcessorName: values.priorProcessorName,
+    stripeImportReference: values.stripeImportReference ?? null,
+    mappingSummary: values.mappingSummary ?? { matched: 0, unmatched: 0, failed: 0, total: 0 },
+    customerMappings: values.customerMappings ?? [],
+    lastError: values.lastError ?? null,
+    fallbackEmailSentAt: values.fallbackEmailSentAt ?? null,
+    completedAt: values.completedAt ?? null,
+    createdAt: now,
+    updatedAt: now,
+    deletedAt: null
+  };
+  state.savedCardMigrations.push(record);
   return record;
 }
 

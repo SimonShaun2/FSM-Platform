@@ -29,7 +29,9 @@ import growthCheckScanRoutes from "./routes/growth-check/index.js";
 import invoiceRoutes from "./routes/invoices/index.js";
 import importRoutes from "./routes/imports/index.js";
 import internalAdminQueueRoutes from "./routes/internal-admin/queues/index.js";
+import internalAdminSavedCardMigrationRoutes from "./routes/internal-admin/saved-card-migrations/index.js";
 import migrateOnboardingRoutes from "./routes/migrate-onboarding/index.js";
+import savedCardMigrationRoutes from "./routes/saved-card-migration/index.js";
 import dataExportRoutes from "./routes/data-exports/index.js";
 import jobEngagementRoutes from "./routes/job-engagement/index.js";
 import jobRoutes from "./routes/jobs/index.js";
@@ -98,6 +100,7 @@ export async function buildApp() {
   await app.register(fieldWorkRoutes, { prefix: "/api/v1" });
   await app.register(growthCheckIntakeRoutes, { prefix: "/api/v1" });
   await app.register(internalAdminQueueRoutes, { prefix: "/api/v1" });
+  await app.register(internalAdminSavedCardMigrationRoutes, { prefix: "/api/v1" });
   await app.register(growthCheckScanRoutes, { prefix: "/api/v1" });
   await app.register(attachmentRoutes, { prefix: "/api/v1" });
   await app.register(bookingRoutes, { prefix: "/api/v1" });
@@ -116,6 +119,7 @@ export async function buildApp() {
   await app.register(invoiceRoutes, { prefix: "/api/v1" });
   await app.register(importRoutes, { prefix: "/api/v1" });
   await app.register(migrateOnboardingRoutes, { prefix: "/api/v1" });
+  await app.register(savedCardMigrationRoutes, { prefix: "/api/v1" });
   await app.register(dataExportRoutes, { prefix: "/api/v1" });
   await app.register(serviceAgreementRoutes, { prefix: "/api/v1" });
   await app.register(vipMembershipRoutes, { prefix: "/api/v1" });
