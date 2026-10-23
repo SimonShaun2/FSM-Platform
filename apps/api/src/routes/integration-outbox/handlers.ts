@@ -19,7 +19,10 @@ export async function listIntegrationOutboxOperationsHandler(
   reply: FastifyReply
 ): Promise<FastifyReply> {
   const query = request.query as ListIntegrationOutboxOperationsQuery;
-  const data = await getIntegrationOutboxOperationsForCompany(request.company.id, query);
+  const data = await getIntegrationOutboxOperationsForCompany(request.company.id, {
+    ...(query.correlationId !== undefined ? { correlationId: query.correlationId } : {}),
+    ...(query.limit !== undefined ? { limit: query.limit } : {})
+  });
   return reply.send({ data });
 }
 

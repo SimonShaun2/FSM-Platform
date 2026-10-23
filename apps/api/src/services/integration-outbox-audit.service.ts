@@ -33,7 +33,7 @@ export async function getIntegrationOutboxAuditTrail(
 
   const events = await listIntegrationOutboxAuditEvents(companyId, {
     outboxOperationId,
-    limit
+    ...(limit !== undefined ? { limit } : {})
   });
 
   return events.map((row) => ({
