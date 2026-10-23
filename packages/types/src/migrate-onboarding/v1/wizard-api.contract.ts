@@ -10,6 +10,7 @@ import {
   MIGRATE_ONBOARDING_CONTRACT_ID,
   setMigrateOnboardingSourceBodySchema
 } from "./schemas.js";
+import { migrateOnboardingIngestStatusResponseSchema } from "./ingest-status.schemas.js";
 
 export { MIGRATE_ONBOARDING_CONTRACT_ID };
 
@@ -27,8 +28,6 @@ export type MigrateOnboardingWizardRouteContract = {
 /**
  * Authoritative wizard HTTP surface (must match `apps/api/src/routes/migrate-onboarding/index.ts`).
  * Paths include the `/api/v1` prefix registered in `app.ts`.
- *
- * File-link routes (run / preview / decisions) return `migrateOnboardingBundle` per #155 @ 4aa23c46.
  */
 export const MIGRATE_ONBOARDING_WIZARD_API_ROUTES: readonly MigrateOnboardingWizardRouteContract[] = [
   {
@@ -100,6 +99,11 @@ export const MIGRATE_ONBOARDING_WIZARD_API_ROUTES: readonly MigrateOnboardingWiz
     responseSchemaId: "migrateRelationalPreviewResponse"
   },
   {
+    method: "GET",
+    path: "/api/v1/migrate/onboarding/sessions/:bundleId/ingest-status",
+    responseSchemaId: "migrateOnboardingIngestStatusResponse"
+  },
+  {
     method: "PATCH",
     path: "/api/v1/migrate/onboarding/sessions/:bundleId/dedupe-decisions",
     requestBodySchemaId: "applyMigrateDedupeDecisionsBody",
@@ -124,5 +128,6 @@ export const migrateOnboardingWizardResponseSchemas = {
   migrateOnboardingSourceCatalogEntry: migrateOnboardingSourceCatalogEntrySchema,
   migrateDedupePreviewResponse: migrateDedupePreviewResponseSchema,
   migrateRelationalPreviewResponse: migrateRelationalPreviewResponseSchema,
-  migrateOnboardingCommitResponse: migrateOnboardingCommitResponseSchema
+  migrateOnboardingCommitResponse: migrateOnboardingCommitResponseSchema,
+  migrateOnboardingIngestStatusResponse: migrateOnboardingIngestStatusResponseSchema
 } as const;
