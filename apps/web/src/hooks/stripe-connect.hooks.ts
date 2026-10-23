@@ -9,6 +9,10 @@ interface StripeUrlResponse {
   url: string;
 }
 
+interface StripeAccountSessionResponse {
+  clientSecret: string;
+}
+
 const stripeConnectKeys = {
   status: ["stripe-connect", "status"] as const
 };
@@ -24,6 +28,13 @@ export function useStripeConnectStatus() {
 export function useStartStripeConnect() {
   return useMutation({
     mutationFn: () => api.post<StripeUrlResponse>("/api/v1/stripe/connect/onboard", {})
+  });
+}
+
+export function useStripeConnectAccountSession() {
+  return useMutation({
+    mutationFn: (components: Array<"account_onboarding" | "payments" | "payouts">) =>
+      api.post<StripeAccountSessionResponse>("/api/v1/stripe/connect/account-session", { components })
   });
 }
 

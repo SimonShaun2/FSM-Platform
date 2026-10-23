@@ -2,6 +2,21 @@ import { Decimal } from "decimal.js";
 import Stripe from "stripe";
 
 import { env } from "@fsm/config";
+import { featureFlags } from "@fsm/config/feature-flags";
+import {
+  buildAgreementRetryPortalUrl,
+  signAgreementPortalToken
+} from "@fsm/config/agreement-portal-token";
+import {
+  buildCardStatementDescriptor,
+  buildInvoicePaymentReturnUrl,
+  buildStripeAccountBrandingPatch,
+  RENVANI_STRIPE_BRAND
+} from "@fsm/config/stripe-branding";
+import {
+  computeCustomerPaidPlatformFee,
+  formatCustomerPlatformFeeLineItemName
+} from "@fsm/config/stripe-pricing";
 
 const stripe = new Stripe(env.STRIPE_SECRET_KEY);
 
@@ -18,14 +33,21 @@ export interface CreateInvoiceCheckoutSessionInput {
   customerId: string;
   customerEmail: string | null;
   companyStripeAccountId: string;
+  companyName: string;
   invoiceNumber: string;
   total: string;
   items: InvoiceCheckoutLineItem[];
+  /** Public pay token — embedded Checkout return URL stays on Renvani. */
+  paymentToken: string;
+  /** Decimal fraction (0.05 = 5%). Customer-paid on top of invoice; 0 for Flat. */
+  connectApplicationFeeFraction: number;
 }
 
 export interface InvoiceCheckoutSessionResult {
   id: string;
-  url: string;
+  /** Stripe-hosted URL; null when using embedded Checkout on Renvani. */
+  url: string | null;
+  clientSecret: string | null;
 }
 
 export interface CreateServiceAgreementPriceInput {
@@ -34,6 +56,8 @@ export interface CreateServiceAgreementPriceInput {
   name: string;
   amount: string;
   interval: "month" | "year";
+  /** Stripe product display name; defaults to `name`. */
+  productName?: string;
 }
 
 export interface CreateStripeCustomerInput {
@@ -53,7 +77,10 @@ export interface CreateServiceAgreementSubscriptionInput {
   customerId: string;
   stripeCustomerId: string;
   stripePriceId: string;
+  /** Recurring customer-paid platform fee price (Flex); omitted on Flat. */
+  stripePlatformFeePriceId?: string | null;
   companyStripeAccountId: string;
+  connectApplicationFeeFraction: number;
 }
 
 export interface StripeSubscriptionResult {
@@ -154,47 +181,107 @@ function formatPayoutSchedule(interval: string | null | undefined): string | nul
 export async function createInvoiceCheckoutSession(
   input: CreateInvoiceCheckoutSessionInput
 ): Promise<InvoiceCheckoutSessionResult> {
-  const totalCents = toCents(input.total);
-  const applicationFeeAmount = new Decimal(totalCents)
-    .mul(env.STRIPE_PLATFORM_FEE_PERCENT)
-    .toDecimalPlaces(0, Decimal.ROUND_HALF_UP)
-    .toNumber();
+  const feeBreakdown = computeCustomerPaidPlatformFee(input.total, input.connectApplicationFeeFraction);
+  const applicationFeeAmount = toCents(feeBreakdown.platformFeeAmount);
   const appBaseUrl = env.APP_URL.replace(/\/$/, "");
-  const session = await stripe.checkout.sessions.create({
-    mode: "payment",
-    ...(input.customerEmail ? { customer_email: input.customerEmail } : {}),
-    line_items: input.items.map((item) => {
-      const description = buildHostedDescription(item);
-
-      return {
-        quantity: 1,
-        price_data: {
-          currency: "usd",
-          unit_amount: toCents(item.total),
-          product_data: description ? { name: item.name, description } : { name: item.name }
-        }
-      };
-    }),
-    payment_intent_data: {
-      application_fee_amount: applicationFeeAmount,
-      transfer_data: {
-        destination: input.companyStripeAccountId
-      },
-      metadata: {
-        companyId: input.companyId,
-        invoiceId: input.invoiceId,
-        customerId: input.customerId
-      }
+  const statementDescriptor = buildCardStatementDescriptor(input.companyName);
+  const useEmbeddedCheckout = featureFlags.stripeRenvaniEmbeddedCheckout;
+  const paymentIntentData: Stripe.Checkout.SessionCreateParams.PaymentIntentData = {
+    transfer_data: {
+      destination: input.companyStripeAccountId
     },
-    success_url: `${appBaseUrl}/invoices/${input.invoiceId}?status=success`,
-    cancel_url: `${appBaseUrl}/invoices/${input.invoiceId}?status=cancelled`,
+    statement_descriptor: statementDescriptor,
     metadata: {
       companyId: input.companyId,
       invoiceId: input.invoiceId,
       customerId: input.customerId,
-      invoiceNumber: input.invoiceNumber
+      renvaniReceiptChannel: "resend"
     }
+  };
+
+  if (applicationFeeAmount > 0) {
+    paymentIntentData.application_fee_amount = applicationFeeAmount;
+  }
+
+  const serviceLineItems = input.items.map((item) => {
+    const description = buildHostedDescription(item);
+
+    return {
+      quantity: 1,
+      price_data: {
+        currency: "usd",
+        unit_amount: toCents(item.total),
+        product_data: description ? { name: item.name, description } : { name: item.name }
+      }
+    };
   });
+
+  const lineItems: Stripe.Checkout.SessionCreateParams.LineItem[] = [...serviceLineItems];
+
+  if (applicationFeeAmount > 0) {
+    lineItems.push({
+      quantity: 1,
+      price_data: {
+        currency: "usd",
+        unit_amount: applicationFeeAmount,
+        product_data: {
+          name: formatCustomerPlatformFeeLineItemName(input.connectApplicationFeeFraction),
+          description:
+            "Customer-paid platform fee (added to your total). Your service provider receives the full invoice amount."
+        }
+      }
+    });
+  }
+
+  const sharedMetadata = {
+    companyId: input.companyId,
+    invoiceId: input.invoiceId,
+    customerId: input.customerId,
+    invoiceNumber: input.invoiceNumber
+  };
+
+  const session = await stripe.checkout.sessions.create(
+    useEmbeddedCheckout
+      ? {
+          mode: "payment",
+          ui_mode: "embedded",
+          redirect_on_completion: "if_required",
+          line_items: lineItems,
+          payment_intent_data: paymentIntentData,
+          return_url: buildInvoicePaymentReturnUrl(appBaseUrl, input.paymentToken),
+          metadata: sharedMetadata,
+          custom_text: {
+            submit: {
+              message: `Secure payment processed by ${RENVANI_STRIPE_BRAND.platformName}. Receipts are sent from Renvani, not Stripe.`
+            }
+          }
+        }
+      : {
+          mode: "payment",
+          line_items: lineItems,
+          payment_intent_data: paymentIntentData,
+          success_url: buildInvoicePaymentReturnUrl(appBaseUrl, input.paymentToken),
+          cancel_url: `${appBaseUrl}/pay/${input.paymentToken}?status=cancelled`,
+          metadata: sharedMetadata,
+          custom_text: {
+            submit: {
+              message: `Secure payment processed by ${RENVANI_STRIPE_BRAND.platformName}.`
+            }
+          }
+        }
+  );
+
+  if (useEmbeddedCheckout) {
+    if (!session.client_secret) {
+      throw new Error("Stripe embedded checkout session did not return client_secret");
+    }
+
+    return {
+      id: session.id,
+      url: null,
+      clientSecret: session.client_secret
+    };
+  }
 
   if (!session.url) {
     throw new Error("Stripe checkout session did not return a hosted URL");
@@ -202,8 +289,19 @@ export async function createInvoiceCheckoutSession(
 
   return {
     id: session.id,
-    url: session.url
+    url: session.url,
+    clientSecret: null
   };
+}
+
+export async function retrieveInvoiceCheckoutClientSecret(sessionId: string): Promise<string | null> {
+  const session = await stripe.checkout.sessions.retrieve(sessionId);
+
+  if (session.ui_mode === "embedded" && session.client_secret) {
+    return session.client_secret;
+  }
+
+  return null;
 }
 
 export async function expireInvoiceCheckoutSession(sessionId: string): Promise<void> {
@@ -220,7 +318,7 @@ export async function createServiceAgreementPrice(
       interval: input.interval
     },
     product_data: {
-      name: input.name,
+      name: input.productName ?? input.name,
       metadata: {
         companyId: input.companyId,
         templateId: input.templateId
@@ -245,7 +343,11 @@ export async function createStripeCustomer(input: CreateStripeCustomerInput): Pr
     name: input.name,
     metadata: {
       companyId: input.companyId,
-      customerId: input.customerId
+      customerId: input.customerId,
+      renvaniTransactionalEmail: "true"
+    },
+    invoice_settings: {
+      footer: `${RENVANI_STRIPE_BRAND.platformName} — invoice and receipts are delivered by your service provider via Renvani.`
     }
   });
 
@@ -257,23 +359,30 @@ export async function createStripeCustomer(input: CreateStripeCustomerInput): Pr
 export async function createServiceAgreementSubscription(
   input: CreateServiceAgreementSubscriptionInput
 ): Promise<StripeSubscriptionResult> {
-  const applicationFeePercent = new Decimal(env.STRIPE_PLATFORM_FEE_PERCENT)
-    .mul(100)
-    .toDecimalPlaces(2, Decimal.ROUND_HALF_UP)
-    .toNumber();
-  const subscription = await stripe.subscriptions.create({
+  const items: Stripe.SubscriptionCreateParams.Item[] = [{ price: input.stripePriceId }];
+
+  if (input.stripePlatformFeePriceId) {
+    items.push({ price: input.stripePlatformFeePriceId });
+  }
+
+  const subscriptionParams: Stripe.SubscriptionCreateParams = {
     customer: input.stripeCustomerId,
-    items: [{ price: input.stripePriceId }],
-    application_fee_percent: applicationFeePercent,
+    items,
+    collection_method: "charge_automatically",
     transfer_data: {
       destination: input.companyStripeAccountId
     },
     metadata: {
       companyId: input.companyId,
       planId: input.planId,
-      customerId: input.customerId
+      customerId: input.customerId,
+      ...(input.stripePlatformFeePriceId
+        ? { platformFeePriceId: input.stripePlatformFeePriceId }
+        : {})
     }
-  });
+  };
+
+  const subscription = await stripe.subscriptions.create(subscriptionParams);
 
   return toSubscriptionResult(subscription);
 }
@@ -308,8 +417,14 @@ export async function pauseServiceAgreementSubscription(
   return toSubscriptionResult(subscription);
 }
 
+export interface ServiceAgreementPortalContext {
+  companyId: string;
+  agreementId: string;
+}
+
 export async function retrieveServiceAgreementSubscriptionSnapshot(
-  subscriptionId: string
+  subscriptionId: string,
+  portalContext?: ServiceAgreementPortalContext
 ): Promise<ServiceAgreementSubscriptionSnapshotResult> {
   const subscription = await stripe.subscriptions.retrieve(subscriptionId, {
     expand: ["default_payment_method", "latest_invoice", "latest_invoice.default_payment_method"]
@@ -322,12 +437,23 @@ export async function retrieveServiceAgreementSubscriptionSnapshot(
     ? latestInvoice.default_payment_method
     : null;
   const paymentMethodLabel = buildPaymentMethodLabel(subscriptionPaymentMethod ?? invoicePaymentMethod);
+  const appBaseUrl = env.APP_URL.replace(/\/$/, "");
+  const openInvoice =
+    latestInvoice?.status === "open" || latestInvoice?.status === "uncollectible";
+
+  let retryPaymentUrl: string | null = null;
+  if (featureFlags.stripeRenvaniPortalUrls && openInvoice && portalContext) {
+    const portalToken = signAgreementPortalToken(portalContext.companyId, portalContext.agreementId);
+    retryPaymentUrl = buildAgreementRetryPortalUrl(appBaseUrl, portalToken);
+  } else if (!featureFlags.stripeRenvaniPortalUrls) {
+    retryPaymentUrl = latestInvoice?.hosted_invoice_url ?? null;
+  }
 
   return {
     ...toSubscriptionResult(subscription),
     status: subscription.status,
     paymentMethodLabel,
-    retryPaymentUrl: latestInvoice?.hosted_invoice_url ?? null,
+    retryPaymentUrl,
     latestInvoiceAmountDue: centsToCurrencyString(latestInvoice?.amount_due),
     latestInvoiceDueDate: latestInvoice?.due_date
       ? new Date(latestInvoice.due_date * 1000).toISOString().slice(0, 10)
@@ -335,17 +461,95 @@ export async function retrieveServiceAgreementSubscriptionSnapshot(
   };
 }
 
-export async function createExpressConnectedAccount(companyId: string): Promise<{ id: string }> {
+export async function createExpressConnectedAccount(companyId: string, companyName?: string): Promise<{ id: string }> {
+  const appBaseUrl = env.APP_URL.replace(/\/$/, "");
+  const statementDescriptor = buildCardStatementDescriptor(companyName);
+  const brandingPatch = buildStripeAccountBrandingPatch();
+
   const account = await stripe.accounts.create({
     type: "express",
     metadata: {
       companyId
+    },
+    business_profile: {
+      name: companyName ?? RENVANI_STRIPE_BRAND.platformName,
+      support_url: appBaseUrl,
+      url: appBaseUrl
+    },
+    settings: {
+      branding: brandingPatch,
+      payments: {
+        statement_descriptor: statementDescriptor
+      }
     }
   });
 
   return {
     id: account.id
   };
+}
+
+export async function applyConnectAccountBranding(accountId: string, companyName?: string | null): Promise<void> {
+  const appBaseUrl = env.APP_URL.replace(/\/$/, "");
+  const statementDescriptor = buildCardStatementDescriptor(companyName);
+  const brandingPatch = buildStripeAccountBrandingPatch();
+
+  await stripe.accounts.update(accountId, {
+    business_profile: {
+      ...(companyName ? { name: companyName } : {}),
+      support_url: appBaseUrl,
+      url: appBaseUrl
+    },
+    settings: {
+      branding: brandingPatch,
+      payments: {
+        statement_descriptor: statementDescriptor
+      }
+    }
+  });
+}
+
+export type ConnectEmbeddedComponent = "account_onboarding" | "payments" | "payouts";
+
+export async function createConnectAccountSession(
+  accountId: string,
+  components: ConnectEmbeddedComponent[]
+): Promise<{ clientSecret: string }> {
+  const componentConfig: Stripe.AccountSessionCreateParams.Components = {};
+
+  if (components.includes("account_onboarding")) {
+    componentConfig.account_onboarding = { enabled: true };
+  }
+  if (components.includes("payments")) {
+    componentConfig.payments = {
+      enabled: true,
+      features: {
+        refund_management: true,
+        dispute_management: true,
+        capture_payments: true
+      }
+    };
+  }
+  if (components.includes("payouts")) {
+    componentConfig.payouts = {
+      enabled: true,
+      features: {
+        instant_payouts: true,
+        standard_payouts: true
+      }
+    };
+  }
+
+  const session = await stripe.accountSessions.create({
+    account: accountId,
+    components: componentConfig
+  });
+
+  if (!session.client_secret) {
+    throw new Error("Stripe Account Session missing client_secret");
+  }
+
+  return { clientSecret: session.client_secret };
 }
 
 export async function createConnectOnboardingLink(accountId: string): Promise<{ url: string }> {
@@ -395,6 +599,7 @@ export interface CreatePlatformBillingCheckoutInput {
   companyId: string;
   stripeCustomerId: string;
   priceId: string;
+  planTier: "flex" | "flat";
   customerEmail: string | null;
 }
 
@@ -410,18 +615,24 @@ export async function createPlatformBillingCheckoutSession(
   const session = await stripe.checkout.sessions.create({
     mode: "subscription",
     customer: input.stripeCustomerId,
-    ...(input.customerEmail ? { customer_email: input.customerEmail } : {}),
     line_items: [{ price: input.priceId, quantity: 1 }],
     success_url: `${appBaseUrl}/settings/billing?checkout=success`,
     cancel_url: `${appBaseUrl}/settings/billing?checkout=cancel`,
     metadata: {
       companyId: input.companyId,
-      billingKind: "platform_mvp"
+      billingKind: "platform_mvp",
+      planTier: input.planTier
     },
     subscription_data: {
       metadata: {
         companyId: input.companyId,
-        billingKind: "platform_mvp"
+        billingKind: "platform_mvp",
+        planTier: input.planTier
+      }
+    },
+    custom_text: {
+      submit: {
+        message: `${RENVANI_STRIPE_BRAND.platformName} subscription — billing notices come from Renvani.`
       }
     }
   });

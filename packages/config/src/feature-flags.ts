@@ -22,7 +22,15 @@ export const featureFlags = {
   // FEATURE FLAG: outbound-sms-enabled — when false, SMS sends are stubbed/disabled (STACK-08 MVP)
   outboundSmsEnabled: false,
   // FEATURE FLAG: stripe-platform-billing-mvp — STACK-13 platform subscription checkout
-  stripePlatformBillingMvp: false
+  stripePlatformBillingMvp: false,
+  // FEATURE FLAG: stripe-renvani-embedded-checkout — invoice pay on Renvani (embedded Checkout vs Stripe redirect)
+  stripeRenvaniEmbeddedCheckout: true,
+  // FEATURE FLAG: stripe-renvani-connect-embedded — Connect Account Session in settings (vs Account Links)
+  stripeRenvaniConnectEmbedded: true,
+  // FEATURE FLAG: stripe-renvani-platform-sync — STACK-14: sync platform account branding via API (test/live key from env)
+  stripeRenvaniPlatformSync: true,
+  // FEATURE FLAG: stripe-renvani-portal-urls — replace hosted_invoice_url with Renvani portal links
+  stripeRenvaniPortalUrls: true
 } as const;
 
 export type FeatureFlags = typeof featureFlags;
