@@ -14,11 +14,11 @@ import {
   buildImportChunkCommitJobId,
   buildImportChunkIdempotencyKey,
   buildImportWorkflowAuditPayloadV1,
-  hashImportWorkflowStepFingerprint,
   assertIdempotencyPayloadMatches,
   type ImportChunkCommitManifest,
   type ImportChunkCommitPayload,
 } from "@fsm/types";
+import { hashImportWorkflowStepFingerprint } from "@fsm/types/fs-migrate/import-workflow-runtime-fingerprint.node";
 
 import { assertImportPolicyVersion } from "./import-workflow-runtime.policy.js";
 
