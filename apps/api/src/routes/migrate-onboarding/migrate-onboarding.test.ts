@@ -168,6 +168,14 @@ describe("migrate onboarding wizard API", () => {
       .expect(200);
 
     expect(dedupePreview.body.totalDuplicateRows).toBe(1);
+
+    const relationalPreview = await request(app.server)
+      .get(`/api/v1/migrate/onboarding/sessions/${bundleId}/relational-preview`)
+      .set("Authorization", authorization)
+      .expect(200);
+
+    expect(relationalPreview.body.bundleId).toBe(bundleId);
+    expect(relationalPreview.body.graph.stats.customerCount).toBeGreaterThanOrEqual(0);
     const collisionKey = dedupePreview.body.collisions[0].collisionKey as string;
 
     await request(app.server)
@@ -198,6 +206,112 @@ describe("migrate onboarding wizard API", () => {
     expect(fakeDb.getTestState().activityEvents.some((event) => event.eventType === "import.bundle.commit_started")).toBe(
       true
     );
+  });
+
+  it("returns customer-property-job relational preview on step 4", async () => {
+    const { company, authorization } = createAuthContext("owner");
+
+    const createResponse = await request(app.server)
+      .post("/api/v1/migrate/onboarding/sessions")
+      .set("Authorization", authorization)
+      .send({ resumeActive: false })
+      .expect(201);
+
+    const bundleId = createResponse.body.id as string;
+
+    await request(app.server)
+      .patch(`/api/v1/migrate/onboarding/sessions/${bundleId}/source`)
+      .set("Authorization", authorization)
+      .send({ sourceSystem: "service_fusion" })
+      .expect(200);
+
+    const customerSession = fakeDb.seedImportSession({
+      companyId: company.id,
+      fileName: "customers.csv",
+      fileUrl: "https://r2.test/imports/customers.csv",
+      status: "preview",
+      entityType: "customers",
+      columnMappings: { sourceId: "sourceId", displayName: "displayName" }
+    });
+    const propertySession = fakeDb.seedImportSession({
+      companyId: company.id,
+      fileName: "locations.csv",
+      fileUrl: "https://r2.test/imports/locations.csv",
+      status: "preview",
+      entityType: "properties",
+      columnMappings: {
+        sourceId: "sourceId",
+        customerSourceId: "customerSourceId",
+        label: "label"
+      }
+    });
+    const jobSession = fakeDb.seedImportSession({
+      companyId: company.id,
+      fileName: "jobs.csv",
+      fileUrl: "https://r2.test/imports/jobs.csv",
+      status: "preview",
+      entityType: "jobs",
+      columnMappings: {
+        sourceId: "sourceId",
+        propertySourceId: "propertySourceId",
+        label: "label"
+      }
+    });
+
+    downloadFileMock.mockImplementation(async (key: string) => {
+      if (key.includes("customers")) {
+        return Buffer.from("sourceId,displayName\nC-1,Acme\n", "utf8");
+      }
+      if (key.includes("locations")) {
+        return Buffer.from("sourceId,customerSourceId,label\nP-1,C-1,Main St\n", "utf8");
+      }
+      return Buffer.from("sourceId,propertySourceId,label\nJ-1,P-1,Tune-up\n", "utf8");
+    });
+
+    await request(app.server)
+      .patch(`/api/v1/migrate/onboarding/sessions/${bundleId}/files`)
+      .set("Authorization", authorization)
+      .send({
+        files: [
+          {
+            importSessionId: customerSession.id,
+            entityType: "customers",
+            fileName: "customers.csv"
+          },
+          {
+            importSessionId: propertySession.id,
+            entityType: "properties",
+            fileName: "locations.csv"
+          },
+          {
+            importSessionId: jobSession.id,
+            entityType: "jobs",
+            fileName: "jobs.csv"
+          }
+        ]
+      })
+      .expect(200);
+
+    await request(app.server)
+      .post(`/api/v1/migrate/onboarding/sessions/${bundleId}/confirm-mappings`)
+      .set("Authorization", authorization)
+      .send({})
+      .expect(200);
+
+    const relationalPreview = await request(app.server)
+      .get(`/api/v1/migrate/onboarding/sessions/${bundleId}/relational-preview`)
+      .set("Authorization", authorization)
+      .expect(200);
+
+    expect(relationalPreview.body.graph.edges).toHaveLength(1);
+    expect(relationalPreview.body.graph.propertyJobEdges).toHaveLength(1);
+    expect(relationalPreview.body.graph.stats).toEqual({
+      customerCount: 1,
+      propertyCount: 1,
+      jobCount: 1,
+      linkedPropertyCount: 1,
+      linkedJobCount: 1
+    });
   });
 
   it("resumes the active bundle when resumeActive is true", async () => {

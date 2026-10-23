@@ -72,6 +72,15 @@ export {
   type ImportInvoiceBalanceEntityResolver,
 } from "./import-invoice-balance-commit.service.js";
 export {
+  commitCommunicationsRows,
+  commitImportedCommunicationRows,
+  mapCommunicationsRow,
+  resolveSourceSystemForCommunicationsImport,
+  softDeleteCommunicationsImport,
+  validateCommunicationsRows,
+  type ImportCommunicationsEntityResolver,
+} from "./import-communications-commit.js";
+export {
   commitImportedEstimateRows,
   commitImportedJobRows,
   createDbHistoryChunkResolver,
