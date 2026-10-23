@@ -6,7 +6,7 @@ import { setupTestEnv } from "../../test-support/env-setup.js";
 
 const JWT_SECRET = "jwt_secret";
 const JWT_REFRESH_SECRET = "jwt_refresh_secret";
-const sendPasswordResetEmailMock = vi.hoisted(() => vi.fn());
+const notificationsQueueAddMock = vi.hoisted(() => vi.fn());
 
 setupTestEnv();
 
@@ -23,11 +23,10 @@ vi.mock("@fsm/db", async () => {
 vi.mock("@fsm/jobs", () => ({
   aiQueue: {
     add: vi.fn()
+  },
+  notificationsQueue: {
+    add: notificationsQueueAddMock
   }
-}));
-
-vi.mock("../../lib/email.js", () => ({
-  sendPasswordResetEmail: sendPasswordResetEmailMock
 }));
 
 type BuildAppModule = typeof import("../../app.js");
@@ -49,7 +48,7 @@ beforeAll(async () => {
 
 beforeEach(async () => {
   fakeDb.resetTestState();
-  sendPasswordResetEmailMock.mockReset();
+  notificationsQueueAddMock.mockReset();
   app = await buildAppModule.buildApp();
   await app.ready();
 });
@@ -198,7 +197,7 @@ describe("auth and company routes", () => {
 
   it("POST /auth/forgot-password returns 200 for existing and nonexistent email", async () => {
     await registerUser();
-    sendPasswordResetEmailMock.mockRejectedValueOnce(new Error("SendGrid down"));
+    notificationsQueueAddMock.mockRejectedValueOnce(new Error("Redis down"));
 
     const existingResponse = await request(app.server).post("/api/v1/auth/forgot-password").send({
       email: "owner@example.com"

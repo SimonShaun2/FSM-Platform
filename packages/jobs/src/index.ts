@@ -10,11 +10,13 @@ export {
   fsmRetainFailedJobsForDlq
 } from "./queue-policy.js";
 export { enqueueMigrateFileBatchJob } from "./enqueue-migrate-file-batch.js";
+export { enqueueImportFileLinkJob } from "./enqueue-import-file-link.js";
 export { enqueueMigrateFileBatchFailedObjectsRetry } from "./enqueue-migrate-file-batch-retry.js";
 export {
   buildMigrateFileBatchFailedObjectsRetryPayload,
   buildMigrateFileBatchRetryJobId
 } from "./migrate-file-batch-retry.js";
+export { findLatestMigrateFileBatchJob } from "./migrate-file-batch-job-resolution.js";
 export { listDeadLetterJobs } from "./dead-letter-visibility.js";
 export { enqueueImportChunkCommitJob } from "./enqueue-import-chunk-commit.js";
 export { enqueueQboSyncPushJob, enqueueQboSyncPullJob } from "./enqueue-qbo-sync.js";
@@ -58,6 +60,15 @@ export {
 } from "./import-equipment-commit.js";
 export type { ImportEquipmentCommitPayload } from "./import-equipment-commit.js";
 export { enqueueImportEquipmentCommitJob } from "./enqueue-import-equipment-commit.js";
+export {
+  SEND_VIP_MEMBERSHIP_EMAIL_JOB_NAME,
+  buildVipDunningEmailJobId,
+  buildVipRenewalEmailJobId,
+  buildVipWelcomeEmailJobId,
+  cancelScheduledVipMembershipDunning,
+  enqueueVipMembershipEmail,
+  scheduleVipMembershipDunningEmails
+} from "./vip-membership-email.js";
 export {
   QUEUE_PREFIX,
   QUEUE_NAMES,
