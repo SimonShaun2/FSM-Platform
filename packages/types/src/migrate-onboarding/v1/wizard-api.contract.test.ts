@@ -90,19 +90,26 @@ describe(`${MIGRATE_ONBOARDING_WIZARD_API_CONTRACT_ID}`, () => {
         customers: [],
         properties: [],
         jobs: [],
+        estimates: [],
         edges: [],
         propertyJobEdges: [],
+        jobEstimateEdges: [],
         orphanPropertyCount: 0,
         orphanJobCount: 0,
+        orphanEstimateCount: 0,
         unmatchedCustomerKeys: [],
         unmatchedPropertyKeys: [],
+        unmatchedJobKeys: [],
+        historyDepth: [],
         joinIssues: [],
         stats: {
           customerCount: 0,
           propertyCount: 0,
           jobCount: 0,
+          estimateCount: 0,
           linkedPropertyCount: 0,
-          linkedJobCount: 0
+          linkedJobCount: 0,
+          linkedEstimateCount: 0
         }
       }
     });

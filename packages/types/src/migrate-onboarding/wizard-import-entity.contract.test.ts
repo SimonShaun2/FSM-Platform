@@ -10,8 +10,13 @@ import {
 } from "./wizard-import-entity.contract.js";
 
 describe(`${WIZARD_V1_IMPORT_ENTITY_CONTRACT_ID}`, () => {
-  it("ships exactly customers, properties, and jobs on the wizard", () => {
-    expect(WIZARD_V1_IMPORT_ENTITY_TYPES).toEqual(["customers", "properties", "jobs"]);
+  it("ships customers, properties, jobs, and estimates on the wizard", () => {
+    expect(WIZARD_V1_IMPORT_ENTITY_TYPES).toEqual([
+      "customers",
+      "properties",
+      "jobs",
+      "estimates"
+    ]);
   });
 
   it("maps every wizard entity into golden bundle entity types", () => {
@@ -25,6 +30,8 @@ describe(`${WIZARD_V1_IMPORT_ENTITY_CONTRACT_ID}`, () => {
     const pipelineOnly = listPipelineOnlyGoldenEntityTypes();
     expect(pipelineOnly).toContain("invoices");
     expect(pipelineOnly).toContain("payments");
+    expect(pipelineOnly).toContain("vip_membership_tiers");
+    expect(pipelineOnly).toContain("vip_memberships");
 
     for (const entityType of pipelineOnly) {
       const result = migrateOnboardingFileRefSchema.safeParse({

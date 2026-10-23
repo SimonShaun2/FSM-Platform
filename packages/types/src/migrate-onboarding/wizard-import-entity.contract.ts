@@ -16,7 +16,7 @@ export type WizardV1ImportEntityType = WizardImportEntityType;
  */
 export const GOLDEN_BUNDLE_PIPELINE_ENTITY_TYPES = goldenBundleEntityTypeSchema.options;
 
-const relationalPreviewFileKindSchema = z.enum(["customers", "properties", "jobs"]);
+const relationalPreviewFileKindSchema = z.enum(["customers", "properties", "jobs", "estimates"]);
 
 export const WIZARD_RELATIONAL_PREVIEW_FILE_KINDS = relationalPreviewFileKindSchema.options;
 
