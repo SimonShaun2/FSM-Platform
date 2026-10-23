@@ -898,6 +898,7 @@ export const estimateItems = pgTable("estimate_items", {
   id: id(),
   estimateId: uuid("estimate_id").notNull().references(() => estimates.id, { onDelete: "cascade" }),
   companyId: companyId(),
+  productCatalogId: uuid("product_catalog_id").references(() => productCatalog.id),
   // Item
   name: varchar("name", { length: 255 }).notNull(),
   description: text("description"),

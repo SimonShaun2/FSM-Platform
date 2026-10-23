@@ -140,6 +140,7 @@ function toInvoice(row: InvoiceRow): Invoice {
 function toInvoiceItem(row: InvoiceItemRow): InvoiceItem {
   return {
     ...row,
+    priceBookItemId: row.productCatalogId,
     itemType: normalizeInvoiceItemType(row.itemType)
   };
 }
@@ -829,7 +830,8 @@ export async function createInvoice(
           quantity: item.quantity,
           unitPrice: item.unitPrice,
           isTaxable: item.isTaxable ?? true,
-          sortOrder: item.sortOrder ?? 0
+          sortOrder: item.sortOrder ?? 0,
+          priceBookItemId: item.productCatalogId
         }))
       : normalizedInput.items;
 
@@ -851,7 +853,10 @@ export async function createInvoice(
               )
             ),
             isTaxable: item.isTaxable ?? true,
-            sortOrder: item.sortOrder ?? index
+            sortOrder: item.sortOrder ?? index,
+            ...("priceBookItemId" in item && item.priceBookItemId
+              ? { productCatalogId: item.priceBookItemId }
+              : {})
           }))
         )
         .returning();
