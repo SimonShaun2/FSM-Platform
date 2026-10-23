@@ -424,6 +424,9 @@ importers:
       '@aws-sdk/s3-request-presigner':
         specifier: 3.1038.0
         version: 3.1038.0
+      '@fsm/import-engine':
+        specifier: workspace:*
+        version: link:../import-engine
       '@fsm/import-normalize':
         specifier: workspace:*
         version: link:../import-normalize

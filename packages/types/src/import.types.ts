@@ -12,6 +12,7 @@ export type ImportSessionStatus =
 export type ImportEntityType =
   | "customers"
   | "jobs"
+  | "estimates"
   | "price_book"
   | "notes"
   | "communications";
