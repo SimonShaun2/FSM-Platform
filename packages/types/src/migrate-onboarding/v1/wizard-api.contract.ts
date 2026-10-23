@@ -1,3 +1,5 @@
+import { z } from "zod";
+
 import {
   applyMigrateDedupeDecisionsBodySchema,
   createMigrateOnboardingSessionBodySchema,
@@ -10,6 +12,13 @@ import {
   MIGRATE_ONBOARDING_CONTRACT_ID,
   setMigrateOnboardingSourceBodySchema
 } from "./schemas.js";
+import {
+  applySavedCardMigrationMappingsBodySchema,
+  confirmStripeImportBodySchema,
+  savedCardMigrationSchema,
+  sendSavedCardFallbackEmailBodySchema,
+  startSavedCardMigrationBodySchema
+} from "../../saved-card-migration/v1/schemas.js";
 
 export { MIGRATE_ONBOARDING_CONTRACT_ID };
 
@@ -69,6 +78,21 @@ export const MIGRATE_ONBOARDING_WIZARD_API_ROUTES: readonly MigrateOnboardingWiz
   },
   {
     method: "POST",
+    path: "/api/v1/migrate/onboarding/sessions/:bundleId/file-link/run",
+    responseSchemaId: "migrateOnboardingBundle"
+  },
+  {
+    method: "GET",
+    path: "/api/v1/migrate/onboarding/sessions/:bundleId/file-link/preview",
+    responseSchemaId: "migrateOnboardingBundle"
+  },
+  {
+    method: "PATCH",
+    path: "/api/v1/migrate/onboarding/sessions/:bundleId/file-link/decisions",
+    responseSchemaId: "migrateOnboardingBundle"
+  },
+  {
+    method: "POST",
     path: "/api/v1/migrate/onboarding/sessions/:bundleId/acknowledge-preview",
     responseSchemaId: "migrateOnboardingBundle"
   },
@@ -92,6 +116,35 @@ export const MIGRATE_ONBOARDING_WIZARD_API_ROUTES: readonly MigrateOnboardingWiz
     method: "POST",
     path: "/api/v1/migrate/onboarding/sessions/:bundleId/commit",
     responseSchemaId: "migrateOnboardingCommitResponse"
+  },
+  {
+    method: "POST",
+    path: "/api/v1/migrate/onboarding/sessions/:bundleId/saved-card-migration",
+    requestBodySchemaId: "startSavedCardMigrationBody",
+    responseSchemaId: "savedCardMigration"
+  },
+  {
+    method: "GET",
+    path: "/api/v1/migrate/onboarding/sessions/:bundleId/saved-card-migration",
+    responseSchemaId: "savedCardMigrationStatus"
+  },
+  {
+    method: "POST",
+    path: "/api/v1/migrate/onboarding/sessions/:bundleId/saved-card-migration/confirm-stripe-import",
+    requestBodySchemaId: "confirmStripeImportBody",
+    responseSchemaId: "savedCardMigration"
+  },
+  {
+    method: "POST",
+    path: "/api/v1/migrate/onboarding/sessions/:bundleId/saved-card-migration/apply-mappings",
+    requestBodySchemaId: "applySavedCardMigrationMappingsBody",
+    responseSchemaId: "savedCardMigration"
+  },
+  {
+    method: "POST",
+    path: "/api/v1/migrate/onboarding/sessions/:bundleId/saved-card-migration/send-fallback-email",
+    requestBodySchemaId: "sendSavedCardFallbackEmailBody",
+    responseSchemaId: "savedCardMigration"
   }
 ];
 
@@ -99,7 +152,11 @@ export const migrateOnboardingWizardRequestSchemas = {
   createMigrateOnboardingSessionBody: createMigrateOnboardingSessionBodySchema,
   setMigrateOnboardingSourceBody: setMigrateOnboardingSourceBodySchema,
   linkMigrateOnboardingFilesBody: linkMigrateOnboardingFilesBodySchema,
-  applyMigrateDedupeDecisionsBody: applyMigrateDedupeDecisionsBodySchema
+  applyMigrateDedupeDecisionsBody: applyMigrateDedupeDecisionsBodySchema,
+  startSavedCardMigrationBody: startSavedCardMigrationBodySchema,
+  confirmStripeImportBody: confirmStripeImportBodySchema,
+  applySavedCardMigrationMappingsBody: applySavedCardMigrationMappingsBodySchema,
+  sendSavedCardFallbackEmailBody: sendSavedCardFallbackEmailBodySchema
 } as const;
 
 export const migrateOnboardingWizardResponseSchemas = {
@@ -107,5 +164,9 @@ export const migrateOnboardingWizardResponseSchemas = {
   migrateOnboardingSourceCatalogEntry: migrateOnboardingSourceCatalogEntrySchema,
   migrateDedupePreviewResponse: migrateDedupePreviewResponseSchema,
   migrateRelationalPreviewResponse: migrateRelationalPreviewResponseSchema,
-  migrateOnboardingCommitResponse: migrateOnboardingCommitResponseSchema
+  migrateOnboardingCommitResponse: migrateOnboardingCommitResponseSchema,
+  savedCardMigration: savedCardMigrationSchema,
+  savedCardMigrationStatus: z.object({
+    migration: savedCardMigrationSchema.nullable()
+  })
 } as const;
