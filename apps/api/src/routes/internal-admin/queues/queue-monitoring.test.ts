@@ -3,7 +3,10 @@ import { afterEach, beforeAll, beforeEach, describe, expect, it, vi } from "vite
 
 import {
   QUEUE_PLATFORM_CONTRACT_VERSION,
+<<<<<<< HEAD
   type DeadLetterJobListV1,
+=======
+>>>>>>> origin/dev
   type PlatformQueueMonitoringSnapshotV1
 } from "@fsm/types";
 
@@ -39,8 +42,12 @@ vi.mock("@fsm/jobs", () => ({
 }));
 
 vi.mock("../../../services/queue-monitoring.service.js", () => ({
+<<<<<<< HEAD
   fetchPlatformQueueMonitoringSnapshot: vi.fn(),
   fetchPlatformDeadLetterJobs: vi.fn()
+=======
+  fetchPlatformQueueMonitoringSnapshot: vi.fn()
+>>>>>>> origin/dev
 }));
 
 type BuildAppModule = typeof import("../../../app.js");
@@ -78,6 +85,7 @@ const sampleSnapshot: PlatformQueueMonitoringSnapshotV1 = {
   ]
 };
 
+<<<<<<< HEAD
 const sampleDeadLetterList: DeadLetterJobListV1 = {
   contractVersion: QUEUE_PLATFORM_CONTRACT_VERSION,
   sourceQueue: "imports",
@@ -98,6 +106,8 @@ const sampleDeadLetterList: DeadLetterJobListV1 = {
   nextCursor: null
 };
 
+=======
+>>>>>>> origin/dev
 beforeAll(async () => {
   buildAppModule = await import("../../../app.js");
   fakeDb = await import("../../../test-support/fake-db.js");
@@ -110,7 +120,10 @@ beforeEach(async () => {
   vi.mocked(queueMonitoringService.fetchPlatformQueueMonitoringSnapshot).mockResolvedValue(
     sampleSnapshot
   );
+<<<<<<< HEAD
   vi.mocked(queueMonitoringService.fetchPlatformDeadLetterJobs).mockResolvedValue(sampleDeadLetterList);
+=======
+>>>>>>> origin/dev
   app = await buildAppModule.buildApp();
   await app.ready();
 });
@@ -222,6 +235,7 @@ describe("GET /api/v1/internal/admin/queues/monitoring (STACK-05)", () => {
     expect(response.statusCode).toBe(401);
   });
 });
+<<<<<<< HEAD
 
 describe("GET /api/v1/internal/admin/queues/:queueName/dead-letter (FS-MIGRATE)", () => {
   it("returns DLQ job summaries for internal admins", async () => {
@@ -238,3 +252,5 @@ describe("GET /api/v1/internal/admin/queues/:queueName/dead-letter (FS-MIGRATE)"
     });
   });
 });
+=======
+>>>>>>> origin/dev

@@ -14,6 +14,11 @@ import {
   importSessions,
 } from "@fsm/db";
 import {
+  isXlsxImportFileName,
+  parseXlsxBufferToSheetRows,
+  sheetRowsToRecordRows,
+} from "@fsm/import-engine";
+import {
   IMPORT_CHUNK_COMMIT_JOB_NAME,
   ImportChunkCommitPayloadSchema,
   buildImportChunkIdempotencyKey,
@@ -79,6 +84,20 @@ function normalizeTextValue(value: string | null | undefined): string | null {
 
   const trimmedValue = sanitizeSpreadsheetCell(value.trim());
   return trimmedValue.length > 0 ? trimmedValue : null;
+}
+
+function parseTabularRows(buffer: Buffer, fileName: string): ParsedCsvRow[] {
+  if (isXlsxImportFileName(fileName)) {
+    const sheet = parseXlsxBufferToSheetRows(buffer);
+    const recordRows = sheetRowsToRecordRows(sheet.headers, sheet.rows);
+
+    return recordRows.map((values, index) => ({
+      rowNumber: index + 2,
+      values,
+    }));
+  }
+
+  return parseCsv(buffer);
 }
 
 function parseCsv(buffer: Buffer): ParsedCsvRow[] {
@@ -246,7 +265,7 @@ async function commitCustomerChunk(
   importSession: ImportSessionRow,
 ): Promise<ChunkCommitResult> {
   const fileBuffer = await downloadFile(getFileKeyFromUrl(importSession.fileUrl));
-  const parsedRows = parseCsv(fileBuffer);
+  const parsedRows = parseTabularRows(fileBuffer, importSession.fileName);
   const { start, end } = resolveRowWindow(payload, parsedRows.length);
   const columnMapping = normalizeColumnMappings(importSession.columnMappings);
 

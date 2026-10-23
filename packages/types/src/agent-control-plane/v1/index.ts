@@ -8,6 +8,7 @@ export * from "./tenant-context.js";
 export * from "./agent-action-state.js";
 export * from "./agent-action-state-machine.js";
 export * from "./agent-action-proposal.js";
+export * from "./agent-audit.js";
 export * from "./queue-envelope.js";
 export * from "./http-route-schemas.js";
 export * from "./tools/registry.js";

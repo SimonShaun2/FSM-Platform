@@ -1,8 +1,8 @@
 import { beforeAll, beforeEach, describe, expect, it, vi } from "vitest";
 
-import { IMPORT_QUEUE_JOB_NAMES, buildMigrateFileBatchIdempotencyKey } from "@fsm/types";
+import { buildMigrateFileBatchIdempotencyKey } from "@fsm/types";
 
-const addImportsQueueJob = vi.fn();
+const enqueueMigrateFileBatchJob = vi.fn();
 
 vi.mock("drizzle-orm", async () => {
   const helper = await import("../test-support/fake-db.js");
@@ -15,15 +15,7 @@ vi.mock("@fsm/db", async () => {
 });
 
 vi.mock("@fsm/jobs", () => ({
-  importsQueue: {
-    add: addImportsQueueJob
-  },
-  buildDefaultEnqueueJobOptions: (overrides: Record<string, unknown> = {}) => ({
-    attempts: 5,
-    backoff: { type: "exponential", delay: 5000 },
-    removeOnFail: false,
-    ...overrides
-  })
+  enqueueMigrateFileBatchJob
 }));
 
 import { setupTestEnv } from "../test-support/env-setup.js";
@@ -44,7 +36,7 @@ describe("import migrate-file-batch enqueue", () => {
   const importBundleId = "33333333-3333-4333-8333-333333333333";
 
   beforeEach(() => {
-    addImportsQueueJob.mockReset();
+    enqueueMigrateFileBatchJob.mockReset();
     fakeDb.resetTestState();
   });
 
@@ -60,7 +52,7 @@ describe("import migrate-file-batch enqueue", () => {
 
     const count = await scheduleMigrateFileBatchesFromSessionAiInferences(company.id, session.id);
     expect(count).toBe(0);
-    expect(addImportsQueueJob).not.toHaveBeenCalled();
+    expect(enqueueMigrateFileBatchJob).not.toHaveBeenCalled();
   });
 
   it("enqueues migrate-file-batch jobs with R2 keys under company imports bundle prefix", async () => {
@@ -88,8 +80,7 @@ describe("import migrate-file-batch enqueue", () => {
     const count = await scheduleMigrateFileBatchesFromSessionAiInferences(company.id, session.id);
 
     expect(count).toBe(1);
-    expect(addImportsQueueJob).toHaveBeenCalledWith(
-      IMPORT_QUEUE_JOB_NAMES.migrateFileBatch,
+    expect(enqueueMigrateFileBatchJob).toHaveBeenCalledWith(
       expect.objectContaining({
         companyId: company.id,
         importSessionId: session.id,
@@ -100,8 +91,7 @@ describe("import migrate-file-batch enqueue", () => {
             r2Key: `${company.id}/imports/${importBundleId}/media/photo-1.jpg`
           })
         ]
-      }),
-      expect.any(Object)
+      })
     );
   });
 });

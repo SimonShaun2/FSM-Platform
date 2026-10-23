@@ -1,10 +1,14 @@
 import type { FastifyReply, FastifyRequest } from "fastify";
 
+<<<<<<< HEAD
 import {
   fetchPlatformDeadLetterJobs,
   fetchPlatformQueueMonitoringSnapshot
 } from "../../../services/queue-monitoring.service.js";
 import { listDeadLetterJobsParamsSchema, listDeadLetterJobsQuerySchema } from "./schemas.js";
+=======
+import { fetchPlatformQueueMonitoringSnapshot } from "../../../services/queue-monitoring.service.js";
+>>>>>>> origin/dev
 
 export async function getPlatformQueueMonitoringHandler(
   _request: FastifyRequest,
@@ -13,6 +17,7 @@ export async function getPlatformQueueMonitoringHandler(
   const snapshot = await fetchPlatformQueueMonitoringSnapshot();
   return reply.send(snapshot);
 }
+<<<<<<< HEAD
 
 export async function listPlatformDeadLetterJobsHandler(
   request: FastifyRequest,
@@ -26,3 +31,5 @@ export async function listPlatformDeadLetterJobsHandler(
   });
   return reply.send(jobs);
 }
+=======
+>>>>>>> origin/dev
