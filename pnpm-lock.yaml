@@ -59,6 +59,9 @@ importers:
       '@fsm/db':
         specifier: workspace:*
         version: link:../../packages/db
+      '@fsm/import-normalize':
+        specifier: workspace:*
+        version: link:../../packages/import-normalize
       '@fsm/jobs':
         specifier: workspace:*
         version: link:../../packages/jobs
