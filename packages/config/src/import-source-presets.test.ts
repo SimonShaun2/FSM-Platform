@@ -106,6 +106,15 @@ describe("import-source-presets", () => {
     ).toBe("quickbooks_desktop_invoices");
   });
 
+  it("infers QuickBooks Desktop payments export", () => {
+    expect(
+      inferImportSourcePresetForSession(
+        ["Payment ID", "Customer", "Payment Date", "Amount", "Invoice ID"],
+        "payments"
+      )
+    ).toBe("quickbooks_desktop_payments");
+  });
+
   it("infers QuickBooks Online payments export", () => {
     expect(
       inferImportSourcePresetForSession(
