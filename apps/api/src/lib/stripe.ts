@@ -4,6 +4,10 @@ import Stripe from "stripe";
 import { env } from "@fsm/config";
 import { featureFlags } from "@fsm/config/feature-flags";
 import {
+  buildAgreementRetryPortalUrl,
+  signAgreementPortalToken
+} from "@fsm/config/agreement-portal-token";
+import {
   buildCardStatementDescriptor,
   buildInvoicePaymentReturnUrl,
   buildStripeAccountBrandingPatch,
@@ -364,6 +368,7 @@ export async function createServiceAgreementSubscription(
   const subscriptionParams: Stripe.SubscriptionCreateParams = {
     customer: input.stripeCustomerId,
     items,
+    collection_method: "charge_automatically",
     transfer_data: {
       destination: input.companyStripeAccountId
     },
@@ -412,8 +417,14 @@ export async function pauseServiceAgreementSubscription(
   return toSubscriptionResult(subscription);
 }
 
+export interface ServiceAgreementPortalContext {
+  companyId: string;
+  agreementId: string;
+}
+
 export async function retrieveServiceAgreementSubscriptionSnapshot(
-  subscriptionId: string
+  subscriptionId: string,
+  portalContext?: ServiceAgreementPortalContext
 ): Promise<ServiceAgreementSubscriptionSnapshotResult> {
   const subscription = await stripe.subscriptions.retrieve(subscriptionId, {
     expand: ["default_payment_method", "latest_invoice", "latest_invoice.default_payment_method"]
@@ -426,12 +437,23 @@ export async function retrieveServiceAgreementSubscriptionSnapshot(
     ? latestInvoice.default_payment_method
     : null;
   const paymentMethodLabel = buildPaymentMethodLabel(subscriptionPaymentMethod ?? invoicePaymentMethod);
+  const appBaseUrl = env.APP_URL.replace(/\/$/, "");
+  const openInvoice =
+    latestInvoice?.status === "open" || latestInvoice?.status === "uncollectible";
+
+  let retryPaymentUrl: string | null = null;
+  if (featureFlags.stripeRenvaniPortalUrls && openInvoice && portalContext) {
+    const portalToken = signAgreementPortalToken(portalContext.companyId, portalContext.agreementId);
+    retryPaymentUrl = buildAgreementRetryPortalUrl(appBaseUrl, portalToken);
+  } else if (!featureFlags.stripeRenvaniPortalUrls) {
+    retryPaymentUrl = latestInvoice?.hosted_invoice_url ?? null;
+  }
 
   return {
     ...toSubscriptionResult(subscription),
     status: subscription.status,
     paymentMethodLabel,
-    retryPaymentUrl: latestInvoice?.hosted_invoice_url ?? null,
+    retryPaymentUrl,
     latestInvoiceAmountDue: centsToCurrencyString(latestInvoice?.amount_due),
     latestInvoiceDueDate: latestInvoice?.due_date
       ? new Date(latestInvoice.due_date * 1000).toISOString().slice(0, 10)

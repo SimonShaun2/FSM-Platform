@@ -7,6 +7,7 @@ import { readRenvaniSubscriptionPlan, resolveCompanyConnectApplicationFeeFractio
 
 import { featureFlags } from "@fsm/config/feature-flags";
 
+import { syncRenvaniStripePlatformPolicies } from "../lib/stripe-platform-settings.js";
 import {
   applyConnectAccountBranding,
   createConnectAccountSession,
@@ -186,6 +187,10 @@ export async function createOnboardingLink(companyId: string): Promise<{ url: st
   }
 
   await applyConnectAccountBranding(accountId, persistedCompany.name);
+
+  if (featureFlags.stripeRenvaniPlatformSync) {
+    await syncRenvaniStripePlatformPolicies().catch(() => undefined);
+  }
 
   return createConnectOnboardingLink(accountId);
 }

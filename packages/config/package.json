@@ -58,6 +58,10 @@
       "types": "./dist/stripe-branding.d.ts",
       "import": "./dist/stripe-branding.js"
     },
+    "./agreement-portal-token": {
+      "types": "./dist/agreement-portal-token.d.ts",
+      "import": "./dist/agreement-portal-token.js"
+    },
     "./langfuse-env": {
       "types": "./dist/langfuse-env.d.ts",
       "import": "./dist/langfuse-env.js"

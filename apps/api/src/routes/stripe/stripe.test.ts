@@ -82,11 +82,13 @@ beforeEach(async () => {
   addAiQueueJob.mockReset();
   addInvoiceQueueJob.mockReset();
   addNotificationQueueJob.mockReset();
+  applyConnectAccountBrandingMock.mockReset();
   createConnectOnboardingLinkMock.mockReset();
   createExpressConnectedAccountMock.mockReset();
   createExpressDashboardLinkMock.mockReset();
   retrieveConnectedAccountMock.mockReset();
   createExpressConnectedAccountMock.mockResolvedValue({ id: "acct_new_123" });
+  applyConnectAccountBrandingMock.mockResolvedValue(undefined);
   createConnectOnboardingLinkMock.mockResolvedValue({ url: "https://stripe.test/onboard" });
   createExpressDashboardLinkMock.mockResolvedValue({ url: "https://stripe.test/dashboard" });
   retrieveConnectedAccountMock.mockResolvedValue({

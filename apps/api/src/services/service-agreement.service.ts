@@ -204,7 +204,10 @@ async function loadAgreementStripeSnapshot(plan: MaintenancePlanRow): Promise<Ag
   }
 
   try {
-    const snapshot = await retrieveServiceAgreementSubscriptionSnapshot(plan.stripeSubscriptionId);
+    const snapshot = await retrieveServiceAgreementSubscriptionSnapshot(plan.stripeSubscriptionId, {
+      companyId: plan.companyId,
+      agreementId: plan.id
+    });
 
     return {
       stripeStatus: toStripeStatus(snapshot.status),
@@ -1247,7 +1250,10 @@ export async function retryAgreementPayment(
     throw new AppError(ErrorCode.CONFLICT, "Retry payment is unavailable for this agreement");
   }
 
-  const stripeSnapshot = await retrieveServiceAgreementSubscriptionSnapshot(agreement.stripeSubscriptionId);
+  const stripeSnapshot = await retrieveServiceAgreementSubscriptionSnapshot(agreement.stripeSubscriptionId, {
+    companyId: agreement.companyId,
+    agreementId: agreement.id
+  });
 
   if (!stripeSnapshot.retryPaymentUrl) {
     throw new AppError(ErrorCode.CONFLICT, "No retry payment link is currently available");
