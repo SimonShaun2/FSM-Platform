@@ -17,7 +17,11 @@ const errorResponseSchema = {
   properties: {
     error: { type: "string" },
     message: { type: "string" },
-    requestId: { type: "string" }
+    requestId: { type: "string" },
+    fields: {
+      type: "object",
+      additionalProperties: { type: "string" }
+    }
   }
 } as const;
 

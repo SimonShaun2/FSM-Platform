@@ -26,6 +26,7 @@ import {
   clearBookingIdempotencyKey,
   getOrCreateBookingIdempotencyKey
 } from "@/src/lib/booking-idempotency";
+import { ApiError } from "@/src/lib/api";
 import { showToast } from "@/src/stores/toast.store";
 import { useBookingFlowStore } from "@/src/stores/booking-flow.store";
 import { cn } from "@/src/lib/utils";
@@ -405,15 +406,36 @@ export function BookingFlowClient({
       setReferenceNumber(response.confirmation.referenceNumber);
       router.push(buildConfirmedHref(slug, source, response.confirmation.referenceNumber));
     } catch (error) {
-      const message = error instanceof Error ? error.message : "Please try again.";
-      const isConflict = message.toLowerCase().includes("conflict") || message.includes("409");
+      if (error instanceof ApiError && error.status === 409) {
+        const reason =
+          typeof error.payload.fields?.reason === "string" ? error.payload.fields.reason : null;
 
+        if (
+          reason === "idempotency_payload_mismatch" ||
+          error.payload.message.toLowerCase().includes("different payload")
+        ) {
+          clearBookingIdempotencyKey(slug);
+          showToast({
+            tone: "error",
+            title: "This form changed",
+            description: "Please review your details and submit again."
+          });
+          return;
+        }
+
+        showToast({
+          tone: "error",
+          title: "Request already submitted",
+          description: "Start again from the contact step if you need to change your details."
+        });
+        return;
+      }
+
+      const message = error instanceof Error ? error.message : "Please try again.";
       showToast({
         tone: "error",
-        title: isConflict ? "Request already submitted" : "Booking could not be confirmed",
-        description: isConflict
-          ? "Start again from the contact step if you need to change your details."
-          : message
+        title: "Could not submit your request",
+        description: message
       });
     }
   }
@@ -995,16 +1017,18 @@ export function BookingConfirmed({
             <ul className="mt-3 space-y-2 text-sm text-neutral-600">
               <li className="flex items-start gap-2">
                 <ShieldCheck className="mt-0.5 h-4 w-4 text-success" />
-                Confirmation text within 2 hours
-              </li>
-              <li className="flex items-start gap-2">
-                <MapPin className="mt-0.5 h-4 w-4 text-brand-accent" />
-                Technician ETA and on-the-way message
+                We review your request — scheduling is not confirmed until our team reaches out.
               </li>
               <li className="flex items-start gap-2">
                 <Phone className="mt-0.5 h-4 w-4 text-brand-accent" />
-                We may call if we need more details
+                We may call or email if we need more details
               </li>
+              {confirmation?.scheduledStart ? (
+                <li className="flex items-start gap-2">
+                  <MapPin className="mt-0.5 h-4 w-4 text-brand-accent" />
+                  Your proposed time is noted; we will confirm the final appointment window.
+                </li>
+              ) : null}
             </ul>
           </div>
 
