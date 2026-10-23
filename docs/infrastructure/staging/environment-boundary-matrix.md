@@ -53,7 +53,7 @@
 
 ## FS-93 / ADR-FS-STACK gate
 
-[ADR-FS-93](../adr/ADR-FS-93-managed-platform-boundaries.md) is **Accepted** for Render compute, Vercel web, Render Key Value (BullMQ), and R2. [ADR-FS-STACK](../adr/ADR-FS-STACK-renvani-official-platform.md) **partially supersedes** FS-93 for **PostgreSQL → Neon** and **staff identity → Clerk** (JWT remains in parallel until STACK-02 cutover).
+[ADR-FS-93](../../adr/ADR-FS-93-managed-platform-boundaries.md) is **Accepted** for Render compute, Vercel web, Render Key Value (BullMQ), and R2. [ADR-FS-STACK](../../adr/ADR-FS-STACK-renvani-official-platform.md) **partially supersedes** FS-93 for **PostgreSQL → Neon** and **staff identity → Clerk** (JWT remains in parallel until STACK-02 cutover).
 
 This matrix therefore **may name** those official providers in row labels and notes (Neon, Render, Vercel, R2, Clerk) — as this document already does for staging tiers.
 
