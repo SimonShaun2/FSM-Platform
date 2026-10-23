@@ -1,68 +1,61 @@
-# MVP P0 assignments — Batches 7–9 (active dispatch)
+# MVP P0 assignments — winter dispatch + FS-MIGRATE epic
 
-**Authority:** Founder MVP-first policy (`BATCH-PLAN-5-9.md` §0) + winter urgency (`MVP-SHORTEST-PATH-WINTER-2026.md`, `MVP-MIGRATION-AI-IMPORT.md`) · **PO:** Elena  
-**Tech Lead:** Grace · **Rule:** Each PR needs **Isaac + Lily + Sam PASS @ exact head** before `batch-ci` merge. Request reviewers **within 1h of push**.
-
-**Integration base:** `dev` (merge-from-dev only on conflict — never rebase signed heads).
-
----
-
-## MVP P0 backlog (Elena cut-line)
-
-| Priority | Ticket | Lifecycle | Status |
-| --- | --- | --- | --- |
-| P0 | **FS-11 / migration** | Migrate | AI-guided import + presets (Jobber/HCP/ST/**QuickBooks**) — [#92](https://github.com/SimonShaun2/Renvani/pull/92); QB items/invoices P0b/c next |
-| P0 | **FS-38** | Discover | [#88](https://github.com/SimonShaun2/Renvani/pull/88) |
-| P0 | **FS-21** | Book | [#89](https://github.com/SimonShaun2/Renvani/pull/89) |
-| P0 | **FS-58** | Discover/Book | [#90](https://github.com/SimonShaun2/Renvani/pull/90) |
-| P0 | **Dispatch SSE** | Serve | [#86](https://github.com/SimonShaun2/Renvani/pull/86) @ `6ca557f` — Isaac PASS, Sam ACCEPT; **Lily @ head pending** |
-| P0 | **FS-72** | Repeat | #85 merged; [#91](https://github.com/SimonShaun2/Renvani/pull/91) |
-| P0 | **FS-87** | Serve | #83 merged |
-| P0 | **Migration plan** | Migrate | [#93](https://github.com/SimonShaun2/Renvani/pull/93) winter shortest path |
-
-**Founder gate (no dev work):** QuickBooks OAuth / Intuit developer app — Ezra documents only until founder approves budget.
+**Authority:** `BATCH-PLAN-5-9.md` §0 · Founder **7:18–7:21 PM CT** · **PO:** Elena  
+**Epic:** [`MVP-MIGRATION-EPIC-FS-MIGRATE.md`](./MVP-MIGRATION-EPIC-FS-MIGRATE.md) — **one generic AI importer** + source presets (Service Fusion, Jobber, ST, HCP, QB Online/Desktop).  
+**Tech Lead:** Grace · **Sign-off:** Isaac + Lily + Sam @ head → `batch-ci` → merge.
 
 ---
 
-## Migration squad (16 devs — parallel, no idle)
+## P0 backlog (Elena)
 
-| # | Dev | Pod | Track | Deliverable | Branch / PR |
-| --- | --- | --- | --- | --- | --- |
-| 1 | **Marcus** | Import 1 | FS-11 P0a | FSM + **QB customer** header presets | [#92](https://github.com/SimonShaun2/Renvani/pull/92) |
-| 2 | **Noah** | Import 1 | FS-11 | Preset types, entity-aware sniff | [#92](https://github.com/SimonShaun2/Renvani/pull/92) |
-| 3 | **Kai** | Import 1 | FS-11 | Golden CSV fixtures (Jobber/HCP/ST/**QB** × entity) | `cursor/fs-11-import-golden-fixtures-1f27` |
-| 4 | **Aria** | Import 2 | FS-11 P0c | Invoice + payment history import service (tenant-scoped) | `cursor/fs-11-qb-invoices-import-1f27` |
-| 5 | **Hana** | Import 2 | FS-11 P0b | Products/services (`products`) import worker path | `cursor/fs-11-qb-items-import-1f27` |
-| 6 | **Iris** | Import 3 | FS-11 | Fix 3× import `/errors` contract tests | `cursor/fs-11-import-errors-fix-1f27` |
-| 7 | **Priya** | Import UX | FS-11 | Vendor + entity picker in import wizard | `cursor/fs-11-import-ui-vendor-step-1f27` |
-| 8 | **Leo** | Import UX | FS-11 | Preview/commit copy (AI-guided, on-brand) | With Priya after [#88](https://github.com/SimonShaun2/Renvani/pull/88) |
-| 9 | **Ezra** | Infra | FS-11 | QB OAuth **founder gate** doc (no credentials) | [#93](https://github.com/SimonShaun2/Renvani/pull/93) + security note |
-| 10 | **Mila** | Infra | FS-11 | CI coverage for preset + import contract tests | [#92](https://github.com/SimonShaun2/Renvani/pull/92) |
-| 11 | **Ava** | Repeat | FS-72 | Agent policy | [#91](https://github.com/SimonShaun2/Renvani/pull/91) |
-| 12 | **Diego** | Repeat | FS-72 | Worker stub | [#91](https://github.com/SimonShaun2/Renvani/pull/91) |
-| 13 | **Sofia** | Public | FS-58 | Runbook | [#90](https://github.com/SimonShaun2/Renvani/pull/90) |
-| 14 | **Nina** | Book | FS-21 | Hold inspect | [#89](https://github.com/SimonShaun2/Renvani/pull/89) |
-| 15 | **Omar** | Serve | Dispatch | SSE API | [#86](https://github.com/SimonShaun2/Renvani/pull/86) |
-| 16 | **Ben** | Serve | Dispatch | EventSource | [#86](https://github.com/SimonShaun2/Renvani/pull/86) |
-| — | **Elena** | PO | All | Cut-line, QB P0b/c acceptance, OAuth gate | `MVP-MIGRATION-AI-IMPORT.md` |
-
-*Grace / Tech Lead:* [#93](https://github.com/SimonShaun2/Renvani/pull/93) planning merges; unblock import branches on `dev`.
+| ID | Item | Status |
+| --- | --- | --- |
+| **FS-MIGRATE** | Universal import + onboarding (this epic) | Active — see §16-dev grid |
+| FS-38 / FS-21 / FS-58 | Discover/Book hardening | [#88](https://github.com/SimonShaun2/Renvani/pull/88)–[#90](https://github.com/SimonShaun2/Renvani/pull/90) |
+| FS-72 | Repeat dry-run | [#91](https://github.com/SimonShaun2/Renvani/pull/91) |
+| Dispatch SSE | Serve | **#86 merged** → `9313130` on `dev` |
+| Planning | Shortest path + epic | [#93](https://github.com/SimonShaun2/Renvani/pull/93) |
 
 ---
 
-## Open PR tracker
+## FS-MIGRATE — 16 dev assignments (parallel)
 
-| PR | Head (sign @) | Isaac | Lily | Sam |
+| # | Dev | Workstream | Deliverable | Branch / PR |
 | --- | --- | --- | --- | --- |
-| [#86](https://github.com/SimonShaun2/Renvani/pull/86) | `6ca557f` | PASS | **pending @ head** | ACCEPT |
-| [#88](https://github.com/SimonShaun2/Renvani/pull/88)–[#91](https://github.com/SimonShaun2/Renvani/pull/91) | see PR | ☐ | ☐ | ☐ |
-| [#92](https://github.com/SimonShaun2/Renvani/pull/92) | import presets | ☐ | ☐ | ☐ |
-| [#93](https://github.com/SimonShaun2/Renvani/pull/93) | winter plan | ☐ | ☐ | ☐ |
+| 1 | **Marcus** | Presets | Service Fusion + Jobber preset modules (quirks doc inline) | [#92](https://github.com/SimonShaun2/Renvani/pull/92) → rename `import-source-presets` |
+| 2 | **Noah** | Presets | ST + HCP + QB Online/Desktop preset modules | `cursor/fs-migrate-source-presets-1f27` |
+| 3 | **Kai** | Fixtures | Golden multi-file bundles per source (M1) | `cursor/fs-migrate-golden-bundles-1f27` |
+| 4 | **Iris** | Engine | XLSX parse in worker; extend `import_sessions` bundle metadata (ADR) | `cursor/fs-migrate-xlsx-bundle-1f27` |
+| 5 | **Aria** | Relational | Join keys customer↔location↔job; preview graph service | `cursor/fs-migrate-relational-preview-1f27` |
+| 6 | **Hana** | Relational | Invoice + **open balance** commit path | `cursor/fs-migrate-invoices-balances-1f27` |
+| 7 | **Diego** | Dedupe | Merge preview API + operator dedupe actions | `cursor/fs-migrate-dedupe-preview-1f27` |
+| 8 | **Ava** | Agreements | Maintenance plans + recurring schedule import slice | `cursor/fs-migrate-maintenance-import-1f27` |
+| 9 | **Omar** | Assets | Equipment/asset history import (asset-age moat) | `cursor/fs-migrate-equipment-import-1f27` |
+| 10 | **Priya** | Onboarding UX | Guided wizard steps 1–2 (source pick + multi-upload) | `cursor/fs-migrate-onboarding-wizard-1f27` |
+| 11 | **Leo** | Onboarding UX | Steps 3–5 preview/commit + **resumable** state | with Priya |
+| 12 | **Ben** | Onboarding UX | Progress UI + plain-language AI issue panel | with Priya/Leo |
+| 13 | **Mila** | Quality | Contract tests for bundle + normalize; CI in `batch-ci` | `cursor/fs-migrate-import-contracts-1f27` |
+| 14 | **Ezra** | Policy | QB OAuth gate doc; Service Fusion export runbook | [#93](https://github.com/SimonShaun2/Renvani/pull/93) |
+| 15 | **Sofia** | Security | Tenant isolation tests for bundle endpoints | `cursor/fs-migrate-tenant-tests-1f27` |
+| 16 | **Nina** | Normalize | Phone/date/money normalizers (`import-normalize`) | `cursor/fs-migrate-normalize-lib-1f27` |
+| — | **Elena** | PO | Epic acceptance §6; vendor priority order | Epic doc |
+
+*Grace:* land [#93](https://github.com/SimonShaun2/Renvani/pull/93) epic; sequence PRs M1→M5; no per-vendor importer PRs.
 
 ---
 
-## PR workflow (mandatory)
+## Other open PRs
 
-1. Push → request **Isaac, Lily, Sam @ full SHA within 1h**.
-2. Triple PASS → `batch-ci` → merge with head SHA guard.
+| PR | Notes |
+| --- | --- |
+| [#88](https://github.com/SimonShaun2/Renvani/pull/88)–[#91](https://github.com/SimonShaun2/Renvani/pull/91) | Triple sign → `batch-ci` |
+| [#92](https://github.com/SimonShaun2/Renvani/pull/92) | Preset **catalog** for generic engine @ **`6268e44`** (re-sign after dev merge) |
+| [#93](https://github.com/SimonShaun2/Renvani/pull/93) | Epic + assignments |
+
+---
+
+## Workflow
+
+1. Push → request Isaac, Lily, Sam @ full SHA within 1h.  
+2. Triple PASS → `batch-ci` → merge with head SHA guard.  
 3. CoS report at batch merge + MVP dates (`MVP-SHORTEST-PATH-WINTER-2026.md` §5).
