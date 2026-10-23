@@ -9,6 +9,7 @@ import {
   createImportHandler,
   getImportErrorsHandler,
   getImportHandler,
+  getImportIngestStatusHandler,
   listImportsHandler,
   rollbackImportHandler,
   startImportHandler
@@ -18,6 +19,7 @@ import {
   confirmMappingValidation,
   createImportRouteSchema,
   getImportRouteSchema,
+  getImportIngestStatusRouteSchema,
   importErrorsRouteSchema,
   importSessionIdValidation,
   listImportsRouteSchema,
@@ -52,6 +54,12 @@ const importRoutes: FastifyPluginAsync = async (fastify) => {
     preValidation: importSessionIdValidation,
     schema: getImportRouteSchema
   }, getImportHandler);
+
+  fastify.get("/imports/:id/ingest-status", {
+    preHandler: [authenticate, requireOwnerOrAdmin],
+    preValidation: importSessionIdValidation,
+    schema: getImportIngestStatusRouteSchema
+  }, getImportIngestStatusHandler);
 
   fastify.post("/imports/:id/confirm-mapping", {
     preHandler: [authenticate, requireOwnerOrAdmin],

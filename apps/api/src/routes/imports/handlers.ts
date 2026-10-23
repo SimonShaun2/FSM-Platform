@@ -12,6 +12,7 @@ import {
   rollbackImport,
   startImport
 } from "../../services/import.service.js";
+import { getImportSessionIngestStatus } from "../../services/import-session-ingest-status.service.js";
 import { abortImportUploadRequest } from "./upload-guards.js";
 import {
   CSV_IMPORT_MAX_FILES,
@@ -52,6 +53,7 @@ export async function createImportHandler(
   let mimeType: string | undefined;
   let fileBuffer: Buffer | undefined;
   let fileCount = 0;
+  let entityType: import("@fsm/types").ImportEntityType | undefined;
 
   try {
     for await (const part of request.parts(csvImportMultipartParserOptions)) {
@@ -69,7 +71,21 @@ export async function createImportHandler(
         continue;
       }
 
-      await part.value;
+      if (part.fieldname === "entityType" && part.type === "field") {
+        const value = String(part.value).trim();
+        if (
+          value === "customers" ||
+          value === "jobs" ||
+          value === "estimates" ||
+          value === "price_book" ||
+          value === "notes" ||
+          value === "communications"
+        ) {
+          entityType = value;
+        }
+      } else {
+        await part.value;
+      }
     }
   } catch (error: unknown) {
     const fastifyError = error as FastifyError;
@@ -98,7 +114,7 @@ export async function createImportHandler(
     fileBuffer,
     {
       mimeType: mimeType ?? "text/csv",
-      entityType: "customers"
+      entityType: entityType ?? "customers"
     }
   );
 
@@ -128,10 +144,21 @@ export async function getImportHandler(
 ): Promise<FastifyReply> {
   const params = request.params as ImportSessionIdParams;
   const importSession = await getImportSession(request.company.id, params.id);
+  const ingest = await getImportSessionIngestStatus(request.company.id, params.id);
 
   return reply.send({
-    importSession: toImportSessionResponse(importSession)
+    importSession: toImportSessionResponse(importSession),
+    ingest
   });
+}
+
+export async function getImportIngestStatusHandler(
+  request: FastifyRequest,
+  reply: FastifyReply
+): Promise<FastifyReply> {
+  const params = request.params as ImportSessionIdParams;
+  const ingest = await getImportSessionIngestStatus(request.company.id, params.id);
+  return reply.send(ingest);
 }
 
 export async function confirmMappingHandler(
