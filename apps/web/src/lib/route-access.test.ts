@@ -3,6 +3,10 @@ import { describe, expect, it } from "vitest";
 import { isPublicRoute } from "./route-access";
 
 describe("isPublicRoute", () => {
+  it("treats the marketing home page as public", () => {
+    expect(isPublicRoute("/")).toBe(true);
+  });
+
   it("treats customer estimate approval paths as public", () => {
     expect(isPublicRoute("/approve/some-approval-token")).toBe(true);
   });
