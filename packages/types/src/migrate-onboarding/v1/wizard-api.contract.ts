@@ -10,6 +10,7 @@ import {
   MIGRATE_ONBOARDING_CONTRACT_ID,
   setMigrateOnboardingSourceBodySchema
 } from "./schemas.js";
+import { migrateOnboardingIngestStatusResponseSchema } from "./ingest-status.schemas.js";
 
 export { MIGRATE_ONBOARDING_CONTRACT_ID };
 
@@ -69,6 +70,11 @@ export const MIGRATE_ONBOARDING_WIZARD_API_ROUTES: readonly MigrateOnboardingWiz
   },
   {
     method: "POST",
+    path: "/api/v1/migrate/onboarding/sessions/:bundleId/acknowledge-preview",
+    responseSchemaId: "migrateOnboardingBundle"
+  },
+  {
+    method: "POST",
     path: "/api/v1/migrate/onboarding/sessions/:bundleId/file-link/run",
     responseSchemaId: "migrateOnboardingBundle"
   },
@@ -83,11 +89,6 @@ export const MIGRATE_ONBOARDING_WIZARD_API_ROUTES: readonly MigrateOnboardingWiz
     responseSchemaId: "migrateOnboardingBundle"
   },
   {
-    method: "POST",
-    path: "/api/v1/migrate/onboarding/sessions/:bundleId/acknowledge-preview",
-    responseSchemaId: "migrateOnboardingBundle"
-  },
-  {
     method: "GET",
     path: "/api/v1/migrate/onboarding/sessions/:bundleId/dedupe-preview",
     responseSchemaId: "migrateDedupePreviewResponse"
@@ -96,6 +97,11 @@ export const MIGRATE_ONBOARDING_WIZARD_API_ROUTES: readonly MigrateOnboardingWiz
     method: "GET",
     path: "/api/v1/migrate/onboarding/sessions/:bundleId/relational-preview",
     responseSchemaId: "migrateRelationalPreviewResponse"
+  },
+  {
+    method: "GET",
+    path: "/api/v1/migrate/onboarding/sessions/:bundleId/ingest-status",
+    responseSchemaId: "migrateOnboardingIngestStatusResponse"
   },
   {
     method: "PATCH",
@@ -122,5 +128,6 @@ export const migrateOnboardingWizardResponseSchemas = {
   migrateOnboardingSourceCatalogEntry: migrateOnboardingSourceCatalogEntrySchema,
   migrateDedupePreviewResponse: migrateDedupePreviewResponseSchema,
   migrateRelationalPreviewResponse: migrateRelationalPreviewResponseSchema,
-  migrateOnboardingCommitResponse: migrateOnboardingCommitResponseSchema
+  migrateOnboardingCommitResponse: migrateOnboardingCommitResponseSchema,
+  migrateOnboardingIngestStatusResponse: migrateOnboardingIngestStatusResponseSchema
 } as const;

@@ -40,6 +40,7 @@ import messageLogRoutes from "./routes/message-logs/index.js";
 import operatorRoutes from "./routes/operator/index.js";
 import publicRoutes from "./routes/public/index.js";
 import productRoutes from "./routes/products/index.js";
+import qboSyncRoutes from "./routes/qbo-sync/index.js";
 import reportingRoutes from "./routes/reporting/index.js";
 import reviewRequestRoutes from "./routes/review-requests/index.js";
 import revenueInquiryRoutes from "./routes/revenue-inquiries/index.js";
@@ -124,6 +125,7 @@ export async function buildApp() {
   await app.register(serviceAgreementRoutes, { prefix: "/api/v1" });
   await app.register(vipMembershipRoutes, { prefix: "/api/v1" });
   await app.register(loyaltyRoutes, { prefix: "/api/v1" });
+  await app.register(qboSyncRoutes, { prefix: "/api/v1" });
   await app.register(publicRoutes, { prefix: "/api/v1/public" });
 
   return app;

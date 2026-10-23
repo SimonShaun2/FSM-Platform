@@ -355,6 +355,9 @@ export const activityEventTypeEnum = pgEnum("activity_event_type", [
   "import.bundle.commit_started",
   "import.bundle.completed",
   "import.bundle.abandoned",
+  // QuickBooks ongoing sync (FS-133)
+  "integration.qbo_mapping_updated",
+  "integration.qbo_sync_retry_requested",
   // Data export (FS-89)
   "export.requested",
   "export.completed",
@@ -2077,6 +2080,29 @@ export const growthIntakeAuditEvents = pgTable(
       t.companyId,
       t.growthIntakeCheckId
     ),
+  })
+);
+
+export const qboMappingKindEnum = pgEnum("qbo_mapping_kind", [
+  "price_book_item",
+  "tax_code",
+  "payment_method",
+]);
+
+export const qboEntityMappings = pgTable(
+  "qbo_entity_mappings",
+  {
+    id: id(),
+    companyId: companyId(),
+    kind: qboMappingKindEnum("kind").notNull(),
+    localKey: varchar("local_key", { length: 128 }).notNull(),
+    qboId: varchar("qbo_id", { length: 64 }),
+    qboName: varchar("qbo_name", { length: 255 }),
+    ...timestamps,
+  },
+  (t) => ({
+    companyIdx: index("qbo_entity_mappings_company_idx").on(t.companyId),
+    lookupIdx: uniqueIndex("qbo_entity_mappings_lookup_idx").on(t.companyId, t.kind, t.localKey),
   })
 );
 
