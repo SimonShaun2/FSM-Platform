@@ -80,10 +80,9 @@ export default function PublicPaymentPage() {
           </div>
         </dl>
 
-        <p className="mt-4 text-xs leading-5 text-neutral-500">
-          Card processing fees may appear separately on Stripe Checkout. Surcharge and dual-pricing rules
-          vary by state — counsel review in progress.
-        </p>
+        {payment.platformFeeDisclosure ? (
+          <p className="mt-4 text-xs leading-5 text-neutral-500">{payment.platformFeeDisclosure}</p>
+        ) : null}
 
         <button
           type="button"

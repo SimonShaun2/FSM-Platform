@@ -40,6 +40,8 @@ export interface CreateServiceAgreementPriceInput {
   name: string;
   amount: string;
   interval: "month" | "year";
+  /** Stripe product display name; defaults to `name`. */
+  productName?: string;
 }
 
 export interface CreateStripeCustomerInput {
@@ -59,6 +61,8 @@ export interface CreateServiceAgreementSubscriptionInput {
   customerId: string;
   stripeCustomerId: string;
   stripePriceId: string;
+  /** Recurring customer-paid platform fee price (Flex); omitted on Flat. */
+  stripePlatformFeePriceId?: string | null;
   companyStripeAccountId: string;
   connectApplicationFeeFraction: number;
 }
@@ -248,7 +252,7 @@ export async function createServiceAgreementPrice(
       interval: input.interval
     },
     product_data: {
-      name: input.name,
+      name: input.productName ?? input.name,
       metadata: {
         companyId: input.companyId,
         templateId: input.templateId
@@ -285,25 +289,27 @@ export async function createStripeCustomer(input: CreateStripeCustomerInput): Pr
 export async function createServiceAgreementSubscription(
   input: CreateServiceAgreementSubscriptionInput
 ): Promise<StripeSubscriptionResult> {
+  const items: Stripe.SubscriptionCreateParams.Item[] = [{ price: input.stripePriceId }];
+
+  if (input.stripePlatformFeePriceId) {
+    items.push({ price: input.stripePlatformFeePriceId });
+  }
+
   const subscriptionParams: Stripe.SubscriptionCreateParams = {
     customer: input.stripeCustomerId,
-    items: [{ price: input.stripePriceId }],
+    items,
     transfer_data: {
       destination: input.companyStripeAccountId
     },
     metadata: {
       companyId: input.companyId,
       planId: input.planId,
-      customerId: input.customerId
+      customerId: input.customerId,
+      ...(input.stripePlatformFeePriceId
+        ? { platformFeePriceId: input.stripePlatformFeePriceId }
+        : {})
     }
   };
-
-  if (input.connectApplicationFeeFraction > 0) {
-    subscriptionParams.application_fee_percent = new Decimal(input.connectApplicationFeeFraction)
-      .mul(100)
-      .toDecimalPlaces(2, Decimal.ROUND_HALF_UP)
-      .toNumber();
-  }
 
   const subscription = await stripe.subscriptions.create(subscriptionParams);
 

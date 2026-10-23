@@ -118,6 +118,7 @@ interface PublicPaymentLinkResponse {
   totalDue: string;
   platformFeePercent: number | null;
   platformFeePaidByCustomer: boolean;
+  platformFeeDisclosure: string | null;
 }
 
 function buildQueryString(values: Record<string, string | number | undefined>) {

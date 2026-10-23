@@ -17,6 +17,7 @@ import {
   forwardStripePaymentFailed,
   forwardStripePaymentSuccess
 } from "../lib/invoice-service-bridge.js";
+import { stripe } from "../lib/stripe-client.js";
 import {
   handlePlatformSubscriptionDeleted,
   handlePlatformSubscriptionUpsert,
@@ -284,6 +285,82 @@ export async function handleSubscriptionDeleted(
   });
 }
 
+function sumInvoiceLineAmountForPrice(invoice: Stripe.Invoice, priceId: string): number {
+  let total = 0;
+
+  for (const line of invoice.lines?.data ?? []) {
+    const linePriceId = typeof line.price === "string" ? line.price : line.price?.id ?? null;
+
+    if (linePriceId === priceId) {
+      total += line.amount ?? 0;
+    }
+  }
+
+  return total;
+}
+
+export async function handleInvoiceCreated(
+  event: Stripe.InvoiceCreatedEvent,
+  logContext: FastifyRequest["log"]
+): Promise<void> {
+  const stripeInvoice = event.data.object;
+
+  if (!stripeInvoice.subscription || stripeInvoice.status !== "draft") {
+    return;
+  }
+
+  const stripeSubscriptionId =
+    typeof stripeInvoice.subscription === "string"
+      ? stripeInvoice.subscription
+      : stripeInvoice.subscription.id;
+
+  const subscription = await stripe.subscriptions.retrieve(stripeSubscriptionId);
+
+  if (isPlatformMvpBillingMetadata(subscription.metadata)) {
+    return;
+  }
+
+  const companyId = getMetadataString(subscription.metadata, "companyId");
+
+  if (!companyId) {
+    return;
+  }
+
+  if (await shouldIgnoreMaintenancePlanSubscriptionInvoice(companyId, stripeSubscriptionId)) {
+    return;
+  }
+
+  const platformFeePriceId = getMetadataString(subscription.metadata, "platformFeePriceId");
+
+  if (!platformFeePriceId) {
+    return;
+  }
+
+  if ((stripeInvoice.application_fee_amount ?? 0) > 0) {
+    return;
+  }
+
+  const applicationFeeAmount = sumInvoiceLineAmountForPrice(stripeInvoice, platformFeePriceId);
+
+  if (applicationFeeAmount <= 0) {
+    logContext.warn(
+      {
+        eventId: event.id,
+        eventType: event.type,
+        companyId,
+        stripeInvoiceId: stripeInvoice.id,
+        platformFeePriceId
+      },
+      "Maintenance subscription invoice missing platform fee line item"
+    );
+    return;
+  }
+
+  await stripe.invoices.update(stripeInvoice.id, {
+    application_fee_amount: applicationFeeAmount
+  });
+}
+
 export async function handleInvoicePaymentSucceeded(
   event: Stripe.InvoicePaymentSucceededEvent,
   logContext: FastifyRequest["log"]
@@ -548,6 +625,9 @@ export async function stripeHandler(
         break;
       case "customer.subscription.deleted":
         await handleSubscriptionDeleted(event, request.log);
+        break;
+      case "invoice.created":
+        await handleInvoiceCreated(event, request.log);
         break;
       case "invoice.payment_succeeded":
         await handleInvoicePaymentSucceeded(event, request.log);

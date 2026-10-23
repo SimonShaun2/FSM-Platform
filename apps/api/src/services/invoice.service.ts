@@ -6,7 +6,10 @@ import pino from "pino";
 import type Stripe from "stripe";
 
 import { env } from "@fsm/config";
-import { computeCustomerPaidPlatformFee } from "@fsm/config/stripe-pricing";
+import {
+  computeCustomerPaidPlatformFee,
+  customerPlatformFeeDisclosure
+} from "@fsm/config/stripe-pricing";
 import {
   activityEvents,
   automationRules,
@@ -736,6 +739,8 @@ export async function getPublicInvoicePaymentLink(token: string): Promise<Public
   const feeFraction = resolveCompanyConnectApplicationFeeFraction(company);
   const breakdown = computeCustomerPaidPlatformFee(invoice.balanceDue, feeFraction);
 
+  const disclosure = customerPlatformFeeDisclosure();
+
   return {
     invoiceNumber: invoice.invoiceNumber,
     paymentLinkUrl: invoice.stripePaymentLinkUrl,
@@ -743,7 +748,8 @@ export async function getPublicInvoicePaymentLink(token: string): Promise<Public
     platformFeeAmount: breakdown.platformFeeAmount,
     totalDue: breakdown.totalDue,
     platformFeePercent: breakdown.platformFeePercent,
-    platformFeePaidByCustomer: feeFraction > 0
+    platformFeePaidByCustomer: feeFraction > 0,
+    platformFeeDisclosure: disclosure.length > 0 ? disclosure : null
   };
 }
 

@@ -38,9 +38,14 @@ import {
   type UpdateAgreementInput
 } from "@fsm/types";
 
+import {
+  computeCustomerPaidPlatformFee,
+  formatCustomerPlatformFeeLineItemName
+} from "@fsm/config/stripe-pricing";
 import { resolveCompanyConnectApplicationFeeFraction } from "../lib/company-renvani-plan.js";
 import {
   cancelServiceAgreementSubscription,
+  createServiceAgreementPrice,
   createServiceAgreementSubscription,
   createStripeCustomer,
   pauseServiceAgreementSubscription,
@@ -882,14 +887,33 @@ export async function createAgreement(
       })).id;
     }
 
+    const connectApplicationFeeFraction = resolveCompanyConnectApplicationFeeFraction(company);
+    let stripePlatformFeePriceId: string | null = null;
+
+    if (connectApplicationFeeFraction > 0 && resolvedPrice && template) {
+      const feeBreakdown = computeCustomerPaidPlatformFee(resolvedPrice, connectApplicationFeeFraction);
+      const interval = billingCycle === "monthly" ? "month" : "year";
+      stripePlatformFeePriceId = (
+        await createServiceAgreementPrice({
+          companyId,
+          templateId: template.id,
+          name: template.name,
+          productName: formatCustomerPlatformFeeLineItemName(connectApplicationFeeFraction),
+          amount: feeBreakdown.platformFeeAmount,
+          interval
+        })
+      ).id;
+    }
+
     const subscription = await createServiceAgreementSubscription({
       companyId,
       planId,
       customerId: customer.id,
       stripeCustomerId,
       stripePriceId,
+      stripePlatformFeePriceId,
       companyStripeAccountId: company.stripeAccountId,
-      connectApplicationFeeFraction: resolveCompanyConnectApplicationFeeFraction(company)
+      connectApplicationFeeFraction
     });
     stripeSubscriptionId = subscription.id;
     stripeCurrentPeriodStart = subscription.currentPeriodStart;

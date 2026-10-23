@@ -252,4 +252,6 @@ export interface PublicInvoicePaymentLink {
   /** Set for Flex tenants when a customer-paid fee applies. */
   platformFeePercent: number | null;
   platformFeePaidByCustomer: boolean;
+  /** Optional disclosure from `CUSTOMER_PLATFORM_FEE_DISCLOSURE` (empty = omit). */
+  platformFeeDisclosure: string | null;
 }

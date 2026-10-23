@@ -60,6 +60,11 @@ export function formatCustomerPlatformFeeLineItemName(fraction: number): string 
   return `Renvani platform fee (${label}%)`;
 }
 
+/** Configurable disclosure for customer payment surfaces (no hard-coded legal text in app code). */
+export function customerPlatformFeeDisclosure(): string {
+  return (env.CUSTOMER_PLATFORM_FEE_DISCLOSURE ?? "").trim();
+}
+
 /**
  * Connect application fee fraction for a tenant's Renvani plan.
  * Flat ($799/mo): no customer platform fee on processed payments.

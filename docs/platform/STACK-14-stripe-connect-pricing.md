@@ -5,13 +5,14 @@
 - **Flex ($299/mo):** Customers pay a **5% platform fee on top of** the invoice/service amount at checkout. Renvani collects it as the Stripe Connect **application fee**. The shop receives the **full invoice amount** (fee is not deducted from the shop).
 - **Flat ($799/mo):** **No** customer platform fee on invoice payments.
 - **No fee cap.** Single config: `STRIPE_PLATFORM_FEE_PERCENT` (decimal `0.05`).
-- **Test mode only.** Dual-pricing / surcharge compliance copy is flagged for counsel review — do not block engineering on it.
+- **Test mode only.** Customer fee disclosure is configurable via `CUSTOMER_PLATFORM_FEE_DISCLOSURE` (Terms-owned copy; no hard-coded legal text in app).
 
 ## Configuration
 
 | Env | Purpose |
 | --- | --- |
 | `STRIPE_PLATFORM_FEE_PERCENT` | Decimal fraction for **Flex** customer-paid platform fee (e.g. `0.05` = 5%). **0** effective on Flat. |
+| `CUSTOMER_PLATFORM_FEE_DISCLOSURE` | Optional copy shown on public pay surfaces; empty omits disclosure block. |
 | `STRIPE_PLATFORM_BILLING_PRICE_ID_FLEX` | Stripe Price id — Flex subscription |
 | `STRIPE_PLATFORM_BILLING_PRICE_ID_FLAT` | Stripe Price id — Flat subscription |
 | `STRIPE_PLATFORM_BILLING_PRICE_ID` | Legacy alias for Flex price when `_FLEX` unset |
@@ -30,8 +31,10 @@ Helpers: `@fsm/config/stripe-pricing` — `computeCustomerPaidPlatformFee`, `res
 - **Public pay page** (`/pay/[token]`): shows invoice amount, platform fee (Flex), and total due before redirecting to Stripe.
 - **Stripe Checkout:** platform fee as its own line item.
 
-## Maintenance / subscription Connect charges
+## Maintenance / subscription Connect charges (implemented)
 
-Recurring Connect subscriptions still use `application_fee_percent` today; aligning recurring charges with the same **customer-paid on top** model is a follow-up (may require price adjustment or invoice items). Invoice checkout is the v1 path.
+1. Subscription items: plan/service recurring price + **Flex** recurring platform-fee price (5% of plan amount, separate Stripe price/line).
+2. `invoice.created` webhook sets `application_fee_amount` to the platform-fee line total (shop receives full plan price via transfer; no `application_fee_percent` shop-net model).
+3. Flat: service price only; no platform-fee item or application fee.
 
 **Owners:** Ruby / Felix — `cursor/stack-stripe-connect-1f27`.

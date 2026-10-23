@@ -11,12 +11,14 @@ setupTestEnv();
 const {
   addAiQueueJob,
   cancelServiceAgreementSubscriptionMock,
+  createServiceAgreementPriceMock,
   createServiceAgreementSubscriptionMock,
   createStripeCustomerMock,
   updateServiceAgreementSubscriptionCancelAtPeriodEndMock
 } = vi.hoisted(() => ({
   addAiQueueJob: vi.fn(),
   cancelServiceAgreementSubscriptionMock: vi.fn(),
+  createServiceAgreementPriceMock: vi.fn(),
   createServiceAgreementSubscriptionMock: vi.fn(),
   createStripeCustomerMock: vi.fn(),
   updateServiceAgreementSubscriptionCancelAtPeriodEndMock: vi.fn()
@@ -43,6 +45,7 @@ vi.mock("../lib/stripe.js", async () => {
   return {
     ...actual,
     cancelServiceAgreementSubscription: cancelServiceAgreementSubscriptionMock,
+    createServiceAgreementPrice: createServiceAgreementPriceMock,
     createServiceAgreementSubscription: createServiceAgreementSubscriptionMock,
     createStripeCustomer: createStripeCustomerMock,
     updateServiceAgreementSubscriptionCancelAtPeriodEnd: updateServiceAgreementSubscriptionCancelAtPeriodEndMock
@@ -67,11 +70,13 @@ beforeEach(() => {
   fakeDb.resetTestState();
   addAiQueueJob.mockReset();
   cancelServiceAgreementSubscriptionMock.mockReset();
+  createServiceAgreementPriceMock.mockReset();
   createServiceAgreementSubscriptionMock.mockReset();
   createStripeCustomerMock.mockReset();
   updateServiceAgreementSubscriptionCancelAtPeriodEndMock.mockReset();
 
   createStripeCustomerMock.mockResolvedValue({ id: "cus_123" });
+  createServiceAgreementPriceMock.mockResolvedValue({ id: "price_platform_fee_123" });
   createServiceAgreementSubscriptionMock.mockResolvedValue({
     id: "sub_123",
     currentPeriodStart: new Date("2026-04-01T00:00:00.000Z"),
@@ -169,6 +174,7 @@ describe("service-agreement.service", () => {
 
   it("createAgreement with billing creates a Stripe customer and subscription", async () => {
     const { company, actor } = createAdminContext();
+    company.settings = { stripePlatformBilling: { planTier: "flex" } };
     const { customer, property, asset, template } = seedAgreementGraph(company.id);
 
     const agreement = await agreementService.createAgreement(company.id, actor.id, {
@@ -189,6 +195,14 @@ describe("service-agreement.service", () => {
       email: customer.email,
       name: "Chris Pine"
     });
+    expect(createServiceAgreementPriceMock).toHaveBeenCalledWith(
+      expect.objectContaining({
+        companyId: company.id,
+        templateId: template.id,
+        amount: expect.any(String),
+        interval: "month"
+      })
+    );
     expect(createServiceAgreementSubscriptionMock).toHaveBeenCalledWith(
       expect.objectContaining({
         companyId: company.id,
@@ -196,6 +210,7 @@ describe("service-agreement.service", () => {
         customerId: customer.id,
         stripeCustomerId: "cus_123",
         stripePriceId: "price_monthly_123",
+        stripePlatformFeePriceId: "price_platform_fee_123",
         companyStripeAccountId: company.stripeAccountId ?? "",
         connectApplicationFeeFraction: expect.any(Number)
       })

@@ -20,6 +20,8 @@ const envSchema = z.object({
   STRIPE_CONNECT_CLIENT_ID: z.string().min(1, "STRIPE_CONNECT_CLIENT_ID is required"),
   /** Decimal fraction (e.g. 0.05 = 5%) — Flex Connect shop fee only; see stripe-pricing.ts */
   STRIPE_PLATFORM_FEE_PERCENT: z.coerce.number().nonnegative("STRIPE_PLATFORM_FEE_PERCENT must be zero or greater"),
+  /** Optional customer-facing platform-fee disclosure (Terms/surcharge copy). Empty = omit in UI. */
+  CUSTOMER_PLATFORM_FEE_DISCLOSURE: z.string().default(""),
   /** STACK-13 — legacy alias for Flex price when STRIPE_PLATFORM_BILLING_PRICE_ID_FLEX unset */
   STRIPE_PLATFORM_BILLING_PRICE_ID: z.string().default(""),
   /** STACK-13/14 — Flex $299/mo Stripe Price id (test mode) */

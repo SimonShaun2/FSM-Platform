@@ -37,7 +37,8 @@ export const getPublicPaymentLinkSchema = {
         "invoiceAmount",
         "platformFeeAmount",
         "totalDue",
-        "platformFeePaidByCustomer"
+        "platformFeePaidByCustomer",
+        "platformFeeDisclosure"
       ],
       properties: {
         invoiceNumber: { type: "string" },
@@ -46,7 +47,8 @@ export const getPublicPaymentLinkSchema = {
         platformFeeAmount: { type: "string" },
         totalDue: { type: "string" },
         platformFeePercent: { type: ["number", "null"] },
-        platformFeePaidByCustomer: { type: "boolean" }
+        platformFeePaidByCustomer: { type: "boolean" },
+        platformFeeDisclosure: { type: ["string", "null"] }
       }
     },
     400: errorResponseSchema,
