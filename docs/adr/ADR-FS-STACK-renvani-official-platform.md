@@ -50,7 +50,7 @@ Docs and code still describe **Render Postgres**, **Railway** (legacy), and **in
 
 | Component | Official provider | Environment rule |
 | --- | --- | --- |
-| Payments | **Stripe Connect** | **Test mode in dev/staging**; **LIVE in production only** — Shaun owns live key activation and Connect onboarding |
+| Payments | **Stripe Billing** (platform) + **Stripe Connect** (tenant merchants) | **Test/sandbox until production approval**; Shaun owns live activation |
 | Email (transactional) | **Resend** | Replaces SendGrid as official adapter target |
 | SMS | **Twilio** | **Sandbox / test** in non-prod; live send policy unchanged (queued worker, FS-13) |
 | Booking + recurring service | **Renvani domain** | FS-21 / maintenance plans; Stripe for money movement only |
@@ -109,13 +109,13 @@ Credentials and billing stay with **Shaun**. Engineering documents env var **nam
 | Phase | Scope | Owner | Gate |
 | --- | --- | --- | --- |
 | **M0** | Accept ADR; conflict list; assignments | Grace / Elena | This PR merged |
-| **M1** | Neon **dev** `DATABASE_URL`; CI test DB unchanged or Neon branch | Iris / Ezra | Shaun provides dev connection string |
-| **M2** | Neon staging + Render services wired; FS-92 staging matrix | Sofia / Ezra | Separate deploy PR |
-| **M3** | Clerk **dev**; parallel read with JWT; feature flag | Noah / Sam | STACK-02 |
-| **M4** | Clerk cutover staging; FS-84 contract update | Noah / Isaac | Security sign-off |
-| **M5** | Resend adapter; Twilio sandbox env docs | Leo / Hana | No live SMS |
-| **M6** | Sentry, PostHog, Langfuse in worker/API | Ezra / Marcus | Shaun keys |
-| **M7** | Production Neon + Stripe **live** (founder) | Shaun + Grace | Explicit founder OK |
+| **M1** | Neon **dev** (region = Render API); **per-PR branches** for previews | Iris / Ezra | Shaun Neon project |
+| **M2** | Neon staging + Render wired; Sam **cross-tenant CI** live | Sam / Sofia | STACK-03 |
+| **M3** | Clerk **dev** + **session `company_id`** on every DB connection | Noah | STACK-02 |
+| **M4** | RLS policies + Clerk staging cutover | Sam / Noah | STACK-10 |
+| **M5** | **Stripe Billing** (test); Resend; Twilio **sandbox** only | Aria / Leo | Shaun: **10DLC early** |
+| **M6** | Sentry, PostHog, Langfuse | Ezra / Marcus | Shaun keys |
+| **M7** | **Stripe Connect** + prod Billing/live (founder) — **after M5** unless PO 12-05 exception | Shaun + Grace | Elena escalation only |
 
 **Rule:** No production deploy or live Stripe from documentation PRs alone.
 
