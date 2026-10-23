@@ -31,15 +31,11 @@ vi.mock("../../lib/stripe.js", async (importOriginal) => {
   };
 });
 
-vi.mock("@fsm/config/feature-flags", async (importOriginal) => {
-  const original = await importOriginal<typeof import("@fsm/config/feature-flags")>();
-  return {
-    featureFlags: {
-      ...original.featureFlags,
-      stripePlatformBillingMvp: true
-    }
-  };
-});
+vi.mock("@fsm/config/feature-flags", () => ({
+  featureFlags: {
+    stripePlatformBillingMvp: true
+  }
+}));
 
 type BuildAppModule = typeof import("../../app.js");
 type FakeDbModule = typeof import("../../test-support/fake-db.js");
@@ -60,7 +56,7 @@ beforeEach(async () => {
   fakeDb.resetTestState();
   createPlatformBillingCheckoutSessionMock.mockReset();
   createStripePlatformCustomerMock.mockReset();
-  process.env.STRIPE_PLATFORM_BILLING_PRICE_ID = "price_test_mvp";
+  vi.stubEnv("STRIPE_PLATFORM_BILLING_PRICE_ID", "price_test_mvp");
   resetEnvCacheForTests();
   app = await buildAppModule.buildApp();
   await app.ready();
