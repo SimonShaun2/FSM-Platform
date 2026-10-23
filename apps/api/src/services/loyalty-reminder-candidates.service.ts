@@ -18,7 +18,7 @@ export async function listLoyaltyReminderCandidates(
   const candidates = await evaluateLoyaltyReminderCandidatesForCompany(companyId, {
     horizonDays: input.horizonDays,
     importSessionId: input.importSessionId ?? null,
-    lapsedDays: input.lapsedDays,
+    ...(input.lapsedDays !== undefined ? { lapsedDays: input.lapsedDays } : {}),
     dryRun
   });
 

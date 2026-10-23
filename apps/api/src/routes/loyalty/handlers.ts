@@ -14,7 +14,7 @@ export async function listLoyaltyReminderCandidatesHandler(
   const result = await listLoyaltyReminderCandidates(request.company.id, {
     horizonDays: query.horizonDays ?? 14,
     importSessionId: query.importSessionId ?? null,
-    lapsedDays: query.lapsedDays
+    ...(query.lapsedDays !== undefined ? { lapsedDays: query.lapsedDays } : {})
   });
 
   return reply.send(result);

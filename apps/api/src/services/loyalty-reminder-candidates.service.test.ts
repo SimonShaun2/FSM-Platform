@@ -1,34 +1,35 @@
 import { describe, expect, it, vi } from "vitest";
 
-const evaluateMock = vi.fn(async () => [
-  {
-    ruleFamily: "plan_cadence" as const,
-    customerId: "cust-1",
-    customerName: "Ada",
-    maintenancePlanId: "plan-1",
-    evidenceJobId: null,
-    importSessionId: null,
-    planName: "Quarterly",
-    nextServiceDate: "2026-10-30",
-    lastServiceDate: null,
-    daysUntilDue: 7,
-    daysSinceLastService: null,
-    dryRun: true
-  }
-]);
-
-vi.mock("@fsm/config/feature-flags", () => ({
-  featureFlags: {
+const { evaluateMock, featureFlagsMock } = vi.hoisted(() => ({
+  evaluateMock: vi.fn(async () => [
+    {
+      ruleFamily: "plan_cadence" as const,
+      customerId: "cust-1",
+      customerName: "Ada",
+      maintenancePlanId: "plan-1",
+      evidenceJobId: null,
+      importSessionId: null,
+      planName: "Quarterly",
+      nextServiceDate: "2026-10-30",
+      lastServiceDate: null,
+      daysUntilDue: 7,
+      daysSinceLastService: null,
+      dryRun: true
+    }
+  ]),
+  featureFlagsMock: {
     loyaltyRemindersEnabled: false,
     loyaltyRemindersDryRun: true
   }
 }));
 
-vi.mock("@fsm/db", () => ({
-  evaluateLoyaltyReminderCandidatesForCompany: (...args: unknown[]) => evaluateMock(...args)
+vi.mock("@fsm/config/feature-flags", () => ({
+  featureFlags: featureFlagsMock
 }));
 
-import { featureFlags } from "@fsm/config/feature-flags";
+vi.mock("@fsm/db", () => ({
+  evaluateLoyaltyReminderCandidatesForCompany: evaluateMock
+}));
 
 import { listLoyaltyReminderCandidates } from "./loyalty-reminder-candidates.service.js";
 
@@ -40,7 +41,7 @@ describe("loyalty-reminder-candidates.service", () => {
   });
 
   it("delegates evaluation when feature flag is enabled", async () => {
-    featureFlags.loyaltyRemindersEnabled = true;
+    featureFlagsMock.loyaltyRemindersEnabled = true;
 
     const result = await listLoyaltyReminderCandidates("company-1", {
       horizonDays: 21,
@@ -57,6 +58,6 @@ describe("loyalty-reminder-candidates.service", () => {
     expect(result.candidates).toHaveLength(1);
     expect(result.dryRun).toBe(true);
 
-    featureFlags.loyaltyRemindersEnabled = false;
+    featureFlagsMock.loyaltyRemindersEnabled = false;
   });
 });

@@ -82,7 +82,7 @@ describe("loyalty-reminder-propose.service", () => {
           ])
         }))
       }))
-    } as ReturnType<typeof db.select>);
+    } as unknown as ReturnType<typeof db.select>);
 
     await expect(
       createLoyaltyReminderProposal({
