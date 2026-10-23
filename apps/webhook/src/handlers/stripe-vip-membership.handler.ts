@@ -130,14 +130,15 @@ export async function handleVipSubscriptionCreated(
 
   await emitEventWithExecutor(db, {
     companyId: ctx.companyId,
-    eventType: "vip_membership.welcome_email_queued",
+    eventType: "customer.updated",
     actorType: "system",
     entityType: "customer",
     entityId: customer.id,
     customerId: customer.id,
     payload: {
       stripeSubscriptionId: subscription.id,
-      planName: ctx.planName
+      planName: ctx.planName,
+      vipMembershipEmail: "welcome_queued"
     },
     summary: `VIP welcome email queued for ${customer.firstName}`
   });
@@ -197,7 +198,7 @@ export async function handleVipInvoicePaymentSucceeded(
 
   await emitEventWithExecutor(db, {
     companyId: ctx.companyId,
-    eventType: "vip_membership.renewal_email_queued",
+    eventType: "payment.received",
     actorType: "system",
     entityType: "customer",
     entityId: ctx.customerId,
@@ -205,7 +206,8 @@ export async function handleVipInvoicePaymentSucceeded(
     payload: {
       stripeSubscriptionId,
       stripeInvoiceId,
-      amount
+      amount,
+      vipMembershipEmail: "renewal_receipt_queued"
     },
     summary: "VIP renewal receipt email queued"
   });
@@ -311,12 +313,4 @@ export async function handleVipInvoicePaymentFailed(
   }
 
   return true;
-}
-
-export function formatVipEmailDateLabel(iso: string | null | undefined): string | null {
-  if (!iso) {
-    return null;
-  }
-
-  return formatEmailDateFromIso(iso);
 }

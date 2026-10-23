@@ -18,7 +18,7 @@ function getNotificationsQueueAddMock(): NotificationsAddMock {
 
 export const notificationsQueueAddMock = getNotificationsQueueAddMock();
 
-export const notificationsQueueGetJobMock = vi.fn(async () => null);
+export const notificationsQueueGetJobMock = vi.fn(async (_jobId?: string) => null as { remove: () => Promise<void> } | null);
 
 export const notificationsQueue = {
   add: notificationsQueueAddMock,
@@ -77,7 +77,7 @@ export async function scheduleVipMembershipDunningEmails(input: {
   nextRetryAtIso: string | null;
   graceDays: number;
 }): Promise<void> {
-  const offsets = VIP_MEMBERSHIP_DUNNING_DAY_OFFSETS.filter((day) => day < input.graceDays);
+  const offsets = VIP_MEMBERSHIP_DUNNING_DAY_OFFSETS.filter((day: number) => day < input.graceDays);
   const stepCount = offsets.length;
 
   for (let stepIndex = 0; stepIndex < offsets.length; stepIndex += 1) {
@@ -113,7 +113,7 @@ export async function cancelScheduledVipMembershipDunning(
     const jobId = buildVipDunningEmailJobId(stripeSubscriptionId, stripeInvoiceId, dayOffset);
     const job = await notificationsQueue.getJob(jobId);
 
-    if (job) {
+    if (job?.remove) {
       await job.remove();
     }
   }
