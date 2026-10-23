@@ -1,7 +1,3 @@
-import { initSentry } from "@fsm/config/sentry";
-
-initSentry("worker");
-
 import type { Worker } from "bullmq";
 import pino from "pino";
 

@@ -1,7 +1,4 @@
 import { env, resolveWebhookListenPort } from "@fsm/config";
-import { initSentry } from "@fsm/config/sentry";
-
-initSentry("webhook");
 
 import { buildWebhookApp } from "./app.js";
 
