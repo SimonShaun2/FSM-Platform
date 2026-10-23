@@ -8,7 +8,8 @@ import {
   getBookingAvailability,
   getBookingConfirmation,
   getPublicBookingSettingsBySlug,
-  holdPublicBookingSlot
+  holdPublicBookingSlot,
+  inspectPublicBookingHoldToken
 } from "../../../services/booking.service.js";
 import { submitPublicInquiryIntake } from "../../../services/revenue-inquiry-intake.service.js";
 import type {
@@ -94,6 +95,19 @@ export async function getBookingConfirmationHandler(
 
   return reply.send({
     confirmation
+  });
+}
+
+export async function inspectPublicBookingHoldTokenHandler(
+  request: FastifyRequest,
+  reply: FastifyReply
+): Promise<FastifyReply> {
+  const params = request.params as BookingSlugParams;
+  const body = request.body as { holdToken: string };
+  const inspection = await inspectPublicBookingHoldToken(params.slug, body.holdToken);
+
+  return reply.send({
+    inspection
   });
 }
 

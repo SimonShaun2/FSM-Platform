@@ -13,6 +13,9 @@ import {
   serviceAgreementTemplates
 } from "@fsm/db";
 import { notificationsQueue } from "@fsm/jobs";
+import { LOYALTY_AGREEMENTS_JOB_NAMES } from "@fsm/types";
+
+import { processEvaluateLoyaltyReminderCandidates } from "./loyalty-reminder-candidates.processor.js";
 
 const logger = pino({
   name: "agreements-processor"
@@ -359,6 +362,15 @@ export function createAgreementsProcessor(
   dependencies: AgreementsDependencies = productionDependencies
 ): Processor<Record<string, unknown>, void, string> {
   return async (job) => {
+    if (job.name === LOYALTY_AGREEMENTS_JOB_NAMES.evaluateReminderCandidates) {
+      await processEvaluateLoyaltyReminderCandidates(
+        job as unknown as import("bullmq").Job<
+          import("@fsm/types").EvaluateLoyaltyReminderCandidatesJobData
+        >
+      );
+      return;
+    }
+
     if (job.name !== "service-agreement-renewal-check") {
       logger.warn({ jobId: job.id ?? null, jobName: job.name }, "Unknown agreements job received");
       return;

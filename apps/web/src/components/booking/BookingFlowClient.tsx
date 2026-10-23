@@ -22,6 +22,11 @@ import {
   useSubmitBookingRequest,
   type PublicBookingSettingsRecord
 } from "@/src/hooks/booking.hooks";
+import {
+  clearBookingIdempotencyKey,
+  getOrCreateBookingIdempotencyKey
+} from "@/src/lib/booking-idempotency";
+import { ApiError } from "@/src/lib/api";
 import { showToast } from "@/src/stores/toast.store";
 import { useBookingFlowStore } from "@/src/stores/booking-flow.store";
 import { cn } from "@/src/lib/utils";
@@ -283,6 +288,7 @@ export function BookingFlowClient({
     email,
     notes,
     smsConsent,
+    smsConsentMarketing,
     servedTechCount,
     hydrateFromRoute,
     setReferenceNumber,
@@ -364,9 +370,16 @@ export function BookingFlowClient({
   }
 
   async function handleSubmitBooking() {
+    if (submitMutation.isPending) {
+      return;
+    }
+
+    const idempotencyKey = getOrCreateBookingIdempotencyKey(slug);
+
     try {
       const response = await submitMutation.mutateAsync({
         source,
+        idempotencyKey,
         body: {
           firstName,
           lastName,
@@ -384,17 +397,45 @@ export function BookingFlowClient({
           preferredDate,
           preferredWindow,
           customerNotes: notes,
-          smsConsentAppointments: smsConsent
+          smsConsentAppointments: smsConsent,
+          smsConsentMarketing
         }
       });
 
+      clearBookingIdempotencyKey(slug);
       setReferenceNumber(response.confirmation.referenceNumber);
       router.push(buildConfirmedHref(slug, source, response.confirmation.referenceNumber));
     } catch (error) {
+      if (error instanceof ApiError && error.status === 409) {
+        const reason =
+          typeof error.payload.fields?.reason === "string" ? error.payload.fields.reason : null;
+
+        if (
+          reason === "idempotency_payload_mismatch" ||
+          error.payload.message.toLowerCase().includes("different payload")
+        ) {
+          clearBookingIdempotencyKey(slug);
+          showToast({
+            tone: "error",
+            title: "This form changed",
+            description: "Please review your details and submit again."
+          });
+          return;
+        }
+
+        showToast({
+          tone: "error",
+          title: "Request already submitted",
+          description: "Start again from the contact step if you need to change your details."
+        });
+        return;
+      }
+
+      const message = error instanceof Error ? error.message : "Please try again.";
       showToast({
         tone: "error",
-        title: "Booking could not be confirmed",
-        description: error instanceof Error ? error.message : "Please try again."
+        title: "Could not submit your request",
+        description: message
       });
     }
   }
@@ -797,10 +838,22 @@ export function BookingFlowClient({
                 className="mt-1 h-4 w-4 rounded border-neutral-300"
               />
               <span>
-                Receive SMS about my appointment.
+                Receive SMS about my appointment (optional).
                 <span className="mt-1 block text-xs text-neutral-400">
                   Standard message rates apply. Reply STOP to opt out.
                 </span>
+              </span>
+            </label>
+            <label className="mt-3 flex items-start gap-3 rounded-[22px] border border-neutral-200 bg-neutral-50 px-4 py-4 text-sm text-neutral-600">
+              <input
+                type="checkbox"
+                checked={smsConsentMarketing}
+                onChange={(event) => updateFields({ smsConsentMarketing: event.target.checked })}
+                className="mt-1 h-4 w-4 rounded border-neutral-300"
+              />
+              <span>
+                Receive occasional promotional texts (optional).
+                <span className="mt-1 block text-xs text-neutral-400">Separate from appointment updates.</span>
               </span>
             </label>
             <button
@@ -858,15 +911,16 @@ export function BookingFlowClient({
               </dl>
             </div>
 
-            <div className="mt-5 rounded-[24px] border border-neutral-200 bg-neutral-50 px-4 py-4">
+            <div className="mt-5 rounded-[24px] border border-neutral-200 bg-neutral-50 px-4 py-4" aria-live="polite">
               <p className="text-sm font-semibold text-neutral-900">What happens next</p>
               <ul className="mt-3 space-y-2 text-sm text-neutral-600">
-                <li>Confirmation SMS within 2 hours</li>
-                <li>24-hour appointment reminder</li>
-                <li>On-the-way notification before arrival</li>
-                <li>Call if anything needs to shift</li>
+                <li>We review your request — this is not a confirmed appointment yet.</li>
+                {smsConsent ? <li>Confirmation SMS within 2 hours if you opted in</li> : null}
+                {smsConsent ? <li>24-hour appointment reminder when scheduled</li> : null}
+                {smsConsent ? <li>On-the-way notification before arrival when scheduled</li> : null}
+                <li>Our team will call if anything needs to shift</li>
               </ul>
-              <p className="mt-3 text-xs text-neutral-400">No payment is required to request your appointment.</p>
+              <p className="mt-3 text-xs text-neutral-400">No payment is required to submit your request.</p>
             </div>
 
             <button
@@ -875,9 +929,10 @@ export function BookingFlowClient({
                 void handleSubmitBooking();
               }}
               disabled={submitMutation.isPending}
+              aria-busy={submitMutation.isPending}
               className="mt-5 inline-flex min-h-12 w-full items-center justify-center rounded-[20px] bg-brand-accent px-4 text-sm font-semibold text-white disabled:cursor-not-allowed disabled:opacity-60"
             >
-              {submitMutation.isPending ? "Confirming..." : "Confirm Booking"}
+              {submitMutation.isPending ? "Submitting..." : "Submit request"}
             </button>
           </BookingCard>
         ) : null}
@@ -962,16 +1017,18 @@ export function BookingConfirmed({
             <ul className="mt-3 space-y-2 text-sm text-neutral-600">
               <li className="flex items-start gap-2">
                 <ShieldCheck className="mt-0.5 h-4 w-4 text-success" />
-                Confirmation text within 2 hours
-              </li>
-              <li className="flex items-start gap-2">
-                <MapPin className="mt-0.5 h-4 w-4 text-brand-accent" />
-                Technician ETA and on-the-way message
+                We review your request — scheduling is not confirmed until our team reaches out.
               </li>
               <li className="flex items-start gap-2">
                 <Phone className="mt-0.5 h-4 w-4 text-brand-accent" />
-                We may call if we need more details
+                We may call or email if we need more details
               </li>
+              {confirmation?.scheduledStart ? (
+                <li className="flex items-start gap-2">
+                  <MapPin className="mt-0.5 h-4 w-4 text-brand-accent" />
+                  Your proposed time is noted; we will confirm the final appointment window.
+                </li>
+              ) : null}
             </ul>
           </div>
 
