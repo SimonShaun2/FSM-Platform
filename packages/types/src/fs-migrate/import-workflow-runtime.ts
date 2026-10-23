@@ -1,5 +1,3 @@
-import { createHash } from "node:crypto";
-
 import { z } from "zod";
 
 import { ContractVersionV1Schema, IdempotencyKeyV1Schema, UuidSchema } from "../agent-control-plane/v1/zod-shared.js";
@@ -61,9 +59,4 @@ export function buildImportWorkflowAuditPayloadV1(
     policyVersion: IMPORT_POLICY_V1,
     ...input,
   });
-}
-
-/** Stable fingerprint for FS37-style idempotency replay checks on import steps. */
-export function hashImportWorkflowStepFingerprint(payload: Record<string, unknown>): string {
-  return createHash("sha256").update(JSON.stringify(payload)).digest("hex");
 }

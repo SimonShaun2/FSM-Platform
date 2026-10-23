@@ -3,9 +3,9 @@ import { describe, expect, it } from "vitest";
 import {
   IMPORT_POLICY_V1,
   buildImportWorkflowAuditPayloadV1,
-  hashImportWorkflowStepFingerprint,
   parseImportWorkflowQueueEnvelopeV1,
 } from "./import-workflow-runtime.js";
+import { hashImportWorkflowStepFingerprint } from "./import-workflow-runtime-fingerprint.node.js";
 import { buildImportChunkIdempotencyKey } from "./import-chunk-commit.js";
 
 describe("import workflow runtime (FS-MIGRATE agent parity)", () => {
