@@ -1,7 +1,8 @@
 # MVP P0 assignments — winter dispatch + FS-MIGRATE epic
 
-**Authority:** `BATCH-PLAN-5-9.md` §0 · Founder **7:18–7:21 PM CT** · **PO:** Elena  
-**Epic:** [`MVP-MIGRATION-EPIC-FS-MIGRATE.md`](./MVP-MIGRATION-EPIC-FS-MIGRATE.md) — **one generic AI importer** + source presets (Service Fusion, Jobber, ST, HCP, QB Online/Desktop).  
+**Authority:** `BATCH-PLAN-5-9.md` §0 · Founder **7:18–7:23 PM CT** · **PO:** Elena  
+**Epic:** [`MVP-MIGRATION-EPIC-FS-MIGRATE.md`](./MVP-MIGRATION-EPIC-FS-MIGRATE.md) — **one generic AI importer** + source presets + **R2 file migration** (photos, PDFs, forms).  
+**Platform P0:** [`MVP-PLATFORM-P0-INFRA.md`](./MVP-PLATFORM-P0-INFRA.md) — agents, queues, file pipeline, AI eval, audit, observability (parallel from M1).  
 **Tech Lead:** Grace · **Sign-off:** Isaac + Lily + Sam @ head → `batch-ci` → merge.
 
 ---
@@ -38,9 +39,28 @@
 | 14 | **Ezra** | Policy | QB OAuth gate doc; Service Fusion export runbook | [#93](https://github.com/SimonShaun2/Renvani/pull/93) |
 | 15 | **Sofia** | Security | Tenant isolation tests for bundle endpoints | `cursor/fs-migrate-tenant-tests-1f27` |
 | 16 | **Nina** | Normalize | Phone/date/money normalizers (`import-normalize`) | `cursor/fs-migrate-normalize-lib-1f27` |
-| — | **Elena** | PO | Epic acceptance §6; vendor priority order | Epic doc |
+| — | **Elena** | PO | Epic acceptance §6–§7; vendor + file batch priority | Epic doc |
 
-*Grace:* land [#93](https://github.com/SimonShaun2/Renvani/pull/93) epic; sequence PRs M1→M5; no per-vendor importer PRs.
+*Grace:* land [#93](https://github.com/SimonShaun2/Renvani/pull/93) epic; sequence PRs M1→M7; no per-vendor importer PRs. **M6–M7** and platform P0 run in parallel with M2–M5 once M1 presets land.
+
+---
+
+## FS-MIGRATE — file migration & platform P0 (7:23 CT, Backend / Infra)
+
+| Dev | Workstream | Deliverable | Branch / PR |
+| --- | --- | --- | --- |
+| **Diego** | File ingest | Resumable **batch upload** → R2 (`{companyId}/imports/{bundleId}/…`); `migrate-file-batch` on `fsm:imports` | `cursor/fs-migrate-r2-file-batch-1f27` |
+| **Mila** | File ingest | MIME sniff, size limits, checkpoint/resume tests; extends FS-85 tenant paths | with Diego |
+| **Marcus** | AI file link | `fsm:ai` job: filename/folder → customer/job/asset; operator confirm in preview | `cursor/fs-migrate-ai-file-link-1f27` |
+| **Kai** | AI eval | Golden messy-filename fixtures; token usage logging for file match | with Marcus |
+| **Hana** | Queues | DLQ visibility, failed-object-only retry, no silent drops for import jobs | `cursor/fs-migrate-queue-hardening-1f27` |
+| **Iris** | Queues | Wire `migrate-file-batch` into import session state machine | with Hana |
+| **Noah** | Agent runtime | Durable/idempotent import steps aligned with FS-72 agent policy patterns | `cursor/fs-migrate-agent-runtime-1f27` |
+| **Ava** | Audit | `import.files_batch.*` + attachment link events on `activity_events` | with file batch PR |
+| **Ezra** | Observability | Trace one bundle: `importSessionId` → job ids → R2 keys (structured logs) | `cursor/fs-migrate-observability-1f27` |
+| **Sofia** | Security | Sam matrix: attachment paths + rollback cannot cross `companyId` | extends `cursor/fs-migrate-tenant-tests-1f27` |
+
+*Principle (founder):* internal agent/queue/file/AI infrastructure is **MVP P0**, not post-winter — same bar as customer-facing import UX.
 
 ---
 

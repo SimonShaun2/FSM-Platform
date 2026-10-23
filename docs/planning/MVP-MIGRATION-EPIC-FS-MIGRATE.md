@@ -1,8 +1,8 @@
 # MVP P0 Epic — FS-MIGRATE: Universal AI import & onboarding
 
 **Epic ID:** `FS-MIGRATE` (extends FS-11)  
-**Authority:** Founder refinement **2026-10-22 7:21 PM CT** · **PO:** Elena · **Tech Lead:** Grace  
-**Principle:** **One generic importer** — not per-vendor importer apps. Vendors ship as **source presets** (saved mapping templates + known export quirks).
+**Authority:** Founder **7:21–7:23 PM CT** · **PO:** Elena · **Tech Lead:** Grace  
+**Principles:** (1) **One generic importer** — vendors = **source presets** only. (2) **Files migrate too** — photos, PDFs, signed forms, linked to customer/job/equipment in R2. (3) **Platform P0** — agents, queues, file processing, AI eval, audit, observability parity with customer UX ([`MVP-PLATFORM-P0-INFRA.md`](./MVP-PLATFORM-P0-INFRA.md)).
 
 ---
 
@@ -19,8 +19,11 @@
 | **Preview** | Row + relationship errors; plain-language AI summaries | `preview` status + `/errors` |
 | **Reversible commit** | `importSessionId` tagging + rollback transaction | **Shipped** |
 | **Audit** | `activity_events` + session log | **Shipped** pattern |
+| **File / media ingest** | Photos, attachments, PDFs, signed forms → **R2** + `file_attachments` rows linked to customer/job/asset | **Build** — `attachment.service`, R2 adapter |
+| **File ↔ record match** | AI + heuristics on messy filenames/folder paths; operator confirm in preview | **Build** — `fsm:ai` job |
+| **Resumable file batch** | Chunked/batch upload; worker checkpoint; retry failed objects only | **Build** — `fsm:imports` job `migrate-file-batch` |
 
-**Non-goals (founder gate):** QuickBooks OAuth / Intuit dev app, live API sync (ADR-FS-41), paid partner programs.
+**Non-goals (founder gate):** QuickBooks OAuth / Intuit dev app, live API sync (ADR-FS-41), paid partner programs, new R2 **paid tier** provisioning without founder OK.
 
 ---
 
@@ -52,9 +55,14 @@ import_bundle (per onboarding)
   ├── file: invoices.csv       → invoices + open balances
   ├── file: equipment.csv      → assets + service history pointers
   └── file: agreements.csv     → maintenance_plans + recurring schedule seeds
+  └── media/                   → zip or folder upload (job photos, forms, PDFs)
+        ├── resumable batch → R2 keys under `{companyId}/imports/{bundleId}/...`
+        └── AI match → entityType + entityId (preview before link)
 ```
 
-Worker phases: **map each file** → **validate joins** → **preview graph** → **commit in dependency order** (customers → properties → assets → jobs → invoices → plans).
+Worker phases: **map each tabular file** → **validate joins** → **preview graph** → **commit tabular** in dependency order → **file batch upload** → **AI/heuristic file link** → **preview unlinked** → **commit attachments** (same `importSessionId` for rollback).
+
+**Rollback:** soft-delete `file_attachments` + R2 objects tagged with session (or orphan cleanup job — idempotent).
 
 ---
 
@@ -63,9 +71,9 @@ Worker phases: **map each file** → **validate joins** → **preview graph** �
 | Step | UX | AI role |
 | --- | --- | --- |
 | 1. Choose source | Service Fusion / Jobber / ST / HCP / QB Online / QB Desktop | Explain which exports to download |
-| 2. Upload bundle | Multi-file drop; progress per file | Flag missing recommended files |
+| 2. Upload bundle | Tabular + **media** (zip/folder); **resumable** batch progress | Flag missing exports; estimate link confidence |
 | 3. Review mappings | Per-file column review | Plain-language: “We mapped Phone → mobile” |
-| 4. Preview issues | Errors + dedupe collisions | Summarize blockers vs warnings |
+| 4. Preview issues | Row errors, dedupe, **unlinked/orphan files** | Plain-language issue list |
 | 5. Commit | Progress bar; partial success OK | Post-commit summary |
 | 6. Done / rollback | One-click undo | Explain what rollback removes |
 
@@ -77,7 +85,8 @@ Worker phases: **map each file** → **validate joins** → **preview graph** �
 
 - **Equipment / asset history** → feeds asset-age campaigns & FS-72 reminders  
 - **Open balances** → honest AR picture in Command Center  
-- **Maintenance agreements + recurring schedules** → Repeat lifecycle demo
+- **Maintenance agreements + recurring schedules** → Repeat lifecycle demo  
+- **Job photos & signed PDFs** in R2 on the right job/customer — migration credibility
 
 ---
 
@@ -86,8 +95,10 @@ Worker phases: **map each file** → **validate joins** → **preview graph** �
 - [ ] One tenant: **Service Fusion OR Jobber** bundle imported end-to-end with preview, commit, rollback.  
 - [ ] Second source: **QuickBooks Online** (customers + invoices + open balance) via same wizard.  
 - [ ] Dedupe preview shows merge decision before commit.  
-- [ ] Audit: `import.started` / `import.completed` / `import.rolled_back` on bundle.  
-- [ ] No cross-tenant leakage (FS-92 matrix).
+- [ ] **≥50 files** (mixed names) batch-uploaded; **≥90%** auto-linked or flagged in preview for one-click confirm.  
+- [ ] Attachments visible on job/customer in UI; stored tenant-scoped in R2.  
+- [ ] Audit: `import.started` / `import.completed` / `import.rolled_back` + `import.files_batch.*` events on bundle.  
+- [ ] No cross-tenant leakage (FS-92 matrix + FS-85 attachments).
 
 ---
 
@@ -100,8 +111,10 @@ Worker phases: **map each file** → **validate joins** → **preview graph** �
 | **M3** | Week 3 | Jobs + invoices + open balances commit |
 | **M4** | Week 4 | Equipment + maintenance agreements; AI plain-language preview |
 | **M5** | Week 5 | QB Desktop quirks + resumable wizard polish |
+| **M6** | Week 6 | **File batch**: R2 ingest, AI file-to-record match, attachment rollback |
+| **M7** | Week 7 | Platform hardening: queue replay UX, migration observability dashboards (logs) |
 
-*Calendar weeks are planning buckets; ship slices as PRs merge.*
+*Calendar weeks are planning buckets; ship slices as PRs merge. Platform P0 runs **in parallel** from M1 ([`MVP-PLATFORM-P0-INFRA.md`](./MVP-PLATFORM-P0-INFRA.md)).*
 
 ---
 

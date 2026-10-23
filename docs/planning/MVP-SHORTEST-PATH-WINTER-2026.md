@@ -1,7 +1,7 @@
 # Shortest path — demoable, migration-ready MVP (winter 2026)
 
-**Authority:** Founder urgency 2026-10-22 **7:18 PM CT** (winter buying window) · **PO:** Elena · **Tech Lead:** Grace  
-**North star:** **One generic AI importer** (CSV/XLSX) with **source presets** (Service Fusion, Jobber, ST, HCP, QB Online/Desktop) migrates a tenant; then **Discover → Book → Serve → Repeat** in one demo. Epic: `MVP-MIGRATION-EPIC-FS-MIGRATE.md`. No live API sync until founder approves OAuth (ADR-FS-41).
+**Authority:** Founder urgency 2026-10-22 **7:18–7:23 PM CT** (winter buying window) · **PO:** Elena · **Tech Lead:** Grace  
+**North star:** **One generic AI importer** (CSV/XLSX + **media**) with **source presets** migrates tabular data **and** job photos, PDFs, and signed forms to **tenant-scoped R2**, linked via AI/heuristics; then **Discover → Book → Serve → Repeat** in one demo. Epic: [`MVP-MIGRATION-EPIC-FS-MIGRATE.md`](./MVP-MIGRATION-EPIC-FS-MIGRATE.md). Platform agents/queues/files/observability: [`MVP-PLATFORM-P0-INFRA.md`](./MVP-PLATFORM-P0-INFRA.md). No live API sync until founder approves OAuth (ADR-FS-41).
 
 ---
 
@@ -13,7 +13,7 @@
 | **Book** | Request → hold → slot pick | Booking flow, hold tokens | [#89](https://github.com/SimonShaun2/Renvani/pull/89) hold inspect/resume |
 | **Serve** | Dispatch board + field sync contract | Jobs, dispatch view, FS-87 doc, **#86 SSE merged** | — |
 | **Repeat** | Maintenance reminder **candidates** (dry-run) | [#85](https://github.com/SimonShaun2/Renvani/pull/85) API merged | [#91](https://github.com/SimonShaun2/Renvani/pull/91) agent policy + worker stub |
-| **Migrate** | **FS-MIGRATE** wizard: multi-file bundle, AI map, dedupe, normalize, preview, rollback | `import_sessions` + worker shell | Epic M1–M5; [#92](https://github.com/SimonShaun2/Renvani/pull/92) preset catalog |
+| **Migrate** | **FS-MIGRATE** wizard: tabular bundle + **resumable file batch** → R2, AI map + **file-to-record** link, dedupe, preview, rollback | `import_sessions`, R2 adapter, `fsm:imports` / `fsm:ai` | Epic M1–M7; [#92](https://github.com/SimonShaun2/Renvani/pull/92); platform P0 parallel |
 
 **Explicitly ⏸ post-MVP for winter demo:** FS-94 platform billing, FS-6 design partners GTM, **QuickBooks OAuth / Intuit dev app** (founder gate), live Jobber/ST API sync, FS-35 pilot rubric, autonomous customer SMS sends.
 
@@ -33,7 +33,11 @@
 | Equipment + maintenance agreements | Omar, Ava |
 | Open balances | Hana |
 | Onboarding wizard (guided, resumable, AI copy) | Priya, Leo, Ben |
-| Audit + tenant tests | Sofia, Mila |
+| **File batch → R2** + attachment rows | Diego, Mila |
+| **AI file-to-record** match (messy names/folders) | Marcus, Kai |
+| Queue reliability + import observability | Hana, Iris, Ezra |
+| Agent runtime parity for import jobs | Noah, Ava |
+| Audit + tenant tests (tabular + attachments) | Aria, Sofia, Mila |
 | QB OAuth | Ezra — founder gate only |
 
 ---
@@ -60,8 +64,8 @@ Assuming **parallel P0 PRs** (#86–#91 + import presets) merge over the next **
 | Milestone | Target (CT) | Definition |
 | --- | --- | --- |
 | **Demo-ready smoke** | **2026-11-07** | Script in §1 runnable on staging with one imported tenant |
-| **Migration-ready MVP** | **2026-11-28** | FS-MIGRATE M1–M3: 2 sources + multi-file preview/commit/rollback (slip +1 week for epic scope) |
-| **Winter field-ready** | **2026-12-05** | Hardening only; no new modules without Elena + founder |
+| **Migration-ready MVP** | **2026-11-28** | FS-MIGRATE M1–M3 tabular + **M6 file batch** started: 2 sources, preview/commit/rollback, **≥50 files** to R2 with preview link (epic §6) |
+| **Winter field-ready** | **2026-12-05** | M6–M7 complete (file link quality, queue replay/observability); hardening only otherwise |
 
 *Slip risk:* Lily/Isaac queue on concurrent PRs, or FS-11 test repair > 2d — adds ~1 week.
 
