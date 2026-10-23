@@ -48,6 +48,8 @@ function createOwnerContext(label: string) {
   const user = fakeDb.seedUser({
     companyId: company.id,
     email: `${label}@test.local`,
+    firstName: "Test",
+    lastName: "Owner",
     role: "owner"
   });
   const token = tokens.generateAccessToken({
