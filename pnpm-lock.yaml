@@ -520,6 +520,12 @@ importers:
         specifier: ^3.25.76
         version: 3.25.76
     devDependencies:
+      '@fsm/config':
+        specifier: workspace:*
+        version: link:../config
+      '@fsm/import-normalize':
+        specifier: workspace:*
+        version: link:../import-normalize
       '@types/node':
         specifier: ^24.3.0
         version: 24.12.2

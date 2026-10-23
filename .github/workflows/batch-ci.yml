@@ -31,6 +31,8 @@ jobs:
         run: pnpm lint
       - name: Test
         run: pnpm test
+      - name: FS-128 FS-MIGRATE import pipeline contracts
+        run: pnpm test:fs-migrate-import-contracts
 
   neon-per-pr-staging:
     name: Neon per-PR (staging RLS)
@@ -50,7 +52,7 @@ jobs:
       - name: Install
         run: corepack enable && pnpm install --frozen-lockfile
       - name: Build packages for CI scripts
-        run: pnpm --filter "@fsm/config..." --filter "@fsm/db..." build
+        run: pnpm --filter @fsm/import-normalize build && pnpm --filter @fsm/types build && pnpm --filter "@fsm/config..." --filter "@fsm/db..." build
       - name: Neon per-PR branch gate (STACK-10)
         env:
           NEON_CI_DATABASE_URL: ${{ secrets.NEON_CI_STAGING_DATABASE_URL }}

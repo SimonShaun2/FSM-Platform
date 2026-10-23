@@ -1,3 +1,5 @@
+import { normalizeImportText } from "./text.js";
+
 const ISO_DATE_PATTERN = /^(\d{4})-(\d{2})-(\d{2})$/u;
 const US_DATE_PATTERN = /^(\d{1,2})[/-](\d{1,2})[/-](\d{2,4})$/u;
 
@@ -77,4 +79,29 @@ export function normalizeImportDate(value: string | null | undefined): string | 
   }
 
   return null;
+}
+
+/**
+ * Business date for FS-MIGRATE (YYYY-MM-DD). Does not substitute ingestion time.
+ */
+export function normalizeImportBusinessDate(value: string | null | undefined): string | null {
+  const normalized = normalizeImportText(value);
+  if (!normalized) {
+    return null;
+  }
+
+  if (/^\d{4}-\d{2}-\d{2}$/.test(normalized)) {
+    return formatDateOnlyUtc(
+      Number(normalized.slice(0, 4)),
+      Number(normalized.slice(5, 7)),
+      Number(normalized.slice(8, 10))
+    );
+  }
+
+  const isoDateTime = /^(\d{4}-\d{2}-\d{2})T/.exec(normalized);
+  if (isoDateTime?.[1]) {
+    return normalizeImportDate(isoDateTime[1]);
+  }
+
+  return normalizeImportDate(normalized);
 }
