@@ -81,6 +81,15 @@ describe("import-source-presets", () => {
     ).toBe("housecall_pro_jobs");
   });
 
+  it("infers Housecall Pro invoices export", () => {
+    expect(
+      inferImportSourcePresetForSession(
+        ["Invoice ID", "Customer ID", "Invoice Date", "Total", "Balance"],
+        "invoices"
+      )
+    ).toBe("housecall_pro_invoices");
+  });
+
   it("infers QuickBooks Desktop items and invoices", () => {
     expect(
       inferImportSourcePresetFromHeaders(
