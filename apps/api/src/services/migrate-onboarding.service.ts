@@ -160,6 +160,7 @@ export async function createMigrateOnboardingSession(
     .values({
       companyId,
       createdById: actorId,
+      sourceSystem: "manual_csv",
       status: "active",
       wizardStep: 1,
       stepState: { files: [] },

@@ -26,6 +26,14 @@
       "types": "./dist/import-source-presets.d.ts",
       "import": "./dist/import-source-presets.js"
     },
+    "./import-price-book-map": {
+      "types": "./dist/import-price-book-map.d.ts",
+      "import": "./dist/import-price-book-map.js"
+    },
+    "./import-bundle-storage": {
+      "types": "./dist/import-bundle-storage.d.ts",
+      "import": "./dist/import-bundle-storage.js"
+    },
     "./object-storage": {
       "types": "./dist/object-storage/index.d.ts",
       "import": "./dist/object-storage/index.js"

@@ -4,11 +4,14 @@
 
 export type ImportSourcePresetId =
   | "jobber"
+  | "jobber_price_book"
   | "housecall_pro"
   | "service_titan"
   | "service_fusion"
+  | "service_fusion_price_book"
   | "quickbooks_customers"
   | "quickbooks_desktop_customers"
+  | "quickbooks_desktop_items"
   | "quickbooks_items"
   | "quickbooks_invoices"
   | "generic";

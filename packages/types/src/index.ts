@@ -14,6 +14,8 @@ export * from "./field-work-sync/v1/index.js";
 export * from "./estimate.types.js";
 export * from "./file-attachment.types.js";
 export * from "./import.types.js";
+export * from "./import-invoice-balance.types.js";
+export * from "./import-price-book.js";
 export * from "./fs-migrate/index.js";
 export * from "./data-import.contract.js";
 export * from "./data-export/v1/index.js";

@@ -32,6 +32,11 @@ export {
 } from "./import-chunk-commit.js";
 export type { ImportChunkCommitPayload } from "./import-chunk-commit.js";
 export {
+  IMPORT_INVOICE_BALANCE_COMMIT_JOB_NAME,
+  ImportInvoiceBalanceCommitPayloadSchema,
+} from "./import-invoice-balance-commit.js";
+export type { ImportInvoiceBalanceCommitPayload } from "./import-invoice-balance-commit.js";
+export {
   QUEUE_PREFIX,
   QUEUE_NAMES,
   queueBaseOptions,

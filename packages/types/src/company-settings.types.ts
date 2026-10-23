@@ -27,6 +27,14 @@ export interface CompanyClerkSettings {
   organizationId?: string | null;
 }
 
+/** STACK-13 — platform subscription snapshot in companies.settings */
+export interface CompanyStripePlatformBillingSettings {
+  status?: string | null;
+  customerId?: string | null;
+  subscriptionId?: string | null;
+  currentPeriodEnd?: string | null;
+}
+
 export interface CompanySettings {
   tradingName?: string | null;
   currency?: string | null;
@@ -34,4 +42,5 @@ export interface CompanySettings {
   billing?: CompanyBillingSettings | null;
   /** STACK-02 — maps Clerk org to tenant company */
   clerk?: CompanyClerkSettings | null;
+  stripePlatformBilling?: CompanyStripePlatformBillingSettings | null;
 }

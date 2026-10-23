@@ -16,7 +16,13 @@ export const featureFlags = {
   // FEATURE FLAG: clerk-auth-parallel-jwt — STACK-02: accept Clerk session JWT alongside in-repo JWT
   clerkAuthParallelJwt: false,
   // FEATURE FLAG: tenant-session-scoped-writes — STACK-02/10: SET LOCAL app.current_company_id on API writes
-  tenantSessionScopedWrites: false
+  tenantSessionScopedWrites: false,
+  // FEATURE FLAG: resend-email-enabled — STACK-08: route outbound email through Resend (@fsm/comms)
+  resendEmailEnabled: false,
+  // FEATURE FLAG: outbound-sms-enabled — when false, SMS sends are stubbed/disabled
+  outboundSmsEnabled: true,
+  // FEATURE FLAG: stripe-platform-billing-mvp — STACK-13 platform subscription checkout
+  stripePlatformBillingMvp: false
 } as const;
 
 export type FeatureFlags = typeof featureFlags;

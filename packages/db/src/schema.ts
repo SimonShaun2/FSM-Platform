@@ -216,6 +216,14 @@ export const importEntityTypeEnum = pgEnum("import_entity_type", [
   "estimates",
   "invoices",
   "price_book",
+  "payments",
+]);
+
+export const importBundleStatusEnum = pgEnum("import_bundle_status", [
+  "active",
+  "committing",
+  "completed",
+  "abandoned",
 ]);
 
 export const technicianStatusEnum = pgEnum("technician_status", [
@@ -332,6 +340,11 @@ export const activityEventTypeEnum = pgEnum("activity_event_type", [
   "import.completed",
   "import.rolled_back",
   "import.failed",
+  "import.bundle.created",
+  "import.bundle.step_advanced",
+  "import.bundle.commit_started",
+  "import.bundle.completed",
+  "import.bundle.abandoned",
   // Data export (FS-89)
   "export.requested",
   "export.completed",
@@ -1299,8 +1312,14 @@ export const importBundles = pgTable("import_bundles", {
   id: id(),
   companyId: companyId(),
   createdById: uuid("created_by_id").references(() => users.id),
-  sourceSystem: varchar("source_system", { length: 64 }).notNull(),
+  sourceSystem: varchar("source_system", { length: 64 }).notNull().default("manual_csv"),
   label: varchar("label", { length: 255 }),
+  status: importBundleStatusEnum("status").notNull().default("active"),
+  wizardStep: integer("wizard_step").notNull().default(1),
+  stepState: jsonb("step_state").notNull().default({}),
+  dedupeDecisions: jsonb("dedupe_decisions").notNull().default({}),
+  completedAt: timestamp("completed_at"),
+  abandonedAt: timestamp("abandoned_at"),
   ...timestamps,
 }, (t) => ({
   companyIdx: index("import_bundles_company_idx").on(t.companyId),

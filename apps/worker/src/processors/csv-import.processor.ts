@@ -141,8 +141,8 @@ function readPriceBookSourceSystem(
     return inferences.sourceSystem as ReturnType<typeof resolveSourceSystemForPriceBookImport>;
   }
 
-  const presetId = inferImportVendorPresetForSession(headers, entityType);
-  return resolveSourceSystemForPriceBookImport(presetId);
+  const presetId = inferImportSourcePresetForSession(headers, entityType);
+  return resolveSourceSystemForPriceBookImport(presetId ?? "generic");
 }
 
 function normalizeDuplicateActions(value: unknown): Record<string, DuplicateAction> {
@@ -533,7 +533,7 @@ export async function handleMapCsvColumns(job: Job<Record<string, unknown>>): Pr
     }
 
     const priorInferences = normalizeAiInferences(importSession.aiInferences);
-    const sourceSystem = resolveSourceSystemForPriceBookImport(vendorPresetId);
+    const sourceSystem = resolveSourceSystemForPriceBookImport(sourcePresetId ?? "generic");
 
     await db
       .update(importSessions)
@@ -542,7 +542,7 @@ export async function handleMapCsvColumns(job: Job<Record<string, unknown>>): Pr
         status: "mapping",
         aiInferences: {
           ...priorInferences,
-          vendorPresetId,
+          sourcePresetId,
           sourceSystem
         },
         updatedAt: new Date()

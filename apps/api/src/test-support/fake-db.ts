@@ -12,6 +12,7 @@ type TableName =
   | "assets"
   | "jobs"
   | "importSessions"
+  | "importBundles"
   | "importChunkRuns"
   | "dataExportSessions"
   | "estimates"
@@ -322,6 +323,23 @@ export interface TestImportValidationError {
   field: string;
   message: string;
   value: string;
+}
+
+export interface TestImportBundleRecord {
+  id: string;
+  companyId: string;
+  createdById: string | null;
+  sourceSystem: string;
+  label: string | null;
+  status: "active" | "committing" | "completed" | "abandoned";
+  wizardStep: number;
+  stepState: Record<string, unknown>;
+  dedupeDecisions: Record<string, unknown>;
+  completedAt: Date | null;
+  abandonedAt: Date | null;
+  createdAt: Date;
+  updatedAt: Date;
+  deletedAt: Date | null;
 }
 
 export interface TestImportSessionRecord {
@@ -2026,6 +2044,7 @@ interface TestState {
   assets: TestAssetRecord[];
   jobs: TestJobRecord[];
   importSessions: TestImportSessionRecord[];
+  importBundles: Array<Record<string, unknown> & { id: string; companyId: string }>;
   importChunkRuns: TestImportChunkRunRecord[];
   dataExportSessions: TestDataExportSessionRecord[];
   estimates: TestEstimateRecord[];
@@ -3087,6 +3106,7 @@ const state: TestState = {
   assets: [],
   jobs: [],
   importSessions: [],
+  importBundles: [],
   importChunkRuns: [],
   dataExportSessions: [],
   estimates: [],
@@ -3212,6 +3232,8 @@ function getRows(tableName: TableName): AnyTestRecord[] {
       return state.jobs;
     case "importSessions":
       return state.importSessions;
+    case "importBundles":
+      return state.importBundles as unknown as AnyTestRecord[];
     case "importChunkRuns":
       return state.importChunkRuns;
     case "dataExportSessions":
@@ -4659,6 +4681,11 @@ function createRow(tableName: TableName, values: Record<string, unknown>): AnyTe
         values as Partial<TestImportSessionRecord> &
           Pick<TestImportSessionRecord, "companyId" | "fileName" | "fileUrl">
       );
+    case "importBundles":
+      return seedImportBundle(
+        values as Partial<Parameters<typeof seedImportBundle>[0]> &
+          Pick<Parameters<typeof seedImportBundle>[0], "companyId">
+      ) as unknown as AnyTestRecord;
     case "importChunkRuns":
       return createImportChunkRunRecord(
         values as Partial<TestImportChunkRunRecord> &
@@ -5588,6 +5615,7 @@ export function resetTestState(): void {
   state.assets.length = 0;
   state.jobs.length = 0;
   state.importSessions.length = 0;
+  state.importBundles.length = 0;
   state.importChunkRuns.length = 0;
   state.dataExportSessions.length = 0;
   state.estimates.length = 0;
@@ -5982,6 +6010,58 @@ export function seedAgentAction(
     ...values
   });
   state.agentActions.push(record);
+  return record;
+}
+
+export function seedImportBundle(
+  values: Partial<{
+    id: string;
+    companyId: string;
+    createdById: string | null;
+    sourceSystem: string;
+    label: string | null;
+    status: "active" | "committing" | "completed" | "abandoned";
+    wizardStep: number;
+    stepState: Record<string, unknown>;
+    dedupeDecisions: Record<string, unknown>;
+    completedAt: Date | null;
+    abandonedAt: Date | null;
+  }> &
+    Pick<{ companyId: string }, "companyId">
+): {
+  id: string;
+  companyId: string;
+  createdById: string | null;
+  sourceSystem: string;
+  label: string | null;
+  status: "active" | "committing" | "completed" | "abandoned";
+  wizardStep: number;
+  stepState: Record<string, unknown>;
+  dedupeDecisions: Record<string, unknown>;
+  completedAt: Date | null;
+  abandonedAt: Date | null;
+  createdAt: Date;
+  updatedAt: Date;
+  deletedAt: Date | null;
+} {
+  const now = new Date();
+  const record = {
+    id: values.id ?? randomUUID(),
+    companyId: values.companyId,
+    createdById: values.createdById ?? null,
+    sourceSystem: values.sourceSystem ?? "manual_csv",
+    label: values.label ?? null,
+    status: values.status ?? "active",
+    wizardStep: values.wizardStep ?? 1,
+    stepState: values.stepState ?? { files: [] },
+    dedupeDecisions: values.dedupeDecisions ?? {},
+    completedAt: values.completedAt ?? null,
+    abandonedAt: values.abandonedAt ?? null,
+    createdAt: now,
+    updatedAt: now,
+    deletedAt: null
+  };
+  state.importBundles.push(record);
   return record;
 }
 

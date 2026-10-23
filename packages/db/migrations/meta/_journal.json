@@ -197,6 +197,27 @@
       "when": 1777700000000,
       "tag": "0027_stack10_tenant_rls_policies",
       "breakpoints": true
+    },
+    {
+      "idx": 28,
+      "version": "7",
+      "when": 1777701000000,
+      "tag": "0028_fs_migrate_onboarding_wizard",
+      "breakpoints": true
+    },
+    {
+      "idx": 29,
+      "version": "7",
+      "when": 1777702000000,
+      "tag": "0029_fs_migrate_price_book_catalog",
+      "breakpoints": true
+    },
+    {
+      "idx": 30,
+      "version": "7",
+      "when": 1777703000000,
+      "tag": "0030_fs_migrate_invoice_payment_import",
+      "breakpoints": true
     }
   ]
 }
