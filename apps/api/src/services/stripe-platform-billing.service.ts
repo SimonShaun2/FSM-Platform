@@ -1,7 +1,10 @@
 import { and, eq, isNull } from "drizzle-orm";
 
 import { companies, db, emitEventWithExecutor } from "@fsm/db";
-import { env } from "@fsm/config";
+import {
+  resolvePlatformBillingPriceId,
+  type RenvaniSubscriptionPlan
+} from "@fsm/config/stripe-pricing";
 import { featureFlags } from "@fsm/config/feature-flags";
 import type { CompanySettings } from "@fsm/types";
 import { AppError, ErrorCode, type StripePlatformBillingStatus } from "@fsm/types";
@@ -15,8 +18,13 @@ type CompanyRow = typeof companies.$inferSelect;
 
 function isPlatformBillingConfigured(): boolean {
   // FEATURE FLAG: stripe-platform-billing-mvp
-  const priceId = env.STRIPE_PLATFORM_BILLING_PRICE_ID ?? "";
-  return featureFlags.stripePlatformBillingMvp && priceId.trim().length > 0;
+  if (!featureFlags.stripePlatformBillingMvp) {
+    return false;
+  }
+
+  return (
+    resolvePlatformBillingPriceId("flex") !== null || resolvePlatformBillingPriceId("flat") !== null
+  );
 }
 
 function readPlatformBillingSettings(company: CompanyRow) {
@@ -41,6 +49,7 @@ function buildStatus(company: CompanyRow): StripePlatformBillingStatus {
     stripeCustomerId: company.stripeCustomerId,
     stripeSubscriptionId: billing?.subscriptionId ?? null,
     currentPeriodEnd: billing?.currentPeriodEnd ?? null,
+    planTier: billing?.planTier ?? null,
     checkoutAvailable: isPlatformBillingConfigured() && !subscribed
   };
 }
@@ -88,10 +97,16 @@ export async function getPlatformBillingStatus(companyId: string): Promise<Strip
 
 export async function createPlatformBillingCheckout(
   companyId: string,
-  actorEmail: string | null
+  actorEmail: string | null,
+  plan: RenvaniSubscriptionPlan
 ): Promise<{ url: string }> {
   if (!isPlatformBillingConfigured()) {
     throw new AppError(ErrorCode.FORBIDDEN, "Platform billing is not enabled");
+  }
+
+  const priceId = resolvePlatformBillingPriceId(plan);
+  if (!priceId) {
+    throw new AppError(ErrorCode.VALIDATION_ERROR, `Platform billing price is not configured for ${plan}`);
   }
 
   const company = await getCompany(companyId);
@@ -104,7 +119,8 @@ export async function createPlatformBillingCheckout(
   const checkout = await createPlatformBillingCheckoutSession({
     companyId,
     stripeCustomerId,
-    priceId: env.STRIPE_PLATFORM_BILLING_PRICE_ID ?? "",
+    priceId,
+    planTier: plan,
     customerEmail: actorEmail ?? company.email
   });
 
@@ -116,7 +132,8 @@ export async function createPlatformBillingCheckout(
     summary: "Platform billing checkout session created",
     payload: {
       checkoutSessionId: checkout.sessionId,
-      billingKind: "platform_mvp"
+      billingKind: "platform_mvp",
+      planTier: plan
     }
   });
 

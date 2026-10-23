@@ -682,7 +682,8 @@ describe("stripe.handler", () => {
       stripePlatformBilling: {
         subscriptionId: "sub_platform_1",
         status: "active",
-        currentPeriodEnd: "2026-07-01T00:00:00.000Z"
+        currentPeriodEnd: "2026-07-01T00:00:00.000Z",
+        planTier: null
       }
     });
     expect(company.stripeCustomerId).toBe("cus_platform_1");

@@ -2,10 +2,12 @@ import type { FastifyReply, FastifyRequest } from "fastify";
 
 import {
   createDashboardLink,
+  createEmbeddedConnectSession,
   createOnboardingLink,
   getConnectStatus,
   handleOnboardingReturn
 } from "../../services/stripe-connect.service.js";
+import type { ConnectAccountSessionBody } from "./schemas.js";
 
 export async function createOnboardingLinkHandler(
   request: FastifyRequest,
@@ -36,5 +38,14 @@ export async function createDashboardLinkHandler(
   reply: FastifyReply
 ): Promise<FastifyReply> {
   const result = await createDashboardLink(request.company.id);
+  return reply.send(result);
+}
+
+export async function createConnectAccountSessionHandler(
+  request: FastifyRequest,
+  reply: FastifyReply
+): Promise<FastifyReply> {
+  const body = request.body as ConnectAccountSessionBody;
+  const result = await createEmbeddedConnectSession(request.company.id, body.components);
   return reply.send(result);
 }

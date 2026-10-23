@@ -56,7 +56,9 @@ beforeEach(async () => {
   fakeDb.resetTestState();
   createPlatformBillingCheckoutSessionMock.mockReset();
   createStripePlatformCustomerMock.mockReset();
-  vi.stubEnv("STRIPE_PLATFORM_BILLING_PRICE_ID", "price_test_mvp");
+  vi.stubEnv("STRIPE_PLATFORM_BILLING_PRICE_ID_FLEX", "price_test_flex");
+  vi.stubEnv("STRIPE_PLATFORM_BILLING_PRICE_ID_FLAT", "price_test_flat");
+  vi.stubEnv("STRIPE_PLATFORM_BILLING_PRICE_ID", "");
   resetEnvCacheForTests();
   app = await buildAppModule.buildApp();
   await app.ready();

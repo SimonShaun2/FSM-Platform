@@ -113,6 +113,13 @@ interface InvoiceItemResponse {
 interface PublicPaymentLinkResponse {
   invoiceNumber: string;
   paymentLinkUrl: string;
+  checkoutClientSecret: string | null;
+  invoiceAmount: string;
+  platformFeeAmount: string;
+  totalDue: string;
+  platformFeePercent: number | null;
+  platformFeePaidByCustomer: boolean;
+  platformFeeDisclosure: string | null;
 }
 
 function buildQueryString(values: Record<string, string | number | undefined>) {

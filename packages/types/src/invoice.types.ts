@@ -241,3 +241,20 @@ export interface ListPaymentsQuery {
   page?: number;
   limit?: number;
 }
+
+/** Public customer payment page (token link); payment completes on Renvani when embedded Checkout is enabled. */
+export interface PublicInvoicePaymentLink {
+  invoiceNumber: string;
+  /** Renvani-hosted pay page URL (not a Stripe-hosted redirect). */
+  paymentLinkUrl: string;
+  /** Present when invoice Checkout uses embedded UI on the pay page. */
+  checkoutClientSecret: string | null;
+  invoiceAmount: string;
+  platformFeeAmount: string;
+  totalDue: string;
+  /** Set for Flex tenants when a customer-paid fee applies. */
+  platformFeePercent: number | null;
+  platformFeePaidByCustomer: boolean;
+  /** Optional disclosure from `CUSTOMER_PLATFORM_FEE_DISCLOSURE` (empty = omit). */
+  platformFeeDisclosure: string | null;
+}

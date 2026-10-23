@@ -5,6 +5,7 @@ export interface StripePlatformBillingStatus {
   stripeCustomerId?: string | null;
   stripeSubscriptionId?: string | null;
   currentPeriodEnd?: string | null;
+  planTier?: "flex" | "flat" | null;
   checkoutAvailable: boolean;
 }
 
@@ -18,5 +19,7 @@ export interface StripeConnectStatus {
   payoutSchedule?: string | null;
   lastPayoutAmount?: string | null;
   lastPayoutAt?: string | null;
+  /** Flex: customer-paid platform fee % added at checkout (0 on Flat). */
   platformFeePercent?: number;
+  renvaniPlanTier?: "flex" | "flat" | null;
 }

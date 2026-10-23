@@ -2,12 +2,14 @@ import type { FastifyRequest } from "fastify";
 import { and, eq, isNull } from "drizzle-orm";
 import type Stripe from "stripe";
 
+import { resolveRenvaniPlanFromStripePriceId } from "@fsm/config/stripe-pricing";
 import { companies, db, emitEventWithExecutor } from "@fsm/db";
 
 interface CompanyStripePlatformBillingSettings {
   subscriptionId?: string | null;
   status?: string | null;
   currentPeriodEnd?: string | null;
+  planTier?: "flex" | "flat" | null;
 }
 
 interface CompanySettings {
@@ -41,13 +43,33 @@ function readExistingSettings(company: CompanyRow): CompanySettings {
   return company.settings as CompanySettings;
 }
 
+function readSubscriptionPriceId(subscription: Stripe.Subscription): string | null {
+  const price = subscription.items?.data?.[0]?.price;
+  if (!price) {
+    return null;
+  }
+
+  return typeof price === "string" ? price : price.id;
+}
+
+function resolvePlanTierFromSubscription(subscription: Stripe.Subscription): "flex" | "flat" | null {
+  const metadataPlan = getMetadataString(subscription.metadata, "planTier");
+  if (metadataPlan === "flex" || metadataPlan === "flat") {
+    return metadataPlan;
+  }
+
+  const priceId = readSubscriptionPriceId(subscription);
+  return priceId ? resolveRenvaniPlanFromStripePriceId(priceId) : null;
+}
+
 function buildPlatformBillingSnapshot(subscription: Stripe.Subscription): CompanyStripePlatformBillingSettings {
   return {
     subscriptionId: subscription.id,
     status: subscription.status,
     currentPeriodEnd: subscription.current_period_end
       ? new Date(subscription.current_period_end * 1000).toISOString()
-      : null
+      : null,
+    planTier: resolvePlanTierFromSubscription(subscription)
   };
 }
 

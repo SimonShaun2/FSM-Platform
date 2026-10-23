@@ -33,6 +33,8 @@ export interface CompanyStripePlatformBillingSettings {
   customerId?: string | null;
   subscriptionId?: string | null;
   currentPeriodEnd?: string | null;
+  /** Flex ($299/mo + shop fee) vs Flat ($799/mo, no shop fee) */
+  planTier?: "flex" | "flat" | null;
 }
 
 export interface CompanySettings {

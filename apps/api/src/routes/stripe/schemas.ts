@@ -93,3 +93,39 @@ export const stripeDashboardLinkSchema = {
     409: errorResponseSchema
   }
 } as const;
+
+const connectComponentEnum = ["account_onboarding", "payments", "payouts"] as const;
+
+export type ConnectAccountSessionBody = {
+  components: (typeof connectComponentEnum)[number][];
+};
+
+export const stripeConnectAccountSessionSchema = {
+  tags: ["stripe"],
+  body: {
+    type: "object",
+    additionalProperties: false,
+    required: ["components"],
+    properties: {
+      components: {
+        type: "array",
+        minItems: 1,
+        items: { type: "string", enum: connectComponentEnum }
+      }
+    }
+  },
+  response: {
+    200: {
+      type: "object",
+      additionalProperties: false,
+      required: ["clientSecret"],
+      properties: {
+        clientSecret: { type: "string" }
+      }
+    },
+    401: errorResponseSchema,
+    403: errorResponseSchema,
+    404: errorResponseSchema,
+    409: errorResponseSchema
+  }
+} as const;
