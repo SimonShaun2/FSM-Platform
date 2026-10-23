@@ -63,6 +63,15 @@ describe("import-source-presets", () => {
     ).toBe("service_titan");
   });
 
+  it("infers ServiceTitan invoices from invoice export headers", () => {
+    expect(
+      inferImportSourcePresetFromHeaders(
+        ["Invoice Number", "Customer ID", "Invoice Date", "Total", "Balance"],
+        "invoices"
+      )
+    ).toBe("service_titan_invoices");
+  });
+
   it("infers ServiceTitan jobs from job tags and business unit columns", () => {
     expect(
       inferImportSourcePresetForSession(
@@ -104,6 +113,15 @@ describe("import-source-presets", () => {
         "invoices"
       )
     ).toBe("quickbooks_desktop_invoices");
+  });
+
+  it("infers QuickBooks Desktop payments export", () => {
+    expect(
+      inferImportSourcePresetForSession(
+        ["Payment ID", "Customer", "Payment Date", "Amount", "Invoice ID"],
+        "payments"
+      )
+    ).toBe("quickbooks_desktop_payments");
   });
 
   it("infers QuickBooks Online payments export", () => {

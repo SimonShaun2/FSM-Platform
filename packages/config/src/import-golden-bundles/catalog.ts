@@ -253,12 +253,12 @@ export const GOLDEN_IMPORT_BUNDLE_MANIFESTS: GoldenImportBundleManifest[] = [
     fixtureId: `qbd-${versionSuffix}`,
     sourceSystem: "qbd",
     label: "QuickBooks Desktop golden bundle",
-    description: "Desktop customer and item export column variants.",
+    description: "Desktop IIF customer list plus CSV report exports (items, invoices, payments).",
     requiredHistorySpanYears: 2,
     mediaRelativePaths: [],
     files: [
       {
-        relativePath: "customers.csv",
+        relativePath: "customers.iif",
         entityType: "customers",
         presetEntityHint: "customers"
       },
@@ -272,6 +272,12 @@ export const GOLDEN_IMPORT_BUNDLE_MANIFESTS: GoldenImportBundleManifest[] = [
         entityType: "invoices",
         presetEntityHint: "invoices",
         businessDateColumn: "Invoice Date"
+      },
+      {
+        relativePath: "payments.csv",
+        entityType: "payments",
+        presetEntityHint: "invoices",
+        businessDateColumn: "Payment Date"
       }
     ]
   },

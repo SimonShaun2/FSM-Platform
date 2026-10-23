@@ -14,6 +14,7 @@ import {
   listGoldenBundleChunkPartRelativePaths
 } from "./chunked-job-history.js";
 import { columnIndex, parseCsvTable } from "./csv.js";
+import { parseGoldenBundleTabularTable } from "./tabular.js";
 import { goldenImportBundleFileExists, readGoldenImportBundleFile } from "./io.js";
 
 export interface GoldenBundleValidationIssue {
@@ -60,7 +61,7 @@ function validateHistorySpan(
     }
 
     const content = readGoldenImportBundleFile(manifest.sourceSystem, file.relativePath);
-    const { headers, rows } = parseCsvTable(content);
+    const { headers, rows } = parseGoldenBundleTabularTable(content, file.relativePath, file.entityType);
     const dateIdx = columnIndex(headers, file.businessDateColumn);
 
     for (const row of rows) {
@@ -103,7 +104,10 @@ function validateJoinLinks(
 
   for (const file of manifest.files) {
     const content = readGoldenImportBundleFile(manifest.sourceSystem, file.relativePath);
-    tables.set(file.relativePath, parseCsvTable(content));
+    tables.set(
+      file.relativePath,
+      parseGoldenBundleTabularTable(content, file.relativePath, file.entityType)
+    );
   }
 
   for (const file of manifest.files) {
@@ -172,7 +176,7 @@ function validateGenericImportColumnMapping(
     }
 
     const content = readGoldenImportBundleFile(manifest.sourceSystem, file.relativePath);
-    const { headers } = parseCsvTable(content);
+    const { headers } = parseGoldenBundleTabularTable(content, file.relativePath, file.entityType);
     const mapping = bestImportColumnMapping(headers);
 
     if (Object.keys(mapping).length < MIN_GENERIC_MAPPED_COLUMNS) {
@@ -192,7 +196,7 @@ function assertPresetForFile(
   issues: GoldenBundleValidationIssue[]
 ): void {
   const content = readGoldenImportBundleFile(manifest.sourceSystem, file.relativePath);
-  const { headers } = parseCsvTable(content);
+  const { headers } = parseGoldenBundleTabularTable(content, file.relativePath, file.entityType);
   const presetId = inferImportSourcePresetFromHeaders(headers, entityHint);
   const allowed = Array.isArray(expectedPresetIds) ? expectedPresetIds : [expectedPresetIds];
 
@@ -226,6 +230,38 @@ function validateHousecallProPresetInference(
   const invoiceFile = manifest.files.find((entry: GoldenBundleFile) => entry.entityType === "invoices");
   if (invoiceFile) {
     assertPresetForFile(manifest, invoiceFile, "housecall_pro_invoices", "invoices", issues);
+  }
+}
+
+/** ServiceTitan: location-aware multi-export bundle must infer ST preset ids (generic importer path). */
+function validateServiceTitanPresetInference(
+  manifest: GoldenImportBundleManifest,
+  issues: GoldenBundleValidationIssue[]
+): void {
+  if (manifest.sourceSystem !== "servicetitan") {
+    return;
+  }
+
+  const byPath = new Map(manifest.files.map((file) => [file.relativePath, file]));
+
+  const customers = byPath.get("customers.csv");
+  if (customers) {
+    assertPresetForFile(manifest, customers, "service_titan", "customers", issues);
+  }
+
+  const locations = byPath.get("locations.csv");
+  if (locations) {
+    assertPresetForFile(manifest, locations, "service_titan_locations", "customers", issues);
+  }
+
+  const jobs = byPath.get("jobs.csv");
+  if (jobs) {
+    assertPresetForFile(manifest, jobs, "service_titan_jobs", "customers", issues);
+  }
+
+  const invoices = byPath.get("invoices.csv");
+  if (invoices) {
+    assertPresetForFile(manifest, invoices, "service_titan_invoices", "invoices", issues);
   }
 }
 
@@ -264,6 +300,17 @@ function validateQuickBooksPresetInference(
       assertPresetForFile(manifest, invoiceFile, "quickbooks_desktop_invoices", "invoices", issues);
     }
 
+    const paymentsFile = manifest.files.find((entry: GoldenBundleFile) => entry.entityType === "payments");
+    if (paymentsFile) {
+      assertPresetForFile(
+        manifest,
+        paymentsFile,
+        ["quickbooks_desktop_payments", "quickbooks_payments"],
+        "invoices",
+        issues
+      );
+    }
+
     const itemsFile = manifest.files.find((entry: GoldenBundleFile) => entry.entityType === "products");
     if (itemsFile) {
       assertPresetForFile(
@@ -274,6 +321,7 @@ function validateQuickBooksPresetInference(
         issues
       );
     }
+
   }
 }
 
@@ -443,6 +491,7 @@ export function validateGoldenImportBundleManifest(
   validateGenericImportColumnMapping(parsed.data, issues);
   validateHousecallProPresetInference(parsed.data, issues);
   validateQuickBooksPresetInference(parsed.data, issues);
+  validateServiceTitanPresetInference(parsed.data, issues);
   validateHistorySpan(parsed.data, issues);
 
   return {

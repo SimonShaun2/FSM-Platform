@@ -53,7 +53,6 @@ export const HOUSECALL_PRO_PRESETS: ImportSourcePreset[] = [
     label: "Housecall Pro (invoices)",
     headerAliases: {
       "invoice id": "invoiceNumber",
-      "invoice number": "invoiceNumber",
       "customer id": "customerSourceId",
       "customer uuid": "customerSourceId",
       "invoice date": "issuedAt",
