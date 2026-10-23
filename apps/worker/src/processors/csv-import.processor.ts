@@ -28,6 +28,7 @@ import {
   validateCommunicationsRows,
   validatePriceBookRows
 } from "@fsm/db";
+import { normalizeImportPhone } from "@fsm/import-normalize";
 import { aiQueue } from "@fsm/jobs";
 
 import { handleImportChunkCommit, IMPORT_CHUNK_COMMIT_JOB_NAME } from "./import-chunk-commit.processor.js";
@@ -208,17 +209,6 @@ function normalizeEmailValue(value: string | null | undefined): string | null {
   return normalizedValue ? normalizedValue.toLowerCase() : null;
 }
 
-function normalizePhoneValue(value: string | null | undefined): string | null {
-  const normalizedValue = normalizeTextValue(value);
-
-  if (!normalizedValue) {
-    return null;
-  }
-
-  const digitsOnly = normalizedValue.replace(/\D+/gu, "");
-  return digitsOnly.length > 0 ? digitsOnly : null;
-}
-
 function normalizeCustomerNameValue(value: string | null | undefined): string | null {
   const normalizedValue = normalizeTextValue(value);
   return normalizedValue ? normalizedValue.toLowerCase() : null;
@@ -244,7 +234,7 @@ function buildCustomerLookupMaps(existingCustomers: CustomerRow[]) {
 
   for (const customer of existingCustomers) {
     const normalizedEmail = normalizeEmailValue(customer.email);
-    const normalizedPhone = normalizePhoneValue(customer.phone);
+    const normalizedPhone = normalizeImportPhone(customer.phone);
     const normalizedName = normalizeCustomerNameValue(
       customer.displayName ?? `${customer.firstName} ${customer.lastName}`.trim()
     );
@@ -281,7 +271,7 @@ function findDuplicateCustomer(
     }
   }
 
-  const normalizedPhone = normalizePhoneValue(mappedRow.phone);
+  const normalizedPhone = normalizeImportPhone(mappedRow.phone);
   if (normalizedPhone) {
     const customer = existingCustomers.phoneMap.get(normalizedPhone);
     if (customer) {
@@ -849,7 +839,7 @@ export async function handleExecuteImport(job: Job<Record<string, unknown>>): Pr
 
         const mappedRow = mapCustomerRow(row.values, columnMapping);
         const normalizedEmail = normalizeEmailValue(mappedRow.email);
-        const normalizedPhone = normalizePhoneValue(mappedRow.phone);
+        const normalizedPhone = normalizeImportPhone(mappedRow.phone);
         const duplicateMatch = findDuplicateCustomer(mappedRow, customerLookupMaps);
 
         if (duplicateMatch) {
