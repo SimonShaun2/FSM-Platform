@@ -1,4 +1,9 @@
 import {
+  confirmImportFileLinkDecisionsBodySchema,
+  importFileLinkPreviewResponseSchema
+} from "../../fs-migrate/import-file-link.js";
+import { MigrateOnboardingIngestProgressResponseSchema } from "../../import-bundle.schemas.js";
+import {
   applyMigrateDedupeDecisionsBodySchema,
   createMigrateOnboardingSessionBodySchema,
   linkMigrateOnboardingFilesBodySchema,
@@ -51,6 +56,11 @@ export const MIGRATE_ONBOARDING_WIZARD_API_ROUTES: readonly MigrateOnboardingWiz
     responseSchemaId: "migrateOnboardingBundle"
   },
   {
+    method: "GET",
+    path: "/api/v1/migrate/onboarding/sessions/:bundleId/ingest-progress",
+    responseSchemaId: "migrateOnboardingIngestProgressResponse"
+  },
+  {
     method: "PATCH",
     path: "/api/v1/migrate/onboarding/sessions/:bundleId/source",
     requestBodySchemaId: "setMigrateOnboardingSourceBody",
@@ -60,6 +70,22 @@ export const MIGRATE_ONBOARDING_WIZARD_API_ROUTES: readonly MigrateOnboardingWiz
     method: "PATCH",
     path: "/api/v1/migrate/onboarding/sessions/:bundleId/files",
     requestBodySchemaId: "linkMigrateOnboardingFilesBody",
+    responseSchemaId: "migrateOnboardingBundle"
+  },
+  {
+    method: "PATCH",
+    path: "/api/v1/migrate/onboarding/sessions/:bundleId/file-link/decisions",
+    requestBodySchemaId: "confirmImportFileLinkDecisionsBody",
+    responseSchemaId: "migrateOnboardingBundle"
+  },
+  {
+    method: "GET",
+    path: "/api/v1/migrate/onboarding/sessions/:bundleId/file-link/preview",
+    responseSchemaId: "importFileLinkPreviewResponse"
+  },
+  {
+    method: "POST",
+    path: "/api/v1/migrate/onboarding/sessions/:bundleId/file-link/run",
     responseSchemaId: "migrateOnboardingBundle"
   },
   {
@@ -99,7 +125,8 @@ export const migrateOnboardingWizardRequestSchemas = {
   createMigrateOnboardingSessionBody: createMigrateOnboardingSessionBodySchema,
   setMigrateOnboardingSourceBody: setMigrateOnboardingSourceBodySchema,
   linkMigrateOnboardingFilesBody: linkMigrateOnboardingFilesBodySchema,
-  applyMigrateDedupeDecisionsBody: applyMigrateDedupeDecisionsBodySchema
+  applyMigrateDedupeDecisionsBody: applyMigrateDedupeDecisionsBodySchema,
+  confirmImportFileLinkDecisionsBody: confirmImportFileLinkDecisionsBodySchema
 } as const;
 
 export const migrateOnboardingWizardResponseSchemas = {
@@ -107,5 +134,7 @@ export const migrateOnboardingWizardResponseSchemas = {
   migrateOnboardingSourceCatalogEntry: migrateOnboardingSourceCatalogEntrySchema,
   migrateDedupePreviewResponse: migrateDedupePreviewResponseSchema,
   migrateRelationalPreviewResponse: migrateRelationalPreviewResponseSchema,
-  migrateOnboardingCommitResponse: migrateOnboardingCommitResponseSchema
+  migrateOnboardingCommitResponse: migrateOnboardingCommitResponseSchema,
+  migrateOnboardingIngestProgressResponse: MigrateOnboardingIngestProgressResponseSchema,
+  importFileLinkPreviewResponse: importFileLinkPreviewResponseSchema
 } as const;
