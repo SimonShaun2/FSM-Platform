@@ -1,5 +1,6 @@
 import { describe, expect, it } from "vitest";
 
+import { importSourceSystemFromPreset } from "./import-price-book-map.js";
 import {
   buildPresetColumnMapping,
   inferImportSourcePresetForSession,
@@ -104,5 +105,33 @@ describe("import-source-presets", () => {
         "invoices"
       )
     ).toBe("quickbooks_payments");
+  });
+
+  it("infers Jobber jobs, invoices, and payments exports", () => {
+    expect(
+      inferImportSourcePresetForSession(
+        ["Job ID", "Client ID", "Completed On", "Title", "Status"],
+        "jobs"
+      )
+    ).toBe("jobber_jobs");
+
+    expect(
+      inferImportSourcePresetForSession(
+        ["Invoice Number", "Client ID", "Invoice Date", "Total", "Balance"],
+        "invoices"
+      )
+    ).toBe("jobber_invoices");
+
+    expect(
+      inferImportSourcePresetForSession(
+        ["Payment ID", "Client ID", "Payment Date", "Amount", "Invoice Number", "Method"],
+        "payments"
+      )
+    ).toBe("jobber_payments");
+  });
+
+  it("maps Jobber preset ids to jobber lineage source_system", () => {
+    expect(importSourceSystemFromPreset("jobber_jobs")).toBe("jobber");
+    expect(importSourceSystemFromPreset("jobber_payments")).toBe("jobber");
   });
 });
