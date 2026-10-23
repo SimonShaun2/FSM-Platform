@@ -19,6 +19,9 @@ describe("import-price-book-map", () => {
 
   it("resolves source system from preset id", () => {
     expect(importSourceSystemFromPreset("quickbooks_desktop_items")).toBe("qbd");
+    expect(importSourceSystemFromPreset("quickbooks_desktop_customers")).toBe("qbd");
     expect(importSourceSystemFromPreset("quickbooks_items")).toBe("qbo");
+    expect(importSourceSystemFromPreset("service_titan_jobs")).toBe("service_titan");
+    expect(importSourceSystemFromPreset("housecall_pro_jobs")).toBe("housecall_pro");
   });
 });
