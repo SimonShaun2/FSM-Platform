@@ -1,14 +1,24 @@
 /**
- * MVP migration: CSV exports from incumbent FSM tools (export-only — no API sync).
+ * MVP migration: CSV exports from incumbent FSM + QuickBooks (export-only — no API sync).
  * Used to seed column mappings before / alongside AI mapping in the import worker.
  */
 
-export type ImportVendorPresetId = "jobber" | "housecall_pro" | "service_titan" | "generic";
+export type ImportVendorPresetId =
+  | "jobber"
+  | "housecall_pro"
+  | "service_titan"
+  | "quickbooks_customers"
+  | "quickbooks_items"
+  | "quickbooks_invoices"
+  | "generic";
+
+/** Aligns with planned import entity uploads (customers shipped; items/invoices P0b/c). */
+export type ImportPresetEntityHint = "customers" | "products" | "invoices";
 
 export interface ImportVendorPreset {
   id: ImportVendorPresetId;
+  entity: ImportPresetEntityHint;
   label: string;
-  /** CSV header (exact or case-insensitive) → Renvani customer import field */
   headerAliases: Record<string, string>;
 }
 
@@ -17,6 +27,7 @@ const normalizeHeader = (header: string): string => header.trim().toLowerCase();
 export const IMPORT_VENDOR_PRESETS: ImportVendorPreset[] = [
   {
     id: "jobber",
+    entity: "customers",
     label: "Jobber",
     headerAliases: {
       "first name": "firstName",
@@ -34,6 +45,7 @@ export const IMPORT_VENDOR_PRESETS: ImportVendorPreset[] = [
   },
   {
     id: "housecall_pro",
+    entity: "customers",
     label: "Housecall Pro",
     headerAliases: {
       "customer first name": "firstName",
@@ -48,6 +60,7 @@ export const IMPORT_VENDOR_PRESETS: ImportVendorPreset[] = [
   },
   {
     id: "service_titan",
+    entity: "customers",
     label: "ServiceTitan",
     headerAliases: {
       name: "firstName",
@@ -61,7 +74,61 @@ export const IMPORT_VENDOR_PRESETS: ImportVendorPreset[] = [
     }
   },
   {
+    id: "quickbooks_customers",
+    entity: "customers",
+    label: "QuickBooks Online (customers)",
+    headerAliases: {
+      "customer display name": "firstName",
+      "display name": "firstName",
+      "company name": "firstName",
+      "first name": "firstName",
+      "last name": "lastName",
+      "primary email": "email",
+      email: "email",
+      "primary phone": "phone",
+      phone: "phone",
+      "billing address line 1": "addressLine1",
+      "shipping address line 1": "addressLine1",
+      "billing city": "city",
+      "billing state": "state",
+      "billing zip": "zip"
+    }
+  },
+  {
+    id: "quickbooks_items",
+    entity: "products",
+    label: "QuickBooks Online (products & services)",
+    headerAliases: {
+      name: "name",
+      "product/service name": "name",
+      sku: "sku",
+      type: "type",
+      "sales description": "description",
+      description: "description",
+      "sales price/rate": "unitPrice",
+      price: "unitPrice"
+    }
+  },
+  {
+    id: "quickbooks_invoices",
+    entity: "invoices",
+    label: "QuickBooks Online (invoices)",
+    headerAliases: {
+      "invoice no": "invoiceNumber",
+      "invoice number": "invoiceNumber",
+      "customer name": "customerName",
+      "invoice date": "issuedAt",
+      "due date": "dueAt",
+      total: "total",
+      balance: "balanceDue",
+      amount: "total",
+      "payment date": "paidAt",
+      "payment method": "paymentMethod"
+    }
+  },
+  {
     id: "generic",
+    entity: "customers",
     label: "Generic CSV",
     headerAliases: {
       firstname: "firstName",
@@ -78,7 +145,22 @@ export const IMPORT_VENDOR_PRESETS: ImportVendorPreset[] = [
   }
 ];
 
-export function inferImportVendorPresetFromHeaders(headers: string[]): ImportVendorPresetId | null {
+function entityHintFromImportEntityType(entityType: string): ImportPresetEntityHint {
+  if (entityType === "invoices") {
+    return "invoices";
+  }
+
+  if (entityType === "estimates" || entityType === "jobs") {
+    return "customers";
+  }
+
+  return "customers";
+}
+
+export function inferImportVendorPresetFromHeaders(
+  headers: string[],
+  entityHint: ImportPresetEntityHint = "customers"
+): ImportVendorPresetId | null {
   if (headers.length === 0) {
     return null;
   }
@@ -87,7 +169,7 @@ export function inferImportVendorPresetFromHeaders(headers: string[]): ImportVen
   let best: { id: ImportVendorPresetId; score: number } | null = null;
 
   for (const preset of IMPORT_VENDOR_PRESETS) {
-    if (preset.id === "generic") {
+    if (preset.id === "generic" || preset.entity !== entityHint) {
       continue;
     }
 
@@ -102,11 +184,21 @@ export function inferImportVendorPresetFromHeaders(headers: string[]): ImportVen
   return best?.id ?? null;
 }
 
+export function inferImportVendorPresetForSession(
+  headers: string[],
+  importEntityType: string
+): ImportVendorPresetId | null {
+  return inferImportVendorPresetFromHeaders(headers, entityHintFromImportEntityType(importEntityType));
+}
+
 export function buildPresetColumnMapping(
   headers: string[],
   presetId: ImportVendorPresetId
 ): Record<string, string> {
-  const preset = IMPORT_VENDOR_PRESETS.find((entry) => entry.id === presetId) ?? IMPORT_VENDOR_PRESETS.find((e) => e.id === "generic");
+  const preset =
+    IMPORT_VENDOR_PRESETS.find((entry) => entry.id === presetId) ??
+    IMPORT_VENDOR_PRESETS.find((entry) => entry.id === "generic");
+
   if (!preset) {
     return {};
   }

@@ -8,7 +8,7 @@ import pino from "pino";
 import { mapCsvColumns } from "@fsm/ai";
 import {
   buildPresetColumnMapping,
-  inferImportVendorPresetFromHeaders
+  inferImportVendorPresetForSession
 } from "@fsm/config/import-vendor-presets";
 import { downloadFile, getFileKeyFromUrl } from "@fsm/config/storage";
 import {
@@ -483,7 +483,10 @@ export async function handleMapCsvColumns(job: Job<Record<string, unknown>>): Pr
   try {
     const fileBuffer = await downloadFile(getFileKeyFromUrl(importSession.fileUrl));
     const parsedCsv = parseCsv(fileBuffer);
-    const vendorPresetId = inferImportVendorPresetFromHeaders(parsedCsv.headers);
+    const vendorPresetId = inferImportVendorPresetForSession(
+      parsedCsv.headers,
+      importSession.entityType
+    );
     const presetMapping = vendorPresetId
       ? buildPresetColumnMapping(parsedCsv.headers, vendorPresetId)
       : {};
