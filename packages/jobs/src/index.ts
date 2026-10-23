@@ -16,6 +16,7 @@ export {
   buildMigrateFileBatchFailedObjectsRetryPayload,
   buildMigrateFileBatchRetryJobId
 } from "./migrate-file-batch-retry.js";
+export { findLatestMigrateFileBatchJob } from "./migrate-file-batch-job-resolution.js";
 export { listDeadLetterJobs } from "./dead-letter-visibility.js";
 export { enqueueImportChunkCommitJob } from "./enqueue-import-chunk-commit.js";
 export { logMigrateFileBatchTrace } from "./migrate-file-batch-trace-log.js";
