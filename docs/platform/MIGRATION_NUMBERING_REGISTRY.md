@@ -48,13 +48,9 @@ Apply after **`git merge origin/dev`**. Contiguous chain **0026 → 0030**.
 | --- | --- | --- |
 | **Ezra** | [#110](https://github.com/SimonShaun2/Renvani/pull/110) | Drop `0027_stack10_*` SQL + journal from branch if present; keep Neon CI / `neon-per-pr-branch.mjs` only |
 
-**Merge trains (migration-aware)**
+**Merge batch 1 (8–10 PRs, migration-aware merge order on `dev`)**
 
-1. **#96** + **#107** → lands **0026** on `dev`  
-2. **#102** → **#110** (no mig) → **#103**, **#101**, **#104** → lands **0027**  
-3. **#105**, **#106**, **#112** (no new idx)  
-4. **#114** → **0028** · **#113** → **0029** · **#115** → **0030** (each after **0026** on `dev`; order 28→29→30 preferred)  
-5. **#88**, **#89**, **#91**, **#109**, **#111** — no SQL idx
+Candidates: **#96**, **#107**, **#117**, **#102**, **#114**, **#113**, **#115**, **#110**, **#112**, **#103**, **#101**, **#104** — single batched triple sign-off when all green at heads; merge as one batch (SQL order **0026 → 0030** preserved).
 
 **FS-94 platform billing:** **⏸** per `BATCH-PLAN-5-9.md` §0 — do not allocate idx until founder/CoS budget gate.
 
@@ -80,3 +76,4 @@ Apply after **`git merge origin/dev`**. Contiguous chain **0026 → 0030**.
 | 2026-10-22 | Synced tip to **0025** after #81; next free **0026**; FS-94 deferred |
 | 2026-10-23 | **0026** reserved for FS-MIGRATE import lineage per ADR-FS-MIGRATE |
 | 2026-10-23 | **Central assign 0026–0030** for #96, #102, #114, #113, #115; #110 migration stripped; lineage-only-in-0026 rule |
+| 2026-10-23 | Founder batch policy: 8–10 PRs per merge batch; auto CI at PR head |
