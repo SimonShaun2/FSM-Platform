@@ -50,3 +50,13 @@ export {
   exportsQueue,
   growthQueue
 } from "./queues.js";
+export {
+  collectPlatformQueueMonitoringSnapshot,
+  type PlatformQueueMonitoringDeps,
+  type QueueMonitoringProbe
+} from "./queue-monitoring.js";
+export {
+  createDefaultPlatformQueueMonitoringDeps,
+  getPlatformQueueMonitoringSnapshot,
+  platformQueuesByName
+} from "./platform-queue-registry.js";
