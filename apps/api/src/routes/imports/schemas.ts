@@ -12,7 +12,7 @@ const importSessionStatusSchema = z.enum([
   "failed",
   "rolled_back"
 ]);
-const importEntityTypeSchema = z.enum(["customers", "jobs"]);
+const importEntityTypeSchema = z.enum(["customers", "jobs", "price_book"]);
 
 const errorResponseSchema = {
   type: "object",

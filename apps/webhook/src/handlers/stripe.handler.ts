@@ -18,6 +18,12 @@ import {
   forwardStripePaymentSuccess
 } from "../lib/invoice-service-bridge.js";
 import {
+  handlePlatformSubscriptionDeleted,
+  handlePlatformSubscriptionUpsert,
+  isPlatformMvpBillingMetadata,
+  shouldIgnoreMaintenancePlanSubscriptionInvoice
+} from "./stripe-platform-billing.handler.js";
+import {
   claimEventProcessing,
   clearEventProcessingClaim,
   isEventProcessed,
@@ -156,6 +162,12 @@ export async function handleSubscriptionUpdated(
   logContext: FastifyRequest["log"]
 ): Promise<void> {
   const subscription = event.data.object;
+
+  if (isPlatformMvpBillingMetadata(subscription.metadata)) {
+    await handlePlatformSubscriptionUpsert(event, logContext);
+    return;
+  }
+
   const companyId = extractStripeCompanyId(subscription.metadata, logContext, event.type);
 
   if (!companyId) {
@@ -222,6 +234,12 @@ export async function handleSubscriptionDeleted(
   logContext: FastifyRequest["log"]
 ): Promise<void> {
   const subscription = event.data.object;
+
+  if (isPlatformMvpBillingMetadata(subscription.metadata)) {
+    await handlePlatformSubscriptionDeleted(event, logContext);
+    return;
+  }
+
   const companyId = extractStripeCompanyId(subscription.metadata, logContext, event.type);
 
   if (!companyId) {
@@ -283,6 +301,15 @@ export async function handleInvoicePaymentSucceeded(
   }
 
   const stripeSubscriptionId = String(stripeInvoice.subscription);
+
+  if (isPlatformMvpBillingMetadata(stripeInvoice.metadata)) {
+    return;
+  }
+
+  if (await shouldIgnoreMaintenancePlanSubscriptionInvoice(companyId, stripeSubscriptionId)) {
+    return;
+  }
+
   const plan = await getMaintenancePlanBySubscription(companyId, stripeSubscriptionId, db);
 
   if (!plan) {
@@ -342,6 +369,15 @@ export async function handleInvoicePaymentFailed(
   }
 
   const stripeSubscriptionId = String(stripeInvoice.subscription);
+
+  if (isPlatformMvpBillingMetadata(stripeInvoice.metadata)) {
+    return;
+  }
+
+  if (await shouldIgnoreMaintenancePlanSubscriptionInvoice(companyId, stripeSubscriptionId)) {
+    return;
+  }
+
   const plan = await getMaintenancePlanBySubscription(companyId, stripeSubscriptionId, db);
 
   if (!plan) {

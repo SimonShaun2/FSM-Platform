@@ -13,10 +13,10 @@ export const featureFlags = {
   loyaltyRemindersEnabled: false,
   // FEATURE FLAG: loyalty-reminders-dry-run — FS-72 blocks customer send until founder gate
   loyaltyRemindersDryRun: true,
-  // FEATURE FLAG: outbound-sms-enabled — Circle S 2026-10-22: Twilio/Bird deferred; stub only
-  outboundSmsEnabled: false,
-  // FEATURE FLAG: resend-email-enabled — MVP email-first; wire worker templates via @fsm/comms (STACK-08)
-  resendEmailEnabled: false
+  // FEATURE FLAG: clerk-auth-parallel-jwt — STACK-02: accept Clerk session JWT alongside in-repo JWT
+  clerkAuthParallelJwt: false,
+  // FEATURE FLAG: tenant-session-scoped-writes — STACK-02/10: SET LOCAL app.current_company_id on API writes
+  tenantSessionScopedWrites: false
 } as const;
 
 export type FeatureFlags = typeof featureFlags;

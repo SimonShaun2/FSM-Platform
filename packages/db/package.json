@@ -29,6 +29,7 @@
   },
   "dependencies": {
     "@fsm/config": "workspace:*",
+    "@fsm/types": "workspace:*",
     "decimal.js": "^10.5.0",
     "drizzle-orm": "0.44.2",
     "postgres": "3.4.5"

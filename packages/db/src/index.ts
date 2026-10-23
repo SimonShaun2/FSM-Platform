@@ -36,4 +36,23 @@ export type { EmitEventContext } from "./events.js";
 export { emitEventWithExecutor } from "./events.js";
 export { markInvoiceOverdueIfNeeded } from "./invoice-helpers.js";
 export type { InvoiceOverdueRecord } from "./invoice-helpers.js";
+export {
+  TENANT_SESSION_GUC,
+  buildTenantSessionSetLocal,
+  readTenantCompanyIdFromGucRow
+} from "./tenant-session.js";
+export { FS_MIGRATE_RLS_POLICY_CATALOG, type RlsPolicySpec } from "./rls-policy-catalog.js";
+export { renderRlsPolicyStatements, renderStack10RlsMigrationSql } from "./rls-migration-sql.js";
+export { runTransactionWithTenantSession } from "./run-with-tenant-session.js";
 export * from "./schema.js";
+export {
+  commitPriceBookRows,
+  mapPriceBookRow,
+  resolveInvoiceLineCatalogId,
+  resolveSourceSystemForPriceBookImport,
+  softDeletePriceBookImport,
+  validatePriceBookRows,
+  type ParsedImportRow,
+  type PriceBookCommitResult,
+  type PriceBookValidationResult
+} from "./import-price-book-commit.js";

@@ -12,6 +12,7 @@ type TableName =
   | "assets"
   | "jobs"
   | "importSessions"
+  | "importChunkRuns"
   | "dataExportSessions"
   | "estimates"
   | "estimateItems"
@@ -86,9 +87,17 @@ type MaintenancePlanStatus = "active" | "paused" | "expired" | "cancelled";
 type MaintenancePlanFrequency = "monthly" | "bi_monthly" | "quarterly" | "bi_annual" | "annual";
 type ServiceAgreementBillingCycle = "monthly" | "annual";
 type ImportSessionStatus = "uploaded" | "mapping" | "preview" | "importing" | "completed" | "failed" | "rolled_back";
+type ImportChunkRunStatus = "pending" | "running" | "completed" | "failed";
 type DataExportStatus = "pending" | "processing" | "completed" | "failed" | "expired";
 type DataExportFormat = "json" | "csv_bundle";
-type ImportEntityType = "customers" | "properties" | "assets" | "jobs" | "estimates" | "invoices";
+type ImportEntityType =
+  | "customers"
+  | "properties"
+  | "assets"
+  | "jobs"
+  | "estimates"
+  | "invoices"
+  | "payments";
 type AutomationRuleType =
   | "estimate_follow_up"
   | "estimate_declined"
@@ -211,6 +220,8 @@ export interface TestCustomerRecord {
   prefersEmail: boolean | null;
   doNotContact: boolean | null;
   stripeCustomerId: string | null;
+  sourceSystem: string | null;
+  sourceId: string | null;
   importSessionId: string | null;
   createdAt: Date;
   updatedAt: Date;
@@ -317,6 +328,8 @@ export interface TestImportSessionRecord {
   id: string;
   companyId: string;
   createdById: string | null;
+  importBundleId: string | null;
+  sourceSystem: string | null;
   entityType: ImportEntityType;
   status: ImportSessionStatus;
   fileName: string;
@@ -330,10 +343,30 @@ export interface TestImportSessionRecord {
   columnMappings: Record<string, string | null>;
   validationErrors: TestImportValidationError[];
   aiInferences: Record<string, unknown>;
+  progress: Record<string, unknown>;
   rolledBackAt: Date | null;
   rolledBackById: string | null;
   completedAt: Date | null;
   errorMessage: string | null;
+  createdAt: Date;
+  updatedAt: Date;
+  deletedAt: Date | null;
+}
+
+export interface TestImportChunkRunRecord {
+  id: string;
+  companyId: string;
+  importSessionId: string;
+  entityType: ImportEntityType;
+  chunkIndex: number;
+  chunksTotal: number;
+  idempotencyKey: string;
+  status: ImportChunkRunStatus;
+  cursor: Record<string, unknown>;
+  rowsOk: number | null;
+  rowsFailed: number | null;
+  errorMessage: string | null;
+  completedAt: Date | null;
   createdAt: Date;
   updatedAt: Date;
   deletedAt: Date | null;
@@ -422,6 +455,9 @@ export interface TestInvoiceRecord {
   title: string | null;
   messageToCustomer: string | null;
   internalNotes: string | null;
+  sourceSystem: string | null;
+  sourceId: string | null;
+  importSessionId: string | null;
   createdAt: Date;
   updatedAt: Date;
   deletedAt: Date | null;
@@ -459,6 +495,9 @@ export interface TestPaymentRecord {
   referenceNumber: string | null;
   notes: string | null;
   paidAt: Date | null;
+  sourceSystem: string | null;
+  sourceId: string | null;
+  importSessionId: string | null;
   createdAt: Date;
   updatedAt: Date;
   deletedAt: Date | null;
@@ -1072,6 +1111,8 @@ export interface TestCustomerRecord {
   prefersEmail: boolean | null;
   doNotContact: boolean | null;
   stripeCustomerId: string | null;
+  sourceSystem: string | null;
+  sourceId: string | null;
   importSessionId: string | null;
   createdAt: Date;
   updatedAt: Date;
@@ -1197,6 +1238,8 @@ export interface TestImportSessionRecord {
   id: string;
   companyId: string;
   createdById: string | null;
+  importBundleId: string | null;
+  sourceSystem: string | null;
   entityType: ImportEntityType;
   status: ImportSessionStatus;
   fileName: string;
@@ -1210,6 +1253,7 @@ export interface TestImportSessionRecord {
   columnMappings: Record<string, string | null>;
   validationErrors: TestImportValidationError[];
   aiInferences: Record<string, unknown>;
+  progress: Record<string, unknown>;
   rolledBackAt: Date | null;
   rolledBackById: string | null;
   completedAt: Date | null;
@@ -1302,6 +1346,9 @@ export interface TestInvoiceRecord {
   title: string | null;
   messageToCustomer: string | null;
   internalNotes: string | null;
+  sourceSystem: string | null;
+  sourceId: string | null;
+  importSessionId: string | null;
   createdAt: Date;
   updatedAt: Date;
   deletedAt: Date | null;
@@ -1339,6 +1386,9 @@ export interface TestPaymentRecord {
   referenceNumber: string | null;
   notes: string | null;
   paidAt: Date | null;
+  sourceSystem: string | null;
+  sourceId: string | null;
+  importSessionId: string | null;
   createdAt: Date;
   updatedAt: Date;
   deletedAt: Date | null;
@@ -1883,6 +1933,7 @@ type AnyTestRecord =
   | TestAssetRecord
   | TestJobRecord
   | TestImportSessionRecord
+  | TestImportChunkRunRecord
   | TestDataExportSessionRecord
   | TestEstimateRecord
   | TestEstimateItemRecord
@@ -1975,6 +2026,7 @@ interface TestState {
   assets: TestAssetRecord[];
   jobs: TestJobRecord[];
   importSessions: TestImportSessionRecord[];
+  importChunkRuns: TestImportChunkRunRecord[];
   dataExportSessions: TestDataExportSessionRecord[];
   estimates: TestEstimateRecord[];
   estimateItems: TestEstimateItemRecord[];
@@ -2095,6 +2147,8 @@ const customersTable = {
   prefersEmail: "prefersEmail",
   doNotContact: "doNotContact",
   stripeCustomerId: "stripeCustomerId",
+  sourceSystem: "sourceSystem",
+  sourceId: "sourceId",
   importSessionId: "importSessionId",
   createdAt: "createdAt",
   updatedAt: "updatedAt",
@@ -2193,11 +2247,33 @@ const jobsTable = {
   deletedAt: "deletedAt"
 } as const;
 
+const importChunkRunsTable = {
+  __name: "importChunkRuns",
+  id: "id",
+  companyId: "companyId",
+  importSessionId: "importSessionId",
+  entityType: "entityType",
+  chunkIndex: "chunkIndex",
+  chunksTotal: "chunksTotal",
+  idempotencyKey: "idempotencyKey",
+  status: "status",
+  cursor: "cursor",
+  rowsOk: "rowsOk",
+  rowsFailed: "rowsFailed",
+  errorMessage: "errorMessage",
+  completedAt: "completedAt",
+  createdAt: "createdAt",
+  updatedAt: "updatedAt",
+  deletedAt: "deletedAt"
+} as const;
+
 const importSessionsTable = {
   __name: "importSessions",
   id: "id",
   companyId: "companyId",
   createdById: "createdById",
+  importBundleId: "importBundleId",
+  sourceSystem: "sourceSystem",
   entityType: "entityType",
   status: "status",
   fileName: "fileName",
@@ -2211,6 +2287,7 @@ const importSessionsTable = {
   columnMappings: "columnMappings",
   validationErrors: "validationErrors",
   aiInferences: "aiInferences",
+  progress: "progress",
   rolledBackAt: "rolledBackAt",
   rolledBackById: "rolledBackById",
   completedAt: "completedAt",
@@ -2326,6 +2403,9 @@ const invoicesTable = {
   title: "title",
   messageToCustomer: "messageToCustomer",
   internalNotes: "internalNotes",
+  sourceSystem: "sourceSystem",
+  sourceId: "sourceId",
+  importSessionId: "importSessionId",
   createdAt: "createdAt",
   updatedAt: "updatedAt",
   deletedAt: "deletedAt"
@@ -2365,6 +2445,9 @@ const paymentsTable = {
   referenceNumber: "referenceNumber",
   notes: "notes",
   paidAt: "paidAt",
+  sourceSystem: "sourceSystem",
+  sourceId: "sourceId",
+  importSessionId: "importSessionId",
   createdAt: "createdAt",
   updatedAt: "updatedAt",
   deletedAt: "deletedAt"
@@ -3004,6 +3087,7 @@ const state: TestState = {
   assets: [],
   jobs: [],
   importSessions: [],
+  importChunkRuns: [],
   dataExportSessions: [],
   estimates: [],
   estimateItems: [],
@@ -3059,6 +3143,7 @@ function restoreState(snapshot: TestState): void {
   state.assets.splice(0, state.assets.length, ...snapshot.assets);
   state.jobs.splice(0, state.jobs.length, ...snapshot.jobs);
   state.importSessions.splice(0, state.importSessions.length, ...snapshot.importSessions);
+  state.importChunkRuns.splice(0, state.importChunkRuns.length, ...snapshot.importChunkRuns);
   state.dataExportSessions.splice(0, state.dataExportSessions.length, ...snapshot.dataExportSessions);
   state.estimates.splice(0, state.estimates.length, ...snapshot.estimates);
   state.estimateItems.splice(0, state.estimateItems.length, ...snapshot.estimateItems);
@@ -3127,6 +3212,8 @@ function getRows(tableName: TableName): AnyTestRecord[] {
       return state.jobs;
     case "importSessions":
       return state.importSessions;
+    case "importChunkRuns":
+      return state.importChunkRuns;
     case "dataExportSessions":
       return state.dataExportSessions;
     case "estimates":
@@ -3322,6 +3409,8 @@ function createCustomerRecord(
     prefersEmail: values.prefersEmail ?? true,
     doNotContact: values.doNotContact ?? false,
     stripeCustomerId: values.stripeCustomerId ?? null,
+    sourceSystem: values.sourceSystem ?? null,
+    sourceId: values.sourceId ?? null,
     importSessionId: values.importSessionId ?? null,
     createdAt: values.createdAt ?? now,
     updatedAt: values.updatedAt ?? now,
@@ -3474,6 +3563,8 @@ function createImportSessionRecord(
     id: values.id ?? nextId(),
     companyId: values.companyId,
     createdById: values.createdById ?? null,
+    importBundleId: values.importBundleId ?? null,
+    sourceSystem: values.sourceSystem ?? null,
     entityType: values.entityType ?? "customers",
     status: values.status ?? "uploaded",
     fileName: values.fileName,
@@ -3487,10 +3578,45 @@ function createImportSessionRecord(
     columnMappings: values.columnMappings ?? {},
     validationErrors: values.validationErrors ?? [],
     aiInferences: values.aiInferences ?? {},
+    progress: values.progress ?? {},
     rolledBackAt: values.rolledBackAt ?? null,
     rolledBackById: values.rolledBackById ?? null,
     completedAt: values.completedAt ?? null,
     errorMessage: values.errorMessage ?? null,
+    createdAt: values.createdAt ?? now,
+    updatedAt: values.updatedAt ?? now,
+    deletedAt: values.deletedAt ?? null
+  };
+}
+
+function createImportChunkRunRecord(
+  values: Partial<TestImportChunkRunRecord> &
+    Pick<
+      TestImportChunkRunRecord,
+      | "companyId"
+      | "importSessionId"
+      | "entityType"
+      | "chunkIndex"
+      | "chunksTotal"
+      | "idempotencyKey"
+    >
+): TestImportChunkRunRecord {
+  const now = new Date();
+
+  return {
+    id: values.id ?? nextId(),
+    companyId: values.companyId,
+    importSessionId: values.importSessionId,
+    entityType: values.entityType,
+    chunkIndex: values.chunkIndex,
+    chunksTotal: values.chunksTotal,
+    idempotencyKey: values.idempotencyKey,
+    status: values.status ?? "pending",
+    cursor: values.cursor ?? {},
+    rowsOk: values.rowsOk ?? 0,
+    rowsFailed: values.rowsFailed ?? 0,
+    errorMessage: values.errorMessage ?? null,
+    completedAt: values.completedAt ?? null,
     createdAt: values.createdAt ?? now,
     updatedAt: values.updatedAt ?? now,
     deletedAt: values.deletedAt ?? null
@@ -3600,6 +3726,9 @@ function createInvoiceRecord(
     title: values.title ?? null,
     messageToCustomer: values.messageToCustomer ?? null,
     internalNotes: values.internalNotes ?? null,
+    sourceSystem: values.sourceSystem ?? null,
+    sourceId: values.sourceId ?? null,
+    importSessionId: values.importSessionId ?? null,
     createdAt: values.createdAt ?? now,
     updatedAt: values.updatedAt ?? now,
     deletedAt: values.deletedAt ?? null
@@ -3651,6 +3780,9 @@ function createPaymentRecord(
     referenceNumber: values.referenceNumber ?? null,
     notes: values.notes ?? null,
     paidAt: values.paidAt ?? null,
+    sourceSystem: values.sourceSystem ?? null,
+    sourceId: values.sourceId ?? null,
+    importSessionId: values.importSessionId ?? null,
     createdAt: values.createdAt ?? now,
     updatedAt: values.updatedAt ?? now,
     deletedAt: values.deletedAt ?? null
@@ -4527,6 +4659,19 @@ function createRow(tableName: TableName, values: Record<string, unknown>): AnyTe
         values as Partial<TestImportSessionRecord> &
           Pick<TestImportSessionRecord, "companyId" | "fileName" | "fileUrl">
       );
+    case "importChunkRuns":
+      return createImportChunkRunRecord(
+        values as Partial<TestImportChunkRunRecord> &
+          Pick<
+            TestImportChunkRunRecord,
+            | "companyId"
+            | "importSessionId"
+            | "entityType"
+            | "chunkIndex"
+            | "chunksTotal"
+            | "idempotencyKey"
+          >
+      );
     case "dataExportSessions":
       return createDataExportSessionRecord(
         values as Partial<TestDataExportSessionRecord> & Pick<TestDataExportSessionRecord, "companyId">
@@ -4997,6 +5142,7 @@ export const properties = propertiesTable;
 export const assets = assetsTable;
 export const jobs = jobsTable;
 export const importSessions = importSessionsTable;
+export const importChunkRuns = importChunkRunsTable;
 export const dataExportSessions = dataExportSessionsTable;
 export const estimates = estimatesTable;
 export const estimateItems = estimateItemsTable;
@@ -5281,12 +5427,32 @@ function resolveFieldKey(field: unknown): string {
   return typeof field === "string" ? field : String(field);
 }
 
+function readClerkOrganizationIdFromCompanySettings(settings: Record<string, unknown>): string | null {
+  const clerk = settings.clerk;
+  if (!clerk || typeof clerk !== "object" || Array.isArray(clerk)) {
+    return null;
+  }
+  const orgId = (clerk as { organizationId?: unknown }).organizationId;
+  return typeof orgId === "string" && orgId.length > 0 ? orgId : null;
+}
+
 export function createDrizzleModuleMock() {
-  const sqlTag = (strings: TemplateStringsArray, ..._values: unknown[]) => {
+  const sqlTag = (strings: TemplateStringsArray, ...values: unknown[]) => {
     const template = strings.join("");
 
     if (template.includes("COALESCE")) {
       return JOB_ACTIVITY_AT_MARKER;
+    }
+
+    if (template.includes("clerk") && template.includes("organizationId")) {
+      const clerkOrganizationId = values.at(-1);
+      if (typeof clerkOrganizationId !== "string") {
+        return {};
+      }
+      return <T extends { settings?: Record<string, unknown> }>(row: T) => {
+        const settings = row.settings ?? {};
+        return readClerkOrganizationIdFromCompanySettings(settings) === clerkOrganizationId;
+      };
     }
 
     return {};
@@ -5342,9 +5508,22 @@ export function createDrizzleModuleMock() {
   };
 }
 
+async function runTransactionWithRetry<T>(callback: (tx: TestDb) => Promise<T>): Promise<T> {
+  return db.transaction(callback);
+}
+
+async function runTransactionWithTenantSession<T>(
+  _companyId: string,
+  callback: (tx: TestDb) => Promise<T>
+): Promise<T> {
+  return db.transaction(callback);
+}
+
 export function createDbModuleMock() {
   return {
     db,
+    runTransactionWithRetry,
+    runTransactionWithTenantSession,
     companies,
     users,
     refreshTokens,
@@ -5353,6 +5532,7 @@ export function createDbModuleMock() {
     assets,
     jobs,
     importSessions,
+    importChunkRuns,
     dataExportSessions,
     estimates,
     estimateItems,
@@ -5408,6 +5588,7 @@ export function resetTestState(): void {
   state.assets.length = 0;
   state.jobs.length = 0;
   state.importSessions.length = 0;
+  state.importChunkRuns.length = 0;
   state.dataExportSessions.length = 0;
   state.estimates.length = 0;
   state.estimateItems.length = 0;

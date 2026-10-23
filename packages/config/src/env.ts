@@ -51,7 +51,9 @@ const envSchema = z.object({
   RENVANI_INTERNAL_COMPANY_ID: z
     .string()
     .uuid("RENAVANI_INTERNAL_COMPANY_ID must be a valid UUID")
-    .default("00000000-0000-4000-8000-000000000053")
+    .default("00000000-0000-4000-8000-000000000053"),
+  /** STACK-02 — Clerk secret; empty disables Clerk verify path */
+  CLERK_SECRET_KEY: z.string().default("")
 });
 
 export type Env = z.infer<typeof envSchema>;

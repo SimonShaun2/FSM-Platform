@@ -16,6 +16,7 @@ type CompanyRecord = {
   id: string;
   name: string;
   stripeAccountId: string | null;
+  stripeCustomerId: string | null;
   settings: Record<string, unknown>;
   deletedAt: Date | null;
   updatedAt: Date;
@@ -107,6 +108,7 @@ const companiesTable = {
   __name: "companies",
   id: "id",
   stripeAccountId: "stripeAccountId",
+  stripeCustomerId: "stripeCustomerId",
   deletedAt: "deletedAt"
 } as const;
 
@@ -153,6 +155,7 @@ function createCompany(values: Partial<CompanyRecord> = {}): CompanyRecord {
     id: values.id ?? randomUUID(),
     name: values.name ?? "Acme HVAC",
     stripeAccountId: values.stripeAccountId ?? null,
+    stripeCustomerId: values.stripeCustomerId ?? null,
     settings: values.settings ?? {},
     deletedAt: values.deletedAt ?? null,
     updatedAt: values.updatedAt ?? new Date()
@@ -651,6 +654,136 @@ describe("stripe.handler", () => {
     expect(secondReply.statusCode).toBe(200);
     expect(plan.lastServiceDate).toBe(FIXED_RENEWAL_PAID_DATE);
     expect(state.activityEvents.filter((activityEvent) => activityEvent.eventType === "payment.received")).toHaveLength(1);
+  });
+
+  it("handleSubscriptionUpdated persists platform billing snapshot without touching maintenance plans", async () => {
+    const company = seedCompany({ settings: {} });
+    const event = {
+      id: "evt_platform_sub_updated",
+      type: "customer.subscription.updated",
+      data: {
+        object: {
+          id: "sub_platform_1",
+          status: "active",
+          current_period_end: Math.floor(new Date("2026-07-01T00:00:00.000Z").getTime() / 1000),
+          customer: "cus_platform_1",
+          metadata: {
+            companyId: company.id,
+            billingKind: "platform_mvp"
+          }
+        }
+      }
+    } as unknown as Stripe.CustomerSubscriptionUpdatedEvent;
+
+    await stripeHandlerModule.handleSubscriptionUpdated(event, createLog() as unknown as FastifyRequest["log"]);
+
+    expect(state.maintenancePlans).toHaveLength(0);
+    expect(company.settings).toEqual({
+      stripePlatformBilling: {
+        subscriptionId: "sub_platform_1",
+        status: "active",
+        currentPeriodEnd: "2026-07-01T00:00:00.000Z"
+      }
+    });
+    expect(company.stripeCustomerId).toBe("cus_platform_1");
+    expect(state.activityEvents.at(-1)?.eventType).toBe("company.updated");
+    expect(state.activityEvents.at(-1)?.summary).toBe("Platform subscription updated");
+  });
+
+  it("handleSubscriptionDeleted marks platform billing snapshot canceled", async () => {
+    const company = seedCompany({
+      settings: {
+        stripePlatformBilling: {
+          subscriptionId: "sub_platform_cancel",
+          status: "active",
+          currentPeriodEnd: "2026-08-01T00:00:00.000Z"
+        }
+      }
+    });
+    const event = {
+      id: "evt_platform_sub_deleted",
+      type: "customer.subscription.deleted",
+      data: {
+        object: {
+          id: "sub_platform_cancel",
+          status: "canceled",
+          current_period_end: Math.floor(new Date("2026-08-01T00:00:00.000Z").getTime() / 1000),
+          metadata: {
+            companyId: company.id,
+            billingKind: "platform_mvp"
+          }
+        }
+      }
+    } as unknown as Stripe.CustomerSubscriptionDeletedEvent;
+
+    await stripeHandlerModule.handleSubscriptionDeleted(event, createLog() as unknown as FastifyRequest["log"]);
+
+    expect(company.settings).toEqual({
+      stripePlatformBilling: {
+        subscriptionId: "sub_platform_cancel",
+        status: "canceled",
+        currentPeriodEnd: "2026-08-01T00:00:00.000Z"
+      }
+    });
+    expect(state.activityEvents.at(-1)?.summary).toBe("Platform subscription cancelled");
+  });
+
+  it("handleInvoicePaymentSucceeded ignores platform MVP subscription invoices", async () => {
+    const company = seedCompany({
+      settings: {
+        stripePlatformBilling: {
+          subscriptionId: "sub_platform_invoice",
+          status: "active"
+        }
+      }
+    });
+    const event = {
+      id: "evt_platform_invoice_success",
+      type: "invoice.payment_succeeded",
+      data: {
+        object: {
+          id: "in_platform",
+          subscription: "sub_platform_invoice",
+          amount_paid: 9900,
+          metadata: {
+            companyId: company.id
+          }
+        }
+      }
+    } as unknown as Stripe.InvoicePaymentSucceededEvent;
+
+    await stripeHandlerModule.handleInvoicePaymentSucceeded(event, createLog() as unknown as FastifyRequest["log"]);
+
+    expect(state.activityEvents).toHaveLength(0);
+    expect(warnLogMock).not.toHaveBeenCalled();
+  });
+
+  it("stripeHandler returns 200 and skips duplicate platform subscription events after the first successful processing", async () => {
+    const company = seedCompany({ settings: {} });
+    const firstReply = createReplyRecorder();
+    const secondReply = createReplyRecorder();
+    const event = {
+      id: "evt_duplicate_platform_sub",
+      type: "customer.subscription.created",
+      data: {
+        object: {
+          id: "sub_platform_dup",
+          status: "trialing",
+          current_period_end: Math.floor(new Date("2026-07-15T00:00:00.000Z").getTime() / 1000),
+          metadata: {
+            companyId: company.id,
+            billingKind: "platform_mvp"
+          }
+        }
+      }
+    } as unknown as Stripe.CustomerSubscriptionCreatedEvent;
+
+    await stripeHandlerModule.stripeHandler(createRequestWithEvent(event), firstReply);
+    await stripeHandlerModule.stripeHandler(createRequestWithEvent(event), secondReply);
+
+    expect(firstReply.statusCode).toBe(200);
+    expect(secondReply.statusCode).toBe(200);
+    expect(state.activityEvents.filter((activityEvent) => activityEvent.eventType === "company.updated")).toHaveLength(1);
   });
 
   it("stripeHandler returns 200 and skips duplicate Stripe events after the first successful processing", async () => {
