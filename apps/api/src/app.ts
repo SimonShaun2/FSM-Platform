@@ -4,6 +4,7 @@ import pino from "pino";
 
 import { env } from "@fsm/config";
 
+import { redactAccessTokenInUrl } from "./lib/request-log-path.js";
 import authenticatePlugin from "./plugins/authenticate.js";
 import errorHandlerPlugin from "./plugins/error-handler.js";
 import requestLoggerPlugin from "./plugins/request-logger.js";
@@ -46,7 +47,18 @@ import timeRoutes from "./routes/time/index.js";
 
 export async function buildApp() {
   const logger = pino({
-    level: env.NODE_ENV === "production" ? "info" : "debug"
+    level: env.NODE_ENV === "production" ? "info" : "debug",
+    serializers: {
+      req(request) {
+        return {
+          method: request.method,
+          url: redactAccessTokenInUrl(request.url),
+          host: request.headers.host,
+          remoteAddress: request.socket?.remoteAddress,
+          remotePort: request.socket?.remotePort
+        };
+      }
+    }
   });
 
   const app = Fastify({

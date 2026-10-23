@@ -1,5 +1,7 @@
 import fp from "fastify-plugin";
 
+import { requestPathForLog } from "../lib/request-log-path.js";
+
 declare module "fastify" {
   interface FastifyRequest {
     requestStartTime: number;
@@ -22,7 +24,7 @@ const requestLoggerPlugin = fp(async (fastify) => {
         companyId: request.company?.id ?? null,
         userId: request.user?.id ?? null,
         method: request.method,
-        path: request.url,
+        path: requestPathForLog(request.url),
         statusCode: reply.statusCode,
         durationMs
       },

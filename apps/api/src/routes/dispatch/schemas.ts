@@ -34,6 +34,16 @@ export const DispatchDateQuerySchema = z.object({
 
 export type DispatchDateQuery = z.infer<typeof DispatchDateQuerySchema>;
 
+/** SSE clients pass `access_token` in query (EventSource cannot set Authorization). */
+export const DispatchStreamDateQuerySchema = z
+  .object({
+    date: z.string().regex(isoDatePattern).refine(isValidIsoDate, "Invalid ISO date"),
+    access_token: z.string().min(1).optional()
+  })
+  .strict();
+
+export type DispatchStreamDateQuery = z.infer<typeof DispatchStreamDateQuerySchema>;
+
 export const AutoFitBodySchema = z.object({
   jobId: z.string().uuid(),
   date: z.string().regex(isoDatePattern).refine(isValidIsoDate, "Invalid ISO date")
@@ -43,6 +53,10 @@ export type AutoFitBody = z.infer<typeof AutoFitBodySchema>;
 
 export const dispatchDateValidation = withZodValidation({
   query: DispatchDateQuerySchema
+});
+
+export const dispatchStreamDateValidation = withZodValidation({
+  query: DispatchStreamDateQuerySchema
 });
 
 export const autoFitValidation = withZodValidation({
