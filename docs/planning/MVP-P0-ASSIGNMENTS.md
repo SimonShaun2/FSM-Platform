@@ -7,6 +7,27 @@
 
 **Pod shipping policy (Grace relay — Shaun, effective next cycle):** Stay on **Composer 2.5** (**fast mode off**). Drop **“very lean” per-run clipping** — each dev/agent run ships a **fuller, complete PR** for the assigned ticket slice (implementation + **tests** + evidence), not micro-diffs that need immediate follow-up PRs for the same ticket. Still **avoid wasteful reruns** (read epic/ADR first, one branch per slice, don’t re-land the same fix). **Merge discipline unchanged:** triple sign @ head, `batch-ci`, head SHA guard, no rebase on signed PRs.
 
+**CI before merge (Shaun / Grace):** Run full gates on **PR head** (`pnpm install --frozen-lockfile`, `pnpm build`, `pnpm lint`, `pnpm test`). If `batch-ci` label cannot be applied, post gate results on the PR before requesting sign-off. No account creation or live credentials — env stubs only (Shaun owns vendor accounts).
+
+---
+
+## Cycle dispatch — Backend / Infra / Platform (Shaun directive)
+
+**Every backend, infrastructure, and platform dev has one concrete P0 ticket this cycle.** Full slices + tests; base `dev` @ merge train through [#100](https://github.com/SimonShaun2/Renvani/pull/100) / [#92](https://github.com/SimonShaun2/Renvani/pull/92) / [#98](https://github.com/SimonShaun2/Renvani/pull/98) / [#99](https://github.com/SimonShaun2/Renvani/pull/99).
+
+| Dev | Role | Ticket | Deliverable | Branch | Cloud agent |
+| --- | --- | --- | --- | --- | --- |
+| **Noah** | Backend Dev 1 | **FS-MIGRATE-0026 + chunk worker** | Drizzle `0026` lineage (`import_bundles`, chunk runs); `@fsm/jobs` `import-chunk-commit`; worker processor + tests per [ADR-FS-MIGRATE](../adr/ADR-FS-MIGRATE-import-lineage.md) | `cursor/fs-migrate-0026-lineage-1f27` (+ worker in same PR or `cursor/fs-migrate-import-chunk-commit-1f27`) | `bc-11e2b174-5aff-4e65-804d-16db858a45f2` |
+| **Aria** | Backend Dev 2 | **STACK-13** | Stripe **Billing** MVP (test mode): checkout/status API, **platform subscription webhooks** (idempotent), settings snapshot; Connect unchanged | `cursor/stack-stripe-billing-mvp-1f27` ([#104](https://github.com/SimonShaun2/Renvani/pull/104)) | `bc-ea6c1585-f20f-43e8-96e8-ce2e2082c717` |
+| **Kai** | Backend Dev 3 | **STACK-02** | API `runCompanyScopedTransaction` / tenant GUC on writes; Clerk org→`company_id` mapping; feature-flag parallel JWT; tests | `cursor/stack-clerk-auth-1f27` ([#103](https://github.com/SimonShaun2/Renvani/pull/103)) | `bc-b663ca68-21a7-4565-af55-7921998fcf46` |
+| **Mila** | Infra Dev 1 | **STACK-12** | Render blueprint: API/worker/webhook + Key Value (`noeviction`); Neon region alignment; no live deploy | `cursor/stack-render-deploy-1f27` ([#101](https://github.com/SimonShaun2/Renvani/pull/101)) | `bc-dfcd70c2-6f59-4ac5-9d3b-12e009639bc4` |
+| **Ezra** | Infra Dev 2 | **STACK-10 + Neon CI** | RLS policy migration catalog → SQL migration (staging); Neon **per-PR branch** CI hook in `batch-ci` matrix doc + test | `cursor/stack-rls-neon-ci-1f27` (extends [#102](https://github.com/SimonShaun2/Renvani/pull/102)) | `bc-4951f52f-5c64-4ce2-8ed4-aa3a463d11be` |
+| **Iris** | Infra Dev 3 | **FS-MIGRATE R2 + Sentry** | R2 resumable import file pipeline (`migrate-file-batch` job stub); Sentry SDK wiring (API/worker/webhook) env-only | `cursor/fs-migrate-r2-sentry-1f27` | `bc-3bd7afb0-62f8-41dd-a92d-d15383f8f3df` |
+| **Ruby** | Platform 1 | **STACK-05** | BullMQ queue depth / DLQ monitoring routes + minimal internal admin read API; tests | `cursor/stack-bullmq-monitoring-1f27` | `bc-b7e4021a-e3f3-411b-a136-f634378a0f37` |
+| **Felix** | Platform 2 | **STACK-07 + audit** | Langfuse adapter + agent approval/audit event foundation (align FS-72 policy); tests | `cursor/stack-langfuse-agent-audit-1f27` | `bc-f468b53b-61f3-4882-8b49-6e004d371557` |
+
+*Grid adjustments:* STACK-02 owner **Kai** (was Noah). STACK-12 owner **Mila** (was Iris). STACK-10 + Neon per-PR CI **Ezra** (was Sam). STACK-13 **Aria** (unchanged). Noah takes **0026 + chunk worker** (FS-MIGRATE spine). Iris takes **R2 + Sentry** (file platform). Ruby/Felix own queue monitoring and Langfuse/audit platform slices.
+
 ---
 
 ## P0 backlog (Elena)
@@ -32,17 +53,17 @@
 | Priority | ID | Dev | Deliverable | Branch |
 | --- | --- | --- | --- | --- |
 | **P0** | **STACK-11** | **Ezra** | Staging matrix; Neon **per-PR branches** + region = Render API region | `cursor/stack-staging-env-1f27` |
-| **P0** | **STACK-12** | **Iris** | Render deploy/runbook (API region drives Neon region choice) | `cursor/stack-render-deploy-1f27` |
-| **P0** | **STACK-01** | **Iris** | Neon dev/staging URLs; co-located region; FS-80 pools (**no M1 gate**) | `cursor/stack-neon-env-1f27` |
-| **P0** | **STACK-02** | **Noah** | Clerk + **DB session tenant context** (`company_id` per request); JWT flag parallel | `cursor/stack-clerk-auth-1f27` |
+| **P0** | **STACK-12** | **Mila** | Render deploy/runbook (API region drives Neon region choice) | `cursor/stack-render-deploy-1f27` |
+| **P0** | **STACK-01** | **Ezra** | Neon dev/staging URLs; co-located region; FS-80 pools (**no M1 gate**) | `cursor/stack-neon-env-1f27` |
+| **P0** | **STACK-02** | **Kai** | Clerk + **DB session tenant context** (`company_id` per request); JWT flag parallel | `cursor/stack-clerk-auth-1f27` |
 | **P0** | **STACK-03** | **Sam** | **Day-one** automated cross-tenant tests (CI); Clerk + app matrix (Sofia implements with Sam spec) | `cursor/stack-cross-tenant-ci-1f27` |
-| **P0** | **STACK-10** | **Sam** | RLS policies using session `company_id`; pairs with STACK-02 | `cursor/stack-rls-design-1f27` |
+| **P0** | **STACK-10** | **Ezra** | RLS policies using session `company_id`; pairs with STACK-02 | `cursor/stack-rls-design-1f27` / `cursor/stack-rls-neon-ci-1f27` |
 | **P0** | **STACK-13** | **Aria** | **Stripe Billing** MVP subscriptions (test mode); Connect explicitly **deferred** | `cursor/stack-stripe-billing-mvp-1f27` |
-| **P0** | **STACK-05** | **Hana** | BullMQ queue monitoring + DLQ | `cursor/fs-migrate-queue-hardening-1f27` |
+| **P0** | **STACK-05** | **Ruby** | BullMQ queue monitoring + DLQ | `cursor/stack-bullmq-monitoring-1f27` |
 | **P0** | **STACK-08** | **Leo** | Resend adapter; Twilio sandbox only until 10DLC | `cursor/stack-resend-adapter-1f27` |
 | **P1** | **STACK-14** | **Aria** | Stripe **Connect** onboarding/payouts (after Billing unless Elena 12-05 escalation) | `cursor/stack-stripe-connect-1f27` |
 | **P1** | **STACK-04** | **Ezra** | Sentry + PostHog SDK | `cursor/stack-observability-1f27` |
-| **P1** | **STACK-07** | **Marcus** | Langfuse + eval hooks | `cursor/stack-langfuse-eval-1f27` |
+| **P1** | **STACK-07** | **Felix** | Langfuse + eval hooks + agent audit | `cursor/stack-langfuse-agent-audit-1f27` |
 | **P1** | **STACK-06** | **Diego** | R2 per-env buckets | with file batch PR |
 | **P1** | **STACK-00** | **Ezra** | Doc sweep post-accept | `cursor/stack-doc-reconcile-1f27` |
 | — | **STACK-09** | **Shaun** | Stripe test keys; **Billing** live when approved; **A2P 10DLC** registration **start now**; HubSpot **free** tier | Founder only |
