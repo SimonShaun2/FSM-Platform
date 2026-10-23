@@ -23,8 +23,8 @@
       "import": "./dist/import-vendor-presets.js"
     },
     "./import-source-presets": {
-      "types": "./dist/import-source-presets.d.ts",
-      "import": "./dist/import-source-presets.js"
+      "types": "./dist/import-source-presets/index.d.ts",
+      "import": "./dist/import-source-presets/index.js"
     },
     "./import-price-book-map": {
       "types": "./dist/import-price-book-map.d.ts",
@@ -33,6 +33,10 @@
     "./import-bundle-storage": {
       "types": "./dist/import-bundle-storage.d.ts",
       "import": "./dist/import-bundle-storage.js"
+    },
+    "./import-golden-bundles": {
+      "types": "./dist/import-golden-bundles/index.d.ts",
+      "import": "./dist/import-golden-bundles/index.js"
     },
     "./object-storage": {
       "types": "./dist/object-storage/index.d.ts",
@@ -46,9 +50,15 @@
       "types": "./dist/neon-ci.d.ts",
       "import": "./dist/neon-ci.js"
     },
+<<<<<<< HEAD
     "./stripe-pricing": {
       "types": "./dist/stripe-pricing.d.ts",
       "import": "./dist/stripe-pricing.js"
+=======
+    "./langfuse-env": {
+      "types": "./dist/langfuse-env.d.ts",
+      "import": "./dist/langfuse-env.js"
+>>>>>>> origin/dev
     }
   },
   "scripts": {
@@ -57,6 +67,7 @@
     "test": "vitest run"
   },
   "dependencies": {
+    "@fsm/types": "workspace:*",
     "@aws-sdk/client-s3": "^3.931.0",
     "@aws-sdk/s3-request-presigner": "3.1038.0",
     "zod": "^3.25.76"

@@ -28,6 +28,7 @@ import estimateRoutes from "./routes/estimates/index.js";
 import growthCheckScanRoutes from "./routes/growth-check/index.js";
 import invoiceRoutes from "./routes/invoices/index.js";
 import importRoutes from "./routes/imports/index.js";
+import internalAdminQueueRoutes from "./routes/internal-admin/queues/index.js";
 import migrateOnboardingRoutes from "./routes/migrate-onboarding/index.js";
 import dataExportRoutes from "./routes/data-exports/index.js";
 import jobEngagementRoutes from "./routes/job-engagement/index.js";
@@ -93,6 +94,7 @@ export async function buildApp() {
   await app.register(dispatchRoutes, { prefix: "/api/v1" });
   await app.register(fieldWorkRoutes, { prefix: "/api/v1" });
   await app.register(growthCheckIntakeRoutes, { prefix: "/api/v1" });
+  await app.register(internalAdminQueueRoutes, { prefix: "/api/v1" });
   await app.register(growthCheckScanRoutes, { prefix: "/api/v1" });
   await app.register(attachmentRoutes, { prefix: "/api/v1" });
   await app.register(bookingRoutes, { prefix: "/api/v1" });
