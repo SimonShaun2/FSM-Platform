@@ -48,7 +48,9 @@ const envSchema = z.object({
   RENVANI_INTERNAL_COMPANY_ID: z
     .string()
     .uuid("RENAVANI_INTERNAL_COMPANY_ID must be a valid UUID")
-    .default("00000000-0000-4000-8000-000000000053")
+    .default("00000000-0000-4000-8000-000000000053"),
+  /** STACK-13 — Stripe Billing price id for platform MVP (empty disables checkout) */
+  STRIPE_PLATFORM_BILLING_PRICE_ID: z.string().default("")
 });
 
 export type Env = z.infer<typeof envSchema>;

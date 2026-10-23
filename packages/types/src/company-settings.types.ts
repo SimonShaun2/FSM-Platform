@@ -12,6 +12,12 @@ export interface CompanyNotificationSettings {
   serviceDueAlert?: NotificationChannelPreferences | null;
 }
 
+export interface CompanyStripePlatformBillingSettings {
+  subscriptionId?: string | null;
+  status?: string | null;
+  currentPeriodEnd?: string | null;
+}
+
 export interface CompanyBillingSettings {
   planName?: string | null;
   billingInterval?: string | null;
@@ -28,4 +34,6 @@ export interface CompanySettings {
   currency?: string | null;
   notifications?: CompanyNotificationSettings | null;
   billing?: CompanyBillingSettings | null;
+  /** STACK-13 — platform subscription snapshot (Stripe Billing, not Connect) */
+  stripePlatformBilling?: CompanyStripePlatformBillingSettings | null;
 }

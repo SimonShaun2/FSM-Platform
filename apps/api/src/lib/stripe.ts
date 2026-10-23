@@ -390,3 +390,65 @@ export async function createExpressDashboardLink(accountId: string): Promise<{ u
     url: loginLink.url
   };
 }
+
+export interface CreatePlatformBillingCheckoutInput {
+  companyId: string;
+  stripeCustomerId: string;
+  priceId: string;
+  customerEmail: string | null;
+}
+
+export interface PlatformBillingCheckoutResult {
+  sessionId: string;
+  url: string;
+}
+
+export async function createPlatformBillingCheckoutSession(
+  input: CreatePlatformBillingCheckoutInput
+): Promise<PlatformBillingCheckoutResult> {
+  const appBaseUrl = env.APP_URL.replace(/\/$/, "");
+  const session = await stripe.checkout.sessions.create({
+    mode: "subscription",
+    customer: input.stripeCustomerId,
+    customer_email: input.customerEmail ?? undefined,
+    line_items: [{ price: input.priceId, quantity: 1 }],
+    success_url: `${appBaseUrl}/settings/billing?checkout=success`,
+    cancel_url: `${appBaseUrl}/settings/billing?checkout=cancel`,
+    metadata: {
+      companyId: input.companyId,
+      billingKind: "platform_mvp"
+    },
+    subscription_data: {
+      metadata: {
+        companyId: input.companyId,
+        billingKind: "platform_mvp"
+      }
+    }
+  });
+
+  if (!session.url) {
+    throw new Error("Stripe checkout session missing url");
+  }
+
+  return {
+    sessionId: session.id,
+    url: session.url
+  };
+}
+
+export async function createStripePlatformCustomer(input: {
+  companyId: string;
+  email: string | null;
+  name: string;
+}): Promise<StripeCustomerResult> {
+  const customer = await stripe.customers.create({
+    email: input.email ?? undefined,
+    name: input.name,
+    metadata: {
+      companyId: input.companyId,
+      billingKind: "platform_mvp"
+    }
+  });
+
+  return { id: customer.id };
+}

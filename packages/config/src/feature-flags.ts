@@ -12,7 +12,9 @@ export const featureFlags = {
   // FEATURE FLAG: loyalty-reminders-enabled — FS-72 candidate evaluation (proposal path separate)
   loyaltyRemindersEnabled: false,
   // FEATURE FLAG: loyalty-reminders-dry-run — FS-72 blocks customer send until founder gate
-  loyaltyRemindersDryRun: true
+  loyaltyRemindersDryRun: true,
+  // FEATURE FLAG: stripe-platform-billing-mvp — STACK-13: Renvani platform subscription (Billing before Connect)
+  stripePlatformBillingMvp: false
 } as const;
 
 export type FeatureFlags = typeof featureFlags;
