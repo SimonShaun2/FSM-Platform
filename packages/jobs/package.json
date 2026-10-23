@@ -14,6 +14,10 @@
       "types": "./dist/enqueue-migrate-file-batch.d.ts",
       "import": "./dist/enqueue-migrate-file-batch.js"
     },
+    "./enqueue-import-chunk-commit": {
+      "types": "./dist/enqueue-import-chunk-commit.d.ts",
+      "import": "./dist/enqueue-import-chunk-commit.js"
+    },
     "./migrate-file-batch-trace-log": {
       "types": "./dist/migrate-file-batch-trace-log.d.ts",
       "import": "./dist/migrate-file-batch-trace-log.js"

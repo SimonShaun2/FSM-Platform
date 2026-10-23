@@ -7,23 +7,35 @@ import pino from "pino";
 
 import { mapCsvColumns } from "@fsm/ai";
 import {
+  buildCommunicationsColumnMapping,
+  inferCommunicationsPresetFromHeaders
+} from "@fsm/config/import-communications-presets";
+import {
   buildPresetColumnMapping,
   inferImportSourcePresetForSession
 } from "@fsm/config/import-source-presets";
 import { downloadFile, getFileKeyFromUrl } from "@fsm/config/storage";
 import {
+  commitCommunicationsRows,
   commitPriceBookRows,
   customers,
   db,
   emitEventWithExecutor,
   importSessions,
   properties,
+  resolveSourceSystemForCommunicationsImport,
   resolveSourceSystemForPriceBookImport,
+  validateCommunicationsRows,
   validatePriceBookRows
 } from "@fsm/db";
+import { normalizeImportPhone } from "@fsm/import-normalize";
 import { aiQueue } from "@fsm/jobs";
 
 import { handleImportChunkCommit, IMPORT_CHUNK_COMMIT_JOB_NAME } from "./import-chunk-commit.processor.js";
+import {
+  handleImportCommunicationsCommit,
+  IMPORT_COMMUNICATIONS_COMMIT_JOB_NAME
+} from "./import-communications-chunk.processor.js";
 import {
   handleImportEquipmentCommit,
   IMPORT_EQUIPMENT_COMMIT_JOB_NAME,
@@ -153,6 +165,16 @@ function readPriceBookSourceSystem(
   return resolveSourceSystemForPriceBookImport(presetId ?? "generic");
 }
 
+function readCommunicationsSourceSystem(aiInferences: unknown, headers: string[]): string {
+  const inferences = normalizeAiInferences(aiInferences);
+  if (typeof inferences.sourceSystem === "string") {
+    return inferences.sourceSystem;
+  }
+
+  const presetId = inferCommunicationsPresetFromHeaders(headers);
+  return resolveSourceSystemForCommunicationsImport(presetId ?? "generic");
+}
+
 function normalizeDuplicateActions(value: unknown): Record<string, DuplicateAction> {
   if (!isPlainObject(value)) {
     return {};
@@ -187,17 +209,6 @@ function normalizeEmailValue(value: string | null | undefined): string | null {
   return normalizedValue ? normalizedValue.toLowerCase() : null;
 }
 
-function normalizePhoneValue(value: string | null | undefined): string | null {
-  const normalizedValue = normalizeTextValue(value);
-
-  if (!normalizedValue) {
-    return null;
-  }
-
-  const digitsOnly = normalizedValue.replace(/\D+/gu, "");
-  return digitsOnly.length > 0 ? digitsOnly : null;
-}
-
 function normalizeCustomerNameValue(value: string | null | undefined): string | null {
   const normalizedValue = normalizeTextValue(value);
   return normalizedValue ? normalizedValue.toLowerCase() : null;
@@ -223,7 +234,7 @@ function buildCustomerLookupMaps(existingCustomers: CustomerRow[]) {
 
   for (const customer of existingCustomers) {
     const normalizedEmail = normalizeEmailValue(customer.email);
-    const normalizedPhone = normalizePhoneValue(customer.phone);
+    const normalizedPhone = normalizeImportPhone(customer.phone);
     const normalizedName = normalizeCustomerNameValue(
       customer.displayName ?? `${customer.firstName} ${customer.lastName}`.trim()
     );
@@ -260,7 +271,7 @@ function findDuplicateCustomer(
     }
   }
 
-  const normalizedPhone = normalizePhoneValue(mappedRow.phone);
+  const normalizedPhone = normalizeImportPhone(mappedRow.phone);
   if (normalizedPhone) {
     const customer = existingCustomers.phoneMap.get(normalizedPhone);
     if (customer) {
@@ -510,13 +521,16 @@ export async function handleMapCsvColumns(job: Job<Record<string, unknown>>): Pr
   try {
     const fileBuffer = await downloadFile(getFileKeyFromUrl(importSession.fileUrl));
     const parsedCsv = parseCsv(fileBuffer);
-    const sourcePresetId = inferImportSourcePresetForSession(
-      parsedCsv.headers,
-      importSession.entityType
-    );
-    const presetMapping = sourcePresetId
-      ? buildPresetColumnMapping(parsedCsv.headers, sourcePresetId)
-      : {};
+    const sourcePresetId =
+      importSession.entityType === "communications"
+        ? inferCommunicationsPresetFromHeaders(parsedCsv.headers)
+        : inferImportSourcePresetForSession(parsedCsv.headers, importSession.entityType);
+    const presetMapping =
+      importSession.entityType === "communications"
+        ? buildCommunicationsColumnMapping(parsedCsv.headers, sourcePresetId)
+        : sourcePresetId
+          ? buildPresetColumnMapping(parsedCsv.headers, sourcePresetId)
+          : {};
     let columnMapping: ColumnMapping = { ...presetMapping };
 
     try {
@@ -541,7 +555,10 @@ export async function handleMapCsvColumns(job: Job<Record<string, unknown>>): Pr
     }
 
     const priorInferences = normalizeAiInferences(importSession.aiInferences);
-    const sourceSystem = resolveSourceSystemForPriceBookImport(sourcePresetId ?? "generic");
+    const sourceSystem =
+      importSession.entityType === "communications"
+        ? readCommunicationsSourceSystem(importSession.aiInferences, parsedCsv.headers)
+        : resolveSourceSystemForPriceBookImport(sourcePresetId ?? "generic");
 
     await db
       .update(importSessions)
@@ -599,7 +616,9 @@ export async function handleValidateCsvRows(job: Job<Record<string, unknown>>): 
             columnMapping,
             readPriceBookSourceSystem(importSession.aiInferences, parsedCsv.headers, importSession.entityType)
           )
-        : validateCustomerRows(parsedCsv.rows, columnMapping, await getCompanyCustomers(companyId));
+        : importSession.entityType === "communications"
+          ? validateCommunicationsRows(parsedCsv.rows, columnMapping)
+          : validateCustomerRows(parsedCsv.rows, columnMapping, await getCompanyCustomers(companyId));
 
     await db
       .update(importSessions)
@@ -628,6 +647,70 @@ export async function handleValidateCsvRows(job: Job<Record<string, unknown>>): 
     await markImportFailed(importSession, error);
     throw error;
   }
+}
+
+async function executeCommunicationsImport(
+  job: Job<Record<string, unknown>>,
+  companyId: string,
+  importSessionId: string,
+  importSession: ImportSessionRow
+): Promise<void> {
+  const fileBuffer = await downloadFile(getFileKeyFromUrl(importSession.fileUrl));
+  const parsedCsv = parseCsv(fileBuffer);
+  const columnMapping = normalizeColumnMappings(importSession.columnMappings);
+  const validationErrors = normalizeValidationErrors(importSession.validationErrors);
+  const invalidRowNumbers = new Set(validationErrors.map((validationError) => validationError.row));
+  const sourceSystem = readCommunicationsSourceSystem(importSession.aiInferences, parsedCsv.headers);
+
+  const result = await commitCommunicationsRows({
+    companyId,
+    importSessionId,
+    sourceSystem,
+    rows: parsedCsv.rows,
+    columnMapping,
+    invalidRowNumbers
+  });
+
+  const completedAt = new Date();
+  const priorInferences = normalizeAiInferences(importSession.aiInferences);
+
+  await db.transaction(async (tx) => {
+    await tx
+      .update(importSessions)
+      .set({
+        status: "completed",
+        importedRows: result.importedRows,
+        skippedRows: result.skippedRows,
+        duplicateRows: 0,
+        completedAt,
+        errorMessage: null,
+        aiInferences: {
+          ...priorInferences,
+          communicationsImported: result.importedRows
+        },
+        updatedAt: completedAt
+      })
+      .where(
+        and(eq(importSessions.companyId, companyId), eq(importSessions.id, importSessionId), isNull(importSessions.deletedAt))
+      )
+      .returning();
+
+    await emitEventWithExecutor(tx, {
+      companyId,
+      eventType: "import.completed",
+      actorType: "system",
+      entityType: "import_session",
+      entityId: importSessionId,
+      payload: {
+        importedRows: result.importedRows,
+        skippedRows: result.skippedRows,
+        entityType: "communications"
+      },
+      summary: `Communications import ${importSession.fileName} completed`
+    });
+  });
+
+  await job.updateProgress?.(100);
 }
 
 async function executePriceBookImport(
@@ -720,6 +803,11 @@ export async function handleExecuteImport(job: Job<Record<string, unknown>>): Pr
       return;
     }
 
+    if (importSession.entityType === "communications") {
+      await executeCommunicationsImport(job, companyId, importSessionId, importSession);
+      return;
+    }
+
     const fileBuffer = await downloadFile(getFileKeyFromUrl(importSession.fileUrl));
     const parsedCsv = parseCsv(fileBuffer);
     const columnMapping = normalizeColumnMappings(importSession.columnMappings);
@@ -751,7 +839,7 @@ export async function handleExecuteImport(job: Job<Record<string, unknown>>): Pr
 
         const mappedRow = mapCustomerRow(row.values, columnMapping);
         const normalizedEmail = normalizeEmailValue(mappedRow.email);
-        const normalizedPhone = normalizePhoneValue(mappedRow.phone);
+        const normalizedPhone = normalizeImportPhone(mappedRow.phone);
         const duplicateMatch = findDuplicateCustomer(mappedRow, customerLookupMaps);
 
         if (duplicateMatch) {
@@ -1032,6 +1120,9 @@ export function createCsvImportProcessor(): Processor<Record<string, unknown>, v
         return;
       case IMPORT_CHUNK_COMMIT_JOB_NAME:
         await handleImportChunkCommit(job);
+        return;
+      case IMPORT_COMMUNICATIONS_COMMIT_JOB_NAME:
+        await handleImportCommunicationsCommit(job);
         return;
       case IMPORT_INVOICE_BALANCE_COMMIT_JOB_NAME:
         await handleImportInvoiceBalanceCommit(job);

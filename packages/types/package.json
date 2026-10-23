@@ -9,6 +9,10 @@
     ".": {
       "types": "./dist/index.d.ts",
       "import": "./dist/index.js"
+    },
+    "./fs-migrate/import-workflow-runtime-fingerprint.node": {
+      "types": "./dist/fs-migrate/import-workflow-runtime-fingerprint.node.d.ts",
+      "import": "./dist/fs-migrate/import-workflow-runtime-fingerprint.node.js"
     }
   },
   "dependencies": {
