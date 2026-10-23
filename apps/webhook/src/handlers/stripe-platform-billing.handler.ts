@@ -44,7 +44,7 @@ function readExistingSettings(company: CompanyRow): CompanySettings {
 }
 
 function readSubscriptionPriceId(subscription: Stripe.Subscription): string | null {
-  const price = subscription.items.data[0]?.price;
+  const price = subscription.items?.data?.[0]?.price;
   if (!price) {
     return null;
   }
