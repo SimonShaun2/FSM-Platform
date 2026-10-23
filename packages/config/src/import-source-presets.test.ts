@@ -72,6 +72,15 @@ describe("import-source-presets", () => {
     ).toBe("service_titan_invoices");
   });
 
+  it("prefers ServiceTitan invoices when Invoice Number is present (ST export shape)", () => {
+    expect(
+      inferImportSourcePresetFromHeaders(
+        ["Invoice ID", "Invoice Number", "Customer ID", "Invoice Date", "Total", "Balance"],
+        "invoices"
+      )
+    ).toBe("service_titan_invoices");
+  });
+
   it("infers ServiceTitan jobs from job tags and business unit columns", () => {
     expect(
       inferImportSourcePresetForSession(
