@@ -22,6 +22,10 @@ import {
   useSubmitBookingRequest,
   type PublicBookingSettingsRecord
 } from "@/src/hooks/booking.hooks";
+import {
+  clearBookingIdempotencyKey,
+  getOrCreateBookingIdempotencyKey
+} from "@/src/lib/booking-idempotency";
 import { showToast } from "@/src/stores/toast.store";
 import { useBookingFlowStore } from "@/src/stores/booking-flow.store";
 import { cn } from "@/src/lib/utils";
@@ -283,6 +287,7 @@ export function BookingFlowClient({
     email,
     notes,
     smsConsent,
+    smsConsentMarketing,
     servedTechCount,
     hydrateFromRoute,
     setReferenceNumber,
@@ -364,9 +369,16 @@ export function BookingFlowClient({
   }
 
   async function handleSubmitBooking() {
+    if (submitMutation.isPending) {
+      return;
+    }
+
+    const idempotencyKey = getOrCreateBookingIdempotencyKey(slug);
+
     try {
       const response = await submitMutation.mutateAsync({
         source,
+        idempotencyKey,
         body: {
           firstName,
           lastName,
@@ -384,17 +396,24 @@ export function BookingFlowClient({
           preferredDate,
           preferredWindow,
           customerNotes: notes,
-          smsConsentAppointments: smsConsent
+          smsConsentAppointments: smsConsent,
+          smsConsentMarketing
         }
       });
 
+      clearBookingIdempotencyKey(slug);
       setReferenceNumber(response.confirmation.referenceNumber);
       router.push(buildConfirmedHref(slug, source, response.confirmation.referenceNumber));
     } catch (error) {
+      const message = error instanceof Error ? error.message : "Please try again.";
+      const isConflict = message.toLowerCase().includes("conflict") || message.includes("409");
+
       showToast({
         tone: "error",
-        title: "Booking could not be confirmed",
-        description: error instanceof Error ? error.message : "Please try again."
+        title: isConflict ? "Request already submitted" : "Booking could not be confirmed",
+        description: isConflict
+          ? "Start again from the contact step if you need to change your details."
+          : message
       });
     }
   }
@@ -797,10 +816,22 @@ export function BookingFlowClient({
                 className="mt-1 h-4 w-4 rounded border-neutral-300"
               />
               <span>
-                Receive SMS about my appointment.
+                Receive SMS about my appointment (optional).
                 <span className="mt-1 block text-xs text-neutral-400">
                   Standard message rates apply. Reply STOP to opt out.
                 </span>
+              </span>
+            </label>
+            <label className="mt-3 flex items-start gap-3 rounded-[22px] border border-neutral-200 bg-neutral-50 px-4 py-4 text-sm text-neutral-600">
+              <input
+                type="checkbox"
+                checked={smsConsentMarketing}
+                onChange={(event) => updateFields({ smsConsentMarketing: event.target.checked })}
+                className="mt-1 h-4 w-4 rounded border-neutral-300"
+              />
+              <span>
+                Receive occasional promotional texts (optional).
+                <span className="mt-1 block text-xs text-neutral-400">Separate from appointment updates.</span>
               </span>
             </label>
             <button
@@ -858,15 +889,16 @@ export function BookingFlowClient({
               </dl>
             </div>
 
-            <div className="mt-5 rounded-[24px] border border-neutral-200 bg-neutral-50 px-4 py-4">
+            <div className="mt-5 rounded-[24px] border border-neutral-200 bg-neutral-50 px-4 py-4" aria-live="polite">
               <p className="text-sm font-semibold text-neutral-900">What happens next</p>
               <ul className="mt-3 space-y-2 text-sm text-neutral-600">
-                <li>Confirmation SMS within 2 hours</li>
-                <li>24-hour appointment reminder</li>
-                <li>On-the-way notification before arrival</li>
-                <li>Call if anything needs to shift</li>
+                <li>We review your request — this is not a confirmed appointment yet.</li>
+                {smsConsent ? <li>Confirmation SMS within 2 hours if you opted in</li> : null}
+                {smsConsent ? <li>24-hour appointment reminder when scheduled</li> : null}
+                {smsConsent ? <li>On-the-way notification before arrival when scheduled</li> : null}
+                <li>Our team will call if anything needs to shift</li>
               </ul>
-              <p className="mt-3 text-xs text-neutral-400">No payment is required to request your appointment.</p>
+              <p className="mt-3 text-xs text-neutral-400">No payment is required to submit your request.</p>
             </div>
 
             <button
@@ -875,9 +907,10 @@ export function BookingFlowClient({
                 void handleSubmitBooking();
               }}
               disabled={submitMutation.isPending}
+              aria-busy={submitMutation.isPending}
               className="mt-5 inline-flex min-h-12 w-full items-center justify-center rounded-[20px] bg-brand-accent px-4 text-sm font-semibold text-white disabled:cursor-not-allowed disabled:opacity-60"
             >
-              {submitMutation.isPending ? "Confirming..." : "Confirm Booking"}
+              {submitMutation.isPending ? "Submitting..." : "Submit request"}
             </button>
           </BookingCard>
         ) : null}
