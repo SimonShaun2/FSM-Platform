@@ -201,7 +201,7 @@ Keep Renvani's subscription billing separate from the service company's collecti
 |---|---|---|
 | Renvani subscription | Plan, billing account, subscription state, invoices, tax/receipts, failed renewal and cancellation | Flex and Flat pricing rules, billing dates, proration/refund policy, delinquency and grace behavior |
 | Service-business invoice | Quote/invoice, payment intent, tender, settlement, refund, dispute, processor fee and payout reconciliation | Stripe Connect charge model, merchant of record, connected-account onboarding and responsibility for losses |
-| Platform fee | Flex per-invoice shop fee and Flat no-shop-fee rule | Calculate once from versioned policy; distinguish the Renvani fee from processor fees and any customer-paid processor fee |
+| Platform fee | Flex: customer-paid % **on top of** invoice (shop receives full invoice); Flat: no customer fee | Single `STRIPE_PLATFORM_FEE_PERCENT`, no cap; show fee on pay page and Checkout; counsel review for surcharge wording |
 
 Preserve the founder's current pricing direction in configuration and acceptance tests: Flex is $299/month plus 5% of in-app-paid payments processed, with **no** platform shop-fee cap; Flat is $799/month with no shop fee. Both include the full product and unlimited users. Processor fees remain separate and must be disclosed. Do not create seat entitlements, feature gates or hidden add-ons. Treat prices and fee rules as effective-dated policy, not constants copied into UI code. Confirm tax handling and final fee presentation before production.
 

@@ -6,6 +6,7 @@ import pino from "pino";
 import type Stripe from "stripe";
 
 import { env } from "@fsm/config";
+import { computeCustomerPaidPlatformFee } from "@fsm/config/stripe-pricing";
 import {
   activityEvents,
   automationRules,
@@ -39,6 +40,7 @@ import {
   type Payment,
   type PaymentMethod,
   type PaymentStatus,
+  type PublicInvoicePaymentLink,
   type RecordPaymentInput,
   type UpdateInvoiceInput
 } from "@fsm/types";
@@ -723,19 +725,25 @@ export async function getInvoice(companyId: string, invoiceId: string): Promise<
   return buildInvoiceDetail(companyId, invoice, db);
 }
 
-export async function getPublicInvoicePaymentLink(token: string): Promise<{
-  invoiceNumber: string;
-  paymentLinkUrl: string;
-}> {
+export async function getPublicInvoicePaymentLink(token: string): Promise<PublicInvoicePaymentLink> {
   const invoice = await getInvoiceByPaymentToken(token, db);
 
   if (!invoice.stripePaymentLinkUrl) {
     throw new AppError(ErrorCode.CONFLICT, "Invoice payment link is unavailable");
   }
 
+  const company = await getCompanyRecord(invoice.companyId, db);
+  const feeFraction = resolveCompanyConnectApplicationFeeFraction(company);
+  const breakdown = computeCustomerPaidPlatformFee(invoice.balanceDue, feeFraction);
+
   return {
     invoiceNumber: invoice.invoiceNumber,
-    paymentLinkUrl: invoice.stripePaymentLinkUrl
+    paymentLinkUrl: invoice.stripePaymentLinkUrl,
+    invoiceAmount: breakdown.invoiceAmount,
+    platformFeeAmount: breakdown.platformFeeAmount,
+    totalDue: breakdown.totalDue,
+    platformFeePercent: breakdown.platformFeePercent,
+    platformFeePaidByCustomer: feeFraction > 0
   };
 }
 
@@ -961,7 +969,7 @@ export async function sendInvoice(
       customerEmail: customer.email,
       companyStripeAccountId: company.stripeAccountId,
       invoiceNumber: existingInvoice.invoiceNumber,
-      total: existingInvoice.total,
+      total: existingInvoice.balanceDue,
       connectApplicationFeeFraction: resolveCompanyConnectApplicationFeeFraction(company),
       items: items.map((item) => ({
         name: item.name,

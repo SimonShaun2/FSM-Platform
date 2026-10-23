@@ -159,14 +159,20 @@ export default function SettingsPaymentsPage() {
                 <p className="mt-1 text-xs text-neutral-500">{status.lastPayoutAt ? new Date(status.lastPayoutAt).toLocaleDateString("en-US") : "No payout recorded yet"}</p>
               </div>
               <div className="rounded-[24px] border border-neutral-200 bg-neutral-50 px-4 py-4">
-                <p className="text-xs font-semibold uppercase tracking-[0.18em] text-neutral-400">Platform fee</p>
+                <p className="text-xs font-semibold uppercase tracking-[0.18em] text-neutral-400">Platform fee (Flex)</p>
                 <p className="mt-2 text-lg font-semibold text-neutral-950">
-                  {status.platformFeePercent != null ? `${status.platformFeePercent.toFixed(1)}%` : "Unavailable"}
+                  {status.platformFeePercent != null && status.platformFeePercent > 0
+                    ? `${status.platformFeePercent.toFixed(1)}%`
+                    : status.renvaniPlanTier === "flat"
+                      ? "None"
+                      : "Unavailable"}
                 </p>
                 <p className="mt-1 text-xs text-neutral-500">
-                  {status.platformFeePercent != null
-                    ? "ServiceRev charges this percentage per transaction."
-                    : "Platform fee details will appear after payments are configured."}
+                  {status.platformFeePercent != null && status.platformFeePercent > 0
+                    ? "On Flex, customers pay this fee on top of the invoice. You receive the full invoice amount."
+                    : status.renvaniPlanTier === "flat"
+                      ? "Flat plan: no customer platform fee on invoice payments."
+                      : "Platform fee details will appear after billing plan is set."}
                 </p>
               </div>
             </div>

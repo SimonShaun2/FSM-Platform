@@ -14,6 +14,23 @@ describe("stripe-pricing", () => {
     resetEnvCacheForTests();
   });
 
+  it("computes customer-paid platform fee on top of invoice total", async () => {
+    const { computeCustomerPaidPlatformFee } = await import("./stripe-pricing.js");
+
+    const breakdown = computeCustomerPaidPlatformFee("100.00", 0.05);
+    expect(breakdown).toEqual({
+      invoiceAmount: "100.00",
+      platformFeeAmount: "5.00",
+      totalDue: "105.00",
+      platformFeePercent: 5
+    });
+
+    const flat = computeCustomerPaidPlatformFee("250.50", 0);
+    expect(flat.platformFeeAmount).toBe("0.00");
+    expect(flat.totalDue).toBe("250.50");
+    expect(flat.platformFeePercent).toBeNull();
+  });
+
   it("applies configured flex shop fee fraction", async () => {
     vi.stubEnv("STRIPE_PLATFORM_FEE_PERCENT", "0.05");
     resetEnvCacheForTests();

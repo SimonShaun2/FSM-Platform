@@ -1,23 +1,26 @@
 "use client";
 
-import { useEffect } from "react";
+import { useState } from "react";
 import { useParams } from "next/navigation";
 import { Loader2 } from "lucide-react";
 
+import { Button } from "@/src/components/ui/Button";
 import { EmptyState } from "@/src/components/ui/EmptyState";
 import { usePublicPaymentLink } from "@/src/hooks/invoices.hooks";
+
+function formatUsd(amount: string): string {
+  const value = Number(amount);
+  if (!Number.isFinite(value)) {
+    return amount;
+  }
+
+  return new Intl.NumberFormat("en-US", { style: "currency", currency: "USD" }).format(value);
+}
 
 export default function PublicPaymentPage() {
   const params = useParams<{ token: string }>();
   const paymentQuery = usePublicPaymentLink(params.token);
-
-  useEffect(() => {
-    if (!paymentQuery.data?.paymentLinkUrl) {
-      return;
-    }
-
-    window.location.replace(paymentQuery.data.paymentLinkUrl);
-  }, [paymentQuery.data?.paymentLinkUrl]);
+  const [redirecting, setRedirecting] = useState(false);
 
   if (paymentQuery.isError) {
     return (
@@ -26,21 +29,71 @@ export default function PublicPaymentPage() {
           <EmptyState
             icon={Loader2}
             title="Payment link unavailable"
-            subtitle="This payment link may have expired. Contact ServiceRev to request a new invoice link."
+            subtitle="This payment link may have expired. Contact your service provider to request a new invoice link."
           />
         </div>
       </div>
     );
   }
 
+  if (paymentQuery.isLoading || !paymentQuery.data) {
+    return (
+      <div className="flex min-h-screen items-center justify-center bg-white px-4">
+        <Loader2 className="h-10 w-10 animate-spin text-brand-accent" />
+      </div>
+    );
+  }
+
+  const payment = paymentQuery.data;
+
+  const handleContinue = () => {
+    setRedirecting(true);
+    window.location.replace(payment.paymentLinkUrl);
+  };
+
   return (
-    <div className="flex min-h-screen items-center justify-center bg-white px-4">
-      <div className="rounded-[32px] border border-neutral-200 bg-white px-8 py-10 text-center shadow-[0_24px_80px_rgba(16,33,99,0.08)]">
-        <Loader2 className="mx-auto h-10 w-10 animate-spin text-brand-accent" />
-        <h1 className="mt-5 text-2xl font-semibold tracking-tight text-neutral-900">Redirecting to secure payment</h1>
-        <p className="mt-3 max-w-md text-sm leading-6 text-neutral-500">
-          We&apos;re sending you to Stripe now so you can complete the payment securely.
+    <div className="flex min-h-screen items-center justify-center bg-neutral-50 px-4 py-12">
+      <div className="w-full max-w-md rounded-[32px] border border-neutral-200 bg-white px-8 py-10 shadow-[0_24px_80px_rgba(16,33,99,0.08)]">
+        <p className="text-xs font-semibold uppercase tracking-[0.18em] text-neutral-400">Invoice payment</p>
+        <h1 className="mt-3 text-2xl font-semibold tracking-tight text-neutral-900">
+          {payment.invoiceNumber}
+        </h1>
+
+        <dl className="mt-8 space-y-4 border-t border-neutral-100 pt-6 text-sm">
+          <div className="flex items-center justify-between gap-4">
+            <dt className="text-neutral-600">Invoice amount</dt>
+            <dd className="font-semibold text-neutral-900">{formatUsd(payment.invoiceAmount)}</dd>
+          </div>
+          {payment.platformFeePaidByCustomer && payment.platformFeePercent != null ? (
+            <div className="flex items-center justify-between gap-4">
+              <dt className="text-neutral-600">
+                Renvani platform fee ({payment.platformFeePercent}%)
+                <span className="mt-1 block text-xs font-normal text-neutral-500">
+                  Paid by you; not deducted from your service provider.
+                </span>
+              </dt>
+              <dd className="font-semibold text-neutral-900">{formatUsd(payment.platformFeeAmount)}</dd>
+            </div>
+          ) : null}
+          <div className="flex items-center justify-between gap-4 border-t border-neutral-100 pt-4 text-base">
+            <dt className="font-semibold text-neutral-900">Total due today</dt>
+            <dd className="font-semibold text-neutral-900">{formatUsd(payment.totalDue)}</dd>
+          </div>
+        </dl>
+
+        <p className="mt-4 text-xs leading-5 text-neutral-500">
+          Card processing fees may appear separately on Stripe Checkout. Surcharge and dual-pricing rules
+          vary by state — counsel review in progress.
         </p>
+
+        <Button
+          type="button"
+          className="mt-8 w-full"
+          disabled={redirecting}
+          onClick={handleContinue}
+        >
+          {redirecting ? "Redirecting…" : "Continue to secure payment"}
+        </Button>
       </div>
     </div>
   );

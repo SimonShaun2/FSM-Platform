@@ -1,22 +1,37 @@
-# STACK-14 — Stripe Connect shop fee (Flex vs Flat)
+# STACK-14 — Stripe Connect platform fee (Flex vs Flat)
 
-**Founder policy (2026-10-23):** Flex **$299/mo + 5%** of payments processed; Flat **$799/mo**, **no** platform shop fee on Connect. **Test mode only.**
+**Founder policy (2026-10-23, clarified 7:08 AM CT):**
 
-## Configuration (single knob)
+- **Flex ($299/mo):** Customers pay a **5% platform fee on top of** the invoice/service amount at checkout. Renvani collects it as the Stripe Connect **application fee**. The shop receives the **full invoice amount** (fee is not deducted from the shop).
+- **Flat ($799/mo):** **No** customer platform fee on invoice payments.
+- **No fee cap.** Single config: `STRIPE_PLATFORM_FEE_PERCENT` (decimal `0.05`).
+- **Test mode only.** Dual-pricing / surcharge compliance copy is flagged for counsel review — do not block engineering on it.
+
+## Configuration
 
 | Env | Purpose |
 | --- | --- |
-| `STRIPE_PLATFORM_FEE_PERCENT` | Decimal fraction for **Flex** Connect application fee (e.g. `0.05` = 5%). Not applied on Flat. |
+| `STRIPE_PLATFORM_FEE_PERCENT` | Decimal fraction for **Flex** customer-paid platform fee (e.g. `0.05` = 5%). **0** effective on Flat. |
 | `STRIPE_PLATFORM_BILLING_PRICE_ID_FLEX` | Stripe Price id — Flex subscription |
 | `STRIPE_PLATFORM_BILLING_PRICE_ID_FLAT` | Stripe Price id — Flat subscription |
 | `STRIPE_PLATFORM_BILLING_PRICE_ID` | Legacy alias for Flex price when `_FLEX` unset |
 
-Resolution lives in `@fsm/config/stripe-pricing` (`resolveConnectApplicationFeeFraction`, `resolvePlatformBillingPriceId`).
+Helpers: `@fsm/config/stripe-pricing` — `computeCustomerPaidPlatformFee`, `resolveConnectApplicationFeeFraction`, `resolvePlatformBillingPriceId`.
 
-## Runtime
+## Invoice checkout (implemented)
 
-- Tenant plan stored in `companies.settings.stripePlatformBilling.planTier` (`flex` \| `flat`) from platform billing webhooks / checkout metadata.
-- Invoice checkout and maintenance-plan Connect subscriptions pass `connectApplicationFeeFraction` from `resolveCompanyConnectApplicationFeeFraction(company)` — **0** on Flat.
-- Connect status API returns effective `platformFeePercent` (0 on Flat) and `renvaniPlanTier`.
+1. Line items: invoice/service lines (shop receives this total via transfer).
+2. **Flex only:** separate Checkout line item — `Renvani platform fee (5%)` — customer-paid, with clear description.
+3. `application_fee_amount` = platform fee cents (matches the added line item).
+4. Customer total charged = invoice amount + platform fee.
 
-**Owners:** Ruby / Felix — STACK delivery; folded into `cursor/stack-stripe-connect-1f27`.
+## Customer-facing surfaces
+
+- **Public pay page** (`/pay/[token]`): shows invoice amount, platform fee (Flex), and total due before redirecting to Stripe.
+- **Stripe Checkout:** platform fee as its own line item.
+
+## Maintenance / subscription Connect charges
+
+Recurring Connect subscriptions still use `application_fee_percent` today; aligning recurring charges with the same **customer-paid on top** model is a follow-up (may require price adjustment or invoice items). Invoice checkout is the v1 path.
+
+**Owners:** Ruby / Felix — `cursor/stack-stripe-connect-1f27`.

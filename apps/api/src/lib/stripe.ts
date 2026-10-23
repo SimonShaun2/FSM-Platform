@@ -2,6 +2,10 @@ import { Decimal } from "decimal.js";
 import Stripe from "stripe";
 
 import { env } from "@fsm/config";
+import {
+  computeCustomerPaidPlatformFee,
+  formatCustomerPlatformFeeLineItemName
+} from "@fsm/config/stripe-pricing";
 
 const stripe = new Stripe(env.STRIPE_SECRET_KEY);
 
@@ -21,7 +25,7 @@ export interface CreateInvoiceCheckoutSessionInput {
   invoiceNumber: string;
   total: string;
   items: InvoiceCheckoutLineItem[];
-  /** Decimal fraction (0.05 = 5%). Omit or 0 for Flat / no shop fee. */
+  /** Decimal fraction (0.05 = 5%). Customer-paid on top of invoice; 0 for Flat. */
   connectApplicationFeeFraction: number;
 }
 
@@ -157,11 +161,8 @@ function formatPayoutSchedule(interval: string | null | undefined): string | nul
 export async function createInvoiceCheckoutSession(
   input: CreateInvoiceCheckoutSessionInput
 ): Promise<InvoiceCheckoutSessionResult> {
-  const totalCents = toCents(input.total);
-  const applicationFeeAmount = new Decimal(totalCents)
-    .mul(input.connectApplicationFeeFraction)
-    .toDecimalPlaces(0, Decimal.ROUND_HALF_UP)
-    .toNumber();
+  const feeBreakdown = computeCustomerPaidPlatformFee(input.total, input.connectApplicationFeeFraction);
+  const applicationFeeAmount = toCents(feeBreakdown.platformFeeAmount);
   const appBaseUrl = env.APP_URL.replace(/\/$/, "");
   const paymentIntentData: Stripe.Checkout.SessionCreateParams.PaymentIntentData = {
     transfer_data: {
@@ -178,21 +179,40 @@ export async function createInvoiceCheckoutSession(
     paymentIntentData.application_fee_amount = applicationFeeAmount;
   }
 
+  const serviceLineItems = input.items.map((item) => {
+    const description = buildHostedDescription(item);
+
+    return {
+      quantity: 1,
+      price_data: {
+        currency: "usd",
+        unit_amount: toCents(item.total),
+        product_data: description ? { name: item.name, description } : { name: item.name }
+      }
+    };
+  });
+
+  const lineItems: Stripe.Checkout.SessionCreateParams.LineItem[] = [...serviceLineItems];
+
+  if (applicationFeeAmount > 0) {
+    lineItems.push({
+      quantity: 1,
+      price_data: {
+        currency: "usd",
+        unit_amount: applicationFeeAmount,
+        product_data: {
+          name: formatCustomerPlatformFeeLineItemName(input.connectApplicationFeeFraction),
+          description:
+            "Customer-paid platform fee (added to your total). Your service provider receives the full invoice amount."
+        }
+      }
+    });
+  }
+
   const session = await stripe.checkout.sessions.create({
     mode: "payment",
     ...(input.customerEmail ? { customer_email: input.customerEmail } : {}),
-    line_items: input.items.map((item) => {
-      const description = buildHostedDescription(item);
-
-      return {
-        quantity: 1,
-        price_data: {
-          currency: "usd",
-          unit_amount: toCents(item.total),
-          product_data: description ? { name: item.name, description } : { name: item.name }
-        }
-      };
-    }),
+    line_items: lineItems,
     payment_intent_data: paymentIntentData,
     success_url: `${appBaseUrl}/invoices/${input.invoiceId}?status=success`,
     cancel_url: `${appBaseUrl}/invoices/${input.invoiceId}?status=cancelled`,

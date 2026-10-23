@@ -241,3 +241,15 @@ export interface ListPaymentsQuery {
   page?: number;
   limit?: number;
 }
+
+/** Public customer payment page (token link) before Stripe Checkout redirect. */
+export interface PublicInvoicePaymentLink {
+  invoiceNumber: string;
+  paymentLinkUrl: string;
+  invoiceAmount: string;
+  platformFeeAmount: string;
+  totalDue: string;
+  /** Set for Flex tenants when a customer-paid fee applies. */
+  platformFeePercent: number | null;
+  platformFeePaidByCustomer: boolean;
+}
