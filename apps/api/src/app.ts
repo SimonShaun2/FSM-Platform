@@ -44,6 +44,7 @@ import revenueInquiryRoutes from "./routes/revenue-inquiries/index.js";
 import schedulingAgentRoutes from "./routes/scheduling-agent/index.js";
 import tenantContextRoutes from "./routes/tenant-context/index.js";
 import serviceAgreementRoutes from "./routes/service-agreements/index.js";
+import vipMembershipRoutes from "./routes/vip-memberships/index.js";
 import stripePlatformSyncPlugin from "./plugins/stripe-platform-sync.js";
 import stripeRoutes from "./routes/stripe/index.js";
 import technicianExtensionRoutes from "./routes/technician-extensions/index.js";
@@ -117,6 +118,7 @@ export async function buildApp() {
   await app.register(migrateOnboardingRoutes, { prefix: "/api/v1" });
   await app.register(dataExportRoutes, { prefix: "/api/v1" });
   await app.register(serviceAgreementRoutes, { prefix: "/api/v1" });
+  await app.register(vipMembershipRoutes, { prefix: "/api/v1" });
   await app.register(loyaltyRoutes, { prefix: "/api/v1" });
   await app.register(publicRoutes, { prefix: "/api/v1/public" });
 

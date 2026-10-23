@@ -80,6 +80,22 @@ describe("clerk-tenant.service", () => {
     expect(resolved.id).toBe(user.id);
   });
 
+  it("STACK03-CLK-09 findCompanyByClerkOrganizationId never maps org B id to company A", async () => {
+    const companyA = fakeDb.seedCompany({
+      name: "Org A",
+      slug: "org-a-clerk",
+      settings: { clerk: { organizationId: "org_stack03_map_a" } }
+    });
+    fakeDb.seedCompany({
+      name: "Org B",
+      slug: "org-b-clerk",
+      settings: { clerk: { organizationId: "org_stack03_map_b" } }
+    });
+
+    const resolved = await clerkTenantService.findCompanyByClerkOrganizationId("org_stack03_map_b");
+    expect(resolved?.id).not.toBe(companyA.id);
+  });
+
   it("resolveStaffUserForClerkSession rejects inactive users", async () => {
     const company = fakeDb.seedCompany({ name: "Acme", slug: "acme-inactive" });
     fakeDb.seedUser({

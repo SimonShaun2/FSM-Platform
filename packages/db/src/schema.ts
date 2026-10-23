@@ -314,6 +314,10 @@ export const activityEventTypeEnum = pgEnum("activity_event_type", [
   "service_agreement_template.created",
   "service_agreement_template.updated",
   "service_agreement_template.deleted",
+  // VIP membership (FS-132)
+  "vip.tier.created",
+  "vip.tier.updated",
+  "vip.tier.deleted",
   // Maintenance plan
   "maintenance_plan.created",
   "maintenance_plan.updated",
@@ -1018,6 +1022,23 @@ export const payments = pgTable("payments", {
 // Service Agreement Templates — the plan products the company sells
 // e.g. "Silver Plan", "Gold Plan", "Platinum Plan"
 // Company defines these once; customers are enrolled into instances (maintenancePlans)
+export const vipMembershipTiers = pgTable("vip_membership_tiers", {
+  id: id(),
+  companyId: companyId(),
+  name: varchar("name", { length: 255 }).notNull(),
+  description: text("description"),
+  monthlyPrice: decimal("monthly_price", { precision: 10, scale: 2 }).notNull(),
+  discountPercent: decimal("discount_percent", { precision: 5, scale: 2 }).notNull().default("0"),
+  includedVisitsPerMonth: integer("included_visits_per_month"),
+  stripeMonthlyPriceId: varchar("stripe_monthly_price_id", { length: 100 }),
+  sortOrder: integer("sort_order").default(0),
+  isActive: boolean("is_active").notNull().default(true),
+  ...timestamps,
+}, (t) => ({
+  companyIdx: index("vip_membership_tiers_company_idx").on(t.companyId),
+  activeIdx: index("vip_membership_tiers_active_idx").on(t.isActive),
+}));
+
 export const serviceAgreementTemplates = pgTable("service_agreement_templates", {
   id: id(),
   companyId: companyId(),
@@ -1052,6 +1073,7 @@ export const maintenancePlans = pgTable("maintenance_plans", {
   // Template this plan was created from (nullable — plan may be one-off custom)
   serviceAgreementTemplateId: uuid("service_agreement_template_id")
     .references(() => serviceAgreementTemplates.id),
+  vipTierId: uuid("vip_tier_id").references(() => vipMembershipTiers.id),
   // Plan definition
   name: varchar("name", { length: 255 }).notNull(),
   description: text("description"),

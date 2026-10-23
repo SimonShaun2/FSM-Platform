@@ -24,6 +24,7 @@ type TableName =
   | "jobPhotos"
   | "serviceAgreementTemplates"
   | "maintenancePlans"
+  | "vipMembershipTiers"
   | "maintenanceVisits"
   | "automationRules"
   | "aiRecommendations"
@@ -569,12 +570,29 @@ export interface TestServiceAgreementTemplateRecord {
   deletedAt: Date | null;
 }
 
+export interface TestVipMembershipTierRecord {
+  id: string;
+  companyId: string;
+  name: string;
+  description: string | null;
+  monthlyPrice: string;
+  discountPercent: string;
+  includedVisitsPerMonth: number | null;
+  stripeMonthlyPriceId: string | null;
+  sortOrder: number | null;
+  isActive: boolean;
+  createdAt: Date;
+  updatedAt: Date;
+  deletedAt: Date | null;
+}
+
 export interface TestMaintenancePlanRecord {
   id: string;
   companyId: string;
   customerId: string;
   propertyId: string | null;
   serviceAgreementTemplateId: string | null;
+  vipTierId: string | null;
   name: string;
   description: string | null;
   includedServices: string[] | null;
@@ -1460,12 +1478,29 @@ export interface TestServiceAgreementTemplateRecord {
   deletedAt: Date | null;
 }
 
+export interface TestVipMembershipTierRecord {
+  id: string;
+  companyId: string;
+  name: string;
+  description: string | null;
+  monthlyPrice: string;
+  discountPercent: string;
+  includedVisitsPerMonth: number | null;
+  stripeMonthlyPriceId: string | null;
+  sortOrder: number | null;
+  isActive: boolean;
+  createdAt: Date;
+  updatedAt: Date;
+  deletedAt: Date | null;
+}
+
 export interface TestMaintenancePlanRecord {
   id: string;
   companyId: string;
   customerId: string;
   propertyId: string | null;
   serviceAgreementTemplateId: string | null;
+  vipTierId: string | null;
   name: string;
   description: string | null;
   includedServices: string[] | null;
@@ -1962,6 +1997,7 @@ type AnyTestRecord =
   | TestJobPhotoRecord
   | TestServiceAgreementTemplateRecord
   | TestMaintenancePlanRecord
+  | TestVipMembershipTierRecord
   | TestMaintenanceVisitRecord
   | TestAutomationRuleRecord
   | TestAiRecommendationRecord
@@ -2009,6 +2045,7 @@ type MockTable =
   | typeof jobPhotosTable
   | typeof serviceAgreementTemplatesTable
   | typeof maintenancePlansTable
+  | typeof vipMembershipTiersTable
   | typeof maintenanceVisitsTable
   | typeof automationRulesTable
   | typeof aiRecommendationsTable
@@ -2057,6 +2094,7 @@ interface TestState {
   jobPhotos: TestJobPhotoRecord[];
   serviceAgreementTemplates: TestServiceAgreementTemplateRecord[];
   maintenancePlans: TestMaintenancePlanRecord[];
+  vipMembershipTiers: TestVipMembershipTierRecord[];
   maintenanceVisits: TestMaintenanceVisitRecord[];
   automationRules: TestAutomationRuleRecord[];
   aiRecommendations: TestAiRecommendationRecord[];
@@ -2549,6 +2587,7 @@ const maintenancePlansTable = {
   customerId: "customerId",
   propertyId: "propertyId",
   serviceAgreementTemplateId: "serviceAgreementTemplateId",
+  vipTierId: "vipTierId",
   name: "name",
   description: "description",
   includedServices: "includedServices",
@@ -2570,6 +2609,23 @@ const maintenancePlansTable = {
   deletedAt: "deletedAt",
   createdAt: "createdAt",
   updatedAt: "updatedAt"
+} as const;
+
+const vipMembershipTiersTable = {
+  __name: "vipMembershipTiers",
+  id: "id",
+  companyId: "companyId",
+  name: "name",
+  description: "description",
+  monthlyPrice: "monthlyPrice",
+  discountPercent: "discountPercent",
+  includedVisitsPerMonth: "includedVisitsPerMonth",
+  stripeMonthlyPriceId: "stripeMonthlyPriceId",
+  sortOrder: "sortOrder",
+  isActive: "isActive",
+  createdAt: "createdAt",
+  updatedAt: "updatedAt",
+  deletedAt: "deletedAt"
 } as const;
 
 const maintenanceVisitsTable = {
@@ -3137,6 +3193,7 @@ const state: TestState = {
   jobPhotos: [],
   serviceAgreementTemplates: [],
   maintenancePlans: [],
+  vipMembershipTiers: [],
   maintenanceVisits: [],
   automationRules: [],
   aiRecommendations: [],
@@ -3275,6 +3332,8 @@ function getRows(tableName: TableName): AnyTestRecord[] {
       return state.serviceAgreementTemplates;
     case "maintenancePlans":
       return state.maintenancePlans;
+    case "vipMembershipTiers":
+      return state.vipMembershipTiers;
     case "maintenanceVisits":
       return state.maintenanceVisits;
     case "automationRules":
@@ -3911,6 +3970,7 @@ function createMaintenancePlanRecord(
     customerId: values.customerId,
     propertyId: values.propertyId ?? null,
     serviceAgreementTemplateId: values.serviceAgreementTemplateId ?? null,
+    vipTierId: values.vipTierId ?? null,
     name: values.name ?? "Maintenance Plan",
     description: values.description ?? null,
     includedServices: values.includedServices ?? [],
@@ -4762,6 +4822,25 @@ function createRow(tableName: TableName, values: Record<string, unknown>): AnyTe
       return createMaintenancePlanRecord(
         values as Partial<TestMaintenancePlanRecord> & Pick<TestMaintenancePlanRecord, "companyId" | "customerId">
       );
+    case "vipMembershipTiers": {
+      const record: TestVipMembershipTierRecord = {
+        id: randomUUID(),
+        companyId: String(values.companyId),
+        name: String(values.name ?? "VIP"),
+        description: (values.description as string | null | undefined) ?? null,
+        monthlyPrice: String(values.monthlyPrice ?? "0.00"),
+        discountPercent: String(values.discountPercent ?? "0"),
+        includedVisitsPerMonth: (values.includedVisitsPerMonth as number | null | undefined) ?? null,
+        stripeMonthlyPriceId: (values.stripeMonthlyPriceId as string | null | undefined) ?? null,
+        sortOrder: (values.sortOrder as number | null | undefined) ?? 0,
+        isActive: (values.isActive as boolean | undefined) ?? true,
+        createdAt: new Date(),
+        updatedAt: new Date(),
+        deletedAt: null
+      };
+      state.vipMembershipTiers.push(record);
+      return record;
+    }
     case "maintenanceVisits":
       return createMaintenanceVisitRecord(
         values as Partial<TestMaintenanceVisitRecord> &
@@ -5200,6 +5279,7 @@ export const jobNotes = jobNotesTable;
 export const jobPhotos = jobPhotosTable;
 export const serviceAgreementTemplates = serviceAgreementTemplatesTable;
 export const maintenancePlans = maintenancePlansTable;
+export const vipMembershipTiers = vipMembershipTiersTable;
 export const maintenanceVisits = maintenanceVisitsTable;
 export const automationRules = automationRulesTable;
 export const aiRecommendations = aiRecommendationsTable;
@@ -5591,6 +5671,7 @@ export function createDbModuleMock() {
     jobPhotos,
     serviceAgreementTemplates,
     maintenancePlans,
+    vipMembershipTiers,
     maintenanceVisits,
     automationRules,
     aiRecommendations,
@@ -5648,6 +5729,7 @@ export function resetTestState(): void {
   state.jobPhotos.length = 0;
   state.serviceAgreementTemplates.length = 0;
   state.maintenancePlans.length = 0;
+  state.vipMembershipTiers.length = 0;
   state.maintenanceVisits.length = 0;
   state.automationRules.length = 0;
   state.aiRecommendations.length = 0;
