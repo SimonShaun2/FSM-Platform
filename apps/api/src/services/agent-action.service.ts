@@ -49,7 +49,7 @@ export interface CreateAgentActionInput {
   companyId: string;
   actorId: string;
   actorType: "user" | "system" | "ai" | "customer";
-  agentProduct: "revenue" | "scheduling" | "service" | "retention" | "owner";
+  agentProduct: "revenue" | "scheduling" | "service" | "retention" | "owner" | "loyalty";
   actionType: string;
   parameters: Record<string, unknown>;
   target: CanonicalEntityRefV1;
