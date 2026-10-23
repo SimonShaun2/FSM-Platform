@@ -80,5 +80,6 @@ export {
   createDefaultPlatformQueueMonitoringDeps,
   getPlatformQueueMonitoringSnapshot,
   listPlatformDeadLetterJobs,
+  listPlatformFailedJobsWithReplayMetadata,
   platformQueuesByName
 } from "./platform-queue-registry.js";
