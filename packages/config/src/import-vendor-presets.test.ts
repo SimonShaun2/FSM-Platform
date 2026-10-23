@@ -48,12 +48,24 @@ describe("import-vendor-presets", () => {
     ).toBe("quickbooks_invoices");
   });
 
-  it("infers QuickBooks Desktop item list for price book sessions", () => {
+  it("shim infers Service Fusion and QuickBooks Desktop presets", () => {
     expect(
-      inferImportVendorPresetForSession(
-        ["Item", "Type", "Sales Price", "Item ID", "Sales Desc"],
-        "price_book"
+      inferImportVendorPresetFromHeaders([
+        "Customer Name",
+        "Email Address",
+        "Mobile Phone",
+        "Service Address",
+        "City",
+        "State",
+        "ZIP"
+      ])
+    ).toBe("service_fusion");
+
+    expect(
+      inferImportVendorPresetFromHeaders(
+        ["Customer", "E-mail", "Main Phone", "Bill To 1", "Bill To City", "Bill To State"],
+        "customers"
       )
-    ).toBe("quickbooks_desktop_items");
+    ).toBe("quickbooks_desktop_customers");
   });
 });

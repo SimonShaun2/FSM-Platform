@@ -15,10 +15,10 @@
 | API (`apps/api`) | **Render** | Web service (long-lived Node) |
 | Worker (`apps/worker`) | **Render** | Background worker |
 | Webhook (`apps/webhook`) | **Render** | Web service (separate from API) |
-| PostgreSQL | **Render Postgres** | Managed database |
+| PostgreSQL | **Neon** (serverless Postgres) | Connection string in Render env; **same region as API** ([ADR-FS-STACK](../adr/ADR-FS-STACK-renvani-official-platform.md)) |
 | Queues (`REDIS_URL`) | **Render Key Value** | Redis-compatible (Valkey); BullMQ |
 | Files | **Cloudflare R2** | External; not Render |
-| Staff auth | **In-repo JWT** | API-owned; no Supabase Auth in FS-93 |
+| Staff auth | **Clerk** (phased) + in-repo JWT parallel | STACK-02; JWT remains until Clerk cutover |
 
 **Out of scope for this runbook:** account creation, billing, secrets, DNS cutover, production deploy, staging spend (separate founder OK).
 
@@ -63,10 +63,13 @@ BullMQ stores job metadata and locks in Redis-compatible storage. **Do not use t
 - **Start:** `node dist/server.js` from `apps/webhook`.
 - **Public URL** is the Stripe/Twilio webhook target; signature verification stays in app code.
 
-### Render Postgres
+### Neon PostgreSQL (STACK-12)
 
-- Single writer; run Drizzle migrations from a **controlled** process (one-off job or pre-deploy command) — policy in FS-80 / #63.
-- Use internal connection string for API/worker/webhook; pool limits in application config.
+- **Region:** Neon project region must match the Render **API** web service region (latency + data residency).
+- **Environments:** Separate Neon branches or projects for dev, staging, and prod; `DATABASE_URL` per Render service group (see STACK-01 / STACK-11).
+- **Migrations:** Run Drizzle migrations from a **controlled** process (pre-deploy job or one-off) — FS-80 / #63; never from ad-hoc shells against prod.
+- **Pooling:** Use Neon pooler URL where appropriate; honor `DATABASE_POOL_MAX` / FS-80 connection budget on API, worker, and webhook.
+- **RLS:** Session `app.current_company_id` (STACK-10) enabled on staging after Clerk session bridge (STACK-02).
 
 ### Vercel (web)
 
@@ -82,7 +85,7 @@ BullMQ stores job metadata and locks in Redis-compatible storage. **Do not use t
 
 Sync `false` in blueprint for all secrets. Minimum shared set across API, worker, webhook:
 
-- `DATABASE_URL` — from Render Postgres
+- `DATABASE_URL` — from **Neon** (pooled connection string; region = API region)
 - `REDIS_URL` — from Render Key Value `connectionString`
 - `JWT_SECRET`, `JWT_REFRESH_SECRET`
 - Stripe, Twilio, SendGrid, R2, OpenAI keys per `@fsm/config` / `packages/config`

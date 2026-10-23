@@ -22,9 +22,9 @@
       "types": "./dist/import-vendor-presets.d.ts",
       "import": "./dist/import-vendor-presets.js"
     },
-    "./import-price-book-map": {
-      "types": "./dist/import-price-book-map.d.ts",
-      "import": "./dist/import-price-book-map.js"
+    "./import-source-presets": {
+      "types": "./dist/import-source-presets.d.ts",
+      "import": "./dist/import-source-presets.js"
     },
     "./object-storage": {
       "types": "./dist/object-storage/index.d.ts",
@@ -33,6 +33,10 @@
     "./deployment-environment": {
       "types": "./dist/deployment-environment.d.ts",
       "import": "./dist/deployment-environment.js"
+    },
+    "./neon-ci": {
+      "types": "./dist/neon-ci.d.ts",
+      "import": "./dist/neon-ci.js"
     }
   },
   "scripts": {

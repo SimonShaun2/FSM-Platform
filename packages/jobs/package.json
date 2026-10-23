@@ -9,6 +9,10 @@
     ".": {
       "types": "./dist/index.d.ts",
       "import": "./dist/index.js"
+    },
+    "./enqueue-migrate-file-batch": {
+      "types": "./dist/enqueue-migrate-file-batch.d.ts",
+      "import": "./dist/enqueue-migrate-file-batch.js"
     }
   },
   "scripts": {
@@ -20,6 +24,7 @@
     "@fsm/config": "workspace:*",
     "@fsm/types": "workspace:*",
     "bullmq": "^5.0.0",
+    "zod": "^3.25.76",
     "ioredis": "^5.4.0"
   },
   "devDependencies": {

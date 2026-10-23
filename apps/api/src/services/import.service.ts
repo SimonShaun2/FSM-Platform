@@ -26,6 +26,7 @@ import {
   type ValidationError
 } from "@fsm/types";
 
+import { scheduleMigrateFileBatchesFromSessionAiInferences } from "./import-migrate-file-batch.service.js";
 import { uploadCsvToR2 } from "./file-upload.service.js";
 
 type ImportSessionRow = typeof importSessions.$inferSelect;
@@ -498,6 +499,8 @@ export async function startImport(
         jobId: `execute-import-${importSessionId}-${now.getTime()}`
       }
     );
+
+    await scheduleMigrateFileBatchesFromSessionAiInferences(companyId, importSessionId);
   } catch (error: unknown) {
     const message = error instanceof Error ? error.message : "Failed to enqueue import execution job";
     await markImportSessionFailed(companyId, importSessionId, message);
