@@ -2,6 +2,11 @@ export {
   GOLDEN_IMPORT_BUNDLE_MANIFESTS,
   getGoldenImportBundleManifest
 } from "./catalog.js";
+export {
+  expectedGoldenBundleWorkerChunkCount,
+  formatGoldenBundleChunkPartFileName,
+  listGoldenBundleChunkPartRelativePaths
+} from "./chunked-job-history.js";
 export { parseCsvLine, parseCsvTable, columnIndex } from "./csv.js";
 export {
   resolveGoldenImportBundleRoot,
