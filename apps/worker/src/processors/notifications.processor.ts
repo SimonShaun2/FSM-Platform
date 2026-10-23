@@ -2,7 +2,7 @@ import { and, eq, isNull } from "drizzle-orm";
 import type { Job, Processor } from "bullmq";
 import pino from "pino";
 
-import { resolveOutboundEmailFromAddress } from "@fsm/comms";
+import { resolveOutboundEmailFromAddress, type EmailTemplateId } from "@fsm/comms";
 import { env } from "@fsm/config";
 import { featureFlags } from "@fsm/config/feature-flags";
 import { recordTransactionalEmailMessageLog } from "./transactional-email-message-log.js";
@@ -32,7 +32,7 @@ type AutomationRuleType = (typeof automationRules.$inferSelect)["ruleType"];
 type AgreementEmailType = "renewal_reminder" | "payment_failed";
 
 type TransactionalEmailSendResult = {
-  templateId: string;
+  templateId: EmailTemplateId;
   subject: string;
   providerMessageId: string | null;
 };
