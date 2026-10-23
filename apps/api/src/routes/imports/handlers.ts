@@ -1,7 +1,7 @@
 import type { FastifyError, FastifyReply, FastifyRequest } from "fastify";
 
-import type { ImportEntityType, ListImportsQuery } from "@fsm/types";
-import { AppError, ErrorCode, importEntityTypeSchema } from "@fsm/types";
+import type { ListImportsQuery } from "@fsm/types";
+import { AppError, ErrorCode } from "@fsm/types";
 
 import {
   confirmMapping,
@@ -12,6 +12,7 @@ import {
   rollbackImport,
   startImport
 } from "../../services/import.service.js";
+import { getImportSessionIngestStatus } from "../../services/import-session-ingest-status.service.js";
 import {
   getMigrateFileBatchOperatorStatus,
   retryMigrateFileBatchFailedObjects
@@ -61,7 +62,7 @@ export async function createImportHandler(
   let mimeType: string | undefined;
   let fileBuffer: Buffer | undefined;
   let fileCount = 0;
-  let entityType: ImportEntityType = "customers";
+  let entityType: import("@fsm/types").ImportEntityType | undefined;
 
   try {
     for await (const part of request.parts(csvImportMultipartParserOptions)) {
@@ -79,17 +80,21 @@ export async function createImportHandler(
         continue;
       }
 
-      if (part.type === "field" && part.fieldname === "entityType") {
-        const parsedEntityType = importEntityTypeSchema.safeParse(String(await part.value));
-        if (parsedEntityType.success) {
-          entityType = parsedEntityType.data as ImportEntityType;
-        } else {
-          throw new AppError(ErrorCode.VALIDATION_ERROR, "entityType must be customers, properties, or jobs");
+      if (part.fieldname === "entityType" && part.type === "field") {
+        const value = String(part.value).trim();
+        if (
+          value === "customers" ||
+          value === "jobs" ||
+          value === "estimates" ||
+          value === "price_book" ||
+          value === "notes" ||
+          value === "communications"
+        ) {
+          entityType = value;
         }
-        continue;
+      } else {
+        await part.value;
       }
-
-      await part.value;
     }
   } catch (error: unknown) {
     const fastifyError = error as FastifyError;
@@ -118,7 +123,7 @@ export async function createImportHandler(
     fileBuffer,
     {
       mimeType: mimeType ?? "text/csv",
-      entityType
+      entityType: entityType ?? "customers"
     }
   );
 
@@ -148,10 +153,21 @@ export async function getImportHandler(
 ): Promise<FastifyReply> {
   const params = request.params as ImportSessionIdParams;
   const importSession = await getImportSession(request.company.id, params.id);
+  const ingest = await getImportSessionIngestStatus(request.company.id, params.id);
 
   return reply.send({
-    importSession: toImportSessionResponse(importSession)
+    importSession: toImportSessionResponse(importSession),
+    ingest
   });
+}
+
+export async function getImportIngestStatusHandler(
+  request: FastifyRequest,
+  reply: FastifyReply
+): Promise<FastifyReply> {
+  const params = request.params as ImportSessionIdParams;
+  const ingest = await getImportSessionIngestStatus(request.company.id, params.id);
+  return reply.send(ingest);
 }
 
 export async function confirmMappingHandler(
