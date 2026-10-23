@@ -4,11 +4,16 @@ import { useEffect, useMemo, useState } from "react";
 import { Loader2, RefreshCw } from "lucide-react";
 import Link from "next/link";
 
-import type { MigrateOnboardingBundle, MigrateOnboardingWizardStep } from "@fsm/types";
+import type {
+  ImportDuplicateAction,
+  MigrateOnboardingBundle,
+  MigrateOnboardingWizardStep
+} from "@fsm/types";
 
 import { PageLayout } from "@/src/components/layout/PageLayout";
 import { ApiError } from "@/src/lib/api";
 import { toPlainLanguageImportIssue } from "@/src/lib/migrate-onboarding-plain-language";
+import { formatHistoryDepthSummary } from "@/src/lib/migrate-relational-preview-summary";
 import { isPriyaOnboardingMockEnabled } from "@/src/lib/migrate-onboarding-priya-mock";
 import {
   useAcknowledgeMigratePreview,
@@ -141,6 +146,7 @@ export function MigrateOnboardingWizardClient() {
   const bundleQuery = useMigrateOnboardingBundle(bundleId);
   const bundle = bundleQuery.data ?? resumeQuery.data ?? null;
   const activeStep = bundle?.wizardStep ?? 1;
+  const resolvedBundleId = bundle?.id ?? null;
 
   useEffect(() => {
     if (bundle) {
@@ -148,13 +154,13 @@ export function MigrateOnboardingWizardClient() {
     }
   }, [bundle, setBundle]);
 
-  const confirmMappings = useConfirmMigrateMappings(bundle?.id ?? "");
-  const acknowledgePreview = useAcknowledgeMigratePreview(bundle?.id ?? "");
-  const commitBundle = useCommitMigrateBundle(bundle?.id ?? "");
-  const applyDedupe = useApplyMigrateDedupeDecisions(bundle?.id ?? "");
+  const confirmMappings = useConfirmMigrateMappings(resolvedBundleId);
+  const acknowledgePreview = useAcknowledgeMigratePreview(resolvedBundleId);
+  const commitBundle = useCommitMigrateBundle(resolvedBundleId);
+  const applyDedupe = useApplyMigrateDedupeDecisions(resolvedBundleId);
 
-  const relationalPreview = useMigrateRelationalPreview(bundle?.id ?? null, activeStep >= 4);
-  const dedupePreview = useMigrateDedupePreview(bundle?.id ?? null, activeStep >= 4);
+  const relationalPreview = useMigrateRelationalPreview(resolvedBundleId, activeStep >= 4);
+  const dedupePreview = useMigrateDedupePreview(resolvedBundleId, activeStep >= 4);
 
   const firstSessionId = bundle?.stepState.files[0]?.importSessionId ?? null;
   const importErrors = useImportErrors(firstSessionId, activeStep === 3 && Boolean(firstSessionId));
@@ -247,7 +253,11 @@ export function MigrateOnboardingWizardClient() {
               <p className="mt-2 text-neutral-700">
                 {relationalPreview.data.graph.stats.customerCount} customers ·{" "}
                 {relationalPreview.data.graph.stats.propertyCount} properties ·{" "}
-                {relationalPreview.data.graph.stats.jobCount} jobs
+                {relationalPreview.data.graph.stats.jobCount} jobs ·{" "}
+                {relationalPreview.data.graph.stats.estimateCount} estimates
+              </p>
+              <p className="mt-2 text-neutral-600">
+                {formatHistoryDepthSummary(relationalPreview.data.graph.historyDepth)}
               </p>
               {relationalPreview.data.graph.joinIssues.length > 0 ? (
                 <ul className="mt-3 list-disc pl-5 text-amber-800">
@@ -275,7 +285,12 @@ export function MigrateOnboardingWizardClient() {
                       defaultValue={collision.action}
                       onChange={(event) =>
                         applyDedupe.mutate({
-                          decisions: [{ collisionKey: collision.collisionKey, action: event.target.value as never }]
+                          decisions: [
+                            {
+                              collisionKey: collision.collisionKey,
+                              action: event.target.value as ImportDuplicateAction
+                            }
+                          ]
                         })
                       }
                     >
@@ -319,7 +334,10 @@ export function MigrateOnboardingWizardClient() {
             disabled={commitBundle.isPending || bundle.status === "committing"}
             onClick={() =>
               commitBundle.mutate(undefined, {
-                onSuccess: () => showToast({ tone: "success", title: "Import commit started" }),
+                onSuccess: () => {
+                  showToast({ tone: "success", title: "Import commit started" });
+                  void bundleQuery.refetch();
+                },
                 onError: (error) =>
                   showToast({ tone: "error", title: "Commit failed", description: formatError(error) })
               })

@@ -10,7 +10,7 @@ import type {
   SetMigrateOnboardingSourceBody
 } from "@fsm/types";
 
-import { api } from "@/src/lib/api";
+import { api, ApiError } from "@/src/lib/api";
 
 const BASE = "/api/v1/migrate/onboarding";
 
@@ -18,7 +18,16 @@ export const migrateOnboardingRealClient = {
   listSources: () => api.get<{ sources: MigrateOnboardingSourceCatalogEntry[] }>(`${BASE}/sources`),
   createSession: (body: CreateMigrateOnboardingSessionBody) =>
     api.post<MigrateOnboardingBundle>(`${BASE}/sessions`, body),
-  getActiveSession: () => api.get<MigrateOnboardingBundle>(`${BASE}/sessions/active`),
+  getActiveSession: async () => {
+    try {
+      return await api.get<MigrateOnboardingBundle>(`${BASE}/sessions/active`);
+    } catch (error) {
+      if (error instanceof ApiError && error.status === 404) {
+        throw new Error("NO_ACTIVE_SESSION");
+      }
+      throw error;
+    }
+  },
   getBundle: (bundleId: string) => api.get<MigrateOnboardingBundle>(`${BASE}/sessions/${bundleId}`),
   setSource: (bundleId: string, body: SetMigrateOnboardingSourceBody) =>
     api.patch<MigrateOnboardingBundle>(`${BASE}/sessions/${bundleId}/source`, body),

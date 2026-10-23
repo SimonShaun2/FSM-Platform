@@ -1,7 +1,12 @@
 "use client";
 
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import type { ApplyMigrateDedupeDecisionsBody, LinkMigrateOnboardingFilesBody } from "@fsm/types";
+import type {
+  ApplyMigrateDedupeDecisionsBody,
+  ImportDuplicateAction,
+  LinkMigrateOnboardingFilesBody,
+  MigrateSourceSystemId
+} from "@fsm/types";
 
 import { migrateOnboardingRealClient } from "@/src/lib/migrate-onboarding-client";
 import {
@@ -18,6 +23,7 @@ export function useMigrateOnboardingBundle(bundleId: string | null) {
   return useQuery({
     queryKey: ["migrate-onboarding", "bundle", bundleId],
     enabled: Boolean(bundleId),
+    refetchInterval: (query) => (query.state.data?.status === "committing" ? 2000 : false),
     queryFn: async () => {
       if (!bundleId) {
         throw new Error("Missing bundle id");
@@ -49,7 +55,12 @@ export function useResumeMigrateOnboardingSession() {
         const active = await migrateOnboardingRealClient.getActiveSession();
         setBundle(active.id, active.wizardStep);
         return active;
-      } catch {
+      } catch (error) {
+        if (error instanceof Error && error.message === "NO_ACTIVE_SESSION") {
+          // expected when no in-progress bundle
+        } else if (!(error instanceof Error)) {
+          throw error;
+        }
         if (isPriyaOnboardingMockEnabled()) {
           const mockActive = await priyaClient.getActiveSession();
           if (mockActive) {
@@ -79,12 +90,17 @@ export function useMigrateDedupePreview(bundleId: string | null, enabled: boolea
   });
 }
 
-export function useConfirmMigrateMappings(bundleId: string) {
+export function useConfirmMigrateMappings(bundleId: string | null) {
   const queryClient = useQueryClient();
   const setBundle = useMigrateOnboardingWizardStore((state) => state.setBundle);
 
   return useMutation({
-    mutationFn: () => migrateOnboardingRealClient.confirmMappings(bundleId),
+    mutationFn: () => {
+      if (!bundleId) {
+        throw new Error("Missing onboarding bundle");
+      }
+      return migrateOnboardingRealClient.confirmMappings(bundleId);
+    },
     onSuccess: (bundle) => {
       setBundle(bundle.id, bundle.wizardStep);
       void queryClient.invalidateQueries({ queryKey: ["migrate-onboarding"] });
@@ -92,12 +108,17 @@ export function useConfirmMigrateMappings(bundleId: string) {
   });
 }
 
-export function useAcknowledgeMigratePreview(bundleId: string) {
+export function useAcknowledgeMigratePreview(bundleId: string | null) {
   const queryClient = useQueryClient();
   const setBundle = useMigrateOnboardingWizardStore((state) => state.setBundle);
 
   return useMutation({
-    mutationFn: () => migrateOnboardingRealClient.acknowledgePreview(bundleId),
+    mutationFn: () => {
+      if (!bundleId) {
+        throw new Error("Missing onboarding bundle");
+      }
+      return migrateOnboardingRealClient.acknowledgePreview(bundleId);
+    },
     onSuccess: (bundle) => {
       setBundle(bundle.id, bundle.wizardStep);
       void queryClient.invalidateQueries({ queryKey: ["migrate-onboarding"] });
@@ -105,23 +126,32 @@ export function useAcknowledgeMigratePreview(bundleId: string) {
   });
 }
 
-export function useApplyMigrateDedupeDecisions(bundleId: string) {
+export function useApplyMigrateDedupeDecisions(bundleId: string | null) {
   const queryClient = useQueryClient();
 
   return useMutation({
-    mutationFn: (body: ApplyMigrateDedupeDecisionsBody) =>
-      migrateOnboardingRealClient.applyDedupeDecisions(bundleId, body),
+    mutationFn: (body: ApplyMigrateDedupeDecisionsBody) => {
+      if (!bundleId) {
+        throw new Error("Missing onboarding bundle");
+      }
+      return migrateOnboardingRealClient.applyDedupeDecisions(bundleId, body);
+    },
     onSuccess: () => {
       void queryClient.invalidateQueries({ queryKey: ["migrate-onboarding", "dedupe-preview", bundleId] });
     }
   });
 }
 
-export function useCommitMigrateBundle(bundleId: string) {
+export function useCommitMigrateBundle(bundleId: string | null) {
   const queryClient = useQueryClient();
 
   return useMutation({
-    mutationFn: () => migrateOnboardingRealClient.commit(bundleId),
+    mutationFn: () => {
+      if (!bundleId) {
+        throw new Error("Missing onboarding bundle");
+      }
+      return migrateOnboardingRealClient.commit(bundleId);
+    },
     onSuccess: () => {
       void queryClient.invalidateQueries({ queryKey: ["migrate-onboarding", "bundle", bundleId] });
     }
@@ -138,11 +168,11 @@ export function usePriyaOnboardingSteps(bundleId: string | null) {
   });
 
   const setSource = useMutation({
-    mutationFn: (sourceSystem: string) => {
+    mutationFn: (sourceSystem: MigrateSourceSystemId) => {
       if (!bundleId) {
         throw new Error("Create a session first");
       }
-      return priyaClient.setSource(bundleId, { sourceSystem: sourceSystem as never });
+      return priyaClient.setSource(bundleId, { sourceSystem });
     },
     onSuccess: (bundle) => {
       setBundle(bundle.id, bundle.wizardStep);
