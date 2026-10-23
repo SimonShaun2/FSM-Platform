@@ -376,6 +376,9 @@ importers:
       '@aws-sdk/s3-request-presigner':
         specifier: 3.1038.0
         version: 3.1038.0
+      '@fsm/types':
+        specifier: workspace:*
+        version: link:../types
       zod:
         specifier: ^3.25.76
         version: 3.25.76
