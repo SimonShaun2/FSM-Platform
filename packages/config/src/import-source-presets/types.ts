@@ -21,7 +21,7 @@ export type ImportSourcePresetId =
   | "quickbooks_payments"
   | "generic";
 
-export type ImportPresetEntityHint = "customers" | "products" | "invoices";
+export type ImportPresetEntityHint = "customers" | "products" | "invoices" | "notes";
 
 export interface ImportSourcePreset {
   id: ImportSourcePresetId;

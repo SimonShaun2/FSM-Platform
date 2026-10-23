@@ -1,4 +1,4 @@
-import { GENERIC_CUSTOMER_PRESET } from "./generic.js";
+import { GENERIC_CUSTOMER_PRESET, GENERIC_NOTES_PRESET } from "./generic.js";
 import { HOUSECALL_PRO_PRESETS } from "./housecall-pro.js";
 import { JOBBER_PRESETS } from "./jobber.js";
 import { QUICKBOOKS_PRESETS } from "./quickbooks.js";
@@ -12,5 +12,6 @@ export const IMPORT_SOURCE_PRESETS: ImportSourcePreset[] = [
   ...SERVICE_TITAN_PRESETS,
   ...SERVICE_FUSION_PRESETS,
   ...QUICKBOOKS_PRESETS,
-  GENERIC_CUSTOMER_PRESET
+  GENERIC_CUSTOMER_PRESET,
+  GENERIC_NOTES_PRESET
 ];

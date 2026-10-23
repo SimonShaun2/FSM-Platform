@@ -3,6 +3,7 @@ import { afterEach, beforeAll, beforeEach, describe, expect, it, vi } from "vite
 
 import {
   QUEUE_PLATFORM_CONTRACT_VERSION,
+  type DeadLetterJobListV1,
   type PlatformQueueMonitoringSnapshotV1
 } from "@fsm/types";
 
@@ -38,7 +39,8 @@ vi.mock("@fsm/jobs", () => ({
 }));
 
 vi.mock("../../../services/queue-monitoring.service.js", () => ({
-  fetchPlatformQueueMonitoringSnapshot: vi.fn()
+  fetchPlatformQueueMonitoringSnapshot: vi.fn(),
+  fetchPlatformDeadLetterJobs: vi.fn()
 }));
 
 type BuildAppModule = typeof import("../../../app.js");
@@ -76,6 +78,26 @@ const sampleSnapshot: PlatformQueueMonitoringSnapshotV1 = {
   ]
 };
 
+const sampleDeadLetterList: DeadLetterJobListV1 = {
+  contractVersion: QUEUE_PLATFORM_CONTRACT_VERSION,
+  sourceQueue: "imports",
+  deadLetterQueueName: "imports-dlq",
+  jobs: [
+    {
+      deadLetterJobId: "dlq-1",
+      sourceQueue: "imports",
+      sourceJobId: "job-1",
+      jobName: "migrate-file-batch",
+      companyId: "11111111-1111-4111-8111-111111111111",
+      attemptsMade: 5,
+      failedAt: "2026-10-23T12:00:00.000Z",
+      failureClass: "transient",
+      errorMessage: "partial object failure"
+    }
+  ],
+  nextCursor: null
+};
+
 beforeAll(async () => {
   buildAppModule = await import("../../../app.js");
   fakeDb = await import("../../../test-support/fake-db.js");
@@ -88,6 +110,7 @@ beforeEach(async () => {
   vi.mocked(queueMonitoringService.fetchPlatformQueueMonitoringSnapshot).mockResolvedValue(
     sampleSnapshot
   );
+  vi.mocked(queueMonitoringService.fetchPlatformDeadLetterJobs).mockResolvedValue(sampleDeadLetterList);
   app = await buildAppModule.buildApp();
   await app.ready();
 });
@@ -197,5 +220,21 @@ describe("GET /api/v1/internal/admin/queues/monitoring (STACK-05)", () => {
     const response = await request(app.server).get("/api/v1/internal/admin/queues/monitoring");
 
     expect(response.statusCode).toBe(401);
+  });
+});
+
+describe("GET /api/v1/internal/admin/queues/:queueName/dead-letter (FS-MIGRATE)", () => {
+  it("returns DLQ job summaries for internal admins", async () => {
+    const internalAdmin = createInternalAdminContext("admin");
+
+    const response = await request(app.server)
+      .get("/api/v1/internal/admin/queues/imports/dead-letter?limit=10")
+      .set("Authorization", internalAdmin.authorization);
+
+    expect(response.statusCode).toBe(200);
+    expect(response.body).toEqual(sampleDeadLetterList);
+    expect(queueMonitoringService.fetchPlatformDeadLetterJobs).toHaveBeenCalledWith("imports", {
+      limit: 10
+    });
   });
 });
