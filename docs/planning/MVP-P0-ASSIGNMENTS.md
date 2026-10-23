@@ -5,6 +5,8 @@
 **Platform P0:** [`MVP-PLATFORM-P0-INFRA.md`](./MVP-PLATFORM-P0-INFRA.md) — agents, queues, file pipeline, AI eval, audit, observability (parallel from M1).  
 **Tech Lead:** Grace · **Sign-off:** Isaac + Lily + Sam @ head → `batch-ci` → merge.
 
+**Pod shipping policy (Grace relay — Shaun, effective next cycle):** Stay on **Composer 2.5** (**fast mode off**). Drop **“very lean” per-run clipping** — each dev/agent run ships a **fuller, complete PR** for the assigned ticket slice (implementation + **tests** + evidence), not micro-diffs that need immediate follow-up PRs for the same ticket. Still **avoid wasteful reruns** (read epic/ADR first, one branch per slice, don’t re-land the same fix). **Merge discipline unchanged:** triple sign @ head, `batch-ci`, head SHA guard, no rebase on signed PRs.
+
 ---
 
 ## P0 backlog (Elena)
@@ -91,6 +93,7 @@
 
 ## Workflow
 
-1. Push → request Isaac, Lily, Sam @ full SHA within 1h.  
-2. Triple PASS → `batch-ci` → merge with head SHA guard.  
-3. CoS report at batch merge + MVP dates (`MVP-SHORTEST-PATH-WINTER-2026.md` §5).
+1. **Ship:** one PR per ticket slice — complete enough to review/merge without a chained “part 2” for the same FS row (tests required where repo convention expects them).  
+2. Push → request Isaac, Lily, Sam @ full SHA within 1h.  
+3. Triple PASS → `batch-ci` → merge with head SHA guard.  
+4. CoS report at batch merge + MVP dates (`MVP-SHORTEST-PATH-WINTER-2026.md` §5).

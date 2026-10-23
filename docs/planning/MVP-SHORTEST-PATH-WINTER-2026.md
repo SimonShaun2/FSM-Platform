@@ -61,6 +61,8 @@ See `MVP-P0-ASSIGNMENTS.md` (updated tracker). Rule: when a PR merges, that row 
 
 **Review discipline:** Request **Isaac + Lily + Sam** in GitHub **within 1h of push** @ full head SHA. `batch-ci` label only after triple PASS.
 
+**Agent runs (Grace relay — Shaun, next cycle onward):** **Composer 2.5**, fast mode **off**; no **very lean** per-run clipping — deliver **whole ticket slices with tests** per PR; merge rules above unchanged.
+
 ---
 
 ## 5. MVP-complete estimate (engineering, for merge reports)
