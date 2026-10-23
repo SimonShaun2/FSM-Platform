@@ -48,3 +48,4 @@ Use [ADR-TEMPLATE.md](ADR-TEMPLATE.md) for new records.
 | [ADR-0004](ADR-0004-modular-architecture.md) | Modular architecture over microservices | Accepted | TL-01 | - |
 | [ADR-FS-41](ADR-FS-41-renvani-sor-integrations-addendum.md) | Renvani SoR, CSV/import-only, integration non-goals | **Proposed** | Tech Lead | FS-41 |
 | [ADR-FS-93](ADR-FS-93-managed-platform-boundaries.md) | Managed platform boundaries (Option A) | **Accepted** (founder); PO + Security ACK pending | Tech Lead | FS-93 |
+| [ADR-FS-MIGRATE](ADR-FS-MIGRATE-import-lineage.md) | Import lineage (`source_system`/`source_id`), business timestamps, chunk idempotency | **Proposed** | Tech Lead | FS-MIGRATE |
