@@ -25,6 +25,7 @@ export interface BookingFlowStore {
   email: string;
   notes: string;
   smsConsent: boolean;
+  smsConsentMarketing: boolean;
   referenceNumber: string | null;
   servedTechCount: number;
   setStep: (step: number) => void;
@@ -61,7 +62,8 @@ const initialBookingState: BookingFlowSnapshot = {
   phone: "",
   email: "",
   notes: "",
-  smsConsent: true,
+  smsConsent: false,
+  smsConsentMarketing: false,
   referenceNumber: null,
   servedTechCount: 0
 };
@@ -125,6 +127,7 @@ export const useBookingFlowStore = create<BookingFlowStore>()(
         email: state.email,
         notes: state.notes,
         smsConsent: state.smsConsent,
+        smsConsentMarketing: state.smsConsentMarketing,
         referenceNumber: state.referenceNumber,
         servedTechCount: state.servedTechCount
       })
