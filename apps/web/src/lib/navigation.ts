@@ -74,6 +74,7 @@ export const mobileNavigation: NavItem[] = [
 
 export const settingsNavigation: NavItem[] = [
   { label: "Data import", href: "/settings/import", icon: Upload },
+  { label: "Migration wizard", href: "/settings/migrate", icon: Upload },
   { label: "General", href: "/settings/general", icon: Settings },
   { label: "Payments", href: "/settings/payments", icon: CreditCard },
   { label: "Automation Rules", href: "/settings/automation", icon: Sparkles },
