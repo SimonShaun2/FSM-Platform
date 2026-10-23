@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# Vercel rootDirectory=apps/web — build workspace deps then Next (keeps vercel.json buildCommand under 256 chars).
+# Vercel rootDirectory=apps/web — deps via vercel-web-build-deps.sh, then next build (<256 char buildCommand).
 set -euo pipefail
 ROOT="$(cd "$(dirname "$0")/.." && pwd)"
 cd "$ROOT"
