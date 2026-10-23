@@ -21,6 +21,8 @@ export interface CreateInvoiceCheckoutSessionInput {
   invoiceNumber: string;
   total: string;
   items: InvoiceCheckoutLineItem[];
+  /** Decimal fraction (0.05 = 5%). Omit or 0 for Flat / no shop fee. */
+  connectApplicationFeeFraction: number;
 }
 
 export interface InvoiceCheckoutSessionResult {
@@ -54,6 +56,7 @@ export interface CreateServiceAgreementSubscriptionInput {
   stripeCustomerId: string;
   stripePriceId: string;
   companyStripeAccountId: string;
+  connectApplicationFeeFraction: number;
 }
 
 export interface StripeSubscriptionResult {
@@ -156,10 +159,25 @@ export async function createInvoiceCheckoutSession(
 ): Promise<InvoiceCheckoutSessionResult> {
   const totalCents = toCents(input.total);
   const applicationFeeAmount = new Decimal(totalCents)
-    .mul(env.STRIPE_PLATFORM_FEE_PERCENT)
+    .mul(input.connectApplicationFeeFraction)
     .toDecimalPlaces(0, Decimal.ROUND_HALF_UP)
     .toNumber();
   const appBaseUrl = env.APP_URL.replace(/\/$/, "");
+  const paymentIntentData: Stripe.Checkout.SessionCreateParams.PaymentIntentData = {
+    transfer_data: {
+      destination: input.companyStripeAccountId
+    },
+    metadata: {
+      companyId: input.companyId,
+      invoiceId: input.invoiceId,
+      customerId: input.customerId
+    }
+  };
+
+  if (applicationFeeAmount > 0) {
+    paymentIntentData.application_fee_amount = applicationFeeAmount;
+  }
+
   const session = await stripe.checkout.sessions.create({
     mode: "payment",
     ...(input.customerEmail ? { customer_email: input.customerEmail } : {}),
@@ -175,17 +193,7 @@ export async function createInvoiceCheckoutSession(
         }
       };
     }),
-    payment_intent_data: {
-      application_fee_amount: applicationFeeAmount,
-      transfer_data: {
-        destination: input.companyStripeAccountId
-      },
-      metadata: {
-        companyId: input.companyId,
-        invoiceId: input.invoiceId,
-        customerId: input.customerId
-      }
-    },
+    payment_intent_data: paymentIntentData,
     success_url: `${appBaseUrl}/invoices/${input.invoiceId}?status=success`,
     cancel_url: `${appBaseUrl}/invoices/${input.invoiceId}?status=cancelled`,
     metadata: {
@@ -257,14 +265,9 @@ export async function createStripeCustomer(input: CreateStripeCustomerInput): Pr
 export async function createServiceAgreementSubscription(
   input: CreateServiceAgreementSubscriptionInput
 ): Promise<StripeSubscriptionResult> {
-  const applicationFeePercent = new Decimal(env.STRIPE_PLATFORM_FEE_PERCENT)
-    .mul(100)
-    .toDecimalPlaces(2, Decimal.ROUND_HALF_UP)
-    .toNumber();
-  const subscription = await stripe.subscriptions.create({
+  const subscriptionParams: Stripe.SubscriptionCreateParams = {
     customer: input.stripeCustomerId,
     items: [{ price: input.stripePriceId }],
-    application_fee_percent: applicationFeePercent,
     transfer_data: {
       destination: input.companyStripeAccountId
     },
@@ -273,7 +276,16 @@ export async function createServiceAgreementSubscription(
       planId: input.planId,
       customerId: input.customerId
     }
-  });
+  };
+
+  if (input.connectApplicationFeeFraction > 0) {
+    subscriptionParams.application_fee_percent = new Decimal(input.connectApplicationFeeFraction)
+      .mul(100)
+      .toDecimalPlaces(2, Decimal.ROUND_HALF_UP)
+      .toNumber();
+  }
+
+  const subscription = await stripe.subscriptions.create(subscriptionParams);
 
   return toSubscriptionResult(subscription);
 }
@@ -395,6 +407,7 @@ export interface CreatePlatformBillingCheckoutInput {
   companyId: string;
   stripeCustomerId: string;
   priceId: string;
+  planTier: "flex" | "flat";
   customerEmail: string | null;
 }
 
@@ -416,12 +429,14 @@ export async function createPlatformBillingCheckoutSession(
     cancel_url: `${appBaseUrl}/settings/billing?checkout=cancel`,
     metadata: {
       companyId: input.companyId,
-      billingKind: "platform_mvp"
+      billingKind: "platform_mvp",
+      planTier: input.planTier
     },
     subscription_data: {
       metadata: {
         companyId: input.companyId,
-        billingKind: "platform_mvp"
+        billingKind: "platform_mvp",
+        planTier: input.planTier
       }
     }
   });

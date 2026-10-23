@@ -189,14 +189,17 @@ describe("service-agreement.service", () => {
       email: customer.email,
       name: "Chris Pine"
     });
-    expect(createServiceAgreementSubscriptionMock).toHaveBeenCalledWith({
-      companyId: company.id,
-      planId: agreement.id,
-      customerId: customer.id,
-      stripeCustomerId: "cus_123",
-      stripePriceId: "price_monthly_123",
-      companyStripeAccountId: company.stripeAccountId ?? ""
-    });
+    expect(createServiceAgreementSubscriptionMock).toHaveBeenCalledWith(
+      expect.objectContaining({
+        companyId: company.id,
+        planId: agreement.id,
+        customerId: customer.id,
+        stripeCustomerId: "cus_123",
+        stripePriceId: "price_monthly_123",
+        companyStripeAccountId: company.stripeAccountId ?? "",
+        connectApplicationFeeFraction: expect.any(Number)
+      })
+    );
     expect(agreement.stripeSubscriptionId).toBe("sub_123");
     expect(agreement.stripePriceId).toBe("price_monthly_123");
     expect(agreement.price).toBe("29.99");

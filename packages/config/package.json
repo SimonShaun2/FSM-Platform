@@ -45,6 +45,10 @@
     "./neon-ci": {
       "types": "./dist/neon-ci.d.ts",
       "import": "./dist/neon-ci.js"
+    },
+    "./stripe-pricing": {
+      "types": "./dist/stripe-pricing.d.ts",
+      "import": "./dist/stripe-pricing.js"
     }
   },
   "scripts": {

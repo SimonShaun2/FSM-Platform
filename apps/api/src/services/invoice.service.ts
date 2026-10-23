@@ -44,6 +44,7 @@ import {
 } from "@fsm/types";
 
 import { generateInvoiceNumber } from "../lib/invoice-number.js";
+import { resolveCompanyConnectApplicationFeeFraction } from "../lib/company-renvani-plan.js";
 import { createInvoiceCheckoutSession, expireInvoiceCheckoutSession } from "../lib/stripe.js";
 import { listItems, recalculateTotals } from "./invoice-items.service.js";
 
@@ -961,6 +962,7 @@ export async function sendInvoice(
       companyStripeAccountId: company.stripeAccountId,
       invoiceNumber: existingInvoice.invoiceNumber,
       total: existingInvoice.total,
+      connectApplicationFeeFraction: resolveCompanyConnectApplicationFeeFraction(company),
       items: items.map((item) => ({
         name: item.name,
         description: item.description,

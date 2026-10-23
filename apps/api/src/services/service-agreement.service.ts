@@ -38,6 +38,7 @@ import {
   type UpdateAgreementInput
 } from "@fsm/types";
 
+import { resolveCompanyConnectApplicationFeeFraction } from "../lib/company-renvani-plan.js";
 import {
   cancelServiceAgreementSubscription,
   createServiceAgreementSubscription,
@@ -887,7 +888,8 @@ export async function createAgreement(
       customerId: customer.id,
       stripeCustomerId,
       stripePriceId,
-      companyStripeAccountId: company.stripeAccountId
+      companyStripeAccountId: company.stripeAccountId,
+      connectApplicationFeeFraction: resolveCompanyConnectApplicationFeeFraction(company)
     });
     stripeSubscriptionId = subscription.id;
     stripeCurrentPeriodStart = subscription.currentPeriodStart;
