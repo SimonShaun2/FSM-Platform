@@ -246,6 +246,13 @@
       "when": 1777706000000,
       "tag": "0034_vip_membership_foundation",
       "breakpoints": true
+    },
+    {
+      "idx": 35,
+      "version": "7",
+      "when": 1777707000000,
+      "tag": "0039_fs59_recurring_visit_series",
+      "breakpoints": true
     }
   ]
 }
