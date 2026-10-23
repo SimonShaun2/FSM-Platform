@@ -1,12 +1,14 @@
 import {
   getPlatformQueueMonitoringSnapshot,
   listPlatformDeadLetterJobs,
+  listPlatformFailedJobsWithReplayMetadata,
   platformQueuesByName,
   recoverDeadLetterJob
 } from "@fsm/jobs";
 import type {
   DeadLetterJobListV1,
   DeadLetterRecoveryRequestV1,
+  FailedJobReplayListV1,
   PlatformQueueMonitoringSnapshotV1,
   PlatformQueueNameV1
 } from "@fsm/types";
@@ -17,9 +19,16 @@ export async function fetchPlatformQueueMonitoringSnapshot(): Promise<PlatformQu
 
 export async function fetchPlatformDeadLetterJobs(
   queueName: PlatformQueueNameV1,
-  options: { start?: number; limit?: number } = {}
+  options: { start?: number; limit?: number; companyId: string }
 ): Promise<DeadLetterJobListV1> {
   return listPlatformDeadLetterJobs(queueName, options);
+}
+
+export async function fetchPlatformFailedJobsWithReplayMetadata(
+  queueName: PlatformQueueNameV1,
+  options: { companyId: string; start?: number; limit?: number }
+): Promise<FailedJobReplayListV1> {
+  return listPlatformFailedJobsWithReplayMetadata(queueName, options);
 }
 
 export async function recoverPlatformDeadLetterJob(

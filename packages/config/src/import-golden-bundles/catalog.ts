@@ -279,8 +279,26 @@ export const GOLDEN_IMPORT_BUNDLE_MANIFESTS: GoldenImportBundleManifest[] = [
     fixtureId: `manual_csv-${versionSuffix}`,
     sourceSystem: "manual_csv",
     label: "Generic CSV golden bundle",
-    description: "Minimal two-file bundle for AI mapping smoke tests.",
+    description:
+      "Multi-file generic bundle: VIP tabular joins plus ~100k-row chunked job history for worker ingest.",
     mediaRelativePaths: [],
+    requiredHistorySpanYears: 2,
+    chunkedJobHistory: {
+      relativeDir: "jobs_history",
+      partFileNameFormat: "part-%02d.csv",
+      partCount: 20,
+      rowsPerPart: 5000,
+      totalDataRows: 100_000,
+      workerRowChunkSize: 500,
+      entityType: "jobs",
+      presetEntityHint: "customers",
+      joinLink: {
+        parentFile: "customers.csv",
+        localColumn: "customer_id",
+        parentColumn: "customer_id"
+      },
+      businessDateColumn: "completed_at"
+    },
     files: [
       {
         relativePath: "customers.csv",
@@ -297,6 +315,21 @@ export const GOLDEN_IMPORT_BUNDLE_MANIFESTS: GoldenImportBundleManifest[] = [
           parentColumn: "customer_id"
         },
         businessDateColumn: "completed_at"
+      },
+      {
+        relativePath: "vip_tiers.csv",
+        entityType: "vip_membership_tiers",
+        presetEntityHint: "products"
+      },
+      {
+        relativePath: "vip_memberships.csv",
+        entityType: "vip_memberships",
+        presetEntityHint: "customers",
+        joinLink: {
+          parentFile: "customers.csv",
+          localColumn: "customer_id",
+          parentColumn: "customer_id"
+        }
       }
     ]
   }

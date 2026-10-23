@@ -389,8 +389,8 @@ export async function getMigrateRelationalPreview(companyId: string, bundleId: s
   const bundle = await getScopedBundle(companyId, bundleId);
   const stepState = parseStepState(bundle.stepState);
 
-  if (bundle.wizardStep < 4) {
-    throw new AppError(ErrorCode.CONFLICT, "Relational preview is available on wizard step 4 or later");
+  if (bundle.wizardStep < 3) {
+    throw new AppError(ErrorCode.CONFLICT, "Relational preview is available on wizard step 3 or later");
   }
 
   return buildRelationalPreviewForBundle(companyId, bundleId, stepState.files);

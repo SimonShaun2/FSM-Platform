@@ -4,6 +4,7 @@ import { afterEach, beforeAll, beforeEach, describe, expect, it, vi } from "vite
 import {
   QUEUE_PLATFORM_CONTRACT_VERSION,
   type DeadLetterJobListV1,
+  type FailedJobReplayListV1,
   type PlatformQueueMonitoringSnapshotV1
 } from "@fsm/types";
 
@@ -41,6 +42,7 @@ vi.mock("@fsm/jobs", () => ({
 vi.mock("../../../services/queue-monitoring.service.js", () => ({
   fetchPlatformQueueMonitoringSnapshot: vi.fn(),
   fetchPlatformDeadLetterJobs: vi.fn(),
+  fetchPlatformFailedJobsWithReplayMetadata: vi.fn(),
   recoverPlatformDeadLetterJob: vi.fn()
 }));
 
@@ -79,6 +81,8 @@ const sampleSnapshot: PlatformQueueMonitoringSnapshotV1 = {
   ]
 };
 
+const tenantCompanyId = "11111111-1111-4111-8111-111111111111";
+
 const sampleDeadLetterList: DeadLetterJobListV1 = {
   contractVersion: QUEUE_PLATFORM_CONTRACT_VERSION,
   sourceQueue: "imports",
@@ -89,7 +93,7 @@ const sampleDeadLetterList: DeadLetterJobListV1 = {
       sourceQueue: "imports",
       sourceJobId: "job-1",
       jobName: "migrate-file-batch",
-      companyId: "11111111-1111-4111-8111-111111111111",
+      companyId: tenantCompanyId,
       attemptsMade: 5,
       failedAt: "2026-10-23T12:00:00.000Z",
       failureClass: "transient",
@@ -245,13 +249,56 @@ describe("GET /api/v1/internal/admin/queues/:queueName/dead-letter (FS-MIGRATE)"
     const internalAdmin = createInternalAdminContext("admin");
 
     const response = await request(app.server)
-      .get("/api/v1/internal/admin/queues/imports/dead-letter?limit=10")
+      .get(
+        `/api/v1/internal/admin/queues/imports/dead-letter?companyId=${tenantCompanyId}&limit=10`
+      )
       .set("Authorization", internalAdmin.authorization);
 
     expect(response.statusCode).toBe(200);
     expect(response.body).toEqual(sampleDeadLetterList);
     expect(queueMonitoringService.fetchPlatformDeadLetterJobs).toHaveBeenCalledWith("imports", {
+      companyId: tenantCompanyId,
       limit: 10
     });
+  });
+});
+
+describe("GET /api/v1/internal/admin/queues/:queueName/failed (STACK-05)", () => {
+  it("returns tenant-scoped failed job replay metadata", async () => {
+    const internalAdmin = createInternalAdminContext("admin");
+    const failedList: FailedJobReplayListV1 = {
+      contractVersion: QUEUE_PLATFORM_CONTRACT_VERSION,
+      sourceQueue: "imports",
+      companyId: tenantCompanyId,
+      jobs: [
+        {
+          jobId: "job-9",
+          queueName: "imports",
+          jobName: "migrate-file-batch",
+          companyId: tenantCompanyId,
+          attemptsMade: 3,
+          failedAt: "2026-10-23T12:00:00.000Z",
+          failedReason: "timeout",
+          replayable: true
+        }
+      ],
+      nextCursor: null
+    };
+    vi.mocked(queueMonitoringService.fetchPlatformFailedJobsWithReplayMetadata).mockResolvedValue(
+      failedList
+    );
+
+    const response = await request(app.server)
+      .get(
+        `/api/v1/internal/admin/queues/imports/failed?companyId=${tenantCompanyId}&limit=5`
+      )
+      .set("Authorization", internalAdmin.authorization);
+
+    expect(response.statusCode).toBe(200);
+    expect(response.body).toEqual(failedList);
+    expect(queueMonitoringService.fetchPlatformFailedJobsWithReplayMetadata).toHaveBeenCalledWith(
+      "imports",
+      { companyId: tenantCompanyId, limit: 5 }
+    );
   });
 });

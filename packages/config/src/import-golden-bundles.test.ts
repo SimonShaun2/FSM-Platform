@@ -36,6 +36,18 @@ describe("FS-MIGRATE golden import bundles (CI fixtures)", () => {
     expect(manifest?.mediaRelativePaths.length).toBeGreaterThanOrEqual(2);
   });
 
+  it("manual_csv includes ~100k-row chunked job history aligned with worker chunk size", () => {
+    const manifest = GOLDEN_IMPORT_BUNDLE_MANIFESTS.find((entry) => entry.sourceSystem === "manual_csv");
+    expect(manifest?.chunkedJobHistory?.totalDataRows).toBe(100_000);
+    expect(manifest?.chunkedJobHistory?.workerRowChunkSize).toBe(500);
+    expect(manifest?.requiredHistorySpanYears).toBeGreaterThanOrEqual(2);
+    const workerChunks = Math.ceil(
+      (manifest?.chunkedJobHistory?.totalDataRows ?? 0) /
+        (manifest?.chunkedJobHistory?.workerRowChunkSize ?? 1)
+    );
+    expect(workerChunks).toBe(200);
+  });
+
   it("returns structured issues instead of throwing when validation fails", () => {
     const manifest = GOLDEN_IMPORT_BUNDLE_MANIFESTS[0];
     const result = validateGoldenImportBundleManifest({
