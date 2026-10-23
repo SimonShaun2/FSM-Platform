@@ -19,6 +19,8 @@ import {
   properties
 } from "@fsm/db";
 import { aiQueue } from "@fsm/jobs";
+
+import { handleImportChunkCommit, IMPORT_CHUNK_COMMIT_JOB_NAME } from "./import-chunk-commit.processor.js";
 import {
   sanitizeSpreadsheetCell,
   type ColumnMapping,
@@ -769,6 +771,8 @@ export async function handleExecuteImport(job: Job<Record<string, unknown>>): Pr
             prefersEmail: false,
             doNotContact: false,
             stripeCustomerId: null,
+            sourceSystem: null,
+            sourceId: null,
             importSessionId,
             createdAt: new Date(),
             updatedAt: new Date(),
@@ -915,6 +919,9 @@ export function createCsvImportProcessor(): Processor<Record<string, unknown>, v
         return;
       case "execute-import":
         await handleExecuteImport(job);
+        return;
+      case IMPORT_CHUNK_COMMIT_JOB_NAME:
+        await handleImportChunkCommit(job);
         return;
       default:
         logger.warn({ jobId: job.id ?? null, jobName: job.name }, "Unknown CSV import job received");
