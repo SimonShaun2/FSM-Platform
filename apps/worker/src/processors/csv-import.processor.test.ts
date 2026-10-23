@@ -116,6 +116,36 @@ describe("csv-import.processor", () => {
     });
   });
 
+  it("map-csv-columns dedupes when the session already left uploaded state", async () => {
+    const company = fakeDb.seedCompany({
+      name: "Acme HVAC",
+      slug: "acme-hvac-dedupe"
+    });
+    const importSession = fakeDb.seedImportSession({
+      companyId: company.id,
+      fileName: "customers.csv",
+      fileUrl: "imports/company/customers.csv",
+      status: "mapping",
+      columnMappings: { Email: "email" }
+    });
+
+    const { job } = createJob("map-csv-columns", {
+      companyId: company.id,
+      importSessionId: importSession.id,
+      idempotencyKey: `${importSession.id}:map-csv-columns`
+    });
+
+    await csvImportProcessor.handleMapCsvColumns(job);
+
+    expect(mapCsvColumnsMock).not.toHaveBeenCalled();
+    expect(downloadFileMock).not.toHaveBeenCalled();
+    const receipt = fakeDb.getTestState().activityEvents.at(-1);
+    expect(receipt?.payload).toMatchObject({
+      stepKind: "map-csv-columns",
+      state: "deduped_completed"
+    });
+  });
+
   it("validate-csv-rows collects all errors and detects duplicates without aborting", async () => {
     const company = fakeDb.seedCompany({
       name: "Acme HVAC",

@@ -28,11 +28,15 @@ import {
   type ImportChunkCommitPayload,
 } from "@fsm/jobs";
 import {
+  IMPORT_QUEUE_JOB_NAMES,
   ImportEstimateCommitRowSchema,
   ImportJobCommitRowSchema,
+  buildImportChunkCommitJobId,
   sanitizeSpreadsheetCell,
   type ColumnMapping,
 } from "@fsm/types";
+
+import { emitImportWorkflowStepReceipt } from "../lib/import-workflow-step-receipt.js";
 
 import {
   mergeImportChunkSessionProgress,
@@ -642,6 +646,17 @@ export async function handleImportChunkCommit(job: Job<Record<string, unknown>>)
         { idempotencyKey: payload.idempotencyKey, importSessionId: payload.importSessionId },
         "import-chunk-commit skipped; chunk already completed",
       );
+      await emitImportWorkflowStepReceipt({
+        companyId: payload.companyId,
+        importSessionId: payload.importSessionId,
+        ...(payload.importBundleId !== undefined ? { importBundleId: payload.importBundleId } : {}),
+        stepKind: IMPORT_QUEUE_JOB_NAMES.importChunkCommit,
+        idempotencyKey: payload.idempotencyKey,
+        state: "deduped_completed",
+        chunkIndex: payload.chunkIndex,
+        jobId: buildImportChunkCommitJobId(payload.importSessionId, payload.chunkIndex),
+        summary: `Import chunk ${payload.chunkIndex} deduped (already completed)`,
+      });
       return;
     }
 
@@ -649,6 +664,18 @@ export async function handleImportChunkCommit(job: Job<Record<string, unknown>>)
 
     const chunkResult = await commitChunkForEntity(payload, importSession);
     await finalizeChunkRun(payload, importSession, chunkResult, true);
+
+    await emitImportWorkflowStepReceipt({
+      companyId: payload.companyId,
+      importSessionId: payload.importSessionId,
+      ...(payload.importBundleId !== undefined ? { importBundleId: payload.importBundleId } : {}),
+      stepKind: IMPORT_QUEUE_JOB_NAMES.importChunkCommit,
+      idempotencyKey: payload.idempotencyKey,
+      state: "completed",
+      chunkIndex: payload.chunkIndex,
+      jobId: buildImportChunkCommitJobId(payload.importSessionId, payload.chunkIndex),
+      summary: `Import chunk ${payload.chunkIndex} completed`,
+    });
 
     const progressPercent =
       payload.chunksTotal === 0
@@ -658,6 +685,17 @@ export async function handleImportChunkCommit(job: Job<Record<string, unknown>>)
   } catch (error: unknown) {
     if (parsed.success) {
       await markChunkRunFailed(parsed.data, error);
+      await emitImportWorkflowStepReceipt({
+        companyId: parsed.data.companyId,
+        importSessionId: parsed.data.importSessionId,
+        ...(parsed.data.importBundleId !== undefined ? { importBundleId: parsed.data.importBundleId } : {}),
+        stepKind: IMPORT_QUEUE_JOB_NAMES.importChunkCommit,
+        idempotencyKey: parsed.data.idempotencyKey,
+        state: "failed",
+        chunkIndex: parsed.data.chunkIndex,
+        jobId: buildImportChunkCommitJobId(parsed.data.importSessionId, parsed.data.chunkIndex),
+        summary: `Import chunk ${parsed.data.chunkIndex} failed`,
+      });
     }
 
     logger.error(
