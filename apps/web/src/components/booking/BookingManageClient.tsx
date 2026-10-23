@@ -23,9 +23,9 @@ export function BookingManageClient({ slug, manageToken }: { slug: string; manag
     try {
       await cancelMutation.mutateAsync();
       setCancelled(true);
-      showToast({ tone: "success", message: "Your appointment was cancelled." });
+      showToast({ tone: "success", title: "Your appointment was cancelled." });
     } catch {
-      showToast({ tone: "error", message: "We could not cancel online. Please call the office." });
+      showToast({ tone: "error", title: "We could not cancel online. Please call the office." });
     }
   }
 
