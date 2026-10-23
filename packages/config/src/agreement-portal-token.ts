@@ -24,7 +24,12 @@ export function verifyAgreementPortalToken(
     return null;
   }
 
-  const [payload, signature] = parts;
+  const payload = parts[0];
+  const signature = parts[1];
+  if (!payload || !signature) {
+    return null;
+  }
+
   const expected = createHmac("sha256", signingSecret()).update(payload).digest("base64url");
 
   const sigBuffer = Buffer.from(signature);
