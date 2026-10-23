@@ -2286,6 +2286,24 @@ const importChunkRunsTable = {
   deletedAt: "deletedAt"
 } as const;
 
+const importBundlesTable = {
+  __name: "importBundles",
+  id: "id",
+  companyId: "companyId",
+  createdById: "createdById",
+  sourceSystem: "sourceSystem",
+  label: "label",
+  status: "status",
+  wizardStep: "wizardStep",
+  stepState: "stepState",
+  dedupeDecisions: "dedupeDecisions",
+  completedAt: "completedAt",
+  abandonedAt: "abandonedAt",
+  createdAt: "createdAt",
+  updatedAt: "updatedAt",
+  deletedAt: "deletedAt"
+} as const;
+
 const importSessionsTable = {
   __name: "importSessions",
   id: "id",
@@ -5169,6 +5187,7 @@ export const properties = propertiesTable;
 export const assets = assetsTable;
 export const jobs = jobsTable;
 export const importSessions = importSessionsTable;
+export const importBundles = importBundlesTable;
 export const importChunkRuns = importChunkRunsTable;
 export const dataExportSessions = dataExportSessionsTable;
 export const estimates = estimatesTable;
@@ -5559,6 +5578,7 @@ export function createDbModuleMock() {
     assets,
     jobs,
     importSessions,
+    importBundles,
     importChunkRuns,
     dataExportSessions,
     estimates,
