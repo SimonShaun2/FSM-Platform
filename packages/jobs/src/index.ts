@@ -10,17 +10,14 @@ export {
   fsmRetainFailedJobsForDlq
 } from "./queue-policy.js";
 export { enqueueMigrateFileBatchJob } from "./enqueue-migrate-file-batch.js";
-<<<<<<< HEAD
 export { enqueueMigrateFileBatchFailedObjectsRetry } from "./enqueue-migrate-file-batch-retry.js";
 export {
   buildMigrateFileBatchFailedObjectsRetryPayload,
   buildMigrateFileBatchRetryJobId
 } from "./migrate-file-batch-retry.js";
 export { listDeadLetterJobs } from "./dead-letter-visibility.js";
-=======
 export { logMigrateFileBatchTrace } from "./migrate-file-batch-trace-log.js";
 export type { LogMigrateFileBatchTraceInput } from "./migrate-file-batch-trace-log.js";
->>>>>>> origin/dev
 export { redisConnection } from "./connection.js";
 export {
   buildDeadLetterQueueName,
@@ -76,9 +73,6 @@ export {
 export {
   createDefaultPlatformQueueMonitoringDeps,
   getPlatformQueueMonitoringSnapshot,
-<<<<<<< HEAD
   listPlatformDeadLetterJobs,
-=======
->>>>>>> origin/dev
   platformQueuesByName
 } from "./platform-queue-registry.js";

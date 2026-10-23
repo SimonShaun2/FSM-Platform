@@ -15,10 +15,7 @@ import {
   operatorQueue,
   webhooksQueue
 } from "./queues.js";
-<<<<<<< HEAD
 import { listDeadLetterJobs } from "./dead-letter-visibility.js";
-=======
->>>>>>> origin/dev
 import type { PlatformQueueMonitoringDeps, QueueMonitoringProbe } from "./queue-monitoring.js";
 import { collectPlatformQueueMonitoringSnapshot } from "./queue-monitoring.js";
 
@@ -44,7 +41,6 @@ export function createDefaultPlatformQueueMonitoringDeps(): PlatformQueueMonitor
 export async function getPlatformQueueMonitoringSnapshot(collectedAt?: Date) {
   return collectPlatformQueueMonitoringSnapshot(createDefaultPlatformQueueMonitoringDeps(), collectedAt);
 }
-<<<<<<< HEAD
 
 export async function listPlatformDeadLetterJobs(
   sourceQueue: PlatformQueueNameV1,
@@ -53,5 +49,3 @@ export async function listPlatformDeadLetterJobs(
   const deadLetterQueue = getDeadLetterQueue(sourceQueue);
   return listDeadLetterJobs(sourceQueue, deadLetterQueue, options);
 }
-=======
->>>>>>> origin/dev
