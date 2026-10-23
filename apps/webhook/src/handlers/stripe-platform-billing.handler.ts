@@ -3,7 +3,16 @@ import { and, eq, isNull } from "drizzle-orm";
 import type Stripe from "stripe";
 
 import { companies, db, emitEventWithExecutor } from "@fsm/db";
-import type { CompanySettings, CompanyStripePlatformBillingSettings } from "@fsm/types";
+
+interface CompanyStripePlatformBillingSettings {
+  subscriptionId?: string | null;
+  status?: string | null;
+  currentPeriodEnd?: string | null;
+}
+
+interface CompanySettings {
+  stripePlatformBilling?: CompanyStripePlatformBillingSettings | null;
+}
 
 type CompanyRow = typeof companies.$inferSelect;
 type TransactionExecutor = Pick<typeof db, "insert" | "update">;
