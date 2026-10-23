@@ -633,7 +633,9 @@ export async function handleValidateCsvRows(job: Job<Record<string, unknown>>): 
             totalDataRows: validationResult.totalRows,
             entityType: importSession.entityType,
             sourceSystem,
-            importBundleId: importSession.importBundleId ?? undefined
+            ...(importSession.importBundleId
+              ? { importBundleId: importSession.importBundleId }
+              : {})
           })
         : null;
 
