@@ -1281,7 +1281,7 @@ export async function confirmPublicBookingSlot(
       bookingSlug: slug,
       referenceNumber: normalizedRef
     },
-    { recurringSchedule: confirmed.recurringSchedule }
+    { linked: confirmed.recurringSchedule.linked, scheduleKind: confirmed.recurringSchedule.scheduleKind }
   );
 
   return {

@@ -60,6 +60,9 @@ async function confirmOneOffBooking(referenceNumber = "BK-SELF-001") {
   });
   const technician = fakeDb.seedTechnician({
     companyId: company.id,
+    firstName: "Ava",
+    lastName: "Stone",
+    phone: "555-0200",
     serviceZipCodes: ["78701"]
   });
   const booking = fakeDb.seedBookingRequest({

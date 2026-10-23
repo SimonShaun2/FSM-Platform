@@ -71,7 +71,7 @@ export function issueBookingManageTokenIfEligible(
     bookingSlug: string;
     referenceNumber: string;
   },
-  recurring: { linked: boolean; scheduleKind: "vip" | "maintenance" | "none" }
+  recurring: { linked: boolean; scheduleKind?: "vip" | "maintenance" | "none" }
 ): string | null {
   if (!isEligibleForCustomerSelfService(recurring)) {
     return null;
