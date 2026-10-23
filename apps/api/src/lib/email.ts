@@ -2,7 +2,9 @@ import pino from "pino";
 
 import { EMAIL_TEMPLATE_IDS } from "@fsm/comms";
 
-import { sendRenderedTemplateEmail } from "./outbound-email.js";
+import { sendRenderedTemplateEmail, type TransactionalEmailSendResult } from "./outbound-email.js";
+
+export type { TransactionalEmailSendResult } from "./outbound-email.js";
 
 const logger = pino({
   name: "email"
@@ -260,8 +262,8 @@ export async function sendCampaignEmail(to: string, params: CampaignEmailParams)
 export async function sendBookingConfirmationEmail(
   to: string,
   params: BookingConfirmationEmailParams
-): Promise<void> {
-  await sendRenderedTemplateEmail(
+): Promise<TransactionalEmailSendResult> {
+  const result = await sendRenderedTemplateEmail(
     to,
     EMAIL_TEMPLATE_IDS.bookingConfirmation,
     {
@@ -274,10 +276,14 @@ export async function sendBookingConfirmationEmail(
   );
 
   logger.debug({ recipient: "[redacted]" }, "Booking confirmation email sent");
+  return result;
 }
 
-export async function sendBookingDeclineEmail(to: string, params: BookingDeclineEmailParams): Promise<void> {
-  await sendRenderedTemplateEmail(
+export async function sendBookingDeclineEmail(
+  to: string,
+  params: BookingDeclineEmailParams
+): Promise<TransactionalEmailSendResult> {
+  const result = await sendRenderedTemplateEmail(
     to,
     EMAIL_TEMPLATE_IDS.bookingDecline,
     {
@@ -290,13 +296,14 @@ export async function sendBookingDeclineEmail(to: string, params: BookingDecline
   );
 
   logger.debug({ recipient: "[redacted]" }, "Booking decline email sent");
+  return result;
 }
 
 export async function sendVipMembershipWelcomeEmail(
   to: string,
   params: VipMembershipWelcomeEmailParams
-): Promise<void> {
-  await sendRenderedTemplateEmail(
+): Promise<TransactionalEmailSendResult> {
+  const result = await sendRenderedTemplateEmail(
     to,
     EMAIL_TEMPLATE_IDS.vipMembershipWelcome,
     {
@@ -309,13 +316,14 @@ export async function sendVipMembershipWelcomeEmail(
   );
 
   logger.debug({ recipient: "[redacted]" }, "VIP membership welcome email sent");
+  return result;
 }
 
 export async function sendVipMembershipRenewalEmail(
   to: string,
   params: VipMembershipRenewalEmailParams
-): Promise<void> {
-  await sendRenderedTemplateEmail(
+): Promise<TransactionalEmailSendResult> {
+  const result = await sendRenderedTemplateEmail(
     to,
     EMAIL_TEMPLATE_IDS.vipMembershipRenewal,
     {
@@ -329,13 +337,14 @@ export async function sendVipMembershipRenewalEmail(
   );
 
   logger.debug({ recipient: "[redacted]" }, "VIP membership renewal email sent");
+  return result;
 }
 
 export async function sendVipMembershipPaymentFailedEmail(
   to: string,
   params: VipMembershipPaymentFailedEmailParams
-): Promise<void> {
-  await sendRenderedTemplateEmail(
+): Promise<TransactionalEmailSendResult> {
+  const result = await sendRenderedTemplateEmail(
     to,
     EMAIL_TEMPLATE_IDS.vipMembershipPaymentFailed,
     {
@@ -352,4 +361,5 @@ export async function sendVipMembershipPaymentFailedEmail(
   );
 
   logger.debug({ recipient: "[redacted]" }, "VIP membership dunning email sent");
+  return result;
 }

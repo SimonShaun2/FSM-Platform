@@ -15,3 +15,9 @@ export {
   type EmailTemplateId,
   type RenderedTransactionalEmail
 } from "./email-templates.js";
+export {
+  isMvpResendTransactionalTemplate,
+  MVP_RESEND_TRANSACTIONAL_TEMPLATE_IDS,
+  resendTagsForTransactionalTemplate,
+  type MvpResendTransactionalTemplateId
+} from "./transactional-template-catalog.js";
