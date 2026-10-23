@@ -12,7 +12,11 @@ export const featureFlags = {
   // FEATURE FLAG: loyalty-reminders-enabled — FS-72 candidate evaluation (proposal path separate)
   loyaltyRemindersEnabled: false,
   // FEATURE FLAG: loyalty-reminders-dry-run — FS-72 blocks customer send until founder gate
-  loyaltyRemindersDryRun: true
+  loyaltyRemindersDryRun: true,
+  // FEATURE FLAG: outbound-sms-enabled — Circle S 2026-10-22: Twilio/Bird deferred; stub only
+  outboundSmsEnabled: false,
+  // FEATURE FLAG: resend-email-enabled — MVP email-first; wire worker templates via @fsm/comms (STACK-08)
+  resendEmailEnabled: false
 } as const;
 
 export type FeatureFlags = typeof featureFlags;

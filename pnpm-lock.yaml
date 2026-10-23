@@ -47,6 +47,9 @@ importers:
       '@fsm/ai':
         specifier: workspace:*
         version: link:../../packages/ai
+      '@fsm/comms':
+        specifier: workspace:*
+        version: link:../../packages/comms
       '@fsm/config':
         specifier: workspace:*
         version: link:../../packages/config
@@ -333,6 +336,18 @@ importers:
       pino:
         specifier: ^9.4.0
         version: 9.14.0
+    devDependencies:
+      '@types/node':
+        specifier: ^24.3.0
+        version: 24.12.2
+      typescript:
+        specifier: ^5.9.2
+        version: 5.9.3
+      vitest:
+        specifier: ^3.2.4
+        version: 3.2.4(@types/node@24.12.2)(happy-dom@21.0.4)(jiti@1.21.7)(tsx@4.21.0)
+
+  packages/comms:
     devDependencies:
       '@types/node':
         specifier: ^24.3.0

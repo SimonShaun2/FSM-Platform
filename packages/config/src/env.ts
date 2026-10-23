@@ -25,6 +25,9 @@ const envSchema = z.object({
   TWILIO_FROM_NUMBER: z.string().min(1, "TWILIO_FROM_NUMBER is required"),
   SENDGRID_API_KEY: z.string().min(1, "SENDGRID_API_KEY is required"),
   SENDGRID_FROM_EMAIL: z.string().email("SENDGRID_FROM_EMAIL must be a valid email"),
+  /** MVP email-first (Resend); optional until STACK-08 wires transactional sends */
+  RESEND_API_KEY: z.string().default(""),
+  RESEND_FROM_EMAIL: z.string().default(""),
   R2_ACCOUNT_ID: z.string().min(1, "R2_ACCOUNT_ID is required"),
   R2_ACCESS_KEY_ID: z.string().min(1, "R2_ACCESS_KEY_ID is required"),
   R2_SECRET_ACCESS_KEY: z.string().min(1, "R2_SECRET_ACCESS_KEY is required"),

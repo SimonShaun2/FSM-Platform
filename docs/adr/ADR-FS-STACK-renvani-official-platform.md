@@ -51,8 +51,8 @@ Docs and code still describe **Render Postgres**, **Railway** (legacy), and **in
 | Component | Official provider | Environment rule |
 | --- | --- | --- |
 | Payments | **Stripe Billing** (platform) + **Stripe Connect** (tenant merchants) | **Test/sandbox until production approval**; Shaun owns live activation |
-| Email (transactional) | **Resend** | Replaces SendGrid as official adapter target |
-| SMS | **Twilio** | **Sandbox / test** in non-prod; live send policy unchanged (queued worker, FS-13) |
+| Email (transactional) | **Resend** | **Email-first MVP** (Circle S 2026-10-22): booking, estimates, reminders, service updates, rebook follow-ups via `@fsm/comms` |
+| SMS | **Deferred** | **No Twilio/Bird** subscriptions, numbers, A2P/10DLC, or spend until post-MVP; `outboundSmsEnabled` stub only |
 | Booking + recurring service | **Renvani domain** | FS-21 / maintenance plans; Stripe for money movement only |
 
 ### 5. Intelligent execution
@@ -83,7 +83,7 @@ Credentials and billing stay with **Shaun**. Engineering documents env var **nam
 | 8 | **Langfuse** | Project + keys for worker/API AI paths |
 | 9 | **Stripe** | Platform + Connect; **test** keys for dev; **live** keys founder-only for prod |
 | 10 | **Resend** | Domain verification; API keys per env |
-| 11 | **Twilio** | Account; **sandbox** for dev/staging; prod number policy with Elena |
+| 11 | **Twilio / Bird** | **Deferred** — no account spend for MVP; SMS adapter slot reserved in `@fsm/comms` |
 | 12 | **OpenAI** | Org billing (existing); keys per env |
 
 ---
@@ -94,7 +94,8 @@ Credentials and billing stay with **Shaun**. Engineering documents env var **nam
 | --- | --- | --- | --- |
 | **PostgreSQL host** | ADR-FS-93, FS-93 runbook, `docs/env/README.md` → Render Postgres | **Neon** | STACK-01: connection strings, pool limits (FS-80), staging seed |
 | **Identity** | `apps/api/src/lib/tokens.ts`, JWT env in `@fsm/config`, FS-84 contract | **Clerk** | STACK-02: BFF/session bridge; phased cutover ADR addendum |
-| **Email** | `SENDGRID_*`, SendGrid adapter references | **Resend** | STACK-08: adapter swap in `apps/api/src/lib/email.ts` |
+| **Email** | `SENDGRID_*`, SendGrid adapter references | **Resend** via `@fsm/comms` channel interface | STACK-08 (Leo): Resend adapter + migrate worker templates; SendGrid interim until cutover |
+| **SMS** | Twilio live adapter | **Disabled stub** | `outboundSmsEnabled: false`; no live Twilio calls |
 | **Deploy docs** | `PRODUCTION-DEPLOYMENT.md`, Railway wording in `docs/env/README.md`, `AGENTS.md` § deployment | Vercel + Render + **Neon** | STACK-00 (this ADR) + doc sweep PR after acceptance |
 | **Observability** | `pino` only in places | **Sentry + PostHog** | STACK-04 |
 | **AI ops** | OpenAI usage logging partial | **Langfuse** | STACK-07 |
@@ -113,7 +114,7 @@ Credentials and billing stay with **Shaun**. Engineering documents env var **nam
 | **M2** | Neon staging + Render wired; Sam **cross-tenant CI** live | Sam / Sofia | STACK-03 |
 | **M3** | Clerk **dev** + **session `company_id`** on every DB connection | Noah | STACK-02 |
 | **M4** | RLS policies + Clerk staging cutover | Sam / Noah | STACK-10 |
-| **M5** | **Stripe Billing** (test); Resend; Twilio **sandbox** only | Aria / Leo | Shaun: **10DLC early** |
+| **M5** | **Stripe Billing** (test); **Resend email-first** comms layer | Aria / Leo | Twilio/A2P **deferred** (Circle S 2026-10-22) |
 | **M6** | Sentry, PostHog, Langfuse | Ezra / Marcus | Shaun keys |
 | **M7** | **Stripe Connect** + prod Billing/live (founder) — **after M5** unless PO 12-05 exception | Shaun + Grace | Elena escalation only |
 
