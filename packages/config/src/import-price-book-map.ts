@@ -17,30 +17,7 @@ export type ImportSourceSystemId =
   | "qbd"
   | "manual_csv";
 
-const MONEY_SANITIZE = /[^0-9.-]/g;
-
-export function normalizeImportMoney(value: string | null | undefined): string | null {
-  if (value === null || value === undefined) {
-    return null;
-  }
-
-  const trimmed = value.trim();
-  if (trimmed.length === 0) {
-    return null;
-  }
-
-  const cleaned = trimmed.replace(MONEY_SANITIZE, "");
-  if (cleaned.length === 0 || cleaned === "-" || cleaned === ".") {
-    return null;
-  }
-
-  const parsed = Number.parseFloat(cleaned);
-  if (!Number.isFinite(parsed)) {
-    return null;
-  }
-
-  return parsed.toFixed(2);
-}
+export { normalizeImportMoney } from "@fsm/import-normalize";
 
 export function mapVendorItemTypeToCategory(
   rawType: string | null | undefined,

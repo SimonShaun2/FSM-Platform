@@ -4,6 +4,7 @@ export const IMPORT_QUEUE_JOB_NAMES = {
   mapCsvColumns: "map-csv-columns",
   validateCsvRows: "validate-csv-rows",
   executeImport: "execute-import",
+  importChunkCommit: "import-chunk-commit",
   migrateFileBatch: "migrate-file-batch"
 } as const;
 

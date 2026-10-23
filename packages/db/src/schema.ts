@@ -218,6 +218,7 @@ export const importEntityTypeEnum = pgEnum("import_entity_type", [
   "price_book",
   "payments",
   "notes",
+  "communications",
 ]);
 
 export const importBundleStatusEnum = pgEnum("import_bundle_status", [
@@ -1277,11 +1278,19 @@ export const messageLogs = pgTable("message_logs", {
   deliveredAt: timestamp("delivered_at"),
   failedAt: timestamp("failed_at"),
   failureReason: text("failure_reason"),
+  sourceSystem: varchar("source_system", { length: 64 }),
+  sourceId: varchar("source_id", { length: 256 }),
+  importSessionId: uuid("import_session_id").references(() => importSessions.id),
   ...timestamps,
 }, (t) => ({
   companyIdx: index("message_logs_company_idx").on(t.companyId),
   customerIdx: index("message_logs_customer_idx").on(t.customerId),
   jobIdx: index("message_logs_job_idx").on(t.jobId),
+  importLineageIdx: uniqueIndex("message_logs_import_lineage_idx").on(
+    t.companyId,
+    t.sourceSystem,
+    t.sourceId,
+  ),
 }));
 
 // ─────────────────────────────────────────────
