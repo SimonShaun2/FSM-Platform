@@ -33,6 +33,9 @@ export function parseXlsxBufferToSheetRows(buffer: ArrayBuffer | Uint8Array): Xl
   }
 
   const sheet = workbook.Sheets[sheetName];
+  if (!sheet) {
+    throw new Error(`XLSX workbook missing sheet ${sheetName}`);
+  }
   const matrix = XLSX.utils.sheet_to_json<(string | number | boolean | Date | null)[]>(sheet, {
     header: 1,
     raw: false,
