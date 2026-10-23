@@ -5,7 +5,7 @@ import type { Job, Processor } from "bullmq";
 import Papa from "papaparse";
 import pino from "pino";
 
-import { mapCsvColumns } from "@fsm/ai";
+import { mapCsvColumns, recordImportAiObservation } from "@fsm/ai";
 import {
   buildCommunicationsColumnMapping,
   inferCommunicationsPresetFromHeaders
@@ -210,6 +210,31 @@ function normalizeDuplicateActions(value: unknown): Record<string, DuplicateActi
 
 function buildEmptyMapping(headers: string[]): ColumnMapping {
   return Object.fromEntries(headers.map((header) => [header, null]));
+}
+
+function countMappedColumns(mapping: ColumnMapping): number {
+  return Object.values(mapping).filter((value) => typeof value === "string" && value.length > 0).length;
+}
+
+async function mirrorImportAiMappingToLangfuse(input: {
+  companyId: string;
+  importSessionId: string;
+  entityType: string;
+  outcome: "succeeded" | "failed" | "fallback";
+  headerCount: number;
+  columnMapping: ColumnMapping;
+  errorMessage?: string;
+}): Promise<void> {
+  await recordImportAiObservation({
+    companyId: input.companyId,
+    importSessionId: input.importSessionId,
+    entityType: input.entityType,
+    outcome: input.outcome,
+    headerCount: input.headerCount,
+    mappedColumnCount: countMappedColumns(input.columnMapping),
+    occurredAt: new Date().toISOString(),
+    ...(input.errorMessage ? { errorMessage: input.errorMessage } : {})
+  });
 }
 
 function normalizeTextValue(value: string | null | undefined): string | null {
@@ -549,6 +574,7 @@ export async function handleMapCsvColumns(job: Job<Record<string, unknown>>): Pr
           ? buildPresetColumnMapping(parsedCsv.headers, sourcePresetId)
           : {};
     let columnMapping: ColumnMapping = { ...presetMapping };
+    const headerCount = parsedCsv.headers.length;
 
     try {
       const aiMapping = await mapCsvColumns(
@@ -557,6 +583,14 @@ export async function handleMapCsvColumns(job: Job<Record<string, unknown>>): Pr
         importSession.entityType
       );
       columnMapping = { ...aiMapping, ...presetMapping };
+      await mirrorImportAiMappingToLangfuse({
+        companyId,
+        importSessionId,
+        entityType: importSession.entityType,
+        outcome: "succeeded",
+        headerCount,
+        columnMapping
+      });
     } catch (error: unknown) {
       logger.error(
         {
@@ -569,6 +603,16 @@ export async function handleMapCsvColumns(job: Job<Record<string, unknown>>): Pr
       );
       columnMapping =
         Object.keys(presetMapping).length > 0 ? presetMapping : buildEmptyMapping(parsedCsv.headers);
+      const errorMessage = error instanceof Error ? error.message : "AI column mapping failed";
+      await mirrorImportAiMappingToLangfuse({
+        companyId,
+        importSessionId,
+        entityType: importSession.entityType,
+        outcome: Object.keys(presetMapping).length > 0 ? "fallback" : "failed",
+        headerCount,
+        columnMapping,
+        errorMessage
+      });
     }
 
     const priorInferences = normalizeAiInferences(importSession.aiInferences);
