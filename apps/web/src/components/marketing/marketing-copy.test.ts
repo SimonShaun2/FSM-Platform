@@ -1,6 +1,15 @@
 import { describe, expect, it } from "vitest";
 
-import { FEATURE_TILES, HERO_COPY, MARKETING_BRAND, MARKETING_META, WORKFLOW_STEPS } from "./marketing-copy";
+import {
+  FEATURE_TILES,
+  HERO_COPY,
+  HERO_STATS,
+  MARKETING_BRAND,
+  MARKETING_META,
+  MARKETING_VIEWPORTS,
+  PROBLEM_CARDS,
+  WORKFLOW_STEPS
+} from "./marketing-copy";
 
 describe("marketing-copy", () => {
   it("uses Renvani branding for getrenvani.com", () => {
@@ -8,10 +17,16 @@ describe("marketing-copy", () => {
     expect(MARKETING_BRAND.domain).toBe("getrenvani.com");
   });
 
-  it("includes hero and workflow content from marketing Figma", () => {
+  it("includes hero, problem, workflow, and feature content for Figma parity (TICKET-036b)", () => {
     expect(HERO_COPY.headline).toContain("revenue");
-    expect(WORKFLOW_STEPS).toHaveLength(5);
-    expect(FEATURE_TILES.length).toBeGreaterThanOrEqual(8);
+    expect(HERO_STATS).toHaveLength(3);
+    expect(PROBLEM_CARDS).toHaveLength(6);
+    expect(WORKFLOW_STEPS).toHaveLength(9);
+    expect(FEATURE_TILES).toHaveLength(16);
+  });
+
+  it("documents responsive evidence breakpoints", () => {
+    expect(MARKETING_VIEWPORTS).toEqual({ mobile: 390, tablet: 768, desktop: 1440 });
   });
 
   it("defines SEO metadata", () => {

@@ -19,12 +19,20 @@ export const HERO_COPY = {
   secondaryCta: "Book demo"
 } as const;
 
-export const LOGO_STRIP_COPY = {
-  label: "TRUSTED BY SERVICE TEAMS ACROSS NORTH AMERICA",
-  logos: ["Acme HVAC", "Riverside Plumbing", "Peak Electric", "Summit HVAC", "Metro Services"]
+/** Three social-proof metrics shown under hero CTAs (Figma / TICKET-036b). */
+export const HERO_STATS = [
+  { value: "$41K", label: "avg recoverable / month" },
+  { value: "10 min", label: "to your first insight" },
+  { value: "3×", label: "follow-up response lift" }
+] as const;
+
+export const PROBLEM_SECTION_COPY = {
+  eyebrow: "THE LEAK",
+  headline: "Every field-service business is bleeding revenue they can't see.",
+  subhead: "Your CRM only shows what you billed. It can't show the revenue you didn't."
 } as const;
 
-export const LEAK_CARDS = [
+export const PROBLEM_CARDS = [
   {
     amount: "$18.4K",
     title: "in dormant accounts",
@@ -42,8 +50,31 @@ export const LEAK_CARDS = [
     title: "in unpaid invoices",
     detail: "14 jobs done, money never collected.",
     progress: 70
+  },
+  {
+    amount: "$24K",
+    title: "in lapsed agreements",
+    detail: "Maintenance plans expired without renewal outreach.",
+    progress: 48
+  },
+  {
+    amount: "$8.2K",
+    title: "in underpriced jobs",
+    detail: "Price book gaps on repeat service work.",
+    progress: 35
+  },
+  {
+    amount: "$15K",
+    title: "in missed callbacks",
+    detail: "Inbound leads with no scheduled follow-up.",
+    progress: 62
   }
 ] as const;
+
+export const LOGO_STRIP_COPY = {
+  label: "TRUSTED BY SERVICE TEAMS ACROSS NORTH AMERICA",
+  logos: ["Acme HVAC", "Riverside Plumbing", "Peak Electric", "Summit HVAC", "Metro Services"]
+} as const;
 
 export const PILLARS = [
   {
@@ -58,7 +89,7 @@ export const PILLARS = [
     step: "02",
     title: "Recover",
     subtitle: "Automated playbooks",
-    body: "One-click campaigns for re-engagement, follow-ups, and collections. Personalized email and dispatching — done for you.",
+    body: "One-click campaigns for re-engagement, follow-ups, and collections. Personalized SMS, email, and dispatching — done for you.",
     stat: "8 min",
     statLabel: "to launch playbook"
   },
@@ -74,8 +105,12 @@ export const PILLARS = [
 
 export const WORKFLOW_STEPS = [
   { icon: "↑", title: "Upload data", detail: "CSV or live API" },
+  { icon: "⚡", title: "Connect stack", detail: "ST, HCP, QuickBooks" },
+  { icon: "☰", title: "Map fields", detail: "AI column match" },
   { icon: "◐", title: "AI scans", detail: "~3 minutes" },
+  { icon: "◎", title: "Review gaps", detail: "fix row errors" },
   { icon: "$", title: "Opportunities", detail: "ranked by value" },
+  { icon: "✦", title: "Pick playbook", detail: "pre-built campaigns" },
   { icon: "▶", title: "Run playbook", detail: "one click" },
   { icon: "✓", title: "Money in", detail: "tracked end-to-end" }
 ] as const;
@@ -88,8 +123,23 @@ export const FEATURE_TILES = [
   { title: "Revenue insights", description: "Live dashboards and weekly digests." },
   { title: "Playbook library", description: "20+ pre-built campaigns, fully customizable." },
   { title: "Integrations", description: "ServiceTitan, Housecall Pro, QuickBooks, Stripe." },
-  { title: "Permissions", description: "Role-based access for owners and crews." }
+  { title: "Permissions", description: "Role-based access for owners and crews." },
+  { title: "Estimates", description: "Send, track, and follow up on quotes in one flow." },
+  { title: "Invoicing", description: "Progress billing, reminders, and Stripe payouts." },
+  { title: "Service agreements", description: "Renewals, visits, and subscription billing." },
+  { title: "Online booking", description: "Branded scheduling links for your trade." },
+  { title: "Review requests", description: "Automated Google and Yelp review prompts." },
+  { title: "Price book", description: "Flat-rate tasks synced to estimates and jobs." },
+  { title: "Job costing", description: "Margin visibility on labor, parts, and drive time." },
+  { title: "Team messaging", description: "SMS and email threads tied to each customer." }
 ] as const;
+
+/** Canonical responsive widths for marketing QA evidence (390 / 768 / 1440). */
+export const MARKETING_VIEWPORTS = {
+  mobile: 390,
+  tablet: 768,
+  desktop: 1440
+} as const;
 
 export const FOOTER_COLUMNS = [
   {

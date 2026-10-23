@@ -5,11 +5,14 @@ import {
   FEATURE_TILES,
   FOOTER_COLUMNS,
   HERO_COPY,
-  LEAK_CARDS,
+  HERO_STATS,
   LOGO_STRIP_COPY,
   MARKETING_BRAND,
   MARKETING_NAV_LINKS,
+  MARKETING_VIEWPORTS,
   PILLARS,
+  PROBLEM_CARDS,
+  PROBLEM_SECTION_COPY,
   WORKFLOW_STEPS
 } from "./marketing-copy";
 
@@ -24,7 +27,10 @@ function SectionEyebrow({ children }: { children: string }) {
 
 export function MarketingLandingPage() {
   return (
-    <div className="bg-white text-slate-900">
+    <div
+      className="bg-white text-slate-900"
+      data-marketing-viewports={`${MARKETING_VIEWPORTS.mobile}/${MARKETING_VIEWPORTS.tablet}/${MARKETING_VIEWPORTS.desktop}`}
+    >
       <header className="sticky top-0 z-50 border-b border-slate-200/80 bg-white/95 backdrop-blur">
         <div className="mx-auto flex h-[72px] max-w-6xl items-center justify-between px-6 lg:px-10">
           <Link href="/" className="flex items-center gap-3 font-semibold">
@@ -73,6 +79,14 @@ export function MarketingLandingPage() {
                 {HERO_COPY.secondaryCta}
               </a>
             </div>
+            <dl className="mt-12 grid max-w-xl grid-cols-1 gap-6 border-t border-slate-200 pt-8 sm:grid-cols-3" aria-label="Social proof">
+              {HERO_STATS.map((stat) => (
+                <div key={stat.label}>
+                  <dt className="text-2xl font-semibold text-slate-950">{stat.value}</dt>
+                  <dd className="mt-1 text-sm text-slate-600">{stat.label}</dd>
+                </div>
+              ))}
+            </dl>
           </div>
           <AIRevenueWidget />
         </div>
@@ -89,30 +103,25 @@ export function MarketingLandingPage() {
         </div>
       </section>
 
-      <section id="product" className="py-20 lg:py-28">
+      <section id="product" className="bg-slate-50 py-20 lg:py-28">
         <div className="mx-auto max-w-6xl px-6 lg:px-10">
-          <SectionEyebrow>THE LEAK</SectionEyebrow>
+          <SectionEyebrow>{PROBLEM_SECTION_COPY.eyebrow}</SectionEyebrow>
           <h2 className="max-w-3xl text-3xl font-semibold leading-tight text-slate-950 sm:text-4xl lg:text-5xl">
-            Every field-service business is bleeding revenue they can&apos;t see.
+            {PROBLEM_SECTION_COPY.headline}
           </h2>
-          <p className="mt-4 max-w-xl text-lg text-slate-600">
-            Your CRM only shows what you billed. It can&apos;t show the revenue you didn&apos;t.
-          </p>
-          <div className="mt-12 space-y-4">
-            {LEAK_CARDS.map((card) => (
+          <p className="mt-4 max-w-xl text-lg text-slate-600">{PROBLEM_SECTION_COPY.subhead}</p>
+          <div className="mt-12 grid grid-cols-1 gap-4 md:grid-cols-2 xl:grid-cols-3">
+            {PROBLEM_CARDS.map((card) => (
               <article
                 key={card.title}
-                className="grid gap-4 rounded-2xl border border-slate-200 bg-white p-6 shadow-sm lg:grid-cols-[1fr_2fr] lg:items-center"
+                data-testid="problem-card"
+                className="rounded-2xl border border-slate-200 bg-white p-6 shadow-sm"
               >
-                <div>
-                  <p className="text-3xl font-semibold text-slate-950">{card.amount}</p>
-                  <p className="text-lg text-slate-700">{card.title}</p>
-                </div>
-                <div>
-                  <p className="text-sm text-slate-600">{card.detail}</p>
-                  <div className="mt-3 h-1.5 w-full max-w-xs rounded-full bg-slate-100">
-                    <div className="h-full rounded-full bg-orange-500" style={{ width: `${card.progress}%` }} />
-                  </div>
+                <p className="text-3xl font-semibold text-slate-950">{card.amount}</p>
+                <p className="mt-1 text-lg text-slate-700">{card.title}</p>
+                <p className="mt-3 text-sm text-slate-600">{card.detail}</p>
+                <div className="mt-4 h-1.5 w-full rounded-full bg-slate-100">
+                  <div className="h-full rounded-full bg-orange-500" style={{ width: `${card.progress}%` }} />
                 </div>
               </article>
             ))}
@@ -195,9 +204,16 @@ export function MarketingLandingPage() {
         <div className="mx-auto max-w-6xl px-6 lg:px-10">
           <SectionEyebrow>THE PLAYBOOK</SectionEyebrow>
           <h2 className="text-3xl font-semibold sm:text-4xl">From CSV to cash in under 10 minutes.</h2>
-          <div className="mt-12 grid gap-4 sm:grid-cols-2 lg:grid-cols-5">
+          <div
+            className="mt-12 flex gap-4 overflow-x-auto pb-2 snap-x snap-mandatory [-ms-overflow-style:none] [scrollbar-width:none] md:grid md:grid-cols-3 md:overflow-visible md:pb-0 lg:grid-cols-9 [&::-webkit-scrollbar]:hidden"
+            data-testid="workflow-strip"
+          >
             {WORKFLOW_STEPS.map((step, index) => (
-              <article key={step.title} className="relative rounded-2xl border border-white/10 bg-white/5 p-5">
+              <article
+                key={step.title}
+                data-testid="workflow-step"
+                className="relative min-w-[11.5rem] shrink-0 snap-start rounded-2xl border border-white/10 bg-white/5 p-5 md:min-w-0"
+              >
                 <div className="mb-4 flex h-10 w-10 items-center justify-center rounded-xl bg-orange-500/20 text-lg text-orange-200">
                   {step.icon}
                 </div>
@@ -217,9 +233,16 @@ export function MarketingLandingPage() {
           <SectionEyebrow>EVERY DETAIL</SectionEyebrow>
           <h2 className="text-3xl font-semibold text-slate-950 sm:text-4xl">The full toolbox.</h2>
           <p className="mt-3 text-slate-600">Designed for owners, dispatchers, and techs.</p>
-          <div className="mt-12 grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
+          <div
+            className="mt-12 grid grid-cols-2 gap-4 md:grid-cols-3 xl:grid-cols-4"
+            data-testid="features-grid"
+          >
             {FEATURE_TILES.map((feature) => (
-              <article key={feature.title} className="rounded-2xl border border-slate-200 bg-slate-50 p-6">
+              <article
+                key={feature.title}
+                data-testid="feature-tile"
+                className="rounded-2xl border border-slate-200 bg-slate-50 p-6"
+              >
                 <div className="mb-4 h-9 w-9 rounded-xl bg-slate-900/90" aria-hidden />
                 <h3 className="font-semibold text-slate-900">{feature.title}</h3>
                 <p className="mt-2 text-sm text-slate-600">{feature.description}</p>
