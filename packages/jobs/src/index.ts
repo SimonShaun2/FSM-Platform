@@ -17,6 +17,7 @@ export {
 } from "./migrate-file-batch-retry.js";
 export { listDeadLetterJobs } from "./dead-letter-visibility.js";
 export { enqueueImportChunkCommitJob } from "./enqueue-import-chunk-commit.js";
+export { enqueueQboSyncPushJob, enqueueQboSyncPullJob } from "./enqueue-qbo-sync.js";
 export { logMigrateFileBatchTrace } from "./migrate-file-batch-trace-log.js";
 export type { LogMigrateFileBatchTraceInput } from "./migrate-file-batch-trace-log.js";
 export { redisConnection } from "./connection.js";

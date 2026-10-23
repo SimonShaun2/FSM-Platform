@@ -239,6 +239,13 @@
       "when": 1777705000000,
       "tag": "0033_fs_migrate_notes_import",
       "breakpoints": true
+    },
+    {
+      "idx": 34,
+      "version": "7",
+      "when": 1777706000000,
+      "tag": "0034_fs133_qbo_ongoing_sync",
+      "breakpoints": true
     }
   ]
 }
