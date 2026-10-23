@@ -1998,6 +1998,7 @@ type MockTable =
   | typeof assetsTable
   | typeof jobsTable
   | typeof importSessionsTable
+  | typeof importBundlesTable
   | typeof dataExportSessionsTable
   | typeof estimatesTable
   | typeof estimateItemsTable

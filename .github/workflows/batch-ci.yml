@@ -52,7 +52,7 @@ jobs:
       - name: Install
         run: corepack enable && pnpm install --frozen-lockfile
       - name: Build packages for CI scripts
-        run: pnpm --filter @fsm/config --filter @fsm/db build
+        run: pnpm --filter "@fsm/config..." --filter "@fsm/db..." build
       - name: Neon per-PR branch gate (STACK-10)
         env:
           NEON_CI_DATABASE_URL: ${{ secrets.NEON_CI_STAGING_DATABASE_URL }}
