@@ -302,6 +302,9 @@ importers:
       '@fsm/db':
         specifier: workspace:*
         version: link:../../packages/db
+      '@fsm/import-engine':
+        specifier: workspace:*
+        version: link:../../packages/import-engine
       '@fsm/import-normalize':
         specifier: workspace:*
         version: link:../../packages/import-normalize
@@ -342,12 +345,18 @@ importers:
       vitest:
         specifier: ^3.2.4
         version: 3.2.4(@types/node@24.12.2)(happy-dom@21.0.4)(jiti@1.21.7)(tsx@4.21.0)
+      xlsx:
+        specifier: ^0.18.5
+        version: 0.18.5
 
   packages/ai:
     dependencies:
       '@fsm/config':
         specifier: workspace:*
         version: link:../config
+      '@fsm/types':
+        specifier: workspace:*
+        version: link:../types
       pino:
         specifier: ^9.4.0
         version: 9.14.0
@@ -385,6 +394,9 @@ importers:
       '@fsm/import-normalize':
         specifier: workspace:*
         version: link:../import-normalize
+      '@fsm/types':
+        specifier: workspace:*
+        version: link:../types
       zod:
         specifier: ^3.25.76
         version: 3.25.76
@@ -433,6 +445,25 @@ importers:
         specifier: ^3.2.4
         version: 3.2.4(@types/node@24.12.2)(happy-dom@21.0.4)(jiti@1.21.7)(tsx@4.21.0)
 
+  packages/import-engine:
+    dependencies:
+      '@fsm/types':
+        specifier: workspace:*
+        version: link:../types
+      xlsx:
+        specifier: ^0.18.5
+        version: 0.18.5
+    devDependencies:
+      '@types/node':
+        specifier: ^24.3.0
+        version: 24.12.2
+      typescript:
+        specifier: ^5.9.2
+        version: 5.9.3
+      vitest:
+        specifier: ^3.2.4
+        version: 3.2.4(@types/node@24.12.2)(happy-dom@21.0.4)(jiti@1.21.7)(tsx@4.21.0)
+
   packages/import-normalize:
     dependencies:
       '@fsm/types':
@@ -466,6 +497,9 @@ importers:
       ioredis:
         specifier: ^5.4.0
         version: 5.10.1
+      pino:
+        specifier: ^9.4.0
+        version: 9.14.0
       zod:
         specifier: ^3.25.76
         version: 3.25.76

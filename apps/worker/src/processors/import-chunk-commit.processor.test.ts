@@ -1,4 +1,5 @@
 import type { Job } from "bullmq";
+import * as XLSX from "xlsx";
 import { beforeAll, beforeEach, describe, expect, it, vi } from "vitest";
 
 import { buildImportChunkIdempotencyKey } from "@fsm/jobs";
@@ -176,5 +177,53 @@ describe("import-chunk-commit.processor", () => {
     const testState = fakeDb.getTestState();
     expect(testState.customers).toHaveLength(1);
     expect(testState.customers[0]?.firstName).toBe("Ada");
+  });
+
+  it("commits customer rows from an XLSX upload", async () => {
+    const workbook = XLSX.utils.book_new();
+    const sheet = XLSX.utils.aoa_to_sheet([
+      ["vendor_id", "first_name", "last_name", "email"],
+      ["cust-xlsx", "Linus", "Torvalds", "linus@example.com"],
+    ]);
+    XLSX.utils.book_append_sheet(workbook, sheet, "Customers");
+    const xlsxBuffer = Buffer.from(
+      XLSX.write(workbook, { type: "array", bookType: "xlsx" }) as ArrayBuffer,
+    );
+
+    downloadFileMock.mockResolvedValue(xlsxBuffer);
+    fakeDb.seedImportSession({
+      id: importSessionId,
+      companyId,
+      entityType: "customers",
+      status: "importing",
+      fileName: "customers.xlsx",
+      fileUrl: "imports/customers.xlsx",
+      columnMappings: {
+        vendor_id: "sourceId",
+        first_name: "firstName",
+        last_name: "lastName",
+        email: "email",
+      },
+    });
+
+    const idempotencyKey = buildImportChunkIdempotencyKey(importSessionId, "customers", 0);
+    await importChunkCommitProcessor.handleImportChunkCommit(
+      createJob({
+        companyId,
+        importSessionId,
+        sourceSystem: "service_fusion",
+        entityType: "customers",
+        chunkIndex: 0,
+        chunksTotal: 1,
+        cursor: { rowOffset: 0 },
+        idempotencyKey,
+        rowWindow: { start: 0, end: 1 },
+      }).job,
+    );
+
+    const testState = fakeDb.getTestState();
+    expect(testState.customers).toHaveLength(1);
+    expect(testState.customers[0]?.sourceId).toBe("cust-xlsx");
+    expect(testState.customers[0]?.firstName).toBe("Linus");
   });
 });

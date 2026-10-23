@@ -62,14 +62,20 @@ export function importSourceSystemFromPreset(presetId: ImportVendorPresetId): Im
     case "jobber_price_book":
       return "jobber";
     case "housecall_pro":
+    case "housecall_pro_jobs":
       return "housecall_pro";
     case "service_titan":
+    case "service_titan_locations":
+    case "service_titan_jobs":
       return "service_titan";
     case "quickbooks_customers":
     case "quickbooks_items":
     case "quickbooks_invoices":
+    case "quickbooks_payments":
       return "qbo";
+    case "quickbooks_desktop_customers":
     case "quickbooks_desktop_items":
+    case "quickbooks_desktop_invoices":
       return "qbd";
     case "service_fusion_price_book":
       return "service_fusion";

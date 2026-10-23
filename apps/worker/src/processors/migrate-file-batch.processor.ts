@@ -5,9 +5,12 @@ import {
   assertImportBundleObjectKeyBelongsToTenant,
   buildImportBundleObjectKey
 } from "@fsm/config/import-bundle-storage";
+import { logMigrateFileBatchTrace } from "@fsm/jobs";
 import {
   IMPORT_QUEUE_JOB_NAMES,
   MigrateFileBatchJobDataSchema,
+  buildMigrateFileBatchJobId,
+  buildMigrateFileBatchTraceObjects,
   type MigrateFileBatchJobData
 } from "@fsm/types";
 
@@ -17,25 +20,28 @@ const logger = pino({
 
 export async function handleMigrateFileBatch(job: Job<MigrateFileBatchJobData>): Promise<void> {
   const payload = MigrateFileBatchJobDataSchema.parse(job.data);
+  const bullJobId = job.id ?? buildMigrateFileBatchJobId(payload.importSessionId, payload.batchIndex);
+  const resolveR2Key = (relativePath: string) =>
+    buildImportBundleObjectKey(payload.companyId, payload.importBundleId, relativePath);
+  const traceObjects = buildMigrateFileBatchTraceObjects(payload.objects, resolveR2Key);
 
-  for (const object of payload.objects) {
-    const objectKey =
-      object.r2Key ??
-      buildImportBundleObjectKey(payload.companyId, payload.importBundleId, object.relativePath);
-    assertImportBundleObjectKeyBelongsToTenant(objectKey, payload.companyId, payload.importBundleId);
+  for (const object of traceObjects) {
+    assertImportBundleObjectKeyBelongsToTenant(object.r2Key, payload.companyId, payload.importBundleId);
   }
 
-  logger.info(
+  logMigrateFileBatchTrace(
     {
+      phase: "worker_start",
       companyId: payload.companyId,
       importSessionId: payload.importSessionId,
       importBundleId: payload.importBundleId,
+      bullJobId,
       batchIndex: payload.batchIndex,
       batchesTotal: payload.batchesTotal,
-      objectCount: payload.objects.length,
-      idempotencyKey: payload.idempotencyKey
+      idempotencyKey: payload.idempotencyKey,
+      objects: traceObjects
     },
-    "migrate-file-batch stub processed (checkpoint reserved for Diego ingest)"
+    "FS-MIGRATE migrate-file-batch worker started"
   );
 
   await job.updateProgress({
@@ -44,6 +50,21 @@ export async function handleMigrateFileBatch(job: Job<MigrateFileBatchJobData>):
     objectsAcknowledged: payload.objects.length,
     status: "stub_complete"
   });
+
+  logMigrateFileBatchTrace(
+    {
+      phase: "worker_complete",
+      companyId: payload.companyId,
+      importSessionId: payload.importSessionId,
+      importBundleId: payload.importBundleId,
+      bullJobId,
+      batchIndex: payload.batchIndex,
+      batchesTotal: payload.batchesTotal,
+      idempotencyKey: payload.idempotencyKey,
+      objects: traceObjects
+    },
+    "FS-MIGRATE migrate-file-batch worker completed (checkpoint reserved for Diego ingest)"
+  );
 }
 
 export function createMigrateFileBatchProcessor(): Processor<MigrateFileBatchJobData, void, string> {
