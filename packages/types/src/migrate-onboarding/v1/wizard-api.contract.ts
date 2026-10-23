@@ -1,7 +1,4 @@
-import {
-  confirmImportFileLinkDecisionsBodySchema,
-  importFileLinkPreviewResponseSchema
-} from "../../fs-migrate/import-file-link.js";
+import { confirmImportFileLinkDecisionsBodySchema } from "../../fs-migrate/import-file-link.js";
 import {
   applyMigrateDedupeDecisionsBodySchema,
   createMigrateOnboardingSessionBodySchema,
@@ -14,6 +11,7 @@ import {
   MIGRATE_ONBOARDING_CONTRACT_ID,
   setMigrateOnboardingSourceBodySchema
 } from "./schemas.js";
+import { migrateOnboardingIngestStatusResponseSchema } from "./ingest-status.schemas.js";
 
 export { MIGRATE_ONBOARDING_CONTRACT_ID };
 
@@ -73,23 +71,23 @@ export const MIGRATE_ONBOARDING_WIZARD_API_ROUTES: readonly MigrateOnboardingWiz
   },
   {
     method: "POST",
+    path: "/api/v1/migrate/onboarding/sessions/:bundleId/acknowledge-preview",
+    responseSchemaId: "migrateOnboardingBundle"
+  },
+  {
+    method: "POST",
     path: "/api/v1/migrate/onboarding/sessions/:bundleId/file-link/run",
-    responseSchemaId: "importFileLinkPreviewResponse"
+    responseSchemaId: "migrateOnboardingBundle"
   },
   {
     method: "GET",
     path: "/api/v1/migrate/onboarding/sessions/:bundleId/file-link/preview",
-    responseSchemaId: "importFileLinkPreviewResponse"
+    responseSchemaId: "migrateOnboardingBundle"
   },
   {
     method: "PATCH",
     path: "/api/v1/migrate/onboarding/sessions/:bundleId/file-link/decisions",
     requestBodySchemaId: "confirmImportFileLinkDecisionsBody",
-    responseSchemaId: "importFileLinkPreviewResponse"
-  },
-  {
-    method: "POST",
-    path: "/api/v1/migrate/onboarding/sessions/:bundleId/acknowledge-preview",
     responseSchemaId: "migrateOnboardingBundle"
   },
   {
@@ -101,6 +99,11 @@ export const MIGRATE_ONBOARDING_WIZARD_API_ROUTES: readonly MigrateOnboardingWiz
     method: "GET",
     path: "/api/v1/migrate/onboarding/sessions/:bundleId/relational-preview",
     responseSchemaId: "migrateRelationalPreviewResponse"
+  },
+  {
+    method: "GET",
+    path: "/api/v1/migrate/onboarding/sessions/:bundleId/ingest-status",
+    responseSchemaId: "migrateOnboardingIngestStatusResponse"
   },
   {
     method: "PATCH",
@@ -129,5 +132,5 @@ export const migrateOnboardingWizardResponseSchemas = {
   migrateDedupePreviewResponse: migrateDedupePreviewResponseSchema,
   migrateRelationalPreviewResponse: migrateRelationalPreviewResponseSchema,
   migrateOnboardingCommitResponse: migrateOnboardingCommitResponseSchema,
-  importFileLinkPreviewResponse: importFileLinkPreviewResponseSchema
+  migrateOnboardingIngestStatusResponse: migrateOnboardingIngestStatusResponseSchema
 } as const;
