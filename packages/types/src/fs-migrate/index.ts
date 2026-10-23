@@ -9,3 +9,4 @@ export * from "./migrate-file-batch-progress.js";
 export * from "./migrate-file-batch-operator.js";
 export * from "./migrate-file-batch-trace.js";
 export * from "./import-file-link.js";
+export * from "./qbd-desktop-import.contract.js";
