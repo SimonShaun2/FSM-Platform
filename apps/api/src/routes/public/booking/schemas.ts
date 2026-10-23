@@ -17,7 +17,11 @@ const errorResponseSchema = {
   properties: {
     error: { type: "string" },
     message: { type: "string" },
-    requestId: { type: "string" }
+    requestId: { type: "string" },
+    fields: {
+      type: "object",
+      additionalProperties: { type: "string" }
+    }
   }
 } as const;
 
@@ -42,6 +46,12 @@ export const PublicHoldBookingSlotSchema = z.object({
   scheduledStart: z.string().datetime({ offset: true }),
   scheduledEnd: z.string().datetime({ offset: true })
 }).strict();
+
+export const PublicInspectHoldTokenSchema = z
+  .object({
+    holdToken: z.string().trim().min(1)
+  })
+  .strict();
 
 export const ZipCheckSchema = z.object({
   zip: z.string().trim().min(1)
@@ -116,6 +126,11 @@ export const submitBookingValidation = withZodValidation({
 export const publicHoldBookingSlotValidation = withZodValidation({
   params: BookingConfirmationParamsSchema,
   body: PublicHoldBookingSlotSchema
+});
+
+export const publicInspectHoldTokenValidation = withZodValidation({
+  params: BookingSlugParamsSchema,
+  body: PublicInspectHoldTokenSchema
 });
 
 export const publicBookingRouteSchema = {
@@ -296,6 +311,35 @@ export const bookingConfirmationRouteSchema = {
       }
     },
     404: errorResponseSchema
+  }
+} as const;
+
+export const publicInspectHoldTokenRouteSchema = {
+  tags: ["public-booking"],
+  response: {
+    200: {
+      type: "object",
+      additionalProperties: false,
+      required: ["inspection"],
+      properties: {
+        inspection: {
+          type: "object",
+          additionalProperties: false,
+          required: ["status", "referenceNumber", "bookingRequestId", "companyId", "expiresAt", "slugMatches"],
+          properties: {
+            status: { type: "string", enum: ["valid", "expired", "invalid"] },
+            referenceNumber: { anyOf: [{ type: "string" }, { type: "null" }] },
+            bookingRequestId: { anyOf: [{ type: "string", format: "uuid" }, { type: "null" }] },
+            companyId: { anyOf: [{ type: "string", format: "uuid" }, { type: "null" }] },
+            expiresAt: { anyOf: [{ type: "string", format: "date-time" }, { type: "null" }] },
+            slugMatches: { type: "boolean" }
+          }
+        }
+      }
+    },
+    400: errorResponseSchema,
+    404: errorResponseSchema,
+    429: errorResponseSchema
   }
 } as const;
 
