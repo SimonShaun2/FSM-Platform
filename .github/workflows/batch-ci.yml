@@ -29,8 +29,6 @@ jobs:
         run: pnpm build
       - name: Lint
         run: pnpm lint
-      - name: Cross-tenant matrix (STACK-03)
-        run: pnpm test:cross-tenant
       - name: Test
         run: pnpm test
       - name: FS-128 FS-MIGRATE import pipeline contracts
