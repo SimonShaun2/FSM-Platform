@@ -5,6 +5,10 @@ import { MigratePhotoLinkPreviewClient } from "@/src/components/migrate-photo/Mi
 import { readServerAuthSession } from "@/src/lib/auth";
 import { getDefaultRouteForRole } from "@/src/lib/route-access";
 
+export const metadata = {
+  title: "Photo import link preview"
+};
+
 interface PhotosImportPageProps {
   searchParams: Promise<{ bundleId?: string }>;
 }
