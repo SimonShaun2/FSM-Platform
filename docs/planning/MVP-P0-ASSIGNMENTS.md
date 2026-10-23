@@ -18,30 +18,35 @@
 | FS-72 | Repeat dry-run | [#91](https://github.com/SimonShaun2/Renvani/pull/91) |
 | Dispatch SSE | Serve | **#86 merged** → `9313130` on `dev` |
 | Planning | Shortest path + epic | **#93 merged** → `c5fb3de` |
-| **STACK** | Official platform (Neon, Clerk, observability) | ADR PR (this cycle) |
+| **STACK** | Official operational stack | [#97](https://github.com/SimonShaun2/Renvani/pull/97) |
 
 ---
 
-## Official stack — implementation gaps (ADR-FS-STACK)
+## Official stack — migration tickets (prioritized for **2026-12-05 CT**)
 
-**Authority:** Shaun post–#93/#94 · **Docs:** `docs/adr/ADR-FS-STACK-renvani-official-platform.md`  
-**Accounts:** Shaun only (see ADR table); devs wire env **names** after credentials exist.
+**Canonical:** [`docs/OFFICIAL-OPERATIONAL-STACK.md`](../OFFICIAL-OPERATIONAL-STACK.md) · **Gaps:** [`docs/platform/OFFICIAL-STACK-GAP-ANALYSIS.md`](../platform/OFFICIAL-STACK-GAP-ANALYSIS.md)  
+**Accounts:** Shaun creates (gap doc § accounts); agents wire env names only.  
+**FS-MIGRATE M1 (#92):** **not blocked** — ship presets on existing `DATABASE_URL`; Neon/Clerk run **in parallel**.
 
-| ID | Dev | Workstream | Deliverable | Branch |
+| Priority | ID | Dev | Deliverable | Branch |
 | --- | --- | --- | --- | --- |
-| **STACK-00** | **Ezra** | Docs | Reconcile `PRODUCTION-DEPLOYMENT.md`, `docs/env/README.md`, FS-93 runbook pointers after ADR **Accepted** | `cursor/stack-doc-reconcile-1f27` |
-| **STACK-01** | **Iris** | Neon | Dev/staging `DATABASE_URL` contract; pool notes (FS-80); no Render Postgres assumptions in new code | `cursor/stack-neon-env-1f27` |
-| **STACK-02** | **Noah** | Clerk | Staff auth integration; `companyId` mapping; feature-flag parallel with JWT | `cursor/stack-clerk-auth-1f27` |
-| **STACK-03** | **Sofia** | Security | Automated tenant/authz tests for Clerk + Neon staging (extends FS-92) | with STACK-02 |
-| **STACK-04** | **Ezra** | Ops | Sentry + PostHog SDK wiring (api, web, worker) | `cursor/stack-observability-1f27` |
-| **STACK-05** | **Hana** | Ops | Queue monitoring dashboards/alerts; DLQ visibility (FS-MIGRATE platform P0) | extends `cursor/fs-migrate-queue-hardening-1f27` |
-| **STACK-06** | **Diego** | R2 | Env-scoped bucket policy doc + attachment path tests (Shaun creates buckets) | with file batch PR |
-| **STACK-07** | **Marcus** | AI ops | Langfuse traces for `@fsm/ai` + import/agent eval hooks | `cursor/stack-langfuse-eval-1f27` |
-| **STACK-08** | **Leo** | Revenue | Resend adapter (replace SendGrid); Twilio sandbox env validation | `cursor/stack-resend-adapter-1f27` |
-| **STACK-09** | **Shaun** | Stripe | **Live** Connect + platform keys in prod only; test keys for dev/staging | Founder gate — no agent |
-| — | **Elena** | PO | Accept stack ADR; sequencing vs FS-MIGRATE M1 | ADR sign-off |
+| **P0** | **STACK-11** | **Ezra** | Staging env matrix (Vercel preview + Render staging + Neon branch); boundary doc | `cursor/stack-staging-env-1f27` |
+| **P0** | **STACK-12** | **Iris** | Render deploy/runbook reconcile (API, worker, webhook, Key Value `noeviction`) | `cursor/stack-render-deploy-1f27` |
+| **P0** | **STACK-01** | **Iris** | Neon dev + staging connection contract; FS-80 pool limits (**no M1 gate**) | `cursor/stack-neon-env-1f27` |
+| **P0** | **STACK-02** | **Noah** | Clerk dev integration; org → `companyId`; JWT parallel behind flag | `cursor/stack-clerk-auth-1f27` |
+| **P0** | **STACK-03** | **Sofia** | Automated security tests: cross-tenant + Clerk session matrix | with STACK-02 |
+| **P0** | **STACK-10** | **Sam** | PostgreSQL **RLS** ADR + policy design (tenant via `company_id`); migration slot after Neon staging | `cursor/stack-rls-design-1f27` |
+| **P0** | **STACK-05** | **Hana** | BullMQ queue monitoring + DLQ (align FS-MIGRATE platform P0) | `cursor/fs-migrate-queue-hardening-1f27` |
+| **P0** | **STACK-08** | **Leo** | Resend adapter; Twilio **sandbox** env validation | `cursor/stack-resend-adapter-1f27` |
+| **P1** | **STACK-04** | **Ezra** | Sentry + PostHog SDK (api, web, worker) | `cursor/stack-observability-1f27` |
+| **P1** | **STACK-07** | **Marcus** | Langfuse + agent/import eval hooks | `cursor/stack-langfuse-eval-1f27` |
+| **P1** | **STACK-06** | **Diego** | R2 per-env buckets (Shaun creates); FS-85 paths | with file batch PR |
+| **P1** | **STACK-13** | **Aria** | Stripe **Billing** vs Connect boundary doc (FS-94 gate) | `cursor/stack-stripe-billing-scope-1f27` |
+| **P1** | **STACK-00** | **Ezra** | Post-accept doc sweep: `AGENTS.md`, FS-93, `PRODUCTION-DEPLOYMENT.md` | `cursor/stack-doc-reconcile-1f27` |
+| — | **STACK-09** | **Shaun** | Stripe test/sandbox now; **live** Connect + Billing prod activation | Founder only |
+| — | **Elena** | PO | Accept stack PR #97; confirm P0 fits **12-05** | Sign-off |
 
-*Grace:* stack **M0** merges with ADR PR; **M1–M4** parallel to FS-MIGRATE after Shaun provisions Neon dev + Clerk dev.
+*Grace:* **#92 M1** merges on its own train; stack **P0** in parallel — no rebase fights with FS-MIGRATE branches.
 
 ---
 
@@ -112,7 +117,7 @@
 | [#88](https://github.com/SimonShaun2/Renvani/pull/88)–[#91](https://github.com/SimonShaun2/Renvani/pull/91) | Triple sign → `batch-ci` |
 | [#92](https://github.com/SimonShaun2/Renvani/pull/92) | Preset **catalog** for generic engine @ **`6268e44`** (re-sign after dev merge) |
 | [#95](https://github.com/SimonShaun2/Renvani/pull/95)–[#96](https://github.com/SimonShaun2/Renvani/pull/96) | ADR Accepted + 0026 lineage |
-| Stack ADR | Open PR this cycle | Neon / Clerk / observability |
+| [#97](https://github.com/SimonShaun2/Renvani/pull/97) | Official operational stack + gap analysis |
 
 ---
 

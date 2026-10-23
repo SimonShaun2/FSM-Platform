@@ -6,7 +6,8 @@
 **Authority:** Shaun Simon (post–#93/#94 merge on `dev`)  
 **Base SHA:** `5e62102b33cb6e240fd072c565f8f9391caeb012` (`dev` post-#93/#94)  
 **Supersedes (partial):** [ADR-FS-93](ADR-FS-93-managed-platform-boundaries.md) — **PostgreSQL host** (Render Postgres → **Neon**) and **identity** (in-repo JWT → **Clerk**). Render compute, Vercel web, R2, and BullMQ on Render Key Value **remain** unless a future ADR changes them.  
-**Companion:** [RENVANI-OFFICIAL-STACK.md](../platform/RENVANI-OFFICIAL-STACK.md) (operator quick reference)
+**Canonical (founder verbatim):** [OFFICIAL-OPERATIONAL-STACK.md](../OFFICIAL-OPERATIONAL-STACK.md)  
+**Gap analysis:** [OFFICIAL-STACK-GAP-ANALYSIS.md](../platform/OFFICIAL-STACK-GAP-ANALYSIS.md)
 
 ---
 
@@ -32,7 +33,7 @@ Docs and code still describe **Render Postgres**, **Railway** (legacy), and **in
 | --- | --- |
 | Identity | **Clerk** (staff sign-in; replaces long-term reliance on in-repo JWT for product auth) |
 | Tenant authorization | **Renvani app layer** — `companyId` from Clerk org/membership mapping; roles unchanged in domain model |
-| Data isolation | **PostgreSQL** tenant predicates on every query (Neon does not replace app-layer checks) |
+| Data isolation | **PostgreSQL RLS** + app-layer `companyId` predicates (RLS does not replace service-layer checks) |
 | Automated security tests | **CI + Sam matrix** — extend FS-92 / FS-85 patterns for Clerk sessions and Neon-backed staging |
 
 ### 3. Operations
