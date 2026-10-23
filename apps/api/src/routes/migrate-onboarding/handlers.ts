@@ -1,0 +1,137 @@
+import type { FastifyReply, FastifyRequest } from "fastify";
+
+import type {
+  ApplyMigrateDedupeDecisionsBody,
+  CreateMigrateOnboardingSessionBody,
+  LinkMigrateOnboardingFilesBody,
+  MigrateSourceSystemId,
+  SetMigrateOnboardingSourceBody
+} from "@fsm/types";
+
+import {
+  acknowledgeMigrateOnboardingPreview,
+  applyMigrateDedupeDecisions,
+  commitMigrateOnboardingBundle,
+  confirmMigrateOnboardingMappings,
+  createMigrateOnboardingSession,
+  getActiveMigrateOnboardingBundle,
+  getMigrateDedupePreview,
+  getMigrateOnboardingBundle,
+  linkMigrateOnboardingFiles,
+  listMigrateOnboardingSources,
+  setMigrateOnboardingSource
+} from "../../services/migrate-onboarding.service.js";
+
+export async function listMigrateOnboardingSourcesHandler(
+  _request: FastifyRequest,
+  reply: FastifyReply
+): Promise<FastifyReply> {
+  return reply.send({ sources: listMigrateOnboardingSources() });
+}
+
+export async function createMigrateOnboardingSessionHandler(
+  request: FastifyRequest,
+  reply: FastifyReply
+): Promise<FastifyReply> {
+  const body = request.body as CreateMigrateOnboardingSessionBody;
+  const bundle = await createMigrateOnboardingSession(
+    request.company.id,
+    request.user.id,
+    body.resumeActive ?? false
+  );
+  return reply.code(201).send(bundle);
+}
+
+export async function getActiveMigrateOnboardingSessionHandler(
+  request: FastifyRequest,
+  reply: FastifyReply
+): Promise<FastifyReply> {
+  const bundle = await getActiveMigrateOnboardingBundle(request.company.id);
+  if (!bundle) {
+    return reply.code(404).send({
+      error: "NOT_FOUND",
+      message: "No active onboarding session"
+    });
+  }
+  return reply.send(bundle);
+}
+
+export async function getMigrateOnboardingBundleHandler(
+  request: FastifyRequest,
+  reply: FastifyReply
+): Promise<FastifyReply> {
+  const { bundleId } = request.params as { bundleId: string };
+  const bundle = await getMigrateOnboardingBundle(request.company.id, bundleId);
+  return reply.send(bundle);
+}
+
+export async function setMigrateOnboardingSourceHandler(
+  request: FastifyRequest,
+  reply: FastifyReply
+): Promise<FastifyReply> {
+  const { bundleId } = request.params as { bundleId: string };
+  const body = request.body as SetMigrateOnboardingSourceBody;
+  const bundle = await setMigrateOnboardingSource(
+    request.company.id,
+    request.user.id,
+    bundleId,
+    body.sourceSystem as MigrateSourceSystemId
+  );
+  return reply.send(bundle);
+}
+
+export async function linkMigrateOnboardingFilesHandler(
+  request: FastifyRequest,
+  reply: FastifyReply
+): Promise<FastifyReply> {
+  const { bundleId } = request.params as { bundleId: string };
+  const body = request.body as LinkMigrateOnboardingFilesBody;
+  const bundle = await linkMigrateOnboardingFiles(request.company.id, request.user.id, bundleId, body);
+  return reply.send(bundle);
+}
+
+export async function confirmMigrateOnboardingMappingsHandler(
+  request: FastifyRequest,
+  reply: FastifyReply
+): Promise<FastifyReply> {
+  const { bundleId } = request.params as { bundleId: string };
+  const bundle = await confirmMigrateOnboardingMappings(request.company.id, request.user.id, bundleId);
+  return reply.send(bundle);
+}
+
+export async function acknowledgeMigrateOnboardingPreviewHandler(
+  request: FastifyRequest,
+  reply: FastifyReply
+): Promise<FastifyReply> {
+  const { bundleId } = request.params as { bundleId: string };
+  const bundle = await acknowledgeMigrateOnboardingPreview(request.company.id, request.user.id, bundleId);
+  return reply.send(bundle);
+}
+
+export async function getMigrateDedupePreviewHandler(
+  request: FastifyRequest,
+  reply: FastifyReply
+): Promise<FastifyReply> {
+  const { bundleId } = request.params as { bundleId: string };
+  const preview = await getMigrateDedupePreview(request.company.id, bundleId);
+  return reply.send(preview);
+}
+
+export async function applyMigrateDedupeDecisionsHandler(
+  request: FastifyRequest,
+  reply: FastifyReply
+): Promise<FastifyReply> {
+  const { bundleId } = request.params as { bundleId: string };
+  const body = request.body as ApplyMigrateDedupeDecisionsBody;
+  const bundle = await applyMigrateDedupeDecisions(request.company.id, request.user.id, bundleId, body);
+  return reply.send(bundle);
+}
+
+export async function commitMigrateOnboardingBundleHandler(
+  request: FastifyRequest,
+  reply: FastifyReply
+): Promise<FastifyReply> {
+  const { bundleId } = request.params as { bundleId: string };
+  const result = await commitMigrateOnboardingBundle(request.company.id, request.user.id, bundleId);
+  return reply.send(result);
+}

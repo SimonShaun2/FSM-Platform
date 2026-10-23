@@ -28,6 +28,7 @@ import estimateRoutes from "./routes/estimates/index.js";
 import growthCheckScanRoutes from "./routes/growth-check/index.js";
 import invoiceRoutes from "./routes/invoices/index.js";
 import importRoutes from "./routes/imports/index.js";
+import migrateOnboardingRoutes from "./routes/migrate-onboarding/index.js";
 import dataExportRoutes from "./routes/data-exports/index.js";
 import jobEngagementRoutes from "./routes/job-engagement/index.js";
 import jobRoutes from "./routes/jobs/index.js";
@@ -109,6 +110,7 @@ export async function buildApp() {
   await app.register(estimateRoutes, { prefix: "/api/v1/estimates" });
   await app.register(invoiceRoutes, { prefix: "/api/v1" });
   await app.register(importRoutes, { prefix: "/api/v1" });
+  await app.register(migrateOnboardingRoutes, { prefix: "/api/v1" });
   await app.register(dataExportRoutes, { prefix: "/api/v1" });
   await app.register(serviceAgreementRoutes, { prefix: "/api/v1" });
   await app.register(loyaltyRoutes, { prefix: "/api/v1" });
