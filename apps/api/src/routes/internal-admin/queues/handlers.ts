@@ -1,10 +1,17 @@
 import type { FastifyReply, FastifyRequest } from "fastify";
 
+import { DeadLetterRecoveryRequestV1Schema, QUEUE_PLATFORM_CONTRACT_VERSION } from "@fsm/types";
+
 import {
   fetchPlatformDeadLetterJobs,
-  fetchPlatformQueueMonitoringSnapshot
+  fetchPlatformQueueMonitoringSnapshot,
+  recoverPlatformDeadLetterJob
 } from "../../../services/queue-monitoring.service.js";
-import { listDeadLetterJobsParamsSchema, listDeadLetterJobsQuerySchema } from "./schemas.js";
+import {
+  listDeadLetterJobsParamsSchema,
+  listDeadLetterJobsQuerySchema,
+  recoverDeadLetterJobParamsSchema
+} from "./schemas.js";
 
 export async function getPlatformQueueMonitoringHandler(
   _request: FastifyRequest,
@@ -25,4 +32,19 @@ export async function listPlatformDeadLetterJobsHandler(
     ...(query.limit !== undefined ? { limit: query.limit } : {})
   });
   return reply.send(jobs);
+}
+
+export async function recoverPlatformDeadLetterJobHandler(
+  request: FastifyRequest,
+  reply: FastifyReply
+) {
+  const params = recoverDeadLetterJobParamsSchema.parse(request.params);
+  const body = DeadLetterRecoveryRequestV1Schema.parse({
+    contractVersion: QUEUE_PLATFORM_CONTRACT_VERSION,
+    sourceQueue: params.queueName,
+    deadLetterJobId: params.deadLetterJobId,
+    requestedByUserId: request.user?.id
+  });
+  const result = await recoverPlatformDeadLetterJob(params.queueName, body);
+  return reply.code(202).send(result);
 }
