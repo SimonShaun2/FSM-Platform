@@ -25,6 +25,10 @@
     "./deployment-environment": {
       "types": "./dist/deployment-environment.d.ts",
       "import": "./dist/deployment-environment.js"
+    },
+    "./render-neon-region": {
+      "types": "./dist/render-neon-region.d.ts",
+      "import": "./dist/render-neon-region.js"
     }
   },
   "scripts": {
