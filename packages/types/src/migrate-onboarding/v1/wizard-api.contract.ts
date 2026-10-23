@@ -1,7 +1,4 @@
-import {
-  confirmImportFileLinkDecisionsBodySchema,
-  importFileLinkPreviewResponseSchema
-} from "../../fs-migrate/import-file-link.js";
+import { confirmImportFileLinkDecisionsBodySchema } from "../../fs-migrate/import-file-link.js";
 import {
   applyMigrateDedupeDecisionsBodySchema,
   createMigrateOnboardingSessionBodySchema,
@@ -31,6 +28,8 @@ export type MigrateOnboardingWizardRouteContract = {
 /**
  * Authoritative wizard HTTP surface (must match `apps/api/src/routes/migrate-onboarding/index.ts`).
  * Paths include the `/api/v1` prefix registered in `app.ts`.
+ *
+ * File-link routes canonical with #155 @ 4aa23c46: all return `migrateOnboardingBundle`.
  */
 export const MIGRATE_ONBOARDING_WIZARD_API_ROUTES: readonly MigrateOnboardingWizardRouteContract[] = [
   {
@@ -73,23 +72,23 @@ export const MIGRATE_ONBOARDING_WIZARD_API_ROUTES: readonly MigrateOnboardingWiz
   },
   {
     method: "POST",
+    path: "/api/v1/migrate/onboarding/sessions/:bundleId/acknowledge-preview",
+    responseSchemaId: "migrateOnboardingBundle"
+  },
+  {
+    method: "POST",
     path: "/api/v1/migrate/onboarding/sessions/:bundleId/file-link/run",
-    responseSchemaId: "importFileLinkPreviewResponse"
+    responseSchemaId: "migrateOnboardingBundle"
   },
   {
     method: "GET",
     path: "/api/v1/migrate/onboarding/sessions/:bundleId/file-link/preview",
-    responseSchemaId: "importFileLinkPreviewResponse"
+    responseSchemaId: "migrateOnboardingBundle"
   },
   {
     method: "PATCH",
     path: "/api/v1/migrate/onboarding/sessions/:bundleId/file-link/decisions",
     requestBodySchemaId: "confirmImportFileLinkDecisionsBody",
-    responseSchemaId: "importFileLinkPreviewResponse"
-  },
-  {
-    method: "POST",
-    path: "/api/v1/migrate/onboarding/sessions/:bundleId/acknowledge-preview",
     responseSchemaId: "migrateOnboardingBundle"
   },
   {
@@ -128,6 +127,5 @@ export const migrateOnboardingWizardResponseSchemas = {
   migrateOnboardingSourceCatalogEntry: migrateOnboardingSourceCatalogEntrySchema,
   migrateDedupePreviewResponse: migrateDedupePreviewResponseSchema,
   migrateRelationalPreviewResponse: migrateRelationalPreviewResponseSchema,
-  migrateOnboardingCommitResponse: migrateOnboardingCommitResponseSchema,
-  importFileLinkPreviewResponse: importFileLinkPreviewResponseSchema
+  migrateOnboardingCommitResponse: migrateOnboardingCommitResponseSchema
 } as const;
