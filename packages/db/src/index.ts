@@ -81,6 +81,12 @@ export {
   type ImportCommunicationsEntityResolver,
 } from "./import-communications-commit.js";
 export {
+  commitImportedEstimateRows,
+  commitImportedJobRows,
+  createDbHistoryChunkResolver,
+  type ImportHistoryChunkEntityResolver,
+} from "./import-history-chunk-commit.service.js";
+export {
   normalizeImportedAssetType,
   normalizeImportedIsoDate,
   parseImportedBoolean,

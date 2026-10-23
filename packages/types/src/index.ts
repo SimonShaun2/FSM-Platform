@@ -16,6 +16,7 @@ export * from "./file-attachment.types.js";
 export * from "./import.types.js";
 export * from "./import-invoice-balance.types.js";
 export * from "./import-communications.types.js";
+export * from "./import-history-chunk.types.js";
 export * from "./import-equipment.types.js";
 export * from "./import-equipment-normalize.js";
 export * from "./import-price-book.js";
