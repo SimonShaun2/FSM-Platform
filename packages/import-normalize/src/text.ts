@@ -1,10 +1,8 @@
-import { sanitizeSpreadsheetCell } from "@fsm/types";
-
 export function normalizeImportText(value: string | null | undefined): string | null {
-  if (value === null || value === undefined) {
+  if (typeof value !== "string") {
     return null;
   }
 
-  const trimmed = sanitizeSpreadsheetCell(value.trim());
+  const trimmed = value.trim();
   return trimmed.length > 0 ? trimmed : null;
 }
