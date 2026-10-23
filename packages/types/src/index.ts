@@ -18,6 +18,7 @@ export * from "./import-invoice-balance.types.js";
 export * from "./import-price-book.js";
 export * from "./fs-migrate/index.js";
 export * from "./import-relational-preview.types.js";
+export * from "./loyalty/index.js";
 export * from "./data-import.contract.js";
 export * from "./data-export/v1/index.js";
 export * from "./import-outbox-attribution/v1/index.js";
