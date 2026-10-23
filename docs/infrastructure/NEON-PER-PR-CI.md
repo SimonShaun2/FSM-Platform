@@ -22,8 +22,7 @@ Founder provisions one Neon branch per open migration/security PR (or reuses eph
 ## Local / agent validation
 
 ```bash
-pnpm --filter @fsm/config build
-pnpm --filter @fsm/db build
+pnpm --filter "@fsm/config..." --filter "@fsm/db..." build
 RENVANI_DEPLOYMENT_TIER=staging \
   NEON_CI_DATABASE_URL='postgresql://…@ep-staging-pr-NN….neon.tech/neondb' \
   node scripts/ci/neon-per-pr-branch.mjs
