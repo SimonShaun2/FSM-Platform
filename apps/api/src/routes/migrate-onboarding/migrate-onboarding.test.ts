@@ -309,9 +309,65 @@ describe("migrate onboarding wizard API", () => {
       customerCount: 1,
       propertyCount: 1,
       jobCount: 1,
+      estimateCount: 0,
       linkedPropertyCount: 1,
-      linkedJobCount: 1
+      linkedJobCount: 1,
+      linkedEstimateCount: 0
     });
+    expect(relationalPreview.body.graph.historyDepth).toHaveLength(2);
+  });
+
+  it("returns relational preview on wizard step 3 before mappings are confirmed", async () => {
+    const { company, authorization } = createAuthContext("owner");
+
+    const createResponse = await request(app.server)
+      .post("/api/v1/migrate/onboarding/sessions")
+      .set("Authorization", authorization)
+      .send({ resumeActive: false })
+      .expect(201);
+
+    const bundleId = createResponse.body.id as string;
+
+    await request(app.server)
+      .patch(`/api/v1/migrate/onboarding/sessions/${bundleId}/source`)
+      .set("Authorization", authorization)
+      .send({ sourceSystem: "service_fusion" })
+      .expect(200);
+
+    const customerSession = fakeDb.seedImportSession({
+      companyId: company.id,
+      fileName: "customers.csv",
+      fileUrl: "https://r2.test/imports/customers.csv",
+      status: "mapping",
+      entityType: "customers",
+      columnMappings: { sourceId: "sourceId", displayName: "displayName" }
+    });
+
+    downloadFileMock.mockResolvedValue(Buffer.from("sourceId,displayName\nC-1,Acme\n", "utf8"));
+
+    await request(app.server)
+      .patch(`/api/v1/migrate/onboarding/sessions/${bundleId}/files`)
+      .set("Authorization", authorization)
+      .send({
+        files: [
+          {
+            importSessionId: customerSession.id,
+            entityType: "customers",
+            fileName: "customers.csv"
+          }
+        ]
+      })
+      .expect(200)
+      .expect((response) => {
+        expect(response.body.wizardStep).toBe(3);
+      });
+
+    const relationalPreview = await request(app.server)
+      .get(`/api/v1/migrate/onboarding/sessions/${bundleId}/relational-preview`)
+      .set("Authorization", authorization)
+      .expect(200);
+
+    expect(relationalPreview.body.graph.stats.customerCount).toBe(1);
   });
 
   it("resumes the active bundle when resumeActive is true", async () => {
