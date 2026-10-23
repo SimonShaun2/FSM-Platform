@@ -73,6 +73,10 @@
     "./langfuse-env": {
       "types": "./dist/langfuse-env.d.ts",
       "import": "./dist/langfuse-env.js"
+    },
+    "./vip-membership-policy": {
+      "types": "./dist/vip-membership-policy.d.ts",
+      "import": "./dist/vip-membership-policy.js"
     }
   },
   "scripts": {

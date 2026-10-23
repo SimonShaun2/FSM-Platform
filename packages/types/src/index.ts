@@ -44,6 +44,7 @@ export * from "./scheduling-agent.types.js";
 export * from "./product.types.js";
 export * from "./review-request.types.js";
 export * from "./service-agreement.types.js";
+export * from "./vip-membership.types.js";
 export * from "./stripe.types.js";
 export * from "./technician.types.js";
 export * from "./time-entry.types.js";
