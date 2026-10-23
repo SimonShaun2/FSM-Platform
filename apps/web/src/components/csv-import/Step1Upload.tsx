@@ -155,7 +155,10 @@ export function Step1Upload({
         <p className="text-xs font-semibold uppercase tracking-[0.18em] text-neutral-400">Tips for best results</p>
         <ul className="mt-4 space-y-3 text-sm leading-6 text-neutral-500">
           <li>Include customer names, contact details, and at least one address column where possible.</li>
-          <li>Exports from Housecall Pro, Jobber, QuickBooks, and ServiceTitan all work with this flow.</li>
+          <li>
+            Exports from Housecall Pro, Jobber, ServiceTitan, and QuickBooks (customers, products/services,
+            invoices) work with this flow — upload one file per list, review the AI mapping, then import.
+          </li>
           <li>We only import customer data in this release. Jobs, invoices, and payments remain read-only.</li>
         </ul>
 
