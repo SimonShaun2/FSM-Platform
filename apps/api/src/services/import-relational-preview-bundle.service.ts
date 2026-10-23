@@ -32,12 +32,20 @@ export const DEFAULT_RELATIONAL_PREVIEW_FIELD_KEYS = {
   jobs: {
     sourceId: "sourceId",
     propertySourceId: "propertySourceId",
+    businessDate: "completedAt",
+    label: "label"
+  },
+  estimates: {
+    sourceId: "sourceId",
+    jobSourceId: "jobSourceId",
+    businessDate: "issuedAt",
     label: "label"
   }
 } satisfies {
   customers: RelationalPreviewFieldKeys;
   properties: RelationalPreviewFieldKeys;
   jobs: RelationalPreviewFieldKeys;
+  estimates: RelationalPreviewFieldKeys;
 };
 
 function isPlainObject(value: unknown): value is Record<string, unknown> {
@@ -108,9 +116,17 @@ function toBundleFileRef(file: MigrateOnboardingFileRef): ImportBundleFileRef {
     };
   }
 
+  if (file.entityType === "jobs") {
+    return {
+      importSessionId: file.importSessionId,
+      kind: "jobs",
+      fileName: file.fileName
+    };
+  }
+
   return {
     importSessionId: file.importSessionId,
-    kind: "jobs",
+    kind: "estimates",
     fileName: file.fileName
   };
 }
@@ -149,6 +165,7 @@ export async function buildRelationalPreviewForBundle(
   let customerMappedRows: MappedImportPreviewRow[] = [];
   let propertyMappedRows: MappedImportPreviewRow[] = [];
   let jobMappedRows: MappedImportPreviewRow[] | undefined;
+  let estimateMappedRows: MappedImportPreviewRow[] | undefined;
 
   for (const file of files) {
     const session = sessionById.get(file.importSessionId);
@@ -160,10 +177,11 @@ export async function buildRelationalPreviewForBundle(
       throw new AppError(ErrorCode.VALIDATION_ERROR, "Import session entity type does not match bundle file metadata");
     }
 
-    if (session.status !== "preview" && session.status !== "importing" && session.status !== "completed") {
+    const mappingStepStatuses = new Set(["mapping", "preview"]);
+    if (!mappingStepStatuses.has(session.status) && session.status !== "importing" && session.status !== "completed") {
       throw new AppError(
         ErrorCode.CONFLICT,
-        `Import session ${session.id} must reach preview before relational preview`
+        `Import session ${session.id} must reach mapping or preview before relational preview`
       );
     }
 
@@ -176,8 +194,10 @@ export async function buildRelationalPreviewForBundle(
       customerMappedRows = mappedRows;
     } else if (file.entityType === "properties") {
       propertyMappedRows = mappedRows;
-    } else {
+    } else if (file.entityType === "jobs") {
       jobMappedRows = mappedRows;
+    } else {
+      estimateMappedRows = mappedRows;
     }
   }
 
@@ -187,7 +207,8 @@ export async function buildRelationalPreviewForBundle(
     customerMappedRows,
     propertyMappedRows,
     fieldKeys: DEFAULT_RELATIONAL_PREVIEW_FIELD_KEYS,
-    ...(jobMappedRows !== undefined ? { jobMappedRows } : {})
+    ...(jobMappedRows !== undefined ? { jobMappedRows } : {}),
+    ...(estimateMappedRows !== undefined ? { estimateMappedRows } : {})
   };
 
   return buildImportBundleRelationalPreview(previewInput);
