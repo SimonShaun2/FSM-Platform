@@ -299,6 +299,9 @@ importers:
       '@fsm/db':
         specifier: workspace:*
         version: link:../../packages/db
+      '@fsm/import-engine':
+        specifier: workspace:*
+        version: link:../../packages/import-engine
       '@fsm/jobs':
         specifier: workspace:*
         version: link:../../packages/jobs
@@ -336,6 +339,9 @@ importers:
       vitest:
         specifier: ^3.2.4
         version: 3.2.4(@types/node@24.12.2)(happy-dom@21.0.4)(jiti@1.21.7)(tsx@4.21.0)
+      xlsx:
+        specifier: ^0.18.5
+        version: 0.18.5
 
   packages/ai:
     dependencies:
