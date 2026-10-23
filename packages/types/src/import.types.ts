@@ -11,7 +11,8 @@ export type ImportSessionStatus =
 
 export type ImportEntityType =
   | "customers"
-  | "jobs";
+  | "jobs"
+  | "price_book";
 
 export type ColumnMapping = Record<string, string | null>;
 

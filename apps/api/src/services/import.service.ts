@@ -8,7 +8,8 @@ import {
   emitEventWithExecutor,
   importSessions,
   jobs,
-  properties
+  properties,
+  softDeletePriceBookImport
 } from "@fsm/db";
 import { importsQueue } from "@fsm/jobs";
 import {
@@ -624,6 +625,10 @@ export async function rollbackImport(
         )
       )
       .returning();
+
+    if (importSession.entityType === "price_book") {
+      await softDeletePriceBookImport(companyId, importSessionId);
+    }
 
     const updatedSessions = await tx
       .update(importSessions)

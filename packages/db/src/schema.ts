@@ -215,6 +215,7 @@ export const importEntityTypeEnum = pgEnum("import_entity_type", [
   "jobs",
   "estimates",
   "invoices",
+  "price_book",
 ]);
 
 export const technicianStatusEnum = pgEnum("technician_status", [
@@ -918,6 +919,7 @@ export const invoiceItems = pgTable("invoice_items", {
   id: id(),
   invoiceId: uuid("invoice_id").notNull().references(() => invoices.id, { onDelete: "cascade" }),
   companyId: companyId(),
+  productCatalogId: uuid("product_catalog_id").references(() => productCatalog.id),
   name: varchar("name", { length: 255 }).notNull(),
   description: text("description"),
   itemType: varchar("item_type", { length: 30 }).notNull().default("service"),
@@ -1432,10 +1434,43 @@ export const productCatalog = pgTable("product_catalog", {
   isActive: boolean("is_active").notNull().default(true),
   applicableAssetTypes: text("applicable_asset_types").array().default([]),
   sortOrder: integer("sort_order").default(0),
+  sourceSystem: varchar("source_system", { length: 64 }),
+  sourceId: varchar("source_id", { length: 256 }),
+  importSessionId: uuid("import_session_id").references(() => importSessions.id),
   ...timestamps,
 }, (t) => ({
   companyIdx: index("product_catalog_company_idx").on(t.companyId),
   activeIdx: index("product_catalog_active_idx").on(t.isActive),
+  lineageIdx: uniqueIndex("product_catalog_lineage_company_idx").on(
+    t.companyId,
+    t.sourceSystem,
+    t.sourceId
+  ),
+}));
+
+/** Maps vendor price-book ids to catalog rows for invoice line resolution during FS-MIGRATE. */
+export const importInvoiceLineSeeds = pgTable("import_invoice_line_seeds", {
+  id: id(),
+  companyId: companyId(),
+  importSessionId: uuid("import_session_id")
+    .notNull()
+    .references(() => importSessions.id),
+  sourceSystem: varchar("source_system", { length: 64 }).notNull(),
+  sourceId: varchar("source_id", { length: 256 }).notNull(),
+  productCatalogId: uuid("product_catalog_id")
+    .notNull()
+    .references(() => productCatalog.id),
+  sku: varchar("sku", { length: 100 }),
+  name: varchar("name", { length: 255 }).notNull(),
+  ...timestamps,
+}, (t) => ({
+  companyIdx: index("import_invoice_line_seeds_company_idx").on(t.companyId),
+  sessionIdx: index("import_invoice_line_seeds_session_idx").on(t.importSessionId),
+  lookupIdx: uniqueIndex("import_invoice_line_seeds_lookup_idx").on(
+    t.companyId,
+    t.sourceSystem,
+    t.sourceId
+  ),
 }));
 
 export const jobTasks = pgTable("job_tasks", {

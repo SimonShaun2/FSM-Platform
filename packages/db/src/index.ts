@@ -45,3 +45,14 @@ export { FS_MIGRATE_RLS_POLICY_CATALOG, type RlsPolicySpec } from "./rls-policy-
 export { renderRlsPolicyStatements, renderStack10RlsMigrationSql } from "./rls-migration-sql.js";
 export { runTransactionWithTenantSession } from "./run-with-tenant-session.js";
 export * from "./schema.js";
+export {
+  commitPriceBookRows,
+  mapPriceBookRow,
+  resolveInvoiceLineCatalogId,
+  resolveSourceSystemForPriceBookImport,
+  softDeletePriceBookImport,
+  validatePriceBookRows,
+  type ParsedImportRow,
+  type PriceBookCommitResult,
+  type PriceBookValidationResult
+} from "./import-price-book-commit.js";
