@@ -2,6 +2,7 @@ import type {
   BuildRelationalPreviewGraphInput,
   ColumnMapping,
   CustomerPreviewRow,
+  EstimatePreviewRow,
   ImportBundleRelationalPreview,
   JobPreviewRow,
   PropertyPreviewRow,
@@ -10,10 +11,16 @@ import type {
   RelationalPreviewGraph,
   RelationalPreviewNode,
   RelationalPropertyJobEdge,
+  RelationalJobEstimateEdge,
   RelationalPreviewFieldKeys,
   MappedImportPreviewRow,
   TabularRelationalPreviewInput
 } from "@fsm/types";
+
+import {
+  computeEntityHistoryDepth,
+  readBusinessDateField
+} from "./import-relational-preview-history.js";
 
 export type {
   CustomerPreviewRow,
@@ -224,11 +231,20 @@ export function jobPreviewRowsFromMapped(
     const label =
       readMappedField(mappedRow.fields, fieldKeys.label, mappedRow.row, "job label", issues) ?? jobKey;
 
+    const businessDate = readBusinessDateField(
+      mappedRow.fields,
+      fieldKeys.businessDate,
+      mappedRow.row,
+      "job",
+      issues
+    );
+
     rows.push({
       row: mappedRow.row,
       jobKey,
       propertyKey,
-      label
+      label,
+      businessDate
     });
   }
 
@@ -243,8 +259,60 @@ export function jobPreviewRowsFromMapped(
   return { rows, issues };
 }
 
+export function estimatePreviewRowsFromMapped(
+  mappedRows: MappedImportPreviewRow[],
+  fieldKeys: RelationalPreviewFieldKeys
+): { rows: EstimatePreviewRow[]; issues: RelationalJoinIssue[] } {
+  const issues: RelationalJoinIssue[] = [];
+  const rows: EstimatePreviewRow[] = [];
+
+  for (const mappedRow of mappedRows) {
+    const estimateKey = readMappedField(
+      mappedRow.fields,
+      fieldKeys.sourceId,
+      mappedRow.row,
+      "estimate source id",
+      issues
+    );
+    const jobKey = readMappedField(mappedRow.fields, fieldKeys.jobSourceId, mappedRow.row, "job join key", issues);
+    if (!estimateKey || !jobKey) {
+      continue;
+    }
+
+    const label =
+      readMappedField(mappedRow.fields, fieldKeys.label, mappedRow.row, "estimate label", issues) ?? estimateKey;
+
+    const businessDate = readBusinessDateField(
+      mappedRow.fields,
+      fieldKeys.businessDate,
+      mappedRow.row,
+      "estimate",
+      issues
+    );
+
+    rows.push({
+      row: mappedRow.row,
+      estimateKey,
+      jobKey,
+      label,
+      businessDate
+    });
+  }
+
+  issues.push(
+    ...detectDuplicateKeys(
+      rows.map((row) => ({ row: row.row, key: row.estimateKey })),
+      "duplicate_estimate_key",
+      "estimate"
+    )
+  );
+
+  return { rows, issues };
+}
+
 export function buildRelationalPreviewGraph(input: BuildRelationalPreviewGraphInput): RelationalPreviewGraph {
   const jobRows = input.jobRows ?? [];
+  const estimateRows = input.estimateRows ?? [];
   const joinIssues: RelationalJoinIssue[] = [];
 
   const customerCanonicalByNormalized = new Map<string, string>();
@@ -255,6 +323,11 @@ export function buildRelationalPreviewGraph(input: BuildRelationalPreviewGraphIn
   const propertyCanonicalByNormalized = new Map<string, string>();
   for (const row of input.propertyRows) {
     propertyCanonicalByNormalized.set(normalizeRelationalJoinKey(row.propertyKey), row.propertyKey);
+  }
+
+  const jobCanonicalByNormalized = new Map<string, string>();
+  for (const row of jobRows) {
+    jobCanonicalByNormalized.set(normalizeRelationalJoinKey(row.jobKey), row.jobKey);
   }
 
   const customers: RelationalPreviewNode[] = input.customerRows.map((row) => ({
@@ -340,23 +413,79 @@ export function buildRelationalPreviewGraph(input: BuildRelationalPreviewGraphIn
     .map((row) => row.propertyKey)
     .filter((key) => !linkedPropertyKeys.has(normalizeRelationalJoinKey(key)));
 
+  const estimates: RelationalPreviewNode[] = [];
+  const jobEstimateEdges: RelationalJobEstimateEdge[] = [];
+  let orphanEstimateCount = 0;
+
+  for (const estimateRow of estimateRows) {
+    estimates.push({
+      id: estimateRow.estimateKey,
+      kind: "estimate",
+      label: estimateRow.label,
+      sourceRow: estimateRow.row
+    });
+
+    const normalizedJobKey = normalizeRelationalJoinKey(estimateRow.jobKey);
+    const canonicalJobId = jobCanonicalByNormalized.get(normalizedJobKey);
+    if (!canonicalJobId) {
+      orphanEstimateCount += 1;
+      joinIssues.push({
+        code: "orphan_estimate",
+        message: `Estimate "${estimateRow.estimateKey}" references unknown job "${estimateRow.jobKey}"`,
+        sourceRow: estimateRow.row,
+        joinKey: estimateRow.jobKey
+      });
+      continue;
+    }
+
+    jobEstimateEdges.push({
+      fromJobId: canonicalJobId,
+      toEstimateId: estimateRow.estimateKey,
+      joinKey: estimateRow.jobKey
+    });
+  }
+
+  const linkedJobKeys = new Set(jobEstimateEdges.map((edge) => normalizeRelationalJoinKey(edge.fromJobId)));
+  const unmatchedJobKeys = jobRows
+    .map((row) => row.jobKey)
+    .filter((key) => !linkedJobKeys.has(normalizeRelationalJoinKey(key)));
+
+  const jobDates = jobRows.filter((row) => row.businessDate !== null).map((row) => row.businessDate as string);
+  const jobUndated = jobRows.length - jobDates.length;
+  const estimateDates = estimateRows
+    .filter((row) => row.businessDate !== null)
+    .map((row) => row.businessDate as string);
+  const estimateUndated = estimateRows.length - estimateDates.length;
+
+  const historyDepth = [
+    computeEntityHistoryDepth("jobs", jobDates, jobUndated),
+    computeEntityHistoryDepth("estimates", estimateDates, estimateUndated)
+  ];
+
   return {
     customers,
     properties,
     jobs,
+    estimates,
     edges,
     propertyJobEdges,
+    jobEstimateEdges,
     orphanPropertyCount,
     orphanJobCount,
+    orphanEstimateCount,
     unmatchedCustomerKeys,
     unmatchedPropertyKeys,
+    unmatchedJobKeys,
+    historyDepth,
     joinIssues,
     stats: {
       customerCount: customers.length,
       propertyCount: properties.length,
       jobCount: jobs.length,
+      estimateCount: estimates.length,
       linkedPropertyCount: edges.length,
-      linkedJobCount: propertyJobEdges.length
+      linkedJobCount: propertyJobEdges.length,
+      linkedEstimateCount: jobEstimateEdges.length
     }
   };
 }
@@ -385,10 +514,18 @@ export function buildImportBundleRelationalPreview(
     joinIssues.push(...jobExtract.issues);
   }
 
+  let estimateRows: EstimatePreviewRow[] = [];
+  if (input.estimateMappedRows && input.fieldKeys.estimates) {
+    const estimateExtract = estimatePreviewRowsFromMapped(input.estimateMappedRows, input.fieldKeys.estimates);
+    estimateRows = estimateExtract.rows;
+    joinIssues.push(...estimateExtract.issues);
+  }
+
   const graph = buildRelationalPreviewGraph({
     customerRows: customerExtract.rows,
     propertyRows: propertyExtract.rows,
-    jobRows
+    jobRows,
+    estimateRows
   });
 
   graph.joinIssues.push(...joinIssues);
