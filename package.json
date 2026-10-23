@@ -12,7 +12,8 @@
     "test": "corepack pnpm -r test",
     "qa:branded-site": "bash scripts/qa-branded-site-local.sh",
     "check:env-docs": "node scripts/check-env-documentation.mjs",
-    "test:neon-ci-wiring": "node --test scripts/ci/neon-per-pr-branch.test.mjs"
+    "test:neon-ci-wiring": "node --test scripts/ci/neon-per-pr-branch.test.mjs",
+    "test:cross-tenant": "corepack pnpm --filter @fsm/api test:cross-tenant"
   },
   "devDependencies": {
     "@types/node": "^24.3.0",
