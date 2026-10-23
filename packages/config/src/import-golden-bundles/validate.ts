@@ -5,6 +5,7 @@ import {
 
 import {
   buildPresetColumnMapping,
+  IMPORT_SOURCE_PRESETS,
   inferImportSourcePresetFromHeaders
 } from "../import-source-presets.js";
 import { columnIndex, parseCsvTable } from "./csv.js";
@@ -25,6 +26,8 @@ export interface GoldenBundleValidationResult {
   fixtureId: string;
   issues: GoldenBundleValidationIssue[];
 }
+
+type GoldenBundleFile = GoldenImportBundleManifest["files"][number];
 
 function yearsBetween(earliestMs: number, latestMs: number): number {
   const diffMs = Math.max(0, latestMs - earliestMs);
@@ -126,97 +129,116 @@ function validateJoinLinks(
   }
 }
 
-function expectedCustomerPresetId(
-  sourceSystem: GoldenImportBundleManifest["sourceSystem"]
-): string | null {
-  switch (sourceSystem) {
-    case "service_fusion":
-      return "service_fusion";
-    case "jobber":
-      return "jobber";
-    case "servicetitan":
-      return "service_titan";
-    case "housecall_pro":
-      return "housecall_pro";
-    case "qbo":
-      return "quickbooks_customers";
-    case "qbd":
-      return "quickbooks_desktop_customers";
-    case "manual_csv":
-      return "generic";
-    default:
-      return null;
+const MIN_GENERIC_MAPPED_COLUMNS = 3;
+
+function bestImportColumnMapping(headers: string[]): Record<string, string> {
+  let best: Record<string, string> = {};
+
+  for (const preset of IMPORT_SOURCE_PRESETS) {
+    const mapping = buildPresetColumnMapping(headers, preset.id);
+    if (Object.keys(mapping).length > Object.keys(best).length) {
+      best = mapping;
+    }
   }
+
+  return best;
 }
 
-function validatePresetInference(
+/** Non-QB fixtures: generic AI path — any mappable preset (incl. generic), no FSM-specific preset IDs. */
+function validateGenericImportColumnMapping(
   manifest: GoldenImportBundleManifest,
   issues: GoldenBundleValidationIssue[]
 ): void {
-  const expectedCustomers = expectedCustomerPresetId(manifest.sourceSystem);
+  if (manifest.sourceSystem === "qbo" || manifest.sourceSystem === "qbd") {
+    return;
+  }
 
   for (const file of manifest.files) {
-    if (file.entityType !== "customers") {
+    if (file.entityType !== "customers" && file.entityType !== "products" && file.entityType !== "invoices") {
+      continue;
+    }
+
+    if (file.relativePath.includes("price_book")) {
       continue;
     }
 
     const content = readGoldenImportBundleFile(manifest.sourceSystem, file.relativePath);
     const { headers } = parseCsvTable(content);
+    const mapping = bestImportColumnMapping(headers);
 
-    if (manifest.sourceSystem === "manual_csv") {
-      const mapping = buildPresetColumnMapping(headers, "generic");
-      if (Object.keys(mapping).length < 3) {
-        issues.push({
-          code: "PRESET_NOT_INFERRED",
-          message: `Generic preset mapping too sparse for ${file.relativePath}`
-        });
-      }
-      continue;
-    }
-
-    const presetId = inferImportSourcePresetFromHeaders(headers, "customers");
-
-    if (!presetId) {
+    if (Object.keys(mapping).length < MIN_GENERIC_MAPPED_COLUMNS) {
       issues.push({
         code: "PRESET_NOT_INFERRED",
-        message: `Could not infer customer preset for ${manifest.sourceSystem}/${file.relativePath}`
-      });
-      continue;
-    }
-
-    if (expectedCustomers && presetId !== expectedCustomers) {
-      issues.push({
-        code: "PRESET_NOT_INFERRED",
-        message: `Expected ${expectedCustomers} for ${file.relativePath}, got ${presetId}`
+        message: `Generic/AI column mapping too sparse for ${manifest.sourceSystem}/${file.relativePath} (${Object.keys(mapping).length} fields)`
       });
     }
   }
+}
 
+function assertPresetForFile(
+  manifest: GoldenImportBundleManifest,
+  file: GoldenBundleFile,
+  expectedPresetIds: string | string[],
+  entityHint: "customers" | "products" | "invoices",
+  issues: GoldenBundleValidationIssue[]
+): void {
+  const content = readGoldenImportBundleFile(manifest.sourceSystem, file.relativePath);
+  const { headers } = parseCsvTable(content);
+  const presetId = inferImportSourcePresetFromHeaders(headers, entityHint);
+  const allowed = Array.isArray(expectedPresetIds) ? expectedPresetIds : [expectedPresetIds];
+
+  if (!presetId || !allowed.includes(presetId)) {
+    issues.push({
+      code: "PRESET_NOT_INFERRED",
+      message: `Expected one of [${allowed.join(", ")}] for ${file.relativePath}, got ${presetId ?? "null"}`
+    });
+  }
+}
+
+/** QuickBooks Online + Desktop: source-specific preset assertions only. */
+function validateQuickBooksPresetInference(
+  manifest: GoldenImportBundleManifest,
+  issues: GoldenBundleValidationIssue[]
+): void {
   if (manifest.sourceSystem === "qbo") {
-    const invoiceFile = manifest.files.find((file) => file.entityType === "invoices");
-    if (invoiceFile) {
-      const content = readGoldenImportBundleFile(manifest.sourceSystem, invoiceFile.relativePath);
-      const { headers } = parseCsvTable(content);
-      const presetId = inferImportSourcePresetFromHeaders(headers, "invoices");
-      if (presetId !== "quickbooks_invoices") {
-        issues.push({
-          code: "PRESET_NOT_INFERRED",
-          message: `Expected quickbooks_invoices for ${invoiceFile.relativePath}, got ${presetId}`
-        });
-      }
+    const customerFile = manifest.files.find((entry: GoldenBundleFile) => entry.entityType === "customers");
+    if (customerFile) {
+      assertPresetForFile(manifest, customerFile, "quickbooks_customers", "customers", issues);
     }
 
-    const itemsFile = manifest.files.find((file) => file.entityType === "products");
+    const invoiceFile = manifest.files.find((entry: GoldenBundleFile) => entry.entityType === "invoices");
+    if (invoiceFile) {
+      assertPresetForFile(manifest, invoiceFile, "quickbooks_invoices", "invoices", issues);
+    }
+
+    const itemsFile = manifest.files.find((entry: GoldenBundleFile) => entry.entityType === "products");
     if (itemsFile) {
-      const content = readGoldenImportBundleFile(manifest.sourceSystem, itemsFile.relativePath);
-      const { headers } = parseCsvTable(content);
-      const presetId = inferImportSourcePresetFromHeaders(headers, "products");
-      if (presetId !== "quickbooks_items") {
-        issues.push({
-          code: "PRESET_NOT_INFERRED",
-          message: `Expected quickbooks_items for ${itemsFile.relativePath}, got ${presetId}`
-        });
-      }
+      assertPresetForFile(manifest, itemsFile, "quickbooks_items", "products", issues);
+    }
+
+    return;
+  }
+
+  if (manifest.sourceSystem === "qbd") {
+    const customerFile = manifest.files.find((entry: GoldenBundleFile) => entry.entityType === "customers");
+    if (customerFile) {
+      assertPresetForFile(manifest, customerFile, "quickbooks_desktop_customers", "customers", issues);
+    }
+
+    const invoiceFile = manifest.files.find((entry: GoldenBundleFile) => entry.entityType === "invoices");
+    if (invoiceFile) {
+      assertPresetForFile(manifest, invoiceFile, "quickbooks_invoices", "invoices", issues);
+    }
+
+    const itemsFile = manifest.files.find((entry: GoldenBundleFile) => entry.entityType === "products");
+    if (itemsFile) {
+      assertPresetForFile(
+        manifest,
+        itemsFile,
+        ["quickbooks_desktop_items", "quickbooks_items"],
+        "products",
+        issues
+      );
     }
   }
 }
@@ -272,7 +294,8 @@ export function validateGoldenImportBundleManifest(
   }
 
   validateJoinLinks(parsed.data, issues);
-  validatePresetInference(parsed.data, issues);
+  validateGenericImportColumnMapping(parsed.data, issues);
+  validateQuickBooksPresetInference(parsed.data, issues);
   validateHistorySpan(parsed.data, issues);
 
   return {

@@ -16,7 +16,7 @@ describe("FS-MIGRATE golden import bundles (CI fixtures)", () => {
     expect(manifestIds.sort()).toEqual(catalogIds.sort());
   });
 
-  it("validates each manifest (files, joins, presets, history depth)", () => {
+  it("validates each manifest (files, joins, generic mapping, QB presets, history depth)", () => {
     for (const manifest of GOLDEN_IMPORT_BUNDLE_MANIFESTS) {
       assertGoldenImportBundleManifest(manifest);
     }
