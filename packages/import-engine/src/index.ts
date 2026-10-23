@@ -5,6 +5,13 @@ export {
   countMappedImportBundleFiles
 } from "./bundle-progress.js";
 export {
+  buildImportSessionIngestStatus,
+  isChunkedHistoryEntity,
+  parseImportSessionChunkProgress,
+  readPriceBookLineSeedCount,
+  type ImportSessionIngestStatus
+} from "./session-ingest-status.js";
+export {
   buildImportChunkIdempotencyKey,
   DEFAULT_IMPORT_ROW_CHUNK_SIZE,
   planImportRowChunks,
