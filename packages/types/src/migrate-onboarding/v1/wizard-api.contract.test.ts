@@ -20,6 +20,16 @@ describe(`${MIGRATE_ONBOARDING_WIZARD_API_CONTRACT_ID}`, () => {
     expect(new Set(keys).size).toBe(keys.length);
   });
 
+  it("declares file-link wizard routes with migrateOnboardingBundle responses", () => {
+    const fileLinkRoutes = MIGRATE_ONBOARDING_WIZARD_API_ROUTES.filter((route) =>
+      route.path.includes("/file-link/")
+    );
+    expect(fileLinkRoutes).toHaveLength(3);
+    for (const route of fileLinkRoutes) {
+      expect(route.responseSchemaId).toBe("migrateOnboardingBundle");
+    }
+  });
+
   it("parses catalog entries returned by GET /sources", () => {
     for (const entry of MIGRATE_ONBOARDING_SOURCE_CATALOG) {
       const parsed = migrateOnboardingWizardResponseSchemas.migrateOnboardingSourceCatalogEntry.parse(entry);
