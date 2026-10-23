@@ -2038,6 +2038,8 @@ type AnyTestRecord =
   | TestMaintenancePlanRecord
   | TestVipMembershipTierRecord
   | TestMaintenanceVisitRecord
+  | TestRecurringVisitSeriesRecord
+  | TestRecurringVisitOccurrenceRecord
   | TestAutomationRuleRecord
   | TestAiRecommendationRecord
   | TestCampaignRecord
