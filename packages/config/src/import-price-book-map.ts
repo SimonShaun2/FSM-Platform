@@ -59,6 +59,9 @@ export function mapVendorItemTypeToCategory(
 export function importSourceSystemFromPreset(presetId: ImportVendorPresetId): ImportSourceSystemId {
   switch (presetId) {
     case "jobber":
+    case "jobber_jobs":
+    case "jobber_invoices":
+    case "jobber_payments":
     case "jobber_price_book":
       return "jobber";
     case "housecall_pro":

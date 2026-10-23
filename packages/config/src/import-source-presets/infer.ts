@@ -39,7 +39,11 @@ export function inferImportSourcePresetFromHeaders(
     }
 
     const aliasKeys = Object.keys(preset.headerAliases).map(normalizeHeader);
-    const score = aliasKeys.filter((key) => normalizedHeaders.has(key)).length;
+    let score = aliasKeys.filter((key) => normalizedHeaders.has(key)).length;
+
+    if (preset.id === "jobber_invoices" && !normalizedHeaders.has("client id")) {
+      continue;
+    }
 
     if (score >= 3 && (!best || score > best.score)) {
       best = { id: preset.id, score };
