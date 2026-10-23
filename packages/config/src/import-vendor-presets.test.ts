@@ -47,4 +47,13 @@ describe("import-vendor-presets", () => {
       )
     ).toBe("quickbooks_invoices");
   });
+
+  it("infers QuickBooks Desktop item list for price book sessions", () => {
+    expect(
+      inferImportVendorPresetForSession(
+        ["Item", "Type", "Sales Price", "Item ID", "Sales Desc"],
+        "price_book"
+      )
+    ).toBe("quickbooks_desktop_items");
+  });
 });

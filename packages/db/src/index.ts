@@ -37,3 +37,14 @@ export { emitEventWithExecutor } from "./events.js";
 export { markInvoiceOverdueIfNeeded } from "./invoice-helpers.js";
 export type { InvoiceOverdueRecord } from "./invoice-helpers.js";
 export * from "./schema.js";
+export {
+  commitPriceBookRows,
+  mapPriceBookRow,
+  resolveInvoiceLineCatalogId,
+  resolveSourceSystemForPriceBookImport,
+  softDeletePriceBookImport,
+  validatePriceBookRows,
+  type ParsedImportRow,
+  type PriceBookCommitResult,
+  type PriceBookValidationResult
+} from "./import-price-book-commit.js";

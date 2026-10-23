@@ -22,6 +22,10 @@
       "types": "./dist/import-vendor-presets.d.ts",
       "import": "./dist/import-vendor-presets.js"
     },
+    "./import-price-book-map": {
+      "types": "./dist/import-price-book-map.d.ts",
+      "import": "./dist/import-price-book-map.js"
+    },
     "./object-storage": {
       "types": "./dist/object-storage/index.d.ts",
       "import": "./dist/object-storage/index.js"

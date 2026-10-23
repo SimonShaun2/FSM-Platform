@@ -7,8 +7,11 @@ export type ImportVendorPresetId =
   | "jobber"
   | "housecall_pro"
   | "service_titan"
+  | "jobber_price_book"
+  | "service_fusion_price_book"
   | "quickbooks_customers"
   | "quickbooks_items"
+  | "quickbooks_desktop_items"
   | "quickbooks_invoices"
   | "generic";
 
@@ -110,6 +113,63 @@ export const IMPORT_VENDOR_PRESETS: ImportVendorPreset[] = [
     }
   },
   {
+    id: "quickbooks_desktop_items",
+    entity: "products",
+    label: "QuickBooks Desktop (item list)",
+    headerAliases: {
+      name: "name",
+      "item": "name",
+      "item name": "name",
+      "sales desc": "description",
+      description: "description",
+      type: "type",
+      "item type": "type",
+      "sales price": "unitPrice",
+      price: "unitPrice",
+      cost: "cost",
+      "purchase cost": "cost",
+      sku: "sku",
+      "item id": "sourceId",
+      id: "sourceId"
+    }
+  },
+  {
+    id: "jobber_price_book",
+    entity: "products",
+    label: "Jobber (products & services)",
+    headerAliases: {
+      name: "name",
+      "product name": "name",
+      "service name": "name",
+      sku: "sku",
+      category: "type",
+      type: "type",
+      description: "description",
+      "unit price": "unitPrice",
+      price: "unitPrice",
+      cost: "cost",
+      id: "sourceId"
+    }
+  },
+  {
+    id: "service_fusion_price_book",
+    entity: "products",
+    label: "Service Fusion (price book)",
+    headerAliases: {
+      "item name": "name",
+      name: "name",
+      "item type": "type",
+      type: "type",
+      sku: "sku",
+      "unit price": "unitPrice",
+      price: "unitPrice",
+      cost: "cost",
+      description: "description",
+      "item id": "sourceId",
+      id: "sourceId"
+    }
+  },
+  {
     id: "quickbooks_invoices",
     entity: "invoices",
     label: "QuickBooks Online (invoices)",
@@ -148,6 +208,10 @@ export const IMPORT_VENDOR_PRESETS: ImportVendorPreset[] = [
 function entityHintFromImportEntityType(entityType: string): ImportPresetEntityHint {
   if (entityType === "invoices") {
     return "invoices";
+  }
+
+  if (entityType === "price_book") {
+    return "products";
   }
 
   if (entityType === "estimates" || entityType === "jobs") {
