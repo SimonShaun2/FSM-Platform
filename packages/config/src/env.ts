@@ -19,7 +19,7 @@ const envSchema = z.object({
   STRIPE_WEBHOOK_SECRET: z.string().min(1, "STRIPE_WEBHOOK_SECRET is required"),
   STRIPE_CONNECT_CLIENT_ID: z.string().min(1, "STRIPE_CONNECT_CLIENT_ID is required"),
   /** Card statement prefix when shop name is too long (founder may tune in live mode). */
-  STRIPE_RENVANI_STATEMENT_PREFIX: z.string().default("RENAVANI"),
+  STRIPE_RENVANI_STATEMENT_PREFIX: z.string().default("RENVANI"),
   /** Optional — set after founder approves live branding assets (Stripe Dashboard / hosted pages). */
   STRIPE_BRANDING_LOGO_URL: z.string().default(""),
   STRIPE_BRANDING_ICON_URL: z.string().default(""),

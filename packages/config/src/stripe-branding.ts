@@ -3,7 +3,7 @@ import { env } from "./env.js";
 /** Customer-visible brand; Stripe surfaces only where legally required (Connect KYC, card network). */
 export const RENVANI_STRIPE_BRAND = {
   platformName: "Renvani",
-  defaultStatementPrefix: "RENAVANI",
+  defaultStatementPrefix: "RENVANI",
   /** Connect embedded components + Checkout appearance (matches web brand-accent family). */
   primaryColor: "#2563eb",
   secondaryColor: "#102163"
