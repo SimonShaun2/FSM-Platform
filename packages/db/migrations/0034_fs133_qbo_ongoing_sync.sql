@@ -77,3 +77,15 @@ CREATE INDEX IF NOT EXISTS "qbo_connections_realm_idx" ON "qbo_connections" USIN
 CREATE INDEX IF NOT EXISTS "qbo_sync_issues_company_idx" ON "qbo_sync_issues" USING btree ("company_id");
 --> statement-breakpoint
 CREATE INDEX IF NOT EXISTS "qbo_sync_issues_open_idx" ON "qbo_sync_issues" USING btree ("company_id","resolved_at");
+--> statement-breakpoint
+ALTER TABLE "qbo_connections" ENABLE ROW LEVEL SECURITY;
+--> statement-breakpoint
+ALTER TABLE "qbo_connections" FORCE ROW LEVEL SECURITY;
+--> statement-breakpoint
+CREATE POLICY "tenant_isolation_qbo_connections" ON "qbo_connections" FOR ALL USING (company_id::text = current_setting('app.current_company_id', true));
+--> statement-breakpoint
+ALTER TABLE "qbo_sync_issues" ENABLE ROW LEVEL SECURITY;
+--> statement-breakpoint
+ALTER TABLE "qbo_sync_issues" FORCE ROW LEVEL SECURITY;
+--> statement-breakpoint
+CREATE POLICY "tenant_isolation_qbo_sync_issues" ON "qbo_sync_issues" FOR ALL USING (company_id::text = current_setting('app.current_company_id', true));

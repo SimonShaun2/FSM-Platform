@@ -25,15 +25,5 @@ export const FS_MIGRATE_RLS_POLICY_CATALOG: RlsPolicySpec[] = [
     table: "jobs",
     policyName: "tenant_isolation_jobs",
     usingExpression: `company_id::text = current_setting('${TENANT_SESSION_GUC}', true)`
-  },
-  {
-    table: "qbo_connections",
-    policyName: "tenant_isolation_qbo_connections",
-    usingExpression: `company_id::text = current_setting('${TENANT_SESSION_GUC}', true)`
-  },
-  {
-    table: "qbo_sync_issues",
-    policyName: "tenant_isolation_qbo_sync_issues",
-    usingExpression: `company_id::text = current_setting('${TENANT_SESSION_GUC}', true)`
   }
 ];
