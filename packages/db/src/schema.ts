@@ -219,6 +219,8 @@ export const importEntityTypeEnum = pgEnum("import_entity_type", [
   "payments",
   "notes",
   "communications",
+  "vip_membership_tiers",
+  "vip_memberships",
 ]);
 
 export const importBundleStatusEnum = pgEnum("import_bundle_status", [
