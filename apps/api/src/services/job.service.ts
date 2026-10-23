@@ -41,6 +41,7 @@ import {
 
 import { generateJobNumber } from "../lib/job-number.js";
 import { runTenantAwareTransaction } from "../lib/company-scoped-transaction.js";
+import { enforceJobCreationPlanLimit } from "../lib/plan-usage-limits.js";
 import {
   canTransition,
   getAvailableTransitions,
@@ -825,6 +826,8 @@ export async function createJob(
   input: CreateJobInput
 ): Promise<Job> {
   const normalizedInput = normalizeCreateJobInput(input);
+
+  await enforceJobCreationPlanLimit(companyId);
 
   const createdJob = await runTenantAwareTransaction(companyId, async (tx) => {
     const actor = await getActor(companyId, actorId, tx);
