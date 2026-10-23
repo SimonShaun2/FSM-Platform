@@ -2,28 +2,79 @@ import type { Job, Processor } from "bullmq";
 import pino from "pino";
 
 import {
-  assertImportBundleObjectKeyBelongsToTenant,
-  buildImportBundleObjectKey
-} from "@fsm/config/import-bundle-storage";
-import {
   IMPORT_QUEUE_JOB_NAMES,
   MigrateFileBatchJobDataSchema,
+  parseMigrateFileBatchJobProgress,
+  type MigrateFileBatchFailedObject,
+  buildMigrateFileBatchJobProgress,
   type MigrateFileBatchJobData
 } from "@fsm/types";
+
+import { processMigrateFileBatchObject } from "./migrate-file-batch-object.js";
 
 const logger = pino({
   name: "migrate-file-batch-processor"
 });
 
+export class MigrateFileBatchPartialFailureError extends Error {
+  readonly failures: MigrateFileBatchFailedObject[];
+
+  constructor(failures: MigrateFileBatchFailedObject[]) {
+    super(`migrate-file-batch: ${failures.length} object(s) failed`);
+    this.name = "MigrateFileBatchPartialFailureError";
+    this.failures = failures;
+  }
+}
+
 export async function handleMigrateFileBatch(job: Job<MigrateFileBatchJobData>): Promise<void> {
   const payload = MigrateFileBatchJobDataSchema.parse(job.data);
+  const previousProgress = parseMigrateFileBatchJobProgress(job.progress);
+  const succeeded = new Set(previousProgress?.objectsSucceeded ?? []);
+  const failuresByVendorId = new Map<string, MigrateFileBatchFailedObject>();
+
+  for (const failure of previousProgress?.objectsFailed ?? []) {
+    if (!succeeded.has(failure.vendorFileId)) {
+      failuresByVendorId.set(failure.vendorFileId, failure);
+    }
+  }
 
   for (const object of payload.objects) {
-    const objectKey =
-      object.r2Key ??
-      buildImportBundleObjectKey(payload.companyId, payload.importBundleId, object.relativePath);
-    assertImportBundleObjectKeyBelongsToTenant(objectKey, payload.companyId, payload.importBundleId);
+    if (succeeded.has(object.vendorFileId)) {
+      continue;
+    }
+
+    try {
+      await processMigrateFileBatchObject(object, payload);
+      succeeded.add(object.vendorFileId);
+      failuresByVendorId.delete(object.vendorFileId);
+    } catch (error) {
+      const errorMessage = error instanceof Error ? error.message : "migrate-file-batch object failed";
+      failuresByVendorId.set(object.vendorFileId, {
+        vendorFileId: object.vendorFileId,
+        errorMessage
+      });
+    }
+
+    const objectsFailed = [...failuresByVendorId.values()];
+    const status = objectsFailed.length > 0 ? "partial_failure" : "in_progress";
+
+    await job.updateProgress(
+      buildMigrateFileBatchJobProgress(payload, [...succeeded], objectsFailed, status)
+    );
   }
+
+  const objectsFailed = [...failuresByVendorId.values()];
+
+  if (objectsFailed.length > 0) {
+    await job.updateProgress(
+      buildMigrateFileBatchJobProgress(payload, [...succeeded], objectsFailed, "partial_failure")
+    );
+    throw new MigrateFileBatchPartialFailureError(objectsFailed);
+  }
+
+  await job.updateProgress(
+    buildMigrateFileBatchJobProgress(payload, [...succeeded], [], "stub_complete")
+  );
 
   logger.info(
     {
@@ -37,13 +88,6 @@ export async function handleMigrateFileBatch(job: Job<MigrateFileBatchJobData>):
     },
     "migrate-file-batch stub processed (checkpoint reserved for Diego ingest)"
   );
-
-  await job.updateProgress({
-    batchIndex: payload.batchIndex,
-    batchesTotal: payload.batchesTotal,
-    objectsAcknowledged: payload.objects.length,
-    status: "stub_complete"
-  });
 }
 
 export function createMigrateFileBatchProcessor(): Processor<MigrateFileBatchJobData, void, string> {

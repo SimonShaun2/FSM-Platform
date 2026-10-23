@@ -6,6 +6,8 @@ import {
   PlatformQueueRetryPolicyV1Schema
 } from "./retry-policy.js";
 import { DeadLetterJobEnvelopeV1Schema } from "./dead-letter.js";
+import { DeadLetterJobListV1Schema } from "./dead-letter-visibility.js";
+import { PlatformQueueMonitoringSnapshotV1Schema } from "./monitoring.js";
 import { QUEUE_PLATFORM_CONTRACT_VERSION } from "./constants.js";
 
 describe("queue-platform v0.1", () => {
@@ -33,5 +35,45 @@ describe("queue-platform v0.1", () => {
     });
 
     expect(parsed.sourceQueue).toBe("notifications");
+  });
+
+  it("parses queue monitoring snapshot", () => {
+    const parsed = PlatformQueueMonitoringSnapshotV1Schema.parse({
+      contractVersion: QUEUE_PLATFORM_CONTRACT_VERSION,
+      collectedAt: "2026-10-23T12:00:00.000Z",
+      queues: [
+        {
+          queueName: "imports",
+          counts: {
+            waiting: 0,
+            active: 0,
+            delayed: 0,
+            failed: 0,
+            paused: 0,
+            backlog: 0
+          },
+          oldestJobAgeSeconds: null,
+          deadLetter: {
+            queueName: "imports-dlq",
+            count: 0,
+            oldestJobAgeSeconds: null
+          }
+        }
+      ]
+    });
+
+    expect(parsed.queues[0].deadLetter.queueName).toBe("imports-dlq");
+  });
+
+  it("parses dead-letter job list", () => {
+    const parsed = DeadLetterJobListV1Schema.parse({
+      contractVersion: QUEUE_PLATFORM_CONTRACT_VERSION,
+      sourceQueue: "imports",
+      deadLetterQueueName: "imports-dlq",
+      jobs: [],
+      nextCursor: null
+    });
+
+    expect(parsed.sourceQueue).toBe("imports");
   });
 });
