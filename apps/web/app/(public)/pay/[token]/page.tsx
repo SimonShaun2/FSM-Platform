@@ -4,7 +4,6 @@ import { useState } from "react";
 import { useParams } from "next/navigation";
 import { Loader2 } from "lucide-react";
 
-import { Button } from "@/src/components/ui/Button";
 import { EmptyState } from "@/src/components/ui/EmptyState";
 import { usePublicPaymentLink } from "@/src/hooks/invoices.hooks";
 
@@ -86,14 +85,14 @@ export default function PublicPaymentPage() {
           vary by state — counsel review in progress.
         </p>
 
-        <Button
+        <button
           type="button"
-          className="mt-8 w-full"
+          className="mt-8 w-full rounded-full bg-brand-accent px-6 py-3 text-sm font-semibold text-white transition hover:opacity-90 disabled:cursor-not-allowed disabled:opacity-60"
           disabled={redirecting}
           onClick={handleContinue}
         >
           {redirecting ? "Redirecting…" : "Continue to secure payment"}
-        </Button>
+        </button>
       </div>
     </div>
   );
