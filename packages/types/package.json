@@ -17,9 +17,12 @@
   "scripts": {
     "build": "tsc -p tsconfig.json",
     "lint": "tsc --noEmit",
-    "test": "vitest run"
+    "test": "vitest run",
+    "test:import-contracts": "vitest run src/fs-migrate/import-pipeline.contract.test.ts"
   },
   "devDependencies": {
+    "@fsm/config": "workspace:*",
+    "@fsm/import-normalize": "workspace:*",
     "@types/node": "^24.3.0",
     "typescript": "^5.9.2",
     "vitest": "^3.2.4"

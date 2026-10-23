@@ -31,6 +31,8 @@ jobs:
         run: pnpm lint
       - name: Test
         run: pnpm test
+      - name: FS-128 FS-MIGRATE import pipeline contracts
+        run: pnpm test:fs-migrate-import-contracts
 
   neon-per-pr-staging:
     name: Neon per-PR (staging RLS)
