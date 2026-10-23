@@ -1,5 +1,6 @@
 import {
   goldenImportBundleManifestSchema,
+  type GoldenBundleChunkedJobHistorySpec,
   type GoldenImportBundleManifest
 } from "@fsm/types";
 
@@ -8,6 +9,10 @@ import {
   IMPORT_SOURCE_PRESETS,
   inferImportSourcePresetFromHeaders
 } from "../import-source-presets.js";
+import {
+  expectedGoldenBundleWorkerChunkCount,
+  listGoldenBundleChunkPartRelativePaths
+} from "./chunked-job-history.js";
 import { columnIndex, parseCsvTable } from "./csv.js";
 import { goldenImportBundleFileExists, readGoldenImportBundleFile } from "./io.js";
 
@@ -64,6 +69,10 @@ function validateHistorySpan(
         dateValues.push(ms);
       }
     }
+  }
+
+  if (manifest.chunkedJobHistory) {
+    collectChunkedJobHistoryBusinessDates(manifest, manifest.chunkedJobHistory, dateValues);
   }
 
   if (dateValues.length < 2) {
@@ -243,6 +252,115 @@ function validateQuickBooksPresetInference(
   }
 }
 
+function collectChunkedJobHistoryBusinessDates(
+  manifest: GoldenImportBundleManifest,
+  spec: GoldenBundleChunkedJobHistorySpec,
+  dateValues: number[]
+): void {
+  const partPaths = listGoldenBundleChunkPartRelativePaths(spec);
+  const firstPath = partPaths[0];
+  const lastPath = partPaths[partPaths.length - 1];
+  if (!firstPath || !lastPath) {
+    return;
+  }
+  const firstPart = readGoldenImportBundleFile(manifest.sourceSystem, firstPath);
+  const lastPart = readGoldenImportBundleFile(manifest.sourceSystem, lastPath);
+
+  for (const content of [firstPart, lastPart]) {
+    const { headers, rows } = parseCsvTable(content);
+    const dateIdx = columnIndex(headers, spec.businessDateColumn);
+    for (const row of rows) {
+      const ms = parseBusinessDate(row[dateIdx] ?? "");
+      if (ms !== null) {
+        dateValues.push(ms);
+      }
+    }
+  }
+}
+
+function validateChunkedJobHistory(
+  manifest: GoldenImportBundleManifest,
+  spec: GoldenBundleChunkedJobHistorySpec,
+  issues: GoldenBundleValidationIssue[]
+): void {
+  const expectedPartRows = spec.partCount * spec.rowsPerPart;
+  if (expectedPartRows !== spec.totalDataRows) {
+    issues.push({
+      code: "INVALID_MANIFEST",
+      message: `chunkedJobHistory partCount*rowsPerPart (${expectedPartRows}) must equal totalDataRows (${spec.totalDataRows})`
+    });
+  }
+
+  const workerChunks = expectedGoldenBundleWorkerChunkCount(spec);
+  if (workerChunks < 1) {
+    issues.push({
+      code: "INVALID_MANIFEST",
+      message: `chunkedJobHistory workerRowChunkSize yields zero worker chunks`
+    });
+  }
+
+  const partPaths = listGoldenBundleChunkPartRelativePaths(spec);
+  let dataRowCount = 0;
+
+  for (const relativePath of partPaths) {
+    if (!goldenImportBundleFileExists(manifest.sourceSystem, relativePath)) {
+      issues.push({
+        code: "MISSING_FILE",
+        message: `Missing chunked job history part ${manifest.sourceSystem}/${relativePath}`
+      });
+      continue;
+    }
+
+    const content = readGoldenImportBundleFile(manifest.sourceSystem, relativePath);
+    const { rows } = parseCsvTable(content);
+    dataRowCount += rows.length;
+
+    if (rows.length !== spec.rowsPerPart && relativePath !== partPaths[partPaths.length - 1]) {
+      issues.push({
+        code: "INVALID_MANIFEST",
+        message: `Chunk part ${relativePath} expected ${spec.rowsPerPart} rows, got ${rows.length}`
+      });
+    }
+  }
+
+  if (dataRowCount !== spec.totalDataRows) {
+    issues.push({
+      code: "INVALID_MANIFEST",
+      message: `chunkedJobHistory row count ${dataRowCount} != totalDataRows ${spec.totalDataRows}`
+    });
+  }
+
+  const parentContent = readGoldenImportBundleFile(manifest.sourceSystem, spec.joinLink.parentFile);
+  const parentTable = parseCsvTable(parentContent);
+  const parentIdx = columnIndex(parentTable.headers, spec.joinLink.parentColumn);
+  const parentKeys = new Set(parentTable.rows.map((row) => row[parentIdx]));
+
+  const firstSamplePath = partPaths[0];
+  const lastSamplePath = partPaths[partPaths.length - 1];
+  const samplePaths = [firstSamplePath, lastSamplePath].filter(
+    (path): path is string => typeof path === "string"
+  );
+  for (const relativePath of samplePaths) {
+    if (!goldenImportBundleFileExists(manifest.sourceSystem, relativePath)) {
+      continue;
+    }
+    const { headers, rows } = parseCsvTable(
+      readGoldenImportBundleFile(manifest.sourceSystem, relativePath)
+    );
+    const childIdx = columnIndex(headers, spec.joinLink.localColumn);
+    const edgeRows = [rows[0], rows.at(-1)].filter((row): row is string[] => row !== undefined);
+    for (const row of edgeRows) {
+      const key = row[childIdx];
+      if (!parentKeys.has(key)) {
+        issues.push({
+          code: "JOIN_ORPHAN",
+          message: `Orphan join key ${key} in chunked ${relativePath} → ${spec.joinLink.parentFile}`
+        });
+      }
+    }
+  }
+}
+
 function validateFilesPresent(
   manifest: GoldenImportBundleManifest,
   issues: GoldenBundleValidationIssue[]
@@ -294,6 +412,9 @@ export function validateGoldenImportBundleManifest(
   }
 
   validateJoinLinks(parsed.data, issues);
+  if (parsed.data.chunkedJobHistory) {
+    validateChunkedJobHistory(parsed.data, parsed.data.chunkedJobHistory, issues);
+  }
   validateGenericImportColumnMapping(parsed.data, issues);
   validateQuickBooksPresetInference(parsed.data, issues);
   validateHistorySpan(parsed.data, issues);

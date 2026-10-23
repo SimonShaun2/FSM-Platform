@@ -45,6 +45,27 @@ export const goldenBundleFileSpecSchema = z.object({
 
 export type GoldenBundleFileSpec = z.infer<typeof goldenBundleFileSpecSchema>;
 
+/**
+ * Large job-history export split across multiple on-disk CSV parts for worker chunk ingest (ADR §3).
+ * Logical worker windows use `workerRowChunkSize` across the concatenated row stream.
+ */
+export const goldenBundleChunkedJobHistorySpecSchema = z.object({
+  relativeDir: z.string().min(1).max(255),
+  /** printf-style pattern with `%02d` for the part index (e.g. `part-%02d.csv`). */
+  partFileNameFormat: z.string().min(1).max(128),
+  partCount: z.number().int().positive(),
+  rowsPerPart: z.number().int().positive(),
+  totalDataRows: z.number().int().positive(),
+  /** Row window size for `import-chunk-commit` plans over the virtual concatenated file. */
+  workerRowChunkSize: z.number().int().positive(),
+  entityType: z.literal("jobs"),
+  presetEntityHint: z.enum(["customers", "products", "invoices"]),
+  joinLink: goldenBundleJoinLinkSchema,
+  businessDateColumn: z.string().min(1).max(128)
+});
+
+export type GoldenBundleChunkedJobHistorySpec = z.infer<typeof goldenBundleChunkedJobHistorySpecSchema>;
+
 export const goldenImportBundleManifestSchema = z.object({
   fixtureId: z.string().min(1).max(64),
   sourceSystem: migrateSourceSystemIdSchema,
@@ -52,6 +73,7 @@ export const goldenImportBundleManifestSchema = z.object({
   description: z.string().max(500),
   files: z.array(goldenBundleFileSpecSchema).min(1),
   mediaRelativePaths: z.array(z.string().min(1).max(512)).default([]),
+  chunkedJobHistory: goldenBundleChunkedJobHistorySpecSchema.optional(),
   /** Minimum years between earliest and latest job/invoice business dates (epic §6). */
   requiredHistorySpanYears: z.number().positive().optional()
 });
