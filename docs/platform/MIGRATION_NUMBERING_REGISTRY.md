@@ -2,6 +2,7 @@
 
 **Purpose:** One linear Drizzle journal (`packages/db/migrations/meta/_journal.json`). Prevent colliding `00xx_*.sql` tags across open PRs.  
 **Canonical tip on `dev` @ `9313130` (post-#86):** idx **25** — `0025_agent_action_reversed_state`.  
+**Open PR tip:** idx **26** on PR #102 — `0027_stack10_tenant_rls_policies` (renumber to idx **27** after `0026` merges to `dev`).  
 **Next allocatable index:** **0026** — **reserved** for [ADR-FS-MIGRATE](../adr/ADR-FS-MIGRATE-import-lineage.md) (`0026_fs_migrate_import_lineage`); no other work without Tech Lead release.  
 **Owner:** Tech Lead — pairs request slots in PR description before `drizzle-kit generate`.
 
@@ -29,6 +30,7 @@
 | 25 | `0025_agent_action_reversed_state` | Agent action enum `reversed` (#81) |
 
 | 26 | `0026_fs_migrate_import_lineage` | **Reserved** — FS-MIGRATE lineage + chunk runs (ADR-FS-MIGRATE); implementation PR only |
+| — | `0027_stack10_tenant_rls_policies` | STACK-10 tenant RLS — PR #102 (journal idx **26** until **0026** lands, then renumber to idx **27**) |
 
 **FS-94 platform billing:** **⏸** per `BATCH-PLAN-5-9.md` §0 — do not allocate idx until founder/CoS budget gate.
 
@@ -52,3 +54,4 @@
 | 2026-10-22 | Assigned **0023** to #75 (FS-87); #75 must renumber off `0018_field_work_sync` |
 | 2026-10-22 | Synced tip to **0025** after #81; next free **0026**; FS-94 deferred |
 | 2026-10-23 | **0026** reserved for FS-MIGRATE import lineage per ADR-FS-MIGRATE; tip unchanged @ **0025** |
+| 2026-10-23 | **0027** STACK-10 RLS on PR #102 (temporary journal idx **26**) |
