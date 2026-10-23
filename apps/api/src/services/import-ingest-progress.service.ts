@@ -17,6 +17,12 @@ import {
   type MigrateOnboardingStepState
 } from "@fsm/types";
 
+function inferImportFileMimeType(fileName: string): string {
+  return /\.xlsx?$/iu.test(fileName)
+    ? "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
+    : "text/csv";
+}
+
 function toChunkProgress(progress: unknown): ImportSessionChunkProgress | null {
   const parsed = parseImportChunkSessionProgress(progress);
 
@@ -24,17 +30,31 @@ function toChunkProgress(progress: unknown): ImportSessionChunkProgress | null {
     return null;
   }
 
-  const normalized = {
+  let lastCursor: ImportSessionChunkProgress["lastCursor"];
+  if (parsed.lastCursor) {
+    const cursor: NonNullable<ImportSessionChunkProgress["lastCursor"]> = {};
+    if (typeof parsed.lastCursor.rowOffset === "number") {
+      cursor.rowOffset = parsed.lastCursor.rowOffset;
+    }
+    if (typeof parsed.lastCursor.lastSourceId === "string") {
+      cursor.lastSourceId = parsed.lastCursor.lastSourceId;
+    }
+    if (cursor.rowOffset !== undefined || cursor.lastSourceId !== undefined) {
+      lastCursor = cursor;
+    }
+  }
+
+  const validated = ImportSessionChunkProgressSchema.parse({
     entityType: parsed.entityType ?? "unknown",
     chunksTotal: parsed.chunksTotal,
     chunksDone: parsed.chunksDone ?? 0,
     rowsOk: parsed.rowsOk ?? 0,
     rowsFailed: parsed.rowsFailed ?? 0,
-    ...(parsed.lastCursor ? { lastCursor: parsed.lastCursor } : {}),
+    ...(lastCursor ? { lastCursor } : {}),
     ...(parsed.lastIdempotencyKey ? { lastIdempotencyKey: parsed.lastIdempotencyKey } : {})
-  };
+  });
 
-  return ImportSessionChunkProgressSchema.parse(normalized);
+  return validated as ImportSessionChunkProgress;
 }
 
 export async function getImportSessionIngestProgress(
@@ -106,8 +126,8 @@ export async function getMigrateOnboardingIngestProgress(
   const files = buildImportBundleFileDescriptors(
     stepState.files.map((file) => ({
       fileName: file.fileName,
-      mimeType: file.mimeType,
-      byteSize: file.byteSize,
+      mimeType: inferImportFileMimeType(file.fileName),
+      byteSize: 0,
       importSessionId: file.importSessionId
     }))
   );
