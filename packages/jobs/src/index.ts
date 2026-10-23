@@ -39,6 +39,13 @@ export {
 } from "./import-invoice-balance-commit.js";
 export type { ImportInvoiceBalanceCommitPayload } from "./import-invoice-balance-commit.js";
 export {
+  IMPORT_EQUIPMENT_COMMIT_JOB_NAME,
+  ImportEquipmentCommitPayloadSchema,
+  buildImportEquipmentCommitJobId,
+} from "./import-equipment-commit.js";
+export type { ImportEquipmentCommitPayload } from "./import-equipment-commit.js";
+export { enqueueImportEquipmentCommitJob } from "./enqueue-import-equipment-commit.js";
+export {
   QUEUE_PREFIX,
   QUEUE_NAMES,
   queueBaseOptions,
