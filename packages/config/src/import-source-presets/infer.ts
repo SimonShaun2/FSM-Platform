@@ -7,6 +7,10 @@ function entityHintFromImportEntityType(entityType: string): ImportPresetEntityH
     return "invoices";
   }
 
+  if (entityType === "notes") {
+    return "notes";
+  }
+
   if (entityType === "products" || entityType === "price_book" || entityType === "price_book_item") {
     return "products";
   }

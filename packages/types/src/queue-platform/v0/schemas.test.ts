@@ -6,6 +6,7 @@ import {
   PlatformQueueRetryPolicyV1Schema
 } from "./retry-policy.js";
 import { DeadLetterJobEnvelopeV1Schema } from "./dead-letter.js";
+import { DeadLetterJobListV1Schema } from "./dead-letter-visibility.js";
 import { PlatformQueueMonitoringSnapshotV1Schema } from "./monitoring.js";
 import { QUEUE_PLATFORM_CONTRACT_VERSION } from "./constants.js";
 
@@ -62,5 +63,17 @@ describe("queue-platform v0.1", () => {
     });
 
     expect(parsed.queues[0].deadLetter.queueName).toBe("imports-dlq");
+  });
+
+  it("parses dead-letter job list", () => {
+    const parsed = DeadLetterJobListV1Schema.parse({
+      contractVersion: QUEUE_PLATFORM_CONTRACT_VERSION,
+      sourceQueue: "imports",
+      deadLetterQueueName: "imports-dlq",
+      jobs: [],
+      nextCursor: null
+    });
+
+    expect(parsed.sourceQueue).toBe("imports");
   });
 });

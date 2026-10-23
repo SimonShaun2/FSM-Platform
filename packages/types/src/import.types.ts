@@ -13,6 +13,7 @@ export type ImportEntityType =
   | "customers"
   | "jobs"
   | "price_book"
+  | "notes"
   | "communications";
 
 export type ColumnMapping = Record<string, string | null>;

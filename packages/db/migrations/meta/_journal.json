@@ -232,6 +232,13 @@
       "when": 1777704000000,
       "tag": "0032_fs_migrate_communications_history",
       "breakpoints": true
+    },
+    {
+      "idx": 33,
+      "version": "7",
+      "when": 1777705000000,
+      "tag": "0033_fs_migrate_notes_import",
+      "breakpoints": true
     }
   ]
 }

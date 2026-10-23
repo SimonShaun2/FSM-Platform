@@ -10,6 +10,12 @@ export {
   fsmRetainFailedJobsForDlq
 } from "./queue-policy.js";
 export { enqueueMigrateFileBatchJob } from "./enqueue-migrate-file-batch.js";
+export { enqueueMigrateFileBatchFailedObjectsRetry } from "./enqueue-migrate-file-batch-retry.js";
+export {
+  buildMigrateFileBatchFailedObjectsRetryPayload,
+  buildMigrateFileBatchRetryJobId
+} from "./migrate-file-batch-retry.js";
+export { listDeadLetterJobs } from "./dead-letter-visibility.js";
 export { enqueueImportChunkCommitJob } from "./enqueue-import-chunk-commit.js";
 export { logMigrateFileBatchTrace } from "./migrate-file-batch-trace-log.js";
 export type { LogMigrateFileBatchTraceInput } from "./migrate-file-batch-trace-log.js";
@@ -73,5 +79,6 @@ export {
 export {
   createDefaultPlatformQueueMonitoringDeps,
   getPlatformQueueMonitoringSnapshot,
+  listPlatformDeadLetterJobs,
   platformQueuesByName
 } from "./platform-queue-registry.js";

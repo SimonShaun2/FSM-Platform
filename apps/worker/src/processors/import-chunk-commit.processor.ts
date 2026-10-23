@@ -7,6 +7,9 @@ import pino from "pino";
 
 import { downloadFile, getFileKeyFromUrl } from "@fsm/config/storage";
 import {
+  commitImportedEstimateRows,
+  commitImportedJobRows,
+  createDbHistoryChunkResolver,
   customers,
   db,
   emitEventWithExecutor,
@@ -24,7 +27,12 @@ import {
   buildImportChunkIdempotencyKey,
   type ImportChunkCommitPayload,
 } from "@fsm/jobs";
-import { sanitizeSpreadsheetCell, type ColumnMapping } from "@fsm/types";
+import {
+  ImportEstimateCommitRowSchema,
+  ImportJobCommitRowSchema,
+  sanitizeSpreadsheetCell,
+  type ColumnMapping,
+} from "@fsm/types";
 
 import {
   mergeImportChunkSessionProgress,
@@ -260,20 +268,41 @@ async function upsertCustomerByLineage(
   await db.insert(customers).values(insertValues).returning();
 }
 
+function mapRowValues(values: Record<string, string>, columnMapping: ColumnMapping): Record<string, string> {
+  const mappedValues: Record<string, string> = {};
+
+  for (const [csvColumn, fieldName] of Object.entries(columnMapping)) {
+    if (typeof fieldName !== "string" || fieldName.length === 0) {
+      continue;
+    }
+
+    mappedValues[fieldName] = values[csvColumn] ?? "";
+  }
+
+  return mappedValues;
+}
+
+async function loadChunkRows(
+  payload: ImportChunkCommitPayload,
+  importSession: ImportSessionRow,
+): Promise<ParsedCsvRow[]> {
+  const fileBuffer = await downloadFile(getFileKeyFromUrl(importSession.fileUrl));
+  const parsedRows = parseTabularRows(fileBuffer, importSession.fileName);
+  const { start, end } = resolveRowWindow(payload, parsedRows.length);
+  return parsedRows.slice(start, end);
+}
+
 async function commitCustomerChunk(
   payload: ImportChunkCommitPayload,
   importSession: ImportSessionRow,
 ): Promise<ChunkCommitResult> {
-  const fileBuffer = await downloadFile(getFileKeyFromUrl(importSession.fileUrl));
-  const parsedRows = parseTabularRows(fileBuffer, importSession.fileName);
-  const { start, end } = resolveRowWindow(payload, parsedRows.length);
+  const chunkRows = await loadChunkRows(payload, importSession);
   const columnMapping = normalizeColumnMappings(importSession.columnMappings);
 
   let rowsOk = 0;
   let rowsFailed = 0;
 
-  for (let index = start; index < end; index += 1) {
-    const row = parsedRows[index];
+  for (const row of chunkRows) {
     if (!row) {
       continue;
     }
@@ -303,6 +332,100 @@ async function commitCustomerChunk(
   return { rowsOk, rowsFailed };
 }
 
+async function commitJobHistoryChunk(
+  payload: ImportChunkCommitPayload,
+  importSession: ImportSessionRow,
+): Promise<ChunkCommitResult> {
+  const chunkRows = await loadChunkRows(payload, importSession);
+  const columnMapping = normalizeColumnMappings(importSession.columnMappings);
+  const resolver = await createDbHistoryChunkResolver(payload.companyId, payload.sourceSystem);
+
+  const jobRows = chunkRows.map((row) => {
+    const mapped = mapRowValues(row.values, columnMapping);
+    return ImportJobCommitRowSchema.parse({
+      rowNumber: row.rowNumber,
+      sourceId: normalizeTextValue(mapped.sourceId) ?? mapped.jobNumber,
+      jobNumber: mapped.jobNumber,
+      customerId: normalizeTextValue(mapped.customerId) ?? undefined,
+      customerSourceId: normalizeTextValue(mapped.customerSourceId) ?? undefined,
+      propertySourceId: normalizeTextValue(mapped.propertySourceId) ?? undefined,
+      title: normalizeTextValue(mapped.title) ?? mapped.jobNumber,
+      status: normalizeTextValue(mapped.status) ?? undefined,
+      type: normalizeTextValue(mapped.type) ?? undefined,
+      priority: normalizeTextValue(mapped.priority) ?? undefined,
+      leadSource: normalizeTextValue(mapped.leadSource) ?? undefined,
+      description: normalizeTextValue(mapped.description) ?? undefined,
+      scheduledStart: normalizeTextValue(mapped.scheduledStart) ?? undefined,
+      scheduledEnd: normalizeTextValue(mapped.scheduledEnd) ?? undefined,
+      actualStart: normalizeTextValue(mapped.actualStart) ?? undefined,
+      actualEnd: normalizeTextValue(mapped.actualEnd) ?? undefined,
+      estimateTotal: normalizeTextValue(mapped.estimateTotal) ?? undefined,
+      invoiceTotal: normalizeTextValue(mapped.invoiceTotal) ?? undefined,
+      amountPaid: normalizeTextValue(mapped.amountPaid) ?? undefined,
+    });
+  });
+
+  const result = await commitImportedJobRows(
+    {
+      companyId: payload.companyId,
+      importSessionId: payload.importSessionId,
+      sourceSystem: payload.sourceSystem,
+    },
+    jobRows,
+    resolver,
+  );
+
+  return {
+    rowsOk: result.rowsCommitted,
+    rowsFailed: result.rowsFailed,
+  };
+}
+
+async function commitEstimateHistoryChunk(
+  payload: ImportChunkCommitPayload,
+  importSession: ImportSessionRow,
+): Promise<ChunkCommitResult> {
+  const chunkRows = await loadChunkRows(payload, importSession);
+  const columnMapping = normalizeColumnMappings(importSession.columnMappings);
+  const resolver = await createDbHistoryChunkResolver(payload.companyId, payload.sourceSystem);
+
+  const estimateRows = chunkRows.map((row) => {
+    const mapped = mapRowValues(row.values, columnMapping);
+    return ImportEstimateCommitRowSchema.parse({
+      rowNumber: row.rowNumber,
+      sourceId: normalizeTextValue(mapped.sourceId) ?? mapped.estimateNumber,
+      estimateNumber: mapped.estimateNumber,
+      customerId: normalizeTextValue(mapped.customerId) ?? undefined,
+      customerSourceId: normalizeTextValue(mapped.customerSourceId) ?? undefined,
+      jobSourceId: normalizeTextValue(mapped.jobSourceId) ?? undefined,
+      status: normalizeTextValue(mapped.status) ?? undefined,
+      title: normalizeTextValue(mapped.title) ?? undefined,
+      subtotal: normalizeTextValue(mapped.subtotal) ?? undefined,
+      total: mapped.total,
+      sentAt: normalizeTextValue(mapped.sentAt) ?? undefined,
+      approvedAt: normalizeTextValue(mapped.approvedAt) ?? undefined,
+      declinedAt: normalizeTextValue(mapped.declinedAt) ?? undefined,
+      expiresAt: normalizeTextValue(mapped.expiresAt) ?? undefined,
+      approvedByName: normalizeTextValue(mapped.approvedByName) ?? undefined,
+    });
+  });
+
+  const result = await commitImportedEstimateRows(
+    {
+      companyId: payload.companyId,
+      importSessionId: payload.importSessionId,
+      sourceSystem: payload.sourceSystem,
+    },
+    estimateRows,
+    resolver,
+  );
+
+  return {
+    rowsOk: result.rowsCommitted,
+    rowsFailed: result.rowsFailed,
+  };
+}
+
 async function commitChunkForEntity(
   payload: ImportChunkCommitPayload,
   importSession: ImportSessionRow,
@@ -310,6 +433,10 @@ async function commitChunkForEntity(
   switch (payload.entityType) {
     case "customers":
       return commitCustomerChunk(payload, importSession);
+    case "jobs":
+      return commitJobHistoryChunk(payload, importSession);
+    case "estimates":
+      return commitEstimateHistoryChunk(payload, importSession);
     default:
       throw new ImportChunkCommitError(
         "UNSUPPORTED_ENTITY_TYPE",

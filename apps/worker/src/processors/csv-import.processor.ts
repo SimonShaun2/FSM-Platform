@@ -15,8 +15,10 @@ import {
   inferImportSourcePresetForSession
 } from "@fsm/config/import-source-presets";
 import { downloadFile, getFileKeyFromUrl } from "@fsm/config/storage";
+import { resolveSourceSystemForNotesImport } from "@fsm/config/import-notes-map";
 import {
   commitCommunicationsRows,
+  commitNoteImportRows,
   commitPriceBookRows,
   customers,
   db,
@@ -26,6 +28,7 @@ import {
   resolveSourceSystemForCommunicationsImport,
   resolveSourceSystemForPriceBookImport,
   validateCommunicationsRows,
+  validateNoteImportRows,
   validatePriceBookRows
 } from "@fsm/db";
 import { normalizeImportPhone } from "@fsm/import-normalize";
@@ -163,6 +166,20 @@ function readPriceBookSourceSystem(
 
   const presetId = inferImportSourcePresetForSession(headers, entityType);
   return resolveSourceSystemForPriceBookImport(presetId ?? "generic");
+}
+
+function readNotesSourceSystem(
+  aiInferences: unknown,
+  headers: string[],
+  entityType: string
+): ReturnType<typeof resolveSourceSystemForNotesImport> {
+  const inferences = normalizeAiInferences(aiInferences);
+  if (typeof inferences.sourceSystem === "string") {
+    return inferences.sourceSystem as ReturnType<typeof resolveSourceSystemForNotesImport>;
+  }
+
+  const presetId = inferImportSourcePresetForSession(headers, entityType);
+  return resolveSourceSystemForNotesImport(presetId ?? "generic");
 }
 
 function readCommunicationsSourceSystem(aiInferences: unknown, headers: string[]): string {
@@ -616,8 +633,10 @@ export async function handleValidateCsvRows(job: Job<Record<string, unknown>>): 
             columnMapping,
             readPriceBookSourceSystem(importSession.aiInferences, parsedCsv.headers, importSession.entityType)
           )
-        : importSession.entityType === "communications"
-          ? validateCommunicationsRows(parsedCsv.rows, columnMapping)
+        : importSession.entityType === "notes"
+          ? validateNoteImportRows(parsedCsv.rows, columnMapping)
+          : importSession.entityType === "communications"
+            ? validateCommunicationsRows(parsedCsv.rows, columnMapping)
           : validateCustomerRows(parsedCsv.rows, columnMapping, await getCompanyCustomers(companyId));
 
     await db
@@ -647,6 +666,79 @@ export async function handleValidateCsvRows(job: Job<Record<string, unknown>>): 
     await markImportFailed(importSession, error);
     throw error;
   }
+}
+
+async function executeNotesImport(
+  job: Job<Record<string, unknown>>,
+  companyId: string,
+  importSessionId: string,
+  importSession: ImportSessionRow
+): Promise<void> {
+  const fileBuffer = await downloadFile(getFileKeyFromUrl(importSession.fileUrl));
+  const parsedCsv = parseCsv(fileBuffer);
+  const columnMapping = normalizeColumnMappings(importSession.columnMappings);
+  const validationErrors = normalizeValidationErrors(importSession.validationErrors);
+  const invalidRowNumbers = new Set(validationErrors.map((validationError) => validationError.row));
+  const sourceSystem = readNotesSourceSystem(
+    importSession.aiInferences,
+    parsedCsv.headers,
+    importSession.entityType
+  );
+
+  const result = await commitNoteImportRows({
+    companyId,
+    importSessionId,
+    sourceSystem,
+    rows: parsedCsv.rows,
+    columnMapping,
+    invalidRowNumbers
+  });
+
+  const completedAt = new Date();
+  const priorInferences = normalizeAiInferences(importSession.aiInferences);
+
+  await db.transaction(async (tx) => {
+    await tx
+      .update(importSessions)
+      .set({
+        status: "completed",
+        importedRows: result.importedRows,
+        skippedRows: result.skippedRows,
+        duplicateRows: 0,
+        completedAt,
+        errorMessage: null,
+        aiInferences: {
+          ...priorInferences,
+          notesImport: {
+            customerNotes: result.customerNotes,
+            jobNotes: result.jobNotes
+          }
+        },
+        updatedAt: completedAt
+      })
+      .where(
+        and(eq(importSessions.companyId, companyId), eq(importSessions.id, importSessionId), isNull(importSessions.deletedAt))
+      )
+      .returning();
+
+    await emitEventWithExecutor(tx, {
+      companyId,
+      eventType: "import.completed",
+      actorType: "system",
+      entityType: "import_session",
+      entityId: importSessionId,
+      payload: {
+        importedRows: result.importedRows,
+        skippedRows: result.skippedRows,
+        entityType: "notes",
+        customerNotes: result.customerNotes,
+        jobNotes: result.jobNotes
+      },
+      summary: `Notes import ${importSession.fileName} completed`
+    });
+  });
+
+  await job.updateProgress?.(100);
 }
 
 async function executeCommunicationsImport(
@@ -800,6 +892,11 @@ export async function handleExecuteImport(job: Job<Record<string, unknown>>): Pr
   try {
     if (importSession.entityType === "price_book") {
       await executePriceBookImport(job, companyId, importSessionId, importSession);
+      return;
+    }
+
+    if (importSession.entityType === "notes") {
+      await executeNotesImport(job, companyId, importSessionId, importSession);
       return;
     }
 
