@@ -33,6 +33,10 @@
     "./deployment-environment": {
       "types": "./dist/deployment-environment.d.ts",
       "import": "./dist/deployment-environment.js"
+    },
+    "./neon-ci": {
+      "types": "./dist/neon-ci.d.ts",
+      "import": "./dist/neon-ci.js"
     }
   },
   "scripts": {
