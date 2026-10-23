@@ -5,6 +5,7 @@
   "type": "module",
   "scripts": {
     "dev": "next dev --port 3000",
+    "prebuild": "cd ../.. && pnpm -r --filter @fsm/import-normalize --filter @fsm/types --filter @fsm/comms build && pnpm --filter @fsm/import-engine build && pnpm --filter @fsm/config build && pnpm --filter @fsm/db build && pnpm --filter @fsm/observability build && pnpm --filter @fsm/jobs build && pnpm --filter @fsm/ai build",
     "build": "next build",
     "lint": "tsc --noEmit",
     "test": "vitest run",
