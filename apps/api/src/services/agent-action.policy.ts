@@ -62,7 +62,7 @@ export function assertActionAllowedForProduct(
 }
 
 export function requiresHumanApproval(actionType: string): boolean {
-  if (actionType === "message.send_proposed") {
+  if (actionType === "message.send_proposed" || actionType === "loyalty.reminder.propose") {
     return true;
   }
   return !AUTO_APPROVED_ACTION_TYPES.has(actionType);

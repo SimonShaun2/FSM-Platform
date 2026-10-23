@@ -6,6 +6,7 @@ import {
   assertActionAllowedForProduct,
   requiresHumanApproval
 } from "./agent-action.policy.js";
+import { LoyaltyReminderProposeParamsV1Schema } from "@fsm/types";
 
 describe("agent-action.policy", () => {
   it("requires approval for outbound send proposals", () => {
@@ -23,6 +24,20 @@ describe("agent-action.policy", () => {
     expect(() =>
       assertActionAllowedForProduct("loyalty", "loyalty.reminder.propose", "ai")
     ).not.toThrow();
+  });
+
+  it("requires approval for loyalty reminder proposals", () => {
+    expect(requiresHumanApproval("loyalty.reminder.propose")).toBe(true);
+  });
+
+  it("parses loyalty.reminder.propose FS-12 parameters", () => {
+    const parsed = LoyaltyReminderProposeParamsV1Schema.parse({
+      customerId: "11111111-1111-4111-8111-111111111111",
+      ruleFamily: "plan_cadence",
+      maintenancePlanId: "22222222-2222-4222-8222-222222222222",
+      summary: "Quarterly plan visit due"
+    });
+    expect(parsed.ruleFamily).toBe("plan_cadence");
   });
 
   it("denies unknown revenue tools", () => {

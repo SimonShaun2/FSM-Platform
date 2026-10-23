@@ -13,6 +13,7 @@ import {
   serviceAgreementTemplates
 } from "@fsm/db";
 import { featureFlags } from "@fsm/config/feature-flags";
+import { listM8ReactivationSignalsFromImportedJobHistory } from "@fsm/db";
 import { notificationsQueue } from "@fsm/jobs";
 
 const logger = pino({
@@ -374,10 +375,26 @@ export function createAgreementsProcessor(
         return;
       }
 
+      const importSessionId =
+        typeof job.data.importSessionId === "string" && job.data.importSessionId.length > 0
+          ? job.data.importSessionId
+          : null;
+
+      let m8ReactivationSignalCount = 0;
+      if (importSessionId) {
+        const signals = await listM8ReactivationSignalsFromImportedJobHistory(companyId, {
+          importSessionId,
+          lapsedDays: 90
+        });
+        m8ReactivationSignalCount = signals.length;
+      }
+
       logger.info(
         {
           companyId,
           dryRun: featureFlags.loyaltyRemindersDryRun,
+          importSessionId,
+          m8ReactivationSignalCount,
           jobId: job.id ?? null
         },
         "evaluate-loyalty-reminder-candidates stub completed"
