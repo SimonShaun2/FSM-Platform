@@ -10,7 +10,8 @@ export const EMAIL_TEMPLATE_IDS = {
   serviceAgreementPaymentFailed: "service_agreement.payment_failed",
   campaignMessage: "campaign.message",
   bookingConfirmation: "booking.confirmation",
-  bookingDecline: "booking.decline"
+  bookingDecline: "booking.decline",
+  savedCardMigrationReenterCard: "saved_card_migration.reenter_card"
 } as const;
 
 export type EmailTemplateId = (typeof EMAIL_TEMPLATE_IDS)[keyof typeof EMAIL_TEMPLATE_IDS];
@@ -205,6 +206,20 @@ export function renderTransactionalEmail(
           <p>Hi ${name},</p>
           <p>${variables.companyName ?? ""} was unable to confirm booking <strong>${variables.referenceNumber ?? ""}</strong>.</p>
           ${reasonBlock}
+        `)
+      };
+    }
+    case EMAIL_TEMPLATE_IDS.savedCardMigrationReenterCard: {
+      const name = greetingName(variables.firstName ?? "");
+      return {
+        templateId,
+        subject: `Update your card on file — ${variables.companyName ?? "Renvani"}`,
+        html: emailShell(`
+          <p>Hi ${name},</p>
+          <p>${variables.companyName ?? "Your service provider"} is moving billing to a new secure system powered by <strong>Renvani</strong>.</p>
+          <p>We could not automatically move your saved card from your prior processor. Please add your card again the next time you receive an invoice — it only takes a moment.</p>
+          ${button(variables.paymentPortalUrl ?? "#", "Add payment method")}
+          <p>If you have questions, contact ${variables.companyName ?? "our office"}.</p>
         `)
       };
     }

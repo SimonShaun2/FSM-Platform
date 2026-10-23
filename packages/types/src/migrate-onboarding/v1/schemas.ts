@@ -1,5 +1,6 @@
 import { z } from "zod";
 
+import { savedCardMigrationWizardRefSchema } from "../../saved-card-migration/v1/schemas.js";
 import { importEntityTypeSchema } from "../import-entity-bridge.js";
 
 export const MIGRATE_ONBOARDING_CONTRACT_ID = "fsm.migrate-onboarding.v1";
@@ -55,7 +56,8 @@ export const migrateOnboardingStepStateSchema = z.object({
   mappingsConfirmedAt: z.string().datetime().optional(),
   previewReviewedAt: z.string().datetime().optional(),
   commitStartedAt: z.string().datetime().optional(),
-  commitCompletedAt: z.string().datetime().optional()
+  commitCompletedAt: z.string().datetime().optional(),
+  savedCardMigration: savedCardMigrationWizardRefSchema.optional()
 });
 
 export type MigrateOnboardingStepState = z.infer<typeof migrateOnboardingStepStateSchema>;
