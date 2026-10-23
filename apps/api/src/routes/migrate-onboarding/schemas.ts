@@ -56,6 +56,7 @@ export const relationalPreviewRouteSchema: FastifySchema = {};
 export const ingestStatusRouteSchema: FastifySchema = {};
 export const dedupeDecisionsRouteSchema: FastifySchema = {};
 export const commitBundleRouteSchema: FastifySchema = {};
+export const ingestStatusRouteSchema: FastifySchema = {};
 
 export const confirmImportFileLinkDecisionsValidation = withZodValidation({
   params: migrateOnboardingBundleIdParamsSchema,
@@ -65,3 +66,4 @@ export const confirmImportFileLinkDecisionsValidation = withZodValidation({
 export const fileLinkPreviewRouteSchema: FastifySchema = {};
 export const runFileLinkRouteSchema: FastifySchema = {};
 export const confirmFileLinkRouteSchema: FastifySchema = {};
+export const ingestStatusRouteSchema: FastifySchema = {};
