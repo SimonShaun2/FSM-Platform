@@ -1,7 +1,9 @@
 import type { Job } from "bullmq";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
-const emitReceiptMock = vi.fn();
+const { emitReceiptMock } = vi.hoisted(() => ({
+  emitReceiptMock: vi.fn()
+}));
 
 vi.mock("../lib/loyalty-reminder-evaluation-receipt.js", () => ({
   emitLoyaltyReminderEvaluationReceipt: emitReceiptMock
