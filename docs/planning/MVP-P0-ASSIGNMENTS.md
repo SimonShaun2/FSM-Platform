@@ -1,67 +1,66 @@
 # MVP P0 assignments — Batches 7–9 (active dispatch)
 
-**Authority:** Founder MVP-first policy (`BATCH-PLAN-5-9.md` §0) · **PO:** Elena  
-**Tech Lead:** Grace · **Rule:** Each PR needs **Isaac + Lily + Sam PASS @ exact head** before `batch-ci` merge. Standing pre-approval = CI mechanics only.
+**Authority:** Founder MVP-first policy (`BATCH-PLAN-5-9.md` §0) + winter urgency (`MVP-SHORTEST-PATH-WINTER-2026.md`) · **PO:** Elena  
+**Tech Lead:** Grace · **Rule:** Each PR needs **Isaac + Lily + Sam PASS @ exact head** before `batch-ci` merge. Request reviewers **within 1h of push**.
 
-**Integration base:** `dev` (refresh before branch). **Post-merge review:** [#81](https://github.com/SimonShaun2/Renvani/pull/81) @ `5163a8e` — all three reviewers must comment PASS/FAIL (see PR thread).
+**Integration base:** `dev` (merge-from-dev only on conflict — never rebase signed heads).
 
 ---
 
 ## MVP P0 backlog (Elena cut-line)
 
-| Priority | Ticket | Lifecycle | Batch slot | Status |
-| --- | --- | --- | --- | --- |
-| P0 | **FS-72** | Repeat | 9 | Implementation PR(s) — reminder candidates + inbox proposals |
-| P0 | **FS-38** | Discover | 7 | Public acquisition hardening (checklist gaps) |
-| P0 | **FS-21** | Book | 7 | Hold token / slot follow-up |
-| P0 | **FS-58** | Discover/Book | 7 | Public proxy / branded path hardening |
-| P0 | **FS-87** | Serve | 8 | Mobile client contract (extends field-work-sync v1) |
-| P0 | **Dispatch SSE** | Serve | 8 | SSE + 30s poll fallback per `AGENTS.md` |
+| Priority | Ticket | Lifecycle | Status |
+| --- | --- | --- | --- |
+| P0 | **FS-11 / import** | Migrate | Vendor CSV presets (Jobber/HCP/ST) + FS-11 test fix |
+| P0 | **FS-38** | Discover | [#88](https://github.com/SimonShaun2/Renvani/pull/88) |
+| P0 | **FS-21** | Book | [#89](https://github.com/SimonShaun2/Renvani/pull/89) |
+| P0 | **FS-58** | Discover/Book | [#90](https://github.com/SimonShaun2/Renvani/pull/90) |
+| P0 | **Dispatch SSE** | Serve | [#86](https://github.com/SimonShaun2/Renvani/pull/86) @ `6ca557f` — Isaac PASS, Sam ACCEPT; **Lily @ head pending** |
+| P0 | **FS-72** | Repeat | #85 merged; [#91](https://github.com/SimonShaun2/Renvani/pull/91) policy + worker stub |
+| P0 | **FS-87** | Serve | #83 merged (contract doc) |
 
 ---
 
-## Developer assignments (16 + Elena)
+## Developer assignments (16 + Elena) — parallel P0
 
-| # | Dev | Pair / pod | Ticket | Deliverable | Branch (open PR) |
+| # | Dev | Pod | Ticket | Deliverable | Branch / PR |
 | --- | --- | --- | --- | --- | --- |
-| 1 | **Ava** | Pair 1 | FS-72 | Agent action type + policy allow-list for `loyalty.reminder.propose` | `cursor/fs-72-agent-policy-ava-1f27` |
-| 2 | **Marcus** | Pair 1 | FS-72 | Route registration + Zod schemas (`/loyalty/reminder-candidates`) | `cursor/fs-72-reminder-candidates-1f27` |
-| 3 | **Priya** | Pair 2 | FS-87 | Mobile field-work contract doc + shared types review | `cursor/fs-87-mobile-contract-1f27` |
-| 4 | **Leo** | Pair 2 | FS-38 | Public book/inquire error + idempotency UX (checklist §2) | `cursor/fs-38-public-hardening-leo-1f27` |
-| 5 | **Sofia** | Pair 3 | FS-58 | API public route rate-limit / abuse negatives | `cursor/fs-58-proxy-hardening-sofia-1f27` |
-| 6 | **Omar** | Pair 3 | Dispatch SSE | `GET /dispatch/stream` SSE handler + tenant scope | `cursor/dispatch-sse-fallback-1f27` |
-| 7 | **Ben** | Pair 4 | Dispatch SSE | Web `EventSource` + invalidate dispatch queries | `cursor/dispatch-sse-fallback-1f27` |
-| 8 | **Nina** | Pair 4 | FS-21 | Hold expiry / resume follow-up API + tests | `cursor/fs-21-hold-followup-nina-1f27` |
-| 9 | **Diego** | Pair 5 | FS-72 | BullMQ job stub `evaluate-loyalty-reminder-candidates` (dry-run) | `cursor/fs-72-worker-diego-1f27` |
-| 10 | **Hana** | Pair 5 | FS-72 | Queue definition in `@fsm/jobs` + replay registry | `cursor/fs-72-worker-diego-1f27` |
-| 11 | **Noah** | Backend 1 | FS-72 | FS-12 tool payload schema for reminder propose | `cursor/fs-72-agent-policy-ava-1f27` |
-| 12 | **Aria** | Backend 2 | FS-72 | `loyalty-reminder-candidates.service` tenant-scoped queries | `cursor/fs-72-reminder-candidates-1f27` |
-| 13 | **Kai** | Backend 3 | FS-72 | Unit + route tests (isolation, plan cadence math) | `cursor/fs-72-reminder-candidates-1f27` |
-| 14 | **Mila** | Infra 1 | FS-87 | Contract test gate in CI for mobile doc version | `cursor/fs-87-mobile-contract-1f27` |
-| 15 | **Ezra** | Infra 2 | FS-58 | Runbook note in `docs/security` for public surface | `cursor/fs-58-proxy-hardening-sofia-1f27` |
-| 16 | **Iris** | Infra 3 | Platform | Migration registry sync post-#81 (`0024`/`0025`) | `cursor/post-81-registry-fix-1f27` |
-| — | **Elena** | PO | All P0 | MVP cut-line: approve P0 row order; reject ⏸ scope creep | Notion `CI Batch` + card tags |
+| 1 | **Ava** | Pair 1 | FS-72 | `loyalty.reminder.propose` policy | `cursor/fs-72-agent-policy-ava-1f27` → [#91](https://github.com/SimonShaun2/Renvani/pull/91) |
+| 2 | **Marcus** | Pair 1 | FS-11 | Jobber/HCP/ST header presets in worker | `cursor/fs-11-import-vendor-presets-1f27` (next) |
+| 3 | **Priya** | Pair 2 | FS-38 | Book flow QA matrix @ #88 head | Support [#88](https://github.com/SimonShaun2/Renvani/pull/88) |
+| 4 | **Leo** | Pair 2 | FS-38 | Idempotency + consent UX | [#88](https://github.com/SimonShaun2/Renvani/pull/88) |
+| 5 | **Sofia** | Pair 3 | FS-58 | Public surface runbook | [#90](https://github.com/SimonShaun2/Renvani/pull/90) |
+| 6 | **Omar** | Pair 3 | Dispatch | SSE API | [#86](https://github.com/SimonShaun2/Renvani/pull/86) |
+| 7 | **Ben** | Pair 4 | Dispatch | EventSource + poll | [#86](https://github.com/SimonShaun2/Renvani/pull/86) |
+| 8 | **Nina** | Pair 4 | FS-21 | Hold-token inspect / resume | [#89](https://github.com/SimonShaun2/Renvani/pull/89) |
+| 9 | **Diego** | Pair 5 | FS-72 | Worker dry-run stub | [#91](https://github.com/SimonShaun2/Renvani/pull/91) |
+| 10 | **Hana** | Pair 5 | FS-72 | Queue job name + replay registry entry | Follow #91 → `evaluate-loyalty-reminder-candidates` docs |
+| 11 | **Noah** | BE 1 | FS-11 | Preset types + Zod export surface | `cursor/fs-11-import-vendor-presets-1f27` |
+| 12 | **Aria** | BE 2 | FS-11 | Import rollback demo script for sales | After presets merge |
+| 13 | **Kai** | BE 3 | FS-11 | Golden CSV fixtures per vendor | After presets merge |
+| 14 | **Mila** | Infra 1 | FS-11 | CI: preset unit tests in `batch-ci` path | `import-vendor-presets.test.ts` |
+| 15 | **Ezra** | Infra 2 | FS-58 | Runbook cross-link FS-8 matrix | [#90](https://github.com/SimonShaun2/Renvani/pull/90) |
+| 16 | **Iris** | Infra 3 | FS-11 | Fix 3× import `/errors` contract tests | `cursor/fs-11-import-errors-fix-1f27` (next) |
+| — | **Elena** | PO | All | Cut-line + demo script sign-off | `MVP-SHORTEST-PATH-WINTER-2026.md` |
+
+---
+
+## Open PR tracker
+
+| PR | Head (sign @) | Isaac | Lily | Sam |
+| --- | --- | --- | --- | --- |
+| [#86](https://github.com/SimonShaun2/Renvani/pull/86) | `6ca557f` | PASS | **pending @ head** | ACCEPT |
+| [#88](https://github.com/SimonShaun2/Renvani/pull/88) | `b620036` | ☐ | ☐ | ☐ |
+| [#89](https://github.com/SimonShaun2/Renvani/pull/89) | `26b6827` | ☐ | ☐ | ☐ |
+| [#90](https://github.com/SimonShaun2/Renvani/pull/90) | `bbad2fc` | ☐ | ☐ | ☐ |
+| [#91](https://github.com/SimonShaun2/Renvani/pull/91) | `7129b07` | ☐ | ☐ | ☐ |
+
+**Merged (winter train):** #87, #84, #85, #83.
 
 ---
 
 ## PR workflow (mandatory)
 
-1. Branch from latest `dev`; one logical PR per row (shared branches OK when co-owned).
-2. PR description lists **owners**, **ticket**, **MVP lifecycle stage**, and `pnpm build && pnpm lint && pnpm test` output.
-3. Request **Isaac, Lily, Sam** @ **full head SHA** in GitHub comments (PASS/FAIL).
-4. **Do not merge** until all three PASS at that SHA.
-5. Add `batch-ci` label only after triple PASS; merge to `dev`; report E.. CoS at batch merge.
-
----
-
-## Open PR tracker (Tech Lead maintains)
-
-| PR | Branch | Owners | Ticket | Sign-offs @ head |
-| --- | --- | --- | --- | --- |
-| [#87](https://github.com/SimonShaun2/Renvani/pull/87) | `cursor/post-81-registry-fix-1f27` | Iris | Registry (#81 follow-up) | ☐ Isaac ☐ Lily ☐ Sam |
-| [#84](https://github.com/SimonShaun2/Renvani/pull/84) | `cursor/mvp-p0-assignments-1f27` | Grace + Elena | Planning | ☐ ☐ ☐ |
-| [#85](https://github.com/SimonShaun2/Renvani/pull/85) | `cursor/fs-72-reminder-candidates-1f27` | Aria, Marcus, Kai | FS-72 | ☐ ☐ ☐ |
-| [#83](https://github.com/SimonShaun2/Renvani/pull/83) | `cursor/fs-87-mobile-contract-1f27` | Priya, Mila | FS-87 | ☐ ☐ ☐ |
-| [#86](https://github.com/SimonShaun2/Renvani/pull/86) | `cursor/dispatch-sse-fallback-1f27` | Omar, Ben | Dispatch SSE | ☐ ☐ ☐ |
-
-**Next PRs (refresh from `dev`, assign owners):** FS-38 → `cursor/fs-38-contract-pair2-96e5` (Leo); FS-21 → `cursor/fs-21-security-hold-followups-da75` (Nina); FS-58 → `cursor/fs58-public-api-followup-d307` (Sofia).
+1. Branch from latest `dev`; push → **request Isaac, Lily, Sam @ full SHA within 1h**.
+2. Triple PASS → `batch-ci` → merge with head SHA guard.
+3. Report E.. CoS at batch merge with **MVP date table** (`MVP-SHORTEST-PATH-WINTER-2026.md` §5).
