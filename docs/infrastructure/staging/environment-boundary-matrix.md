@@ -1,6 +1,6 @@
 # Environment boundary matrix
 
-**FS-75** · Provider-neutral · Physical mapping **blocked on FS-93**.
+**FS-75** · Updated for [official stack](../../OFFICIAL-OPERATIONAL-STACK.md) · Neon + Render + Vercel (STACK-11).
 
 ## Deployment tiers
 
@@ -16,7 +16,7 @@
 
 | Dimension | Development | Staging | Production |
 |-----------|-------------|---------|------------|
-| `DATABASE_URL` | Local or disposable | **Unique** URL; never prod | Prod URL |
+| `DATABASE_URL` | Local or disposable | **Neon staging branch**; never prod; optional **per-PR** Neon branch in CI | **Neon prod** branch |
 | `REDIS_URL` | Local or disposable | **Unique** URL | Prod URL |
 | `R2_BUCKET_NAME` (or equivalent) | Dev bucket | **Staging-only** bucket | Prod bucket |
 | JWT / refresh secrets | Local | **Rotate independently** | Prod secrets |
