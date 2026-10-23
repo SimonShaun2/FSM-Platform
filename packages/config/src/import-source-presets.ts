@@ -16,7 +16,7 @@ export type ImportSourcePresetId =
   | "quickbooks_invoices"
   | "generic";
 
-export type ImportPresetEntityHint = "customers" | "products" | "invoices";
+export type ImportPresetEntityHint = "customers" | "products" | "invoices" | "notes";
 
 export interface ImportSourcePreset {
   id: ImportSourcePresetId;
@@ -191,12 +191,38 @@ export const IMPORT_SOURCE_PRESETS: ImportSourcePreset[] = [
       state: "state",
       zip: "zip"
     }
+  },
+  {
+    id: "generic",
+    entity: "notes",
+    label: "Generic notes CSV",
+    headerAliases: {
+      "note id": "sourceId",
+      id: "sourceId",
+      "customer id": "customerSourceId",
+      "client id": "customerSourceId",
+      "job id": "jobSourceId",
+      "work order id": "jobSourceId",
+      note: "content",
+      body: "content",
+      text: "content",
+      visibility: "visibility",
+      type: "visibility",
+      internal: "isInternal",
+      "created at": "notedAt",
+      created: "notedAt",
+      date: "notedAt"
+    }
   }
 ];
 
 function entityHintFromImportEntityType(entityType: string): ImportPresetEntityHint {
   if (entityType === "invoices") {
     return "invoices";
+  }
+
+  if (entityType === "notes") {
+    return "notes";
   }
 
   if (entityType === "estimates" || entityType === "jobs") {

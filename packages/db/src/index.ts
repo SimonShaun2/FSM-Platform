@@ -56,6 +56,13 @@ export {
   type PriceBookCommitResult,
   type PriceBookValidationResult
 } from "./import-price-book-commit.js";
+export {
+  commitNoteImportRows,
+  mapNoteImportRow,
+  softDeleteNotesImport,
+  validateNoteImportRows,
+  type NotesValidationResult
+} from "./import-notes-commit.js";
 export { normalizeImportedPaymentMethod } from "./import-invoice-balance-commit.logic.js";
 export {
   commitImportedInvoiceRows,

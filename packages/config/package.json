@@ -30,6 +30,10 @@
       "types": "./dist/import-price-book-map.d.ts",
       "import": "./dist/import-price-book-map.js"
     },
+    "./import-notes-map": {
+      "types": "./dist/import-notes-map.d.ts",
+      "import": "./dist/import-notes-map.js"
+    },
     "./import-bundle-storage": {
       "types": "./dist/import-bundle-storage.d.ts",
       "import": "./dist/import-bundle-storage.js"

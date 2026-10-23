@@ -218,6 +218,13 @@
       "when": 1777703000000,
       "tag": "0030_fs_migrate_invoice_payment_import",
       "breakpoints": true
+    },
+    {
+      "idx": 31,
+      "version": "7",
+      "when": 1777704000000,
+      "tag": "0031_fs_migrate_notes_import",
+      "breakpoints": true
     }
   ]
 }
