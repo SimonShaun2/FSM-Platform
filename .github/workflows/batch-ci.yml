@@ -3,7 +3,8 @@ name: Batch CI (approved)
 
 on:
   pull_request:
-    types: [labeled, synchronize]
+    types: [labeled, synchronize, reopened]
+  workflow_dispatch:
 
 concurrency:
   group: batch-ci-${{ github.event.pull_request.number }}
@@ -11,7 +12,7 @@ concurrency:
 
 jobs:
   batch:
-    if: contains(github.event.pull_request.labels.*.name, 'batch-ci')
+    if: github.event_name == 'workflow_dispatch' || contains(github.event.pull_request.labels.*.name, 'batch-ci')
     runs-on: ubuntu-latest
     timeout-minutes: 45
     steps:
@@ -36,7 +37,7 @@ jobs:
 
   neon-per-pr-staging:
     name: Neon per-PR (staging RLS)
-    if: contains(github.event.pull_request.labels.*.name, 'batch-ci')
+    if: github.event_name == 'workflow_dispatch' || contains(github.event.pull_request.labels.*.name, 'batch-ci')
     runs-on: ubuntu-latest
     timeout-minutes: 20
     needs: batch
