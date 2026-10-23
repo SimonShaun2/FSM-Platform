@@ -6,7 +6,7 @@ import { AppError, ErrorCode } from "@fsm/types";
 
 import { setupTestEnv } from "../test-support/env-setup.js";
 
-const sendPasswordResetEmailMock = vi.hoisted(() => vi.fn());
+const notificationsQueueAddMock = vi.hoisted(() => vi.fn());
 const TEST_JWT_SECRET = "jwt_secret";
 const TEST_JWT_REFRESH_SECRET = "jwt_refresh_secret";
 
@@ -22,8 +22,10 @@ vi.mock("@fsm/db", async () => {
   return helper.createDbModuleMock();
 });
 
-vi.mock("../lib/email.js", () => ({
-  sendPasswordResetEmail: sendPasswordResetEmailMock
+vi.mock("@fsm/jobs", () => ({
+  notificationsQueue: {
+    add: notificationsQueueAddMock
+  }
 }));
 
 type AuthServiceModule = typeof import("./auth.service.js");
@@ -46,7 +48,7 @@ beforeAll(async () => {
 
 beforeEach(() => {
   fakeDb.resetTestState();
-  sendPasswordResetEmailMock.mockReset();
+  notificationsQueueAddMock.mockReset();
   vi.useRealTimers();
 });
 
@@ -334,14 +336,21 @@ describe("auth.service", () => {
       lastName: "Lee"
     });
 
-    sendPasswordResetEmailMock.mockResolvedValue(undefined);
+    notificationsQueueAddMock.mockResolvedValue(undefined);
 
     await expect(authService.forgotPassword("owner@example.com")).resolves.toBeUndefined();
     await expect(authService.forgotPassword("missing@example.com")).resolves.toBeUndefined();
-    expect(sendPasswordResetEmailMock).toHaveBeenCalledTimes(1);
+    expect(notificationsQueueAddMock).toHaveBeenCalledTimes(1);
+    expect(notificationsQueueAddMock).toHaveBeenCalledWith(
+      "send-password-reset-email",
+      expect.objectContaining({
+        toEmail: "owner@example.com",
+        firstName: "Pat"
+      })
+    );
   });
 
-  it("swallows send failures in forgot-password", async () => {
+  it("swallows enqueue failures in forgot-password", async () => {
     const company = fakeDb.seedCompany({ name: "Acme", slug: "acme" });
     fakeDb.seedUser({
       companyId: company.id,
@@ -351,7 +360,7 @@ describe("auth.service", () => {
       lastName: "Lee"
     });
 
-    sendPasswordResetEmailMock.mockRejectedValue(new Error("SendGrid down"));
+    notificationsQueueAddMock.mockRejectedValue(new Error("Redis down"));
 
     await expect(authService.forgotPassword("owner@example.com")).resolves.toBeUndefined();
   });

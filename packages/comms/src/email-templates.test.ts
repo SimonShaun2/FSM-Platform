@@ -17,6 +17,37 @@ describe("renderTransactionalEmail", () => {
     expect(rendered.html).toContain("Apr 30");
   });
 
+  it("renders VIP lifecycle templates with Figma-aligned subjects", () => {
+    const welcome = renderTransactionalEmail(EMAIL_TEMPLATE_IDS.vipMembershipWelcome, {
+      firstName: "Sam",
+      companyName: "Juniper Home Co.",
+      planName: "VIP Plus",
+      portalUrl: "https://example.test/vip"
+    });
+    expect(welcome.subject).toBe("Welcome to VIP Plus");
+
+    const renewal = renderTransactionalEmail(EMAIL_TEMPLATE_IDS.vipMembershipRenewal, {
+      firstName: "Sam",
+      companyName: "Juniper Home Co.",
+      planName: "VIP Plus",
+      amount: "29.00",
+      renewalDateLabel: "Oct 23, 2026"
+    });
+    expect(renewal.subject).toBe("Your VIP Plus membership renewed");
+
+    const dunning = renderTransactionalEmail(EMAIL_TEMPLATE_IDS.vipMembershipPaymentFailed, {
+      firstName: "Sam",
+      companyName: "Juniper Home Co.",
+      planName: "VIP Plus",
+      amount: "29.00",
+      paymentUrl: "https://pay.example.test",
+      graceEndsAtLabel: "Oct 30, 2026",
+      nextRetryAtLabel: "Oct 24, 2026",
+      dunningStepIndex: "0"
+    });
+    expect(dunning.subject).toBe("Action needed: your VIP payment didn't go through");
+  });
+
   it("prefers Resend from address when email-first flag is on", () => {
     expect(
       resolveOutboundEmailFromAddress({
