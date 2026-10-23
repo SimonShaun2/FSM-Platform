@@ -18,6 +18,7 @@
     "@fsm/ai": "workspace:*",
     "@fsm/comms": "workspace:*",
     "@fsm/config": "workspace:*",
+    "@fsm/import-normalize": "workspace:*",
     "@fsm/db": "workspace:*",
     "@fsm/jobs": "workspace:*",
     "@fsm/types": "workspace:*",
