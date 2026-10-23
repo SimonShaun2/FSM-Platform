@@ -62,3 +62,9 @@ export {
   commitImportedPaymentRows,
   type ImportInvoiceBalanceEntityResolver,
 } from "./import-invoice-balance-commit.service.js";
+export {
+  commitImportedEstimateRows,
+  commitImportedJobRows,
+  createDbHistoryChunkResolver,
+  type ImportHistoryChunkEntityResolver,
+} from "./import-history-chunk-commit.service.js";
