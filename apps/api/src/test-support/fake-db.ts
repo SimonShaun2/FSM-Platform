@@ -1972,6 +1972,7 @@ export interface TestBookingSettingsRecord {
   balanceWorkload: boolean | null;
   notifyOnNewBooking: boolean | null;
   notificationEmail: string | null;
+  customerSelfServiceCutoffHours: number;
   createdAt: Date;
   updatedAt: Date;
   deletedAt: Date | null;
@@ -4498,6 +4499,7 @@ function createBookingSettingsRecord(
     balanceWorkload: values.balanceWorkload ?? true,
     notifyOnNewBooking: values.notifyOnNewBooking ?? true,
     notificationEmail: values.notificationEmail ?? null,
+    customerSelfServiceCutoffHours: values.customerSelfServiceCutoffHours ?? 24,
     createdAt: values.createdAt ?? now,
     updatedAt: values.updatedAt ?? now,
     deletedAt: values.deletedAt ?? null
