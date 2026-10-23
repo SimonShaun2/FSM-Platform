@@ -1,4 +1,3 @@
-import { confirmImportFileLinkDecisionsBodySchema } from "../../fs-migrate/import-file-link.js";
 import {
   applyMigrateDedupeDecisionsBodySchema,
   createMigrateOnboardingSessionBodySchema,
@@ -11,6 +10,7 @@ import {
   MIGRATE_ONBOARDING_CONTRACT_ID,
   setMigrateOnboardingSourceBodySchema
 } from "./schemas.js";
+import { migrateOnboardingIngestStatusResponseSchema } from "./ingest-status.schemas.js";
 
 export { MIGRATE_ONBOARDING_CONTRACT_ID };
 
@@ -28,8 +28,6 @@ export type MigrateOnboardingWizardRouteContract = {
 /**
  * Authoritative wizard HTTP surface (must match `apps/api/src/routes/migrate-onboarding/index.ts`).
  * Paths include the `/api/v1` prefix registered in `app.ts`.
- *
- * File-link routes canonical with #155 @ 4aa23c46: all return `migrateOnboardingBundle`.
  */
 export const MIGRATE_ONBOARDING_WIZARD_API_ROUTES: readonly MigrateOnboardingWizardRouteContract[] = [
   {
@@ -88,7 +86,6 @@ export const MIGRATE_ONBOARDING_WIZARD_API_ROUTES: readonly MigrateOnboardingWiz
   {
     method: "PATCH",
     path: "/api/v1/migrate/onboarding/sessions/:bundleId/file-link/decisions",
-    requestBodySchemaId: "confirmImportFileLinkDecisionsBody",
     responseSchemaId: "migrateOnboardingBundle"
   },
   {
@@ -100,6 +97,11 @@ export const MIGRATE_ONBOARDING_WIZARD_API_ROUTES: readonly MigrateOnboardingWiz
     method: "GET",
     path: "/api/v1/migrate/onboarding/sessions/:bundleId/relational-preview",
     responseSchemaId: "migrateRelationalPreviewResponse"
+  },
+  {
+    method: "GET",
+    path: "/api/v1/migrate/onboarding/sessions/:bundleId/ingest-status",
+    responseSchemaId: "migrateOnboardingIngestStatusResponse"
   },
   {
     method: "PATCH",
@@ -118,8 +120,7 @@ export const migrateOnboardingWizardRequestSchemas = {
   createMigrateOnboardingSessionBody: createMigrateOnboardingSessionBodySchema,
   setMigrateOnboardingSourceBody: setMigrateOnboardingSourceBodySchema,
   linkMigrateOnboardingFilesBody: linkMigrateOnboardingFilesBodySchema,
-  applyMigrateDedupeDecisionsBody: applyMigrateDedupeDecisionsBodySchema,
-  confirmImportFileLinkDecisionsBody: confirmImportFileLinkDecisionsBodySchema
+  applyMigrateDedupeDecisionsBody: applyMigrateDedupeDecisionsBodySchema
 } as const;
 
 export const migrateOnboardingWizardResponseSchemas = {
@@ -127,5 +128,6 @@ export const migrateOnboardingWizardResponseSchemas = {
   migrateOnboardingSourceCatalogEntry: migrateOnboardingSourceCatalogEntrySchema,
   migrateDedupePreviewResponse: migrateDedupePreviewResponseSchema,
   migrateRelationalPreviewResponse: migrateRelationalPreviewResponseSchema,
-  migrateOnboardingCommitResponse: migrateOnboardingCommitResponseSchema
+  migrateOnboardingCommitResponse: migrateOnboardingCommitResponseSchema,
+  migrateOnboardingIngestStatusResponse: migrateOnboardingIngestStatusResponseSchema
 } as const;
