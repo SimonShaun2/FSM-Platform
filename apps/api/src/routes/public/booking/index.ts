@@ -11,6 +11,7 @@ import {
   getPublicAvailabilityHandler,
   getPublicBookingSettingsHandler,
   holdPublicBookingSlotHandler,
+  inspectPublicBookingHoldTokenHandler,
   submitBookingRequestHandler
 } from "./handlers.js";
 import {
@@ -23,6 +24,8 @@ import {
   emailCaptureValidation,
   publicBookingRouteSchema,
   publicHoldBookingSlotValidation,
+  publicInspectHoldTokenRouteSchema,
+  publicInspectHoldTokenValidation,
   publicSlotHoldRouteSchema,
   submitBookingRouteSchema,
   submitBookingValidation,
@@ -110,6 +113,11 @@ const publicBookingRoutes: FastifyPluginAsync = async (fastify) => {
     preValidation: [bookingRateLimit, bookingSlotHoldReferenceRateLimit, publicHoldBookingSlotValidation],
     schema: publicSlotHoldRouteSchema
   }, holdPublicBookingSlotHandler);
+
+  fastify.post("/:slug/hold-token/inspect", {
+    preValidation: [bookingRateLimit, publicInspectHoldTokenValidation],
+    schema: publicInspectHoldTokenRouteSchema
+  }, inspectPublicBookingHoldTokenHandler);
 };
 
 export default publicBookingRoutes;

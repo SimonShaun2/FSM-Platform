@@ -110,6 +110,23 @@ afterEach(async () => {
   vi.useRealTimers();
 });
 
+describe("POST /public/booking/:slug/hold-token/inspect", () => {
+  it("returns valid inspection for a matching hold token without claiming it", async () => {
+    const { holdToken, referenceNumber } = seedPublicHoldFixture();
+
+    const response = await request(app.server)
+      .post("/api/v1/public/booking/acme-hvac/hold-token/inspect")
+      .send({ holdToken });
+
+    expect(response.status).toBe(200);
+    expect(response.body.inspection).toMatchObject({
+      status: "valid",
+      referenceNumber,
+      slugMatches: true
+    });
+  });
+});
+
 describe("public booking slot-hold security", () => {
   it("returns 400 when holdToken is missing", async () => {
     const { technician, referenceNumber } = seedPublicHoldFixture();
