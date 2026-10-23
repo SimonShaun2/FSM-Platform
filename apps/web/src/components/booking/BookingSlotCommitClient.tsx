@@ -10,11 +10,7 @@ import {
   usePublicSlotHold
 } from "@/src/hooks/booking.hooks";
 import { ApiError } from "@/src/lib/api";
-import {
-  buildRecurringScheduleMessage,
-  saveConfirmedBookingSnapshot,
-  suggestsRecurringServiceIntent
-} from "@/src/lib/booking-commit.utils";
+import { saveConfirmedBookingSnapshot, suggestsRecurringServiceIntent } from "@/src/lib/booking-commit.utils";
 import { showToast } from "@/src/stores/toast.store";
 import { useBookingFlowStore } from "@/src/stores/booking-flow.store";
 import { cn } from "@/src/lib/utils";
