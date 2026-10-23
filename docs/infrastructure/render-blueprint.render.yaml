@@ -9,6 +9,9 @@
 #
 # CORS: API allows browser origin = `APP_URL` (set to production Vercel URL, sync: false).
 #
+# PostgreSQL: **Neon** (STACK-12) — same region as the Render API web service. Set `DATABASE_URL`
+# manually from Neon (pooler URL recommended); not provisioned by this Blueprint.
+#
 # Note: `@fsm/config` still validates the shared env schema at process start on all services.
 # Least-privilege blocks below are the secrets each service *should* receive in Render;
 # ops may need to add other required keys from docs/security/FS-76-secrets-env-inventory.md until
@@ -33,9 +36,7 @@ services:
       - key: NODE_ENV
         value: production
       - key: DATABASE_URL
-        fromDatabase:
-          name: renvani-postgres
-          property: connectionString
+        sync: false
       - key: REDIS_URL
         fromService:
           type: keyvalue
@@ -94,9 +95,7 @@ services:
       - key: NODE_ENV
         value: production
       - key: DATABASE_URL
-        fromDatabase:
-          name: renvani-postgres
-          property: connectionString
+        sync: false
       - key: REDIS_URL
         fromService:
           type: keyvalue
@@ -140,9 +139,7 @@ services:
       - key: NODE_ENV
         value: production
       - key: DATABASE_URL
-        fromDatabase:
-          name: renvani-postgres
-          property: connectionString
+        sync: false
       - key: REDIS_URL
         fromService:
           type: keyvalue
@@ -158,9 +155,3 @@ services:
         sync: false
       - key: TWILIO_FROM_NUMBER
         sync: false
-
-databases:
-  - name: renvani-postgres
-    plan: starter
-    databaseName: renvani
-    user: renvani

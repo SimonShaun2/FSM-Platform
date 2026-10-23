@@ -22,6 +22,10 @@
       "types": "./dist/import-vendor-presets.d.ts",
       "import": "./dist/import-vendor-presets.js"
     },
+    "./import-source-presets": {
+      "types": "./dist/import-source-presets.d.ts",
+      "import": "./dist/import-source-presets.js"
+    },
     "./object-storage": {
       "types": "./dist/object-storage/index.d.ts",
       "import": "./dist/object-storage/index.js"
@@ -30,9 +34,9 @@
       "types": "./dist/deployment-environment.d.ts",
       "import": "./dist/deployment-environment.js"
     },
-    "./import-bundle-storage": {
-      "types": "./dist/import-bundle-storage.d.ts",
-      "import": "./dist/import-bundle-storage.js"
+    "./neon-ci": {
+      "types": "./dist/neon-ci.d.ts",
+      "import": "./dist/neon-ci.js"
     }
   },
   "scripts": {

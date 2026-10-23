@@ -21,6 +21,8 @@ import {
   type UpdateCustomerInput
 } from "@fsm/types";
 
+import { runTenantAwareTransaction } from "../lib/company-scoped-transaction.js";
+
 const MAX_RESULT_WINDOW = 10_000;
 const DEFAULT_LIST_PAGE = 1;
 const DEFAULT_LIST_LIMIT = 25;
@@ -383,7 +385,7 @@ export async function createCustomer(
 ): Promise<Customer> {
   const normalizedTags = normalizeTags(input.tags) ?? [];
 
-  return db.transaction(async (tx) => {
+  return runTenantAwareTransaction(companyId, async (tx) => {
     const actor = await getActor(companyId, actorId, tx);
     const insertedCustomers = await tx
       .insert(customers)

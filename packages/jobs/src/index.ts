@@ -26,6 +26,12 @@ export {
 } from "./queue-retry-policy.js";
 export { handleWorkerJobFailed } from "./worker-terminal-failure.js";
 export {
+  IMPORT_CHUNK_COMMIT_JOB_NAME,
+  ImportChunkCommitPayloadSchema,
+  buildImportChunkIdempotencyKey,
+} from "./import-chunk-commit.js";
+export type { ImportChunkCommitPayload } from "./import-chunk-commit.js";
+export {
   QUEUE_PREFIX,
   QUEUE_NAMES,
   queueBaseOptions,

@@ -47,4 +47,25 @@ describe("import-vendor-presets", () => {
       )
     ).toBe("quickbooks_invoices");
   });
+
+  it("shim infers Service Fusion and QuickBooks Desktop presets", () => {
+    expect(
+      inferImportVendorPresetFromHeaders([
+        "Customer Name",
+        "Email Address",
+        "Mobile Phone",
+        "Service Address",
+        "City",
+        "State",
+        "ZIP"
+      ])
+    ).toBe("service_fusion");
+
+    expect(
+      inferImportVendorPresetFromHeaders(
+        ["Customer", "E-mail", "Main Phone", "Bill To 1", "Bill To City", "Bill To State"],
+        "customers"
+      )
+    ).toBe("quickbooks_desktop_customers");
+  });
 });
