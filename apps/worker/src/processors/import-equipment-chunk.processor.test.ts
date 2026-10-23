@@ -108,7 +108,7 @@ describe("import-equipment-chunk.processor", () => {
       }),
     );
 
-    expect(buildResolverMock).toHaveBeenCalledWith(companyId, "service_fusion", {});
+    expect(buildResolverMock).toHaveBeenCalledWith(companyId, "service_fusion", undefined);
     expect(commitImportedEquipmentRowsMock).toHaveBeenCalledWith(
       {
         companyId,
