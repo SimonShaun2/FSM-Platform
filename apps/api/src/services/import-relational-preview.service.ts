@@ -1,5 +1,6 @@
 import type {
   BuildRelationalPreviewGraphInput,
+  ColumnMapping,
   CustomerPreviewRow,
   ImportBundleRelationalPreview,
   JobPreviewRow,
@@ -22,6 +23,37 @@ export type {
 
 export function normalizeRelationalJoinKey(value: string): string {
   return value.trim().toLowerCase();
+}
+
+export function mappedImportPreviewRowsFromCsv(
+  rows: Array<{ rowNumber: number; values: Record<string, string> }>,
+  columnMapping: ColumnMapping
+): MappedImportPreviewRow[] {
+  const mappedRows: MappedImportPreviewRow[] = [];
+
+  for (const row of rows) {
+    const fields: Record<string, string | null> = {};
+
+    for (const [csvColumn, fieldName] of Object.entries(columnMapping)) {
+      if (typeof fieldName !== "string" || fieldName.length === 0) {
+        continue;
+      }
+
+      const raw = row.values[csvColumn];
+      if (raw === undefined || raw.trim().length === 0) {
+        fields[fieldName] = null;
+      } else {
+        fields[fieldName] = raw.trim();
+      }
+    }
+
+    mappedRows.push({
+      row: row.rowNumber,
+      fields
+    });
+  }
+
+  return mappedRows;
 }
 
 function isNonEmpty(value: string | null | undefined): value is string {

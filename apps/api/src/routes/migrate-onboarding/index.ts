@@ -9,6 +9,7 @@ import {
   createMigrateOnboardingSessionHandler,
   getActiveMigrateOnboardingSessionHandler,
   getMigrateDedupePreviewHandler,
+  getMigrateRelationalPreviewHandler,
   getMigrateOnboardingBundleHandler,
   linkMigrateOnboardingFilesHandler,
   listMigrateOnboardingSourcesHandler,
@@ -23,6 +24,7 @@ import {
   createSessionRouteSchema,
   dedupeDecisionsRouteSchema,
   dedupePreviewRouteSchema,
+  relationalPreviewRouteSchema,
   getActiveSessionRouteSchema,
   getBundleRouteSchema,
   linkFilesRouteSchema,
@@ -88,6 +90,12 @@ const migrateOnboardingRoutes: FastifyPluginAsync = async (fastify) => {
     preValidation: migrateOnboardingBundleIdValidation,
     schema: dedupePreviewRouteSchema
   }, getMigrateDedupePreviewHandler);
+
+  fastify.get("/migrate/onboarding/sessions/:bundleId/relational-preview", {
+    preHandler: [authenticate, requireOwnerOrAdmin],
+    preValidation: migrateOnboardingBundleIdValidation,
+    schema: relationalPreviewRouteSchema
+  }, getMigrateRelationalPreviewHandler);
 
   fastify.patch("/migrate/onboarding/sessions/:bundleId/dedupe-decisions", {
     preHandler: [authenticate, requireOwnerOrAdmin],
