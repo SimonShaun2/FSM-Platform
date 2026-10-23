@@ -1,5 +1,7 @@
 "use client";
 
+/** FS-43: env-gated Sentry + PostHog browser init (wizard ingest-status is API-only). */
+
 import * as Sentry from "@sentry/react";
 import posthog from "posthog-js";
 
