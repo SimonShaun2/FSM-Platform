@@ -12,6 +12,7 @@ import {
   maintenancePlans,
   serviceAgreementTemplates
 } from "@fsm/db";
+import { featureFlags } from "@fsm/config/feature-flags";
 import { notificationsQueue } from "@fsm/jobs";
 
 const logger = pino({
@@ -359,6 +360,31 @@ export function createAgreementsProcessor(
   dependencies: AgreementsDependencies = productionDependencies
 ): Processor<Record<string, unknown>, void, string> {
   return async (job) => {
+    if (job.name === "evaluate-loyalty-reminder-candidates") {
+      const companyId = job.data.companyId;
+
+      if (typeof companyId !== "string" || companyId.length === 0) {
+        logger.warn({ jobId: job.id ?? null }, "evaluate-loyalty-reminder-candidates missing companyId");
+        return;
+      }
+
+      // FEATURE FLAG: loyalty-reminders-enabled — FS-72 dry-run stub (no customer sends)
+      if (!featureFlags.loyaltyRemindersEnabled) {
+        logger.info({ companyId, jobId: job.id ?? null }, "Loyalty reminders disabled; skipping candidate evaluation");
+        return;
+      }
+
+      logger.info(
+        {
+          companyId,
+          dryRun: featureFlags.loyaltyRemindersDryRun,
+          jobId: job.id ?? null
+        },
+        "evaluate-loyalty-reminder-candidates stub completed"
+      );
+      return;
+    }
+
     if (job.name !== "service-agreement-renewal-check") {
       logger.warn({ jobId: job.id ?? null, jobName: job.name }, "Unknown agreements job received");
       return;

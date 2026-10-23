@@ -9,6 +9,8 @@ const REVENUE_ALLOWED_ACTION_TYPES = new Set([
   "revenue.inquiry.qualify"
 ]);
 
+const LOYALTY_ALLOWED_ACTION_TYPES = new Set(["loyalty.reminder.propose"]);
+
 const AUTO_APPROVED_ACTION_TYPES = new Set(["context.resolve", "message.draft"]);
 
 /** AI may create these proposals; execution still requires owner approval where applicable. */
@@ -39,6 +41,21 @@ export function assertActionAllowedForProduct(
       );
     }
     return;
+  }
+
+  if (agentProduct === "loyalty") {
+    if (!LOYALTY_ALLOWED_ACTION_TYPES.has(actionType)) {
+      throw new AppError(ErrorCode.POLICY_DENIED, "Action type is not allowed for loyalty agent");
+    }
+
+    if (actorType === "ai") {
+      return;
+    }
+
+    throw new AppError(
+      ErrorCode.POLICY_DENIED,
+      "Only AI may propose loyalty reminder actions in v1"
+    );
   }
 
   throw new AppError(ErrorCode.POLICY_DENIED, "Agent product is not enabled");
