@@ -1,3 +1,5 @@
+import { Decimal } from "decimal.js";
+
 import { normalizeImportText } from "./text.js";
 
 const MONEY_PATTERN = /^\d+(\.\d{1,2})?$/;
@@ -34,4 +36,28 @@ export function normalizeImportMoney(value: string | number | null | undefined):
 
   const [whole = "0", fraction = ""] = withoutCurrency.split(".");
   return canonicalizeMoneyParts(whole, fraction);
+}
+
+/**
+ * Parses import money into a non-negative Decimal for ledger math.
+ */
+export function parseImportMoney(value: string): Decimal | null {
+  const trimmed = value.trim().replace(/[$,]/gu, "");
+  if (trimmed.length === 0) {
+    return null;
+  }
+
+  try {
+    const parsed = new Decimal(trimmed);
+    if (!parsed.isFinite() || parsed.isNegative()) {
+      return null;
+    }
+    return parsed;
+  } catch {
+    return null;
+  }
+}
+
+export function formatImportMoney(value: Decimal): string {
+  return value.toFixed(2);
 }
