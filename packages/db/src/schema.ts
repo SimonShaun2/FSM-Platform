@@ -217,6 +217,8 @@ export const importEntityTypeEnum = pgEnum("import_entity_type", [
   "invoices",
   "price_book",
   "payments",
+  "notes",
+  "communications",
 ]);
 
 export const importBundleStatusEnum = pgEnum("import_bundle_status", [
@@ -772,6 +774,28 @@ export const jobs = pgTable("jobs", {
   ),
 }));
 
+export const customerNotes = pgTable("customer_notes", {
+  id: id(),
+  companyId: companyId(),
+  customerId: uuid("customer_id").notNull().references(() => customers.id, { onDelete: "cascade" }),
+  authorId: uuid("author_id").references(() => users.id),
+  content: text("content").notNull(),
+  isInternal: boolean("is_internal").notNull().default(true),
+  notedAt: timestamp("noted_at"),
+  sourceSystem: varchar("source_system", { length: 64 }),
+  sourceId: varchar("source_id", { length: 256 }),
+  importSessionId: uuid("import_session_id").references(() => importSessions.id),
+  ...timestamps,
+}, (t) => ({
+  companyIdx: index("customer_notes_company_idx").on(t.companyId),
+  customerIdx: index("customer_notes_customer_idx").on(t.customerId),
+  importLineageIdx: uniqueIndex("customer_notes_import_lineage_idx").on(
+    t.companyId,
+    t.sourceSystem,
+    t.sourceId,
+  ),
+}));
+
 export const jobNotes = pgTable("job_notes", {
   id: id(),
   companyId: companyId(),
@@ -780,8 +804,18 @@ export const jobNotes = pgTable("job_notes", {
   // null authorId = system/AI note
   content: text("content").notNull(),
   isInternal: boolean("is_internal").notNull().default(true),
+  notedAt: timestamp("noted_at"),
+  sourceSystem: varchar("source_system", { length: 64 }),
+  sourceId: varchar("source_id", { length: 256 }),
+  importSessionId: uuid("import_session_id").references(() => importSessions.id),
   ...timestamps,
-});
+}, (t) => ({
+  importLineageIdx: uniqueIndex("job_notes_import_lineage_idx").on(
+    t.companyId,
+    t.sourceSystem,
+    t.sourceId,
+  ),
+}));
 
 export const jobPhotos = pgTable("job_photos", {
   id: id(),
@@ -1244,11 +1278,19 @@ export const messageLogs = pgTable("message_logs", {
   deliveredAt: timestamp("delivered_at"),
   failedAt: timestamp("failed_at"),
   failureReason: text("failure_reason"),
+  sourceSystem: varchar("source_system", { length: 64 }),
+  sourceId: varchar("source_id", { length: 256 }),
+  importSessionId: uuid("import_session_id").references(() => importSessions.id),
   ...timestamps,
 }, (t) => ({
   companyIdx: index("message_logs_company_idx").on(t.companyId),
   customerIdx: index("message_logs_customer_idx").on(t.customerId),
   jobIdx: index("message_logs_job_idx").on(t.jobId),
+  importLineageIdx: uniqueIndex("message_logs_import_lineage_idx").on(
+    t.companyId,
+    t.sourceSystem,
+    t.sourceId,
+  ),
 }));
 
 // ─────────────────────────────────────────────
@@ -2072,6 +2114,7 @@ export const customersRelations = relations(customers, ({ one, many }) => ({
   properties: many(properties),
   assets: many(assets),
   jobs: many(jobs),
+  notes: many(customerNotes),
   estimates: many(estimates),
   invoices: many(invoices),
   payments: many(payments),

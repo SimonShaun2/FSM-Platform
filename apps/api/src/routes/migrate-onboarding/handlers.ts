@@ -16,6 +16,7 @@ import {
   createMigrateOnboardingSession,
   getActiveMigrateOnboardingBundle,
   getMigrateDedupePreview,
+  getMigrateRelationalPreview,
   getMigrateOnboardingBundle,
   linkMigrateOnboardingFiles,
   listMigrateOnboardingSources,
@@ -114,6 +115,15 @@ export async function getMigrateDedupePreviewHandler(
 ): Promise<FastifyReply> {
   const { bundleId } = request.params as { bundleId: string };
   const preview = await getMigrateDedupePreview(request.company.id, bundleId);
+  return reply.send(preview);
+}
+
+export async function getMigrateRelationalPreviewHandler(
+  request: FastifyRequest,
+  reply: FastifyReply
+): Promise<FastifyReply> {
+  const { bundleId } = request.params as { bundleId: string };
+  const preview = await getMigrateRelationalPreview(request.company.id, bundleId);
   return reply.send(preview);
 }
 

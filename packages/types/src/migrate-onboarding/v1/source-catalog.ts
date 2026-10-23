@@ -5,25 +5,25 @@ export const MIGRATE_ONBOARDING_SOURCE_CATALOG: MigrateOnboardingSourceCatalogEn
     id: "service_fusion",
     label: "Service Fusion",
     description: "Multi-export CSV/XLSX bundle from Service Fusion.",
-    recommendedExports: ["customers", "locations", "jobs", "invoices", "equipment"]
+    recommendedExports: ["customers", "locations", "jobs", "invoices", "equipment", "communications"]
   },
   {
     id: "jobber",
     label: "Jobber",
     description: "Customer and job exports from Jobber.",
-    recommendedExports: ["clients", "properties", "jobs", "invoices"]
+    recommendedExports: ["clients", "properties", "jobs", "invoices", "communications"]
   },
   {
     id: "servicetitan",
     label: "ServiceTitan",
     description: "Location-aware customer and job exports.",
-    recommendedExports: ["customers", "locations", "jobs", "invoices", "equipment"]
+    recommendedExports: ["customers", "locations", "jobs", "invoices", "equipment", "communications"]
   },
   {
     id: "housecall_pro",
     label: "Housecall Pro",
     description: "Customer-centric CSV exports.",
-    recommendedExports: ["customers", "jobs", "invoices"]
+    recommendedExports: ["customers", "jobs", "invoices", "communications"]
   },
   {
     id: "qbo",

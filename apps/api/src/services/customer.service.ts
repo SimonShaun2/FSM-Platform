@@ -1,7 +1,8 @@
-import { and, eq, isNull } from "drizzle-orm";
+import { and, desc, eq, isNull } from "drizzle-orm";
 
 import {
   assets,
+  customerNotes,
   customers,
   db,
   emitEventWithExecutor,
@@ -15,6 +16,7 @@ import {
   ErrorCode,
   type CreateCustomerInput,
   type Customer,
+  type CustomerNote,
   type CustomerWithGraph,
   type ListCustomersQuery,
   type PaginatedResult,
@@ -568,4 +570,35 @@ export async function deleteCustomer(companyId: string, actorId: string, custome
       summary: `Customer ${existingCustomer.firstName} ${existingCustomer.lastName} deleted`
     });
   });
+}
+
+type CustomerNoteRow = typeof customerNotes.$inferSelect;
+
+function toCustomerNote(row: CustomerNoteRow): CustomerNote {
+  return {
+    id: row.id,
+    companyId: row.companyId,
+    customerId: row.customerId,
+    authorId: row.authorId,
+    content: row.content,
+    isInternal: row.isInternal,
+    notedAt: row.notedAt,
+    createdAt: row.createdAt,
+    updatedAt: row.updatedAt,
+    deletedAt: row.deletedAt
+  };
+}
+
+export async function getCustomerNotes(companyId: string, customerId: string): Promise<CustomerNote[]> {
+  await getCustomerRecord(companyId, customerId, db);
+
+  const rows = await db
+    .select()
+    .from(customerNotes)
+    .where(
+      and(eq(customerNotes.companyId, companyId), eq(customerNotes.customerId, customerId), isNull(customerNotes.deletedAt))
+    )
+    .orderBy(desc(customerNotes.notedAt), desc(customerNotes.createdAt));
+
+  return rows.map(toCustomerNote);
 }
