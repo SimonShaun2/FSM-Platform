@@ -97,7 +97,6 @@ const estimateItemSchema = {
     "id",
     "estimateId",
     "companyId",
-    "priceBookItemId",
     "name",
     "description",
     "itemType",

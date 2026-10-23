@@ -83,7 +83,6 @@ const invoiceItemSchema = {
     "id",
     "invoiceId",
     "companyId",
-    "priceBookItemId",
     "name",
     "description",
     "itemType",
