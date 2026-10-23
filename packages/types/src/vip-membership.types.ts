@@ -38,3 +38,10 @@ export type CreateVipMembershipTierInput = z.infer<typeof createVipMembershipTie
 export const updateVipMembershipTierSchema = createVipMembershipTierSchema.partial();
 
 export type UpdateVipMembershipTierInput = z.infer<typeof updateVipMembershipTierSchema>;
+
+export const vipMembershipCheckoutSchema = z.object({
+  customerId: z.string().uuid(),
+  vipTierId: z.string().uuid()
+});
+
+export type VipMembershipCheckoutInput = z.infer<typeof vipMembershipCheckoutSchema>;

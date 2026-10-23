@@ -3,6 +3,7 @@ import { z } from "zod";
 import {
   createVipMembershipTierSchema,
   updateVipMembershipTierSchema,
+  vipMembershipCheckoutSchema,
   vipMembershipPolicySchema
 } from "@fsm/types";
 
@@ -27,6 +28,25 @@ export const deleteTierValidation = withZodValidation({
 
 export const updatePolicyValidation = withZodValidation({
   body: vipMembershipPolicySchema
+});
+
+export const membershipIdParamsSchema = z.object({
+  id: z.string().uuid()
+});
+
+export const checkoutValidation = withZodValidation({
+  body: vipMembershipCheckoutSchema
+});
+
+export const pauseMembershipValidation = withZodValidation({
+  params: membershipIdParamsSchema
+});
+
+export const cancelMembershipValidation = withZodValidation({
+  params: membershipIdParamsSchema,
+  body: z.object({
+    cancelImmediately: z.boolean().optional()
+  })
 });
 
 export const listTiersRouteSchema = {

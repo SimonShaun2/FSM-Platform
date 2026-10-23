@@ -24,6 +24,7 @@ type TableName =
   | "jobPhotos"
   | "serviceAgreementTemplates"
   | "maintenancePlans"
+  | "vipMembershipTiers"
   | "maintenanceVisits"
   | "automationRules"
   | "aiRecommendations"
@@ -2009,6 +2010,7 @@ type MockTable =
   | typeof jobPhotosTable
   | typeof serviceAgreementTemplatesTable
   | typeof maintenancePlansTable
+  | typeof vipMembershipTiersTable
   | typeof maintenanceVisitsTable
   | typeof automationRulesTable
   | typeof aiRecommendationsTable
@@ -2057,6 +2059,14 @@ interface TestState {
   jobPhotos: TestJobPhotoRecord[];
   serviceAgreementTemplates: TestServiceAgreementTemplateRecord[];
   maintenancePlans: TestMaintenancePlanRecord[];
+  vipMembershipTiers: Array<
+    Record<string, unknown> & {
+      id: string;
+      companyId: string;
+      discountPercent: string;
+      deletedAt: Date | null;
+    }
+  >;
   maintenanceVisits: TestMaintenanceVisitRecord[];
   automationRules: TestAutomationRuleRecord[];
   aiRecommendations: TestAiRecommendationRecord[];
@@ -2549,6 +2559,7 @@ const maintenancePlansTable = {
   customerId: "customerId",
   propertyId: "propertyId",
   serviceAgreementTemplateId: "serviceAgreementTemplateId",
+  vipTierId: "vipTierId",
   name: "name",
   description: "description",
   includedServices: "includedServices",
@@ -2570,6 +2581,23 @@ const maintenancePlansTable = {
   deletedAt: "deletedAt",
   createdAt: "createdAt",
   updatedAt: "updatedAt"
+} as const;
+
+const vipMembershipTiersTable = {
+  __name: "vipMembershipTiers",
+  id: "id",
+  companyId: "companyId",
+  name: "name",
+  description: "description",
+  monthlyPrice: "monthlyPrice",
+  discountPercent: "discountPercent",
+  includedVisitsPerMonth: "includedVisitsPerMonth",
+  stripeMonthlyPriceId: "stripeMonthlyPriceId",
+  sortOrder: "sortOrder",
+  isActive: "isActive",
+  createdAt: "createdAt",
+  updatedAt: "updatedAt",
+  deletedAt: "deletedAt"
 } as const;
 
 const maintenanceVisitsTable = {
@@ -3137,6 +3165,7 @@ const state: TestState = {
   jobPhotos: [],
   serviceAgreementTemplates: [],
   maintenancePlans: [],
+  vipMembershipTiers: [],
   maintenanceVisits: [],
   automationRules: [],
   aiRecommendations: [],
@@ -3275,6 +3304,8 @@ function getRows(tableName: TableName): AnyTestRecord[] {
       return state.serviceAgreementTemplates;
     case "maintenancePlans":
       return state.maintenancePlans;
+    case "vipMembershipTiers":
+      return state.vipMembershipTiers;
     case "maintenanceVisits":
       return state.maintenanceVisits;
     case "automationRules":
@@ -4762,6 +4793,15 @@ function createRow(tableName: TableName, values: Record<string, unknown>): AnyTe
       return createMaintenancePlanRecord(
         values as Partial<TestMaintenancePlanRecord> & Pick<TestMaintenancePlanRecord, "companyId" | "customerId">
       );
+    case "vipMembershipTiers": {
+      const record = {
+        id: randomUUID(),
+        deletedAt: null,
+        ...values
+      } as FakeDbState["vipMembershipTiers"][number];
+      state.vipMembershipTiers.push(record);
+      return record;
+    }
     case "maintenanceVisits":
       return createMaintenanceVisitRecord(
         values as Partial<TestMaintenanceVisitRecord> &
@@ -5200,6 +5240,7 @@ export const jobNotes = jobNotesTable;
 export const jobPhotos = jobPhotosTable;
 export const serviceAgreementTemplates = serviceAgreementTemplatesTable;
 export const maintenancePlans = maintenancePlansTable;
+export const vipMembershipTiers = vipMembershipTiersTable;
 export const maintenanceVisits = maintenanceVisitsTable;
 export const automationRules = automationRulesTable;
 export const aiRecommendations = aiRecommendationsTable;
@@ -5591,6 +5632,7 @@ export function createDbModuleMock() {
     jobPhotos,
     serviceAgreementTemplates,
     maintenancePlans,
+    vipMembershipTiers,
     maintenanceVisits,
     automationRules,
     aiRecommendations,
@@ -5648,6 +5690,7 @@ export function resetTestState(): void {
   state.jobPhotos.length = 0;
   state.serviceAgreementTemplates.length = 0;
   state.maintenancePlans.length = 0;
+  state.vipMembershipTiers.length = 0;
   state.maintenanceVisits.length = 0;
   state.automationRules.length = 0;
   state.aiRecommendations.length = 0;

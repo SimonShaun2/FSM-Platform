@@ -13,6 +13,13 @@ import {
   updateVipMembershipTier
 } from "../../services/vip-membership-tier.service.js";
 import { loadVipMembershipPolicy, updateVipMembershipPolicy } from "../../services/vip-membership-policy.service.js";
+import {
+  cancelVipMembership,
+  createVipMembershipCheckout,
+  createVipMembershipJoinLink,
+  listVipMemberships,
+  pauseVipMembership
+} from "../../services/vip-membership.service.js";
 
 function serializeTier(tier: Awaited<ReturnType<typeof listVipMembershipTiers>>[number]) {
   return {
@@ -66,4 +73,47 @@ export async function updatePolicyHandler(request: FastifyRequest, reply: Fastif
     request.body as VipMembershipPolicyInput
   );
   return reply.send({ policy });
+}
+
+export async function listMembershipsHandler(request: FastifyRequest, reply: FastifyReply) {
+  const memberships = await listVipMemberships(request.company.id);
+  return reply.send({ memberships });
+}
+
+export async function createCheckoutHandler(request: FastifyRequest, reply: FastifyReply) {
+  const body = request.body as { customerId: string; vipTierId: string };
+  const result = await createVipMembershipCheckout(
+    request.company.id,
+    body.customerId,
+    body.vipTierId
+  );
+  return reply.code(201).send(result);
+}
+
+export async function createJoinLinkHandler(request: FastifyRequest, reply: FastifyReply) {
+  const body = request.body as { customerId: string; vipTierId: string };
+  const result = await createVipMembershipJoinLink(
+    request.company.id,
+    body.customerId,
+    body.vipTierId
+  );
+  return reply.code(201).send(result);
+}
+
+export async function pauseMembershipHandler(request: FastifyRequest, reply: FastifyReply) {
+  const params = request.params as { id: string };
+  await pauseVipMembership(request.company.id, request.user.id, params.id);
+  return reply.code(204).send();
+}
+
+export async function cancelMembershipHandler(request: FastifyRequest, reply: FastifyReply) {
+  const params = request.params as { id: string };
+  const body = (request.body ?? {}) as { cancelImmediately?: boolean };
+  await cancelVipMembership(
+    request.company.id,
+    request.user.id,
+    params.id,
+    body.cancelImmediately ?? false
+  );
+  return reply.code(204).send();
 }

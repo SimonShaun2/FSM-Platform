@@ -77,6 +77,10 @@
     "./vip-membership-policy": {
       "types": "./dist/vip-membership-policy.d.ts",
       "import": "./dist/vip-membership-policy.js"
+    },
+    "./vip-membership-portal-token": {
+      "types": "./dist/vip-membership-portal-token.d.ts",
+      "import": "./dist/vip-membership-portal-token.js"
     }
   },
   "scripts": {
