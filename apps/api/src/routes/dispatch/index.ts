@@ -1,7 +1,9 @@
 import type { FastifyPluginAsync } from "fastify";
 
+import { promoteQueryAccessTokenToHeader } from "../../lib/promote-query-access-token.js";
 import {
   autoFitHandler,
+  dispatchStreamHandler,
   getDispatchViewHandler,
   getDispatchWorkloadHandler,
   listApprovedUnconvertedEstimatesHandler,
@@ -11,6 +13,7 @@ import {
   autoFitValidation,
   autoFitRouteSchema,
   dispatchDateValidation,
+  dispatchStreamDateValidation,
   dispatchViewRouteSchema,
   dispatchWorkloadRouteSchema,
   listApprovedUnconvertedEstimatesRouteSchema,
@@ -23,6 +26,11 @@ const dispatchRoutes: FastifyPluginAsync = async (fastify) => {
     preValidation: [dispatchDateValidation],
     schema: dispatchViewRouteSchema
   }, getDispatchViewHandler);
+
+  fastify.get("/dispatch/stream", {
+    preValidation: [dispatchStreamDateValidation],
+    preHandler: [promoteQueryAccessTokenToHeader, fastify.authenticate]
+  }, dispatchStreamHandler);
 
   fastify.get("/dispatch/workload", {
     preHandler: [fastify.authenticate],
