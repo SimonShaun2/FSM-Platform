@@ -20,6 +20,7 @@ export * from "./import-equipment.types.js";
 export * from "./import-equipment-normalize.js";
 export * from "./import-price-book.js";
 export * from "./fs-migrate/index.js";
+export * from "./import-relational-preview.types.js";
 export * from "./import-bundle.types.js";
 export * from "./import-bundle.schemas.js";
 export * from "./loyalty/index.js";
