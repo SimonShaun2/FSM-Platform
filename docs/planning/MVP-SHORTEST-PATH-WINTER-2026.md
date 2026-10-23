@@ -1,7 +1,7 @@
 # Shortest path — demoable, migration-ready MVP (winter 2026)
 
-**Authority:** Founder urgency 2026-10-22 **7:18–7:23 PM CT** (winter buying window) · **PO:** Elena · **Tech Lead:** Grace  
-**North star:** **One generic AI importer** (CSV/XLSX + **media**) with **source presets** migrates tabular data **and** job photos, PDFs, and signed forms to **tenant-scoped R2**, linked via AI/heuristics; then **Discover → Book → Serve → Repeat** in one demo. Epic: [`MVP-MIGRATION-EPIC-FS-MIGRATE.md`](./MVP-MIGRATION-EPIC-FS-MIGRATE.md). Platform agents/queues/files/observability: [`MVP-PLATFORM-P0-INFRA.md`](./MVP-PLATFORM-P0-INFRA.md). No live API sync until founder approves OAuth (ADR-FS-41).
+**Authority:** Founder urgency 2026-10-22 **7:18–7:24 PM CT** (winter buying window) · **PO:** Elena · **Tech Lead:** Grace  
+**North star:** **One generic AI importer** migrates **multi-year** customer history (jobs, invoices, payments, estimates, notes, comms), **price book**, **media** to R2, with **chunked worker ingest**, **`source_system` + `source_id`** lineage, and post-import **reminder/reactivation** signals; then **Discover → Book → Serve → Repeat** in one demo. Epic: [`MVP-MIGRATION-EPIC-FS-MIGRATE.md`](./MVP-MIGRATION-EPIC-FS-MIGRATE.md). Platform agents/queues/files/observability: [`MVP-PLATFORM-P0-INFRA.md`](./MVP-PLATFORM-P0-INFRA.md). No live API sync until founder approves OAuth (ADR-FS-41).
 
 ---
 
@@ -13,7 +13,7 @@
 | **Book** | Request → hold → slot pick | Booking flow, hold tokens | [#89](https://github.com/SimonShaun2/Renvani/pull/89) hold inspect/resume |
 | **Serve** | Dispatch board + field sync contract | Jobs, dispatch view, FS-87 doc, **#86 SSE merged** | — |
 | **Repeat** | Maintenance reminder **candidates** (dry-run) | [#85](https://github.com/SimonShaun2/Renvani/pull/85) API merged | [#91](https://github.com/SimonShaun2/Renvani/pull/91) agent policy + worker stub |
-| **Migrate** | **FS-MIGRATE** wizard: tabular bundle + **resumable file batch** → R2, AI map + **file-to-record** link, dedupe, preview, rollback | `import_sessions`, R2 adapter, `fsm:imports` / `fsm:ai` | Epic M1–M7; [#92](https://github.com/SimonShaun2/Renvani/pull/92); platform P0 parallel |
+| **Migrate** | Wizard: relational bundle + **chunked history** + price book/notes + file batch → R2; lineage + FS-72 candidates post-import | `import_sessions`, workers, R2 | Epic M1–**M8**; [#92](https://github.com/SimonShaun2/Renvani/pull/92); platform P0 parallel |
 
 **Explicitly ⏸ post-MVP for winter demo:** FS-94 platform billing, FS-6 design partners GTM, **QuickBooks OAuth / Intuit dev app** (founder gate), live Jobber/ST API sync, FS-35 pilot rubric, autonomous customer SMS sends.
 
@@ -31,8 +31,14 @@
 | Dedupe / merge preview | Diego |
 | Normalize phone/date/money | Nina |
 | Equipment + maintenance agreements | Omar, Ava |
-| Open balances | Hana |
-| Onboarding wizard (guided, resumable, AI copy) | Priya, Leo, Ben |
+| Open balances + **payments** history | Hana |
+| **Price book** (items/services/materials) | Omar |
+| **Notes** + **communications** history | Ben, Priya |
+| **Estimates** + chunked multi-year jobs/invoices | Aria, Iris |
+| `source_system` + `source_id` + original dates | Nina |
+| Historical **report** exports | Leo |
+| Post-import **reminder / reactivation** from history | Ava |
+| Onboarding wizard (guided, resumable, per-chunk progress) | Priya, Leo, Ben |
 | **File batch → R2** + attachment rows | Diego, Mila |
 | **AI file-to-record** match (messy names/folders) | Marcus, Kai |
 | Queue reliability + import observability | Hana, Iris, Ezra |
@@ -64,8 +70,8 @@ Assuming **parallel P0 PRs** (#86–#91 + import presets) merge over the next **
 | Milestone | Target (CT) | Definition |
 | --- | --- | --- |
 | **Demo-ready smoke** | **2026-11-07** | Script in §1 runnable on staging with one imported tenant |
-| **Migration-ready MVP** | **2026-11-28** | FS-MIGRATE M1–M3 tabular + **M6 file batch** started: 2 sources, preview/commit/rollback, **≥50 files** to R2 with preview link (epic §6) |
-| **Winter field-ready** | **2026-12-05** | M6–M7 complete (file link quality, queue replay/observability); hardening only otherwise |
+| **Migration-ready MVP** | **2026-12-05** | M1–M3 + **M5 price book** + chunked history smoke: 2 sources, preview/commit/rollback, **≥50 files** to R2 (epic §6; +1 week vs 7:24 scope) |
+| **Winter field-ready** | **2026-12-12** | M6–M8 (files, comms/reports, reminder/reactivation hook, large-tenant soak); hardening only otherwise |
 
 *Slip risk:* Lily/Isaac queue on concurrent PRs, or FS-11 test repair > 2d — adds ~1 week.
 
