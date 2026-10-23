@@ -741,3 +741,41 @@ export const deleteAssetRouteSchema = {
     404: errorResponseSchema
   }
 } as const;
+
+const customerNoteSchema = {
+  type: "object",
+  additionalProperties: false,
+  required: ["id", "customerId", "authorId", "content", "isInternal", "notedAt", "createdAt", "updatedAt", "deletedAt"],
+  properties: {
+    id: { type: "string" },
+    companyId: { type: "string" },
+    customerId: { type: "string" },
+    authorId: nullableStringSchema,
+    content: { type: "string" },
+    isInternal: { type: "boolean" },
+    notedAt: nullableDateTimeSchema,
+    createdAt: { type: "string", format: "date-time" },
+    updatedAt: { type: "string", format: "date-time" },
+    deletedAt: nullableDateTimeSchema
+  }
+} as const;
+
+export const getCustomerNotesRouteSchema = {
+  tags: ["customers"],
+  response: {
+    200: {
+      type: "object",
+      additionalProperties: false,
+      required: ["notes"],
+      properties: {
+        notes: {
+          type: "array",
+          items: customerNoteSchema
+        }
+      }
+    },
+    400: errorResponseSchema,
+    401: errorResponseSchema,
+    404: errorResponseSchema
+  }
+} as const;

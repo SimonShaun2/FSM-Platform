@@ -18,9 +18,23 @@ vi.mock("drizzle-orm", async () => {
   return helper.createDrizzleModuleMock();
 });
 
+const { commitImportedJobRowsMock, commitImportedEstimateRowsMock, createDbHistoryChunkResolverMock } =
+  vi.hoisted(() => ({
+    commitImportedJobRowsMock: vi.fn(),
+    commitImportedEstimateRowsMock: vi.fn(),
+    createDbHistoryChunkResolverMock: vi.fn(async () => ({
+      resolveCustomerId: async () => "customer-resolved",
+    })),
+  }));
+
 vi.mock("@fsm/db", async () => {
   const helper = await import("../../../api/src/test-support/fake-db.js");
-  return helper.createDbModuleMock();
+  return {
+    ...helper.createDbModuleMock(),
+    commitImportedJobRows: commitImportedJobRowsMock,
+    commitImportedEstimateRows: commitImportedEstimateRowsMock,
+    createDbHistoryChunkResolver: createDbHistoryChunkResolverMock,
+  };
 });
 
 vi.mock("@fsm/config/storage", () => ({
@@ -57,6 +71,14 @@ beforeEach(() => {
   getFileKeyFromUrlMock.mockReset();
   getFileKeyFromUrlMock.mockImplementation((fileUrl: string) => fileUrl);
   downloadFileMock.mockResolvedValue(csvBuffer);
+  commitImportedJobRowsMock.mockReset();
+  commitImportedEstimateRowsMock.mockReset();
+  createDbHistoryChunkResolverMock.mockReset();
+  createDbHistoryChunkResolverMock.mockResolvedValue({
+    resolveCustomerId: async () => "customer-resolved",
+  });
+  commitImportedJobRowsMock.mockResolvedValue({ rowsCommitted: 1, rowsFailed: 0, errors: [] });
+  commitImportedEstimateRowsMock.mockResolvedValue({ rowsCommitted: 1, rowsFailed: 0, errors: [] });
 });
 
 function createJob(data: Record<string, unknown>) {
@@ -147,6 +169,119 @@ describe("import-chunk-commit.processor", () => {
     expect(testState.customers).toHaveLength(1);
     expect(testState.importChunkRuns).toHaveLength(1);
     expect(testState.importSessions[0]?.progress).toMatchObject({ chunksDone: 1, rowsOk: 1 });
+  });
+
+  it("maps job history CSV rows into commitImportedJobRows", async () => {
+    fakeDb.seedImportSession({
+      id: importSessionId,
+      companyId,
+      entityType: "jobs",
+      status: "importing",
+      fileName: "jobs.csv",
+      fileUrl: "imports/jobs.csv",
+      columnMappings: {
+        job_id: "sourceId",
+        job_number: "jobNumber",
+        customer_id: "customerSourceId",
+        title: "title",
+        status: "status",
+        completed_at: "actualEnd",
+        total: "invoiceTotal",
+      },
+    });
+
+    downloadFileMock.mockResolvedValue(
+      Buffer.from(
+        [
+          "job_id,job_number,customer_id,title,status,completed_at,total",
+          "job-100,J-100,cust-job-1,AC repair,Complete,2021-05-10T14:00:00Z,450.00",
+        ].join("\n"),
+        "utf8",
+      ),
+    );
+
+    const idempotencyKey = buildImportChunkIdempotencyKey(importSessionId, "jobs", 0);
+    await importChunkCommitProcessor.handleImportChunkCommit(
+      createJob({
+        companyId,
+        importSessionId,
+        sourceSystem: "jobber",
+        entityType: "jobs",
+        chunkIndex: 0,
+        chunksTotal: 1,
+        cursor: { rowOffset: 0 },
+        idempotencyKey,
+        rowWindow: { start: 0, end: 1 },
+      }).job,
+    );
+
+    expect(commitImportedJobRowsMock).toHaveBeenCalledTimes(1);
+    const rows = commitImportedJobRowsMock.mock.calls[0]?.[1];
+    expect(rows?.[0]).toMatchObject({
+      sourceId: "job-100",
+      jobNumber: "J-100",
+      customerSourceId: "cust-job-1",
+      title: "AC repair",
+      status: "Complete",
+      invoiceTotal: "450.00",
+    });
+    expect(rows?.[0]?.actualEnd).toEqual(new Date("2021-05-10T14:00:00.000Z"));
+  });
+
+  it("maps estimate history CSV rows into commitImportedEstimateRows", async () => {
+    fakeDb.seedImportSession({
+      id: importSessionId,
+      companyId,
+      entityType: "estimates",
+      status: "importing",
+      fileName: "estimates.csv",
+      fileUrl: "imports/estimates.csv",
+      columnMappings: {
+        estimate_id: "sourceId",
+        estimate_number: "estimateNumber",
+        customer_id: "customerSourceId",
+        job_id: "jobSourceId",
+        status: "status",
+        total: "total",
+        sent_at: "sentAt",
+      },
+    });
+
+    downloadFileMock.mockResolvedValue(
+      Buffer.from(
+        [
+          "estimate_id,estimate_number,customer_id,job_id,status,total,sent_at",
+          "est-9,EST-9,cust-est-1,job-22,Approved,1200.00,2020-03-01T10:00:00Z",
+        ].join("\n"),
+        "utf8",
+      ),
+    );
+
+    const idempotencyKey = buildImportChunkIdempotencyKey(importSessionId, "estimates", 0);
+    await importChunkCommitProcessor.handleImportChunkCommit(
+      createJob({
+        companyId,
+        importSessionId,
+        sourceSystem: "service_fusion",
+        entityType: "estimates",
+        chunkIndex: 0,
+        chunksTotal: 1,
+        cursor: { rowOffset: 0 },
+        idempotencyKey,
+        rowWindow: { start: 0, end: 1 },
+      }).job,
+    );
+
+    expect(commitImportedEstimateRowsMock).toHaveBeenCalledTimes(1);
+    const rows = commitImportedEstimateRowsMock.mock.calls[0]?.[1];
+    expect(rows?.[0]).toMatchObject({
+      sourceId: "est-9",
+      estimateNumber: "EST-9",
+      jobSourceId: "job-22",
+      status: "Approved",
+      total: "1200.00",
+    });
+    expect(rows?.[0]?.sentAt).toEqual(new Date("2020-03-01T10:00:00.000Z"));
   });
 
   it("upserts existing customers by source lineage without duplicating rows", async () => {

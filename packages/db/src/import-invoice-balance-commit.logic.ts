@@ -1,32 +1,14 @@
-import { Decimal } from "decimal.js";
+import type { Decimal } from "decimal.js";
 
+import { formatImportMoney, parseImportMoney } from "@fsm/import-normalize";
 import type { InvoiceStatus } from "@fsm/types";
+
+export { formatImportMoney, parseImportMoney };
 
 export interface InvoiceOpenBalanceAmounts {
   total: string;
   amountPaid: string;
   balanceDue: string;
-}
-
-export function parseImportMoney(value: string): Decimal | null {
-  const trimmed = value.trim().replace(/[$,]/gu, "");
-  if (trimmed.length === 0) {
-    return null;
-  }
-
-  try {
-    const parsed = new Decimal(trimmed);
-    if (!parsed.isFinite() || parsed.isNegative()) {
-      return null;
-    }
-    return parsed;
-  } catch {
-    return null;
-  }
-}
-
-export function formatImportMoney(value: Decimal): string {
-  return value.toFixed(2);
 }
 
 /**

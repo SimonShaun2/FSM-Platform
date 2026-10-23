@@ -65,12 +65,34 @@ export {
   type PriceBookCommitResult,
   type PriceBookValidationResult
 } from "./import-price-book-commit.js";
+export {
+  commitNoteImportRows,
+  mapNoteImportRow,
+  softDeleteNotesImport,
+  validateNoteImportRows,
+  type NotesValidationResult
+} from "./import-notes-commit.js";
 export { normalizeImportedPaymentMethod } from "./import-invoice-balance-commit.logic.js";
 export {
   commitImportedInvoiceRows,
   commitImportedPaymentRows,
   type ImportInvoiceBalanceEntityResolver,
 } from "./import-invoice-balance-commit.service.js";
+export {
+  commitCommunicationsRows,
+  commitImportedCommunicationRows,
+  mapCommunicationsRow,
+  resolveSourceSystemForCommunicationsImport,
+  softDeleteCommunicationsImport,
+  validateCommunicationsRows,
+  type ImportCommunicationsEntityResolver,
+} from "./import-communications-commit.js";
+export {
+  commitImportedEstimateRows,
+  commitImportedJobRows,
+  createDbHistoryChunkResolver,
+  type ImportHistoryChunkEntityResolver,
+} from "./import-history-chunk-commit.service.js";
 export {
   normalizeImportedAssetType,
   normalizeImportedIsoDate,
