@@ -64,7 +64,7 @@ export async function scheduleVipMembershipDunningEmails(input: {
   const stepCount = offsets.length;
 
   for (let stepIndex = 0; stepIndex < offsets.length; stepIndex += 1) {
-    const dayOffset = offsets[stepIndex];
+    const dayOffset = offsets[stepIndex] as VipMembershipDunningDayOffset;
     await enqueueVipMembershipEmail(
       {
         companyId: input.companyId,
