@@ -9,6 +9,7 @@ export {
   fsmDefaultWorkerConcurrency,
   fsmRetainFailedJobsForDlq
 } from "./queue-policy.js";
+export { enqueueMigrateFileBatchJob } from "./enqueue-migrate-file-batch.js";
 export { redisConnection } from "./connection.js";
 export {
   buildDeadLetterQueueName,
@@ -25,10 +26,11 @@ export {
 } from "./queue-retry-policy.js";
 export { handleWorkerJobFailed } from "./worker-terminal-failure.js";
 export {
-  IMPORT_INVOICE_BALANCE_COMMIT_JOB_NAME,
-  ImportInvoiceBalanceCommitPayloadSchema,
-  type ImportInvoiceBalanceCommitPayload,
-} from "./import-invoice-balance-commit.js";
+  IMPORT_CHUNK_COMMIT_JOB_NAME,
+  ImportChunkCommitPayloadSchema,
+  buildImportChunkIdempotencyKey,
+} from "./import-chunk-commit.js";
+export type { ImportChunkCommitPayload } from "./import-chunk-commit.js";
 export {
   QUEUE_PREFIX,
   QUEUE_NAMES,

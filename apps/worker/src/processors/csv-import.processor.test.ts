@@ -26,7 +26,7 @@ vi.mock("@fsm/db", async () => {
   const helper = await import("../../../api/src/test-support/fake-db.js");
   return {
     ...helper.createDbModuleMock(),
-    resolveSourceSystemForPriceBookImport: () => "manual_csv"
+    resolveSourceSystemForPriceBookImport: () => "manual_csv",
   };
 });
 

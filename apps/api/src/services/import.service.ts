@@ -7,10 +7,9 @@ import {
   db,
   emitEventWithExecutor,
   importSessions,
-  invoices,
   jobs,
-  payments,
-  properties
+  properties,
+  softDeletePriceBookImport
 } from "@fsm/db";
 import { importsQueue } from "@fsm/jobs";
 import {
@@ -27,6 +26,7 @@ import {
   type ValidationError
 } from "@fsm/types";
 
+import { scheduleMigrateFileBatchesFromSessionAiInferences } from "./import-migrate-file-batch.service.js";
 import { uploadCsvToR2 } from "./file-upload.service.js";
 
 type ImportSessionRow = typeof importSessions.$inferSelect;
@@ -499,6 +499,8 @@ export async function startImport(
         jobId: `execute-import-${importSessionId}-${now.getTime()}`
       }
     );
+
+    await scheduleMigrateFileBatchesFromSessionAiInferences(companyId, importSessionId);
   } catch (error: unknown) {
     const message = error instanceof Error ? error.message : "Failed to enqueue import execution job";
     await markImportSessionFailed(companyId, importSessionId, message);
@@ -624,35 +626,9 @@ export async function rollbackImport(
       )
       .returning();
 
-    await tx
-      .update(payments)
-      .set({
-        deletedAt: now,
-        updatedAt: now
-      })
-      .where(
-        and(
-          eq(payments.companyId, companyId),
-          eq(payments.importSessionId, importSessionId),
-          isNull(payments.deletedAt)
-        )
-      )
-      .returning();
-
-    await tx
-      .update(invoices)
-      .set({
-        deletedAt: now,
-        updatedAt: now
-      })
-      .where(
-        and(
-          eq(invoices.companyId, companyId),
-          eq(invoices.importSessionId, importSessionId),
-          isNull(invoices.deletedAt)
-        )
-      )
-      .returning();
+    if (importSession.entityType === "price_book") {
+      await softDeletePriceBookImport(companyId, importSessionId);
+    }
 
     const updatedSessions = await tx
       .update(importSessions)

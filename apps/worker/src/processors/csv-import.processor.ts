@@ -8,18 +8,22 @@ import pino from "pino";
 import { mapCsvColumns } from "@fsm/ai";
 import {
   buildPresetColumnMapping,
-  inferImportVendorPresetForSession
-} from "@fsm/config/import-vendor-presets";
+  inferImportSourcePresetForSession
+} from "@fsm/config/import-source-presets";
 import { downloadFile, getFileKeyFromUrl } from "@fsm/config/storage";
 import {
+  commitPriceBookRows,
   customers,
   db,
   emitEventWithExecutor,
   importSessions,
-  properties
+  properties,
+  resolveSourceSystemForPriceBookImport,
+  validatePriceBookRows
 } from "@fsm/db";
-import { aiQueue, IMPORT_INVOICE_BALANCE_COMMIT_JOB_NAME } from "@fsm/jobs";
-import { handleImportInvoiceBalanceCommit } from "./import-invoice-balance-chunk.processor.js";
+import { aiQueue } from "@fsm/jobs";
+
+import { handleImportChunkCommit, IMPORT_CHUNK_COMMIT_JOB_NAME } from "./import-chunk-commit.processor.js";
 import {
   sanitizeSpreadsheetCell,
   type ColumnMapping,
@@ -125,6 +129,20 @@ function normalizeValidationErrors(value: unknown): ValidationError[] {
 
 function normalizeAiInferences(value: unknown): Record<string, unknown> {
   return isPlainObject(value) ? value : {};
+}
+
+function readPriceBookSourceSystem(
+  aiInferences: unknown,
+  headers: string[],
+  entityType: string
+): ReturnType<typeof resolveSourceSystemForPriceBookImport> {
+  const inferences = normalizeAiInferences(aiInferences);
+  if (typeof inferences.sourceSystem === "string") {
+    return inferences.sourceSystem as ReturnType<typeof resolveSourceSystemForPriceBookImport>;
+  }
+
+  const presetId = inferImportVendorPresetForSession(headers, entityType);
+  return resolveSourceSystemForPriceBookImport(presetId);
 }
 
 function normalizeDuplicateActions(value: unknown): Record<string, DuplicateAction> {
@@ -484,12 +502,12 @@ export async function handleMapCsvColumns(job: Job<Record<string, unknown>>): Pr
   try {
     const fileBuffer = await downloadFile(getFileKeyFromUrl(importSession.fileUrl));
     const parsedCsv = parseCsv(fileBuffer);
-    const vendorPresetId = inferImportVendorPresetForSession(
+    const sourcePresetId = inferImportSourcePresetForSession(
       parsedCsv.headers,
       importSession.entityType
     );
-    const presetMapping = vendorPresetId
-      ? buildPresetColumnMapping(parsedCsv.headers, vendorPresetId)
+    const presetMapping = sourcePresetId
+      ? buildPresetColumnMapping(parsedCsv.headers, sourcePresetId)
       : {};
     let columnMapping: ColumnMapping = { ...presetMapping };
 
@@ -506,7 +524,7 @@ export async function handleMapCsvColumns(job: Job<Record<string, unknown>>): Pr
           err: error,
           companyId,
           importSessionId,
-          vendorPresetId
+          sourcePresetId
         },
         "AI column mapping failed; falling back to vendor preset or empty mapping"
       );
@@ -514,11 +532,19 @@ export async function handleMapCsvColumns(job: Job<Record<string, unknown>>): Pr
         Object.keys(presetMapping).length > 0 ? presetMapping : buildEmptyMapping(parsedCsv.headers);
     }
 
+    const priorInferences = normalizeAiInferences(importSession.aiInferences);
+    const sourceSystem = resolveSourceSystemForPriceBookImport(vendorPresetId);
+
     await db
       .update(importSessions)
       .set({
         columnMappings: columnMapping,
         status: "mapping",
+        aiInferences: {
+          ...priorInferences,
+          vendorPresetId,
+          sourceSystem
+        },
         updatedAt: new Date()
       })
       .where(and(eq(importSessions.companyId, companyId), eq(importSessions.id, importSessionId), isNull(importSessions.deletedAt)))
@@ -556,12 +582,16 @@ export async function handleValidateCsvRows(job: Job<Record<string, unknown>>): 
   try {
     const fileBuffer = await downloadFile(getFileKeyFromUrl(importSession.fileUrl));
     const parsedCsv = parseCsv(fileBuffer);
-    const existingCustomers = await getCompanyCustomers(companyId);
-    const validationResult = validateCustomerRows(
-      parsedCsv.rows,
-      normalizeColumnMappings(importSession.columnMappings),
-      existingCustomers
-    );
+    const columnMapping = normalizeColumnMappings(importSession.columnMappings);
+
+    const validationResult =
+      importSession.entityType === "price_book"
+        ? validatePriceBookRows(
+            parsedCsv.rows,
+            columnMapping,
+            readPriceBookSourceSystem(importSession.aiInferences, parsedCsv.headers, importSession.entityType)
+          )
+        : validateCustomerRows(parsedCsv.rows, columnMapping, await getCompanyCustomers(companyId));
 
     await db
       .update(importSessions)
@@ -592,6 +622,74 @@ export async function handleValidateCsvRows(job: Job<Record<string, unknown>>): 
   }
 }
 
+async function executePriceBookImport(
+  job: Job<Record<string, unknown>>,
+  companyId: string,
+  importSessionId: string,
+  importSession: ImportSessionRow
+): Promise<void> {
+  const fileBuffer = await downloadFile(getFileKeyFromUrl(importSession.fileUrl));
+  const parsedCsv = parseCsv(fileBuffer);
+  const columnMapping = normalizeColumnMappings(importSession.columnMappings);
+  const validationErrors = normalizeValidationErrors(importSession.validationErrors);
+  const invalidRowNumbers = new Set(validationErrors.map((validationError) => validationError.row));
+  const sourceSystem = readPriceBookSourceSystem(
+    importSession.aiInferences,
+    parsedCsv.headers,
+    importSession.entityType
+  );
+
+  const result = await commitPriceBookRows({
+    companyId,
+    importSessionId,
+    sourceSystem,
+    rows: parsedCsv.rows,
+    columnMapping,
+    invalidRowNumbers
+  });
+
+  const completedAt = new Date();
+  const priorInferences = normalizeAiInferences(importSession.aiInferences);
+
+  await db.transaction(async (tx) => {
+    await tx
+      .update(importSessions)
+      .set({
+        status: "completed",
+        importedRows: result.importedRows,
+        skippedRows: result.skippedRows,
+        duplicateRows: 0,
+        completedAt,
+        errorMessage: null,
+        aiInferences: {
+          ...priorInferences,
+          priceBookLineSeeds: result.lineSeeds.length
+        },
+        updatedAt: completedAt
+      })
+      .where(
+        and(eq(importSessions.companyId, companyId), eq(importSessions.id, importSessionId), isNull(importSessions.deletedAt))
+      )
+      .returning();
+
+    await emitEventWithExecutor(tx, {
+      companyId,
+      eventType: "import.completed",
+      actorType: "system",
+      entityType: "import_session",
+      entityId: importSessionId,
+      payload: {
+        importedRows: result.importedRows,
+        skippedRows: result.skippedRows,
+        entityType: "price_book"
+      },
+      summary: `Price book import ${importSession.fileName} completed`
+    });
+  });
+
+  await job.updateProgress?.(100);
+}
+
 export async function handleExecuteImport(job: Job<Record<string, unknown>>): Promise<void> {
   const companyId = typeof job.data.companyId === "string" ? job.data.companyId : null;
   const importSessionId = typeof job.data.importSessionId === "string" ? job.data.importSessionId : null;
@@ -609,6 +707,11 @@ export async function handleExecuteImport(job: Job<Record<string, unknown>>): Pr
   }
 
   try {
+    if (importSession.entityType === "price_book") {
+      await executePriceBookImport(job, companyId, importSessionId, importSession);
+      return;
+    }
+
     const fileBuffer = await downloadFile(getFileKeyFromUrl(importSession.fileUrl));
     const parsedCsv = parseCsv(fileBuffer);
     const columnMapping = normalizeColumnMappings(importSession.columnMappings);
@@ -770,6 +873,8 @@ export async function handleExecuteImport(job: Job<Record<string, unknown>>): Pr
             prefersEmail: false,
             doNotContact: false,
             stripeCustomerId: null,
+            sourceSystem: null,
+            sourceId: null,
             importSessionId,
             createdAt: new Date(),
             updatedAt: new Date(),
@@ -917,8 +1022,8 @@ export function createCsvImportProcessor(): Processor<Record<string, unknown>, v
       case "execute-import":
         await handleExecuteImport(job);
         return;
-      case IMPORT_INVOICE_BALANCE_COMMIT_JOB_NAME:
-        await handleImportInvoiceBalanceCommit(job);
+      case IMPORT_CHUNK_COMMIT_JOB_NAME:
+        await handleImportChunkCommit(job);
         return;
       default:
         logger.warn({ jobId: job.id ?? null, jobName: job.name }, "Unknown CSV import job received");
