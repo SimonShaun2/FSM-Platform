@@ -19,8 +19,8 @@ export const featureFlags = {
   tenantSessionScopedWrites: false,
   // FEATURE FLAG: resend-email-enabled — STACK-08: route outbound email through Resend (@fsm/comms)
   resendEmailEnabled: false,
-  // FEATURE FLAG: outbound-sms-enabled — when false, SMS sends are stubbed/disabled
-  outboundSmsEnabled: true,
+  // FEATURE FLAG: outbound-sms-enabled — when false, SMS sends are stubbed/disabled (STACK-08 MVP)
+  outboundSmsEnabled: false,
   // FEATURE FLAG: stripe-platform-billing-mvp — STACK-13 platform subscription checkout
   stripePlatformBillingMvp: false
 } as const;

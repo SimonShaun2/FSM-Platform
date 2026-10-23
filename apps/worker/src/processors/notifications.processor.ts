@@ -31,6 +31,7 @@ type AutomationRuleType = (typeof automationRules.$inferSelect)["ruleType"];
 type AgreementEmailType = "renewal_reminder" | "payment_failed";
 
 interface EmailModule {
+  sendPasswordResetEmail(to: string, resetUrl: string, firstName: string): Promise<void>;
   sendEstimateEmail(
     to: string,
     params: {
@@ -1139,6 +1140,24 @@ export async function handleSendReviewRequest(
   });
 }
 
+export async function handleSendPasswordResetEmail(
+  job: Job<Record<string, unknown>>,
+  dependencies: NotificationsDependencies
+): Promise<void> {
+  const companyId = getJobString(job.data, "companyId");
+  const toEmail = getJobString(job.data, "toEmail");
+  const firstName = getJobString(job.data, "firstName") ?? "there";
+  const resetUrl = getJobString(job.data, "resetUrl");
+
+  if (!companyId || !toEmail || !resetUrl) {
+    logger.warn({ jobId: job.id ?? null, jobName: job.name }, "Password reset email job missing required data");
+    return;
+  }
+
+  await dependencies.email.sendPasswordResetEmail(toEmail, resetUrl, firstName);
+  logger.info({ companyId, jobName: job.name }, "Password reset email sent");
+}
+
 export async function handleSendBookingNotification(
   job: Job<Record<string, unknown>>,
   dependencies: NotificationsDependencies
@@ -1232,6 +1251,9 @@ export function createNotificationsProcessor(
       case "send-booking-confirmation":
       case "send-booking-decline":
         await handleSendBookingNotification(job, dependencies);
+        return;
+      case "send-password-reset-email":
+        await handleSendPasswordResetEmail(job, dependencies);
         return;
       default:
         logger.warn({ jobId: job.id ?? null, jobName: job.name }, "Unknown notifications job received");
