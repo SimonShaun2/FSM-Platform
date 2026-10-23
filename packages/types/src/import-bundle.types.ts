@@ -26,6 +26,26 @@ export interface ImportBundleProgress {
   chunksTotal: number | null;
 }
 
+/** Zero-based data row window (header row excluded). `end` is exclusive. */
+export interface ImportRowChunkWindow {
+  start: number;
+  end: number;
+}
+
+/** ADR FS-MIGRATE §3 — persisted on `import_sessions.progress` during chunked ingest. */
+export interface ImportSessionChunkProgress {
+  entityType: string;
+  chunksTotal: number;
+  chunksDone: number;
+  rowsOk: number;
+  rowsFailed: number;
+  lastCursor?: {
+    rowOffset?: number;
+    lastSourceId?: string;
+  };
+  lastIdempotencyKey?: string;
+}
+
 export interface ImportBundleContract {
   id: string;
   companyId: string;
