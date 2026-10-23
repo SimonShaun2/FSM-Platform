@@ -125,6 +125,7 @@ export const publicHoldBookingSlotValidation = withZodValidation({
 });
 
 export const publicInspectHoldTokenValidation = withZodValidation({
+  params: BookingSlugParamsSchema,
   body: PublicInspectHoldTokenSchema
 });
 
@@ -333,6 +334,7 @@ export const publicInspectHoldTokenRouteSchema = {
       }
     },
     400: errorResponseSchema,
+    404: errorResponseSchema,
     429: errorResponseSchema
   }
 } as const;
