@@ -28,6 +28,7 @@ import importRoutes from "./routes/imports/index.js";
 import dataExportRoutes from "./routes/data-exports/index.js";
 import jobEngagementRoutes from "./routes/job-engagement/index.js";
 import jobRoutes from "./routes/jobs/index.js";
+import loyaltyRoutes from "./routes/loyalty/index.js";
 import messageLogRoutes from "./routes/message-logs/index.js";
 import operatorRoutes from "./routes/operator/index.js";
 import publicRoutes from "./routes/public/index.js";
@@ -94,6 +95,7 @@ export async function buildApp() {
   await app.register(importRoutes, { prefix: "/api/v1" });
   await app.register(dataExportRoutes, { prefix: "/api/v1" });
   await app.register(serviceAgreementRoutes, { prefix: "/api/v1" });
+  await app.register(loyaltyRoutes, { prefix: "/api/v1" });
   await app.register(publicRoutes, { prefix: "/api/v1/public" });
 
   return app;
