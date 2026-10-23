@@ -1,8 +1,4 @@
 import {
-  confirmImportFileLinkDecisionsBodySchema,
-  importFileLinkPreviewResponseSchema
-} from "../../fs-migrate/import-file-link.js";
-import {
   applyMigrateDedupeDecisionsBodySchema,
   createMigrateOnboardingSessionBodySchema,
   linkMigrateOnboardingFilesBodySchema,
@@ -31,6 +27,8 @@ export type MigrateOnboardingWizardRouteContract = {
 /**
  * Authoritative wizard HTTP surface (must match `apps/api/src/routes/migrate-onboarding/index.ts`).
  * Paths include the `/api/v1` prefix registered in `app.ts`.
+ *
+ * File-link routes (run / preview / decisions) return `migrateOnboardingBundle` per #155 @ 4aa23c46.
  */
 export const MIGRATE_ONBOARDING_WIZARD_API_ROUTES: readonly MigrateOnboardingWizardRouteContract[] = [
   {
@@ -68,28 +66,27 @@ export const MIGRATE_ONBOARDING_WIZARD_API_ROUTES: readonly MigrateOnboardingWiz
   },
   {
     method: "POST",
-    path: "/api/v1/migrate/onboarding/sessions/:bundleId/file-link/run",
-    responseSchemaId: "importFileLinkPreviewResponse"
-  },
-  {
-    method: "GET",
-    path: "/api/v1/migrate/onboarding/sessions/:bundleId/file-link/preview",
-    responseSchemaId: "importFileLinkPreviewResponse"
-  },
-  {
-    method: "PATCH",
-    path: "/api/v1/migrate/onboarding/sessions/:bundleId/file-link/decisions",
-    requestBodySchemaId: "confirmImportFileLinkDecisionsBody",
-    responseSchemaId: "migrateOnboardingBundle"
-  },
-  {
-    method: "POST",
     path: "/api/v1/migrate/onboarding/sessions/:bundleId/confirm-mappings",
     responseSchemaId: "migrateOnboardingBundle"
   },
   {
     method: "POST",
     path: "/api/v1/migrate/onboarding/sessions/:bundleId/acknowledge-preview",
+    responseSchemaId: "migrateOnboardingBundle"
+  },
+  {
+    method: "POST",
+    path: "/api/v1/migrate/onboarding/sessions/:bundleId/file-link/run",
+    responseSchemaId: "migrateOnboardingBundle"
+  },
+  {
+    method: "GET",
+    path: "/api/v1/migrate/onboarding/sessions/:bundleId/file-link/preview",
+    responseSchemaId: "migrateOnboardingBundle"
+  },
+  {
+    method: "PATCH",
+    path: "/api/v1/migrate/onboarding/sessions/:bundleId/file-link/decisions",
     responseSchemaId: "migrateOnboardingBundle"
   },
   {
@@ -119,14 +116,12 @@ export const migrateOnboardingWizardRequestSchemas = {
   createMigrateOnboardingSessionBody: createMigrateOnboardingSessionBodySchema,
   setMigrateOnboardingSourceBody: setMigrateOnboardingSourceBodySchema,
   linkMigrateOnboardingFilesBody: linkMigrateOnboardingFilesBodySchema,
-  confirmImportFileLinkDecisionsBody: confirmImportFileLinkDecisionsBodySchema,
   applyMigrateDedupeDecisionsBody: applyMigrateDedupeDecisionsBodySchema
 } as const;
 
 export const migrateOnboardingWizardResponseSchemas = {
   migrateOnboardingBundle: migrateOnboardingBundleSchema,
   migrateOnboardingSourceCatalogEntry: migrateOnboardingSourceCatalogEntrySchema,
-  importFileLinkPreviewResponse: importFileLinkPreviewResponseSchema,
   migrateDedupePreviewResponse: migrateDedupePreviewResponseSchema,
   migrateRelationalPreviewResponse: migrateRelationalPreviewResponseSchema,
   migrateOnboardingCommitResponse: migrateOnboardingCommitResponseSchema
