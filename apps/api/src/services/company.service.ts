@@ -1,6 +1,8 @@
 import { and, eq, isNull } from "drizzle-orm";
 
 import { companies, db, emitEventWithExecutor } from "@fsm/db";
+
+import { runTenantAwareTransaction } from "../lib/company-scoped-transaction.js";
 import {
   AppError,
   ErrorCode,
@@ -211,7 +213,7 @@ export async function updateCompany(
     return existingCompany;
   }
 
-  return db.transaction(async (tx) => {
+  return runTenantAwareTransaction(companyId, async (tx) => {
     const updatedCompanies = await tx
       .update(companies)
       .set({

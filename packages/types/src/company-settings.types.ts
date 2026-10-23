@@ -12,12 +12,6 @@ export interface CompanyNotificationSettings {
   serviceDueAlert?: NotificationChannelPreferences | null;
 }
 
-export interface CompanyStripePlatformBillingSettings {
-  subscriptionId?: string | null;
-  status?: string | null;
-  currentPeriodEnd?: string | null;
-}
-
 export interface CompanyBillingSettings {
   planName?: string | null;
   billingInterval?: string | null;
@@ -29,11 +23,15 @@ export interface CompanyBillingSettings {
   smsCreditsLimit?: number | null;
 }
 
+export interface CompanyClerkSettings {
+  organizationId?: string | null;
+}
+
 export interface CompanySettings {
   tradingName?: string | null;
   currency?: string | null;
   notifications?: CompanyNotificationSettings | null;
   billing?: CompanyBillingSettings | null;
-  /** STACK-13 — platform subscription snapshot (Stripe Billing, not Connect) */
-  stripePlatformBilling?: CompanyStripePlatformBillingSettings | null;
+  /** STACK-02 — maps Clerk org to tenant company */
+  clerk?: CompanyClerkSettings | null;
 }

@@ -31,3 +31,30 @@ jobs:
         run: pnpm lint
       - name: Test
         run: pnpm test
+
+  neon-per-pr-staging:
+    name: Neon per-PR (staging RLS)
+    if: contains(github.event.pull_request.labels.*.name, 'batch-ci')
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    needs: batch
+    steps:
+      - uses: actions/checkout@v4
+      - uses: pnpm/action-setup@v4
+        with:
+          version: 10.0.0
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: pnpm
+      - name: Install
+        run: corepack enable && pnpm install --frozen-lockfile
+      - name: Build packages for CI scripts
+        run: pnpm --filter @fsm/config --filter @fsm/db build
+      - name: Neon per-PR branch gate (STACK-10)
+        env:
+          NEON_CI_DATABASE_URL: ${{ secrets.NEON_CI_STAGING_DATABASE_URL }}
+          RENVANI_DEPLOYMENT_TIER: staging
+        run: node scripts/ci/neon-per-pr-branch.mjs
+      - name: Neon CI wiring contract test
+        run: node --test scripts/ci/neon-per-pr-branch.test.mjs

@@ -6,6 +6,7 @@ import { env } from "@fsm/config";
 
 import { redactAccessTokenInUrl } from "./lib/request-log-path.js";
 import authenticatePlugin from "./plugins/authenticate.js";
+import companyScopedWritePlugin from "./plugins/company-scoped-write.js";
 import errorHandlerPlugin from "./plugins/error-handler.js";
 import requestLoggerPlugin from "./plugins/request-logger.js";
 import activityEventRoutes from "./routes/activity-events/index.js";
@@ -74,6 +75,7 @@ export async function buildApp() {
   await app.register(errorHandlerPlugin);
   await app.register(healthRoutes);
   await app.register(authenticatePlugin);
+  await app.register(companyScopedWritePlugin);
 
   await app.register(activityEventRoutes, { prefix: "/api/v1" });
   await app.register(agentActionRoutes, { prefix: "/api/v1" });
