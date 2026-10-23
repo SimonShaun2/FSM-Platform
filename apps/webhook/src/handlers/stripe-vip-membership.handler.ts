@@ -15,7 +15,8 @@ import {
   extractVipMembershipContext,
   getStripeMetadataString,
   isVipMembershipBillingMetadata,
-  resolveVipGraceDaysFromCompanySettings
+  resolveVipGraceDaysFromCompanySettings,
+  VIP_MEMBERSHIP_BILLING_KIND
 } from "@fsm/types";
 
 import { stripe } from "../lib/stripe-client.js";
@@ -84,6 +85,17 @@ export async function resolveVipMetadataForInvoice(
 ): Promise<Record<string, string | undefined> | null> {
   if (isVipMembershipBillingMetadata(stripeInvoice.metadata)) {
     return stripeInvoice.metadata ?? {};
+  }
+
+  const invoiceBillingKind = getStripeMetadataString(stripeInvoice.metadata, "billingKind");
+
+  if (invoiceBillingKind && invoiceBillingKind !== VIP_MEMBERSHIP_BILLING_KIND) {
+    return null;
+  }
+
+  // Connect maintenance/service-agreement invoices include companyId on the invoice — skip Stripe API.
+  if (getStripeMetadataString(stripeInvoice.metadata, "companyId")) {
+    return null;
   }
 
   if (!stripeInvoice.subscription) {
