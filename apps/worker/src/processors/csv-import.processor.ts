@@ -36,6 +36,14 @@ import {
   IMPORT_COMMUNICATIONS_COMMIT_JOB_NAME
 } from "./import-communications-chunk.processor.js";
 import {
+  handleImportEquipmentCommit,
+  IMPORT_EQUIPMENT_COMMIT_JOB_NAME,
+} from "./import-equipment-chunk.processor.js";
+import {
+  handleImportInvoiceBalanceCommit,
+  IMPORT_INVOICE_BALANCE_COMMIT_JOB_NAME,
+} from "./import-invoice-balance-chunk.processor.js";
+import {
   sanitizeSpreadsheetCell,
   type ColumnMapping,
   type ImportCustomerUpdateSnapshotV1,
@@ -1125,6 +1133,12 @@ export function createCsvImportProcessor(): Processor<Record<string, unknown>, v
         return;
       case IMPORT_COMMUNICATIONS_COMMIT_JOB_NAME:
         await handleImportCommunicationsCommit(job);
+        return;
+      case IMPORT_INVOICE_BALANCE_COMMIT_JOB_NAME:
+        await handleImportInvoiceBalanceCommit(job);
+        return;
+      case IMPORT_EQUIPMENT_COMMIT_JOB_NAME:
+        await handleImportEquipmentCommit(job);
         return;
       default:
         logger.warn({ jobId: job.id ?? null, jobName: job.name }, "Unknown CSV import job received");

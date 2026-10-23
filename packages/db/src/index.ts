@@ -80,3 +80,14 @@ export {
   validateCommunicationsRows,
   type ImportCommunicationsEntityResolver,
 } from "./import-communications-commit.js";
+export {
+  normalizeImportedAssetType,
+  normalizeImportedIsoDate,
+  parseImportedBoolean,
+  pickLastServiceDate,
+} from "./import-equipment-commit.logic.js";
+export {
+  buildLineageEquipmentResolver,
+  commitImportedEquipmentRows,
+  type ImportEquipmentEntityResolver,
+} from "./import-equipment-commit.service.js";

@@ -26,6 +26,10 @@ vi.mock("./tenant-context.service.js", () => ({
   }))
 }));
 
+vi.mock("@fsm/ai/langfuse", () => ({
+  recordAgentAuditObservation: vi.fn(async () => undefined)
+}));
+
 type AgentActionServiceModule = typeof import("./agent-action.service.js");
 type FakeDbModule = typeof import("../test-support/fake-db.js");
 
@@ -98,6 +102,16 @@ describe("agent-action.service tenant scope (FS-10)", () => {
 
     expect(approved.state).toBe("approved");
     expect(approved.reviewerId).toBe(reviewer.id);
+
+    const approvalEvent = fakeDb
+      .getTestState()
+      .activityEvents.find((event) => event.eventType === "agent.proposal_approved");
+    const payload = approvalEvent?.payload as { audit?: Record<string, unknown> } | undefined;
+    expect(payload?.audit).toMatchObject({
+      auditSchemaVersion: "agent-activity-audit-v1",
+      lifecycle: "proposal_approved",
+      loyaltyRemindersDryRun: true
+    });
   });
 
   it("company-scoped update predicates do not match another tenant's action id", async () => {

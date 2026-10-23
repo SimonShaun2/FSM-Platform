@@ -4,7 +4,7 @@ import {
   buildPresetColumnMapping,
   inferImportSourcePresetForSession,
   inferImportSourcePresetFromHeaders
-} from "./import-source-presets.js";
+} from "./import-source-presets/index.js";
 
 describe("import-source-presets", () => {
   it("infers Service Fusion from typical export headers", () => {
@@ -45,5 +45,64 @@ describe("import-source-presets", () => {
         "invoices"
       )
     ).toBe("quickbooks_invoices");
+  });
+
+  it("infers ServiceTitan location export vs customer export", () => {
+    expect(
+      inferImportSourcePresetFromHeaders(
+        ["Location ID", "Customer ID", "Location Name", "Street Address", "City", "State", "ZIP Code"],
+        "customers"
+      )
+    ).toBe("service_titan_locations");
+
+    expect(
+      inferImportSourcePresetFromHeaders(
+        ["Customer Name", "Email", "Phone Number", "Street Address", "City", "State", "ZIP"],
+        "customers"
+      )
+    ).toBe("service_titan");
+  });
+
+  it("infers ServiceTitan jobs from job tags and business unit columns", () => {
+    expect(
+      inferImportSourcePresetForSession(
+        ["Job ID", "Job Number", "Customer ID", "Job Status", "Completed On", "Business Unit", "Tags"],
+        "jobs"
+      )
+    ).toBe("service_titan_jobs");
+  });
+
+  it("infers Housecall Pro jobs export", () => {
+    expect(
+      inferImportSourcePresetForSession(
+        ["Job ID", "Customer UUID", "Scheduled Date", "Job Status", "Street", "City", "State", "ZIP"],
+        "jobs"
+      )
+    ).toBe("housecall_pro_jobs");
+  });
+
+  it("infers QuickBooks Desktop items and invoices", () => {
+    expect(
+      inferImportSourcePresetFromHeaders(
+        ["Item", "Description", "Type", "Sales Price", "Cost", "Account"],
+        "products"
+      )
+    ).toBe("quickbooks_desktop_items");
+
+    expect(
+      inferImportSourcePresetForSession(
+        ["Invoice #", "Customer", "Date", "Due Date", "Amount", "Open Balance"],
+        "invoices"
+      )
+    ).toBe("quickbooks_desktop_invoices");
+  });
+
+  it("infers QuickBooks Online payments export", () => {
+    expect(
+      inferImportSourcePresetForSession(
+        ["Date", "Customer", "Amount", "Payment Method", "Invoice Number", "Ref"],
+        "invoices"
+      )
+    ).toBe("quickbooks_payments");
   });
 });
