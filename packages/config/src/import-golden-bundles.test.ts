@@ -22,6 +22,13 @@ describe("FS-MIGRATE golden import bundles (CI fixtures)", () => {
     }
   });
 
+  it("ServiceTitan golden bundle is location-aware with ST preset contract coverage", () => {
+    const manifest = GOLDEN_IMPORT_BUNDLE_MANIFESTS.find((entry) => entry.sourceSystem === "servicetitan");
+    expect(manifest).toBeDefined();
+    expect(manifest?.files.some((file) => file.relativePath === "locations.csv")).toBe(true);
+    assertGoldenImportBundleManifest(manifest!);
+  });
+
   it("requires price book files for Service Fusion and Jobber epic §6 fixtures", () => {
     for (const source of ["service_fusion", "jobber"] as const) {
       const manifest = GOLDEN_IMPORT_BUNDLE_MANIFESTS.find((entry) => entry.sourceSystem === source);
