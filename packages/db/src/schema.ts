@@ -210,6 +210,13 @@ export const importEntityTypeEnum = pgEnum("import_entity_type", [
   "invoices",
 ]);
 
+export const importBundleStatusEnum = pgEnum("import_bundle_status", [
+  "active",
+  "committing",
+  "completed",
+  "abandoned"
+]);
+
 export const technicianStatusEnum = pgEnum("technician_status", [
   "active",
   "inactive",
@@ -324,6 +331,11 @@ export const activityEventTypeEnum = pgEnum("activity_event_type", [
   "import.completed",
   "import.rolled_back",
   "import.failed",
+  "import.bundle.created",
+  "import.bundle.step_advanced",
+  "import.bundle.commit_started",
+  "import.bundle.completed",
+  "import.bundle.abandoned",
   // Data export (FS-89)
   "export.requested",
   "export.completed",
@@ -1235,10 +1247,27 @@ export const formSubmissions = pgTable("form_submissions", {
 
 // Tracks a single CSV import session from upload through completion
 // Supports rollback: all records created by an import are tagged with import_session_id
+export const importBundles = pgTable("import_bundles", {
+  id: id(),
+  companyId: companyId(),
+  createdById: uuid("created_by_id").references(() => users.id),
+  status: importBundleStatusEnum("status").notNull().default("active"),
+  wizardStep: integer("wizard_step").notNull().default(1),
+  stepState: jsonb("step_state").notNull().default({}),
+  dedupeDecisions: jsonb("dedupe_decisions").notNull().default({}),
+  completedAt: timestamp("completed_at"),
+  abandonedAt: timestamp("abandoned_at"),
+  ...timestamps
+}, (t) => ({
+  companyIdx: index("import_bundles_company_idx").on(t.companyId),
+  statusIdx: index("import_bundles_status_idx").on(t.status)
+}));
+
 export const importSessions = pgTable("import_sessions", {
   id: id(),
   companyId: companyId(),
   createdById: uuid("created_by_id").references(() => users.id),
+  importBundleId: uuid("import_bundle_id").references(() => importBundles.id),
   entityType: importEntityTypeEnum("entity_type").notNull(), // what is being imported
   status: importSessionStatusEnum("status").notNull().default("uploaded"),
   // Source file

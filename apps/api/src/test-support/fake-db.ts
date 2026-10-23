@@ -12,6 +12,7 @@ type TableName =
   | "assets"
   | "jobs"
   | "importSessions"
+  | "importBundles"
   | "dataExportSessions"
   | "estimates"
   | "estimateItems"
@@ -313,10 +314,26 @@ export interface TestImportValidationError {
   value: string;
 }
 
+export interface TestImportBundleRecord {
+  id: string;
+  companyId: string;
+  createdById: string | null;
+  status: "active" | "committing" | "completed" | "abandoned";
+  wizardStep: number;
+  stepState: Record<string, unknown>;
+  dedupeDecisions: Record<string, string>;
+  completedAt: Date | null;
+  abandonedAt: Date | null;
+  createdAt: Date;
+  updatedAt: Date;
+  deletedAt: Date | null;
+}
+
 export interface TestImportSessionRecord {
   id: string;
   companyId: string;
   createdById: string | null;
+  importBundleId: string | null;
   entityType: ImportEntityType;
   status: ImportSessionStatus;
   fileName: string;
@@ -1193,32 +1210,6 @@ export interface TestDataExportSessionRecord {
   deletedAt: Date | null;
 }
 
-export interface TestImportSessionRecord {
-  id: string;
-  companyId: string;
-  createdById: string | null;
-  entityType: ImportEntityType;
-  status: ImportSessionStatus;
-  fileName: string;
-  fileUrl: string;
-  totalRows: number | null;
-  validRows: number | null;
-  errorRows: number | null;
-  importedRows: number | null;
-  skippedRows: number | null;
-  duplicateRows: number | null;
-  columnMappings: Record<string, string | null>;
-  validationErrors: TestImportValidationError[];
-  aiInferences: Record<string, unknown>;
-  rolledBackAt: Date | null;
-  rolledBackById: string | null;
-  completedAt: Date | null;
-  errorMessage: string | null;
-  createdAt: Date;
-  updatedAt: Date;
-  deletedAt: Date | null;
-}
-
 export interface TestEstimateRecord {
   id: string;
   companyId: string;
@@ -1883,6 +1874,7 @@ type AnyTestRecord =
   | TestAssetRecord
   | TestJobRecord
   | TestImportSessionRecord
+  | TestImportBundleRecord
   | TestDataExportSessionRecord
   | TestEstimateRecord
   | TestEstimateItemRecord
@@ -1929,6 +1921,7 @@ type MockTable =
   | typeof assetsTable
   | typeof jobsTable
   | typeof importSessionsTable
+  | typeof importBundlesTable
   | typeof dataExportSessionsTable
   | typeof estimatesTable
   | typeof estimateItemsTable
@@ -1975,6 +1968,7 @@ interface TestState {
   assets: TestAssetRecord[];
   jobs: TestJobRecord[];
   importSessions: TestImportSessionRecord[];
+  importBundles: TestImportBundleRecord[];
   dataExportSessions: TestDataExportSessionRecord[];
   estimates: TestEstimateRecord[];
   estimateItems: TestEstimateItemRecord[];
@@ -2193,11 +2187,28 @@ const jobsTable = {
   deletedAt: "deletedAt"
 } as const;
 
+const importBundlesTable = {
+  __name: "importBundles",
+  id: "id",
+  companyId: "companyId",
+  createdById: "createdById",
+  status: "status",
+  wizardStep: "wizardStep",
+  stepState: "stepState",
+  dedupeDecisions: "dedupeDecisions",
+  completedAt: "completedAt",
+  abandonedAt: "abandonedAt",
+  createdAt: "createdAt",
+  updatedAt: "updatedAt",
+  deletedAt: "deletedAt"
+} as const;
+
 const importSessionsTable = {
   __name: "importSessions",
   id: "id",
   companyId: "companyId",
   createdById: "createdById",
+  importBundleId: "importBundleId",
   entityType: "entityType",
   status: "status",
   fileName: "fileName",
@@ -3004,6 +3015,7 @@ const state: TestState = {
   assets: [],
   jobs: [],
   importSessions: [],
+  importBundles: [],
   dataExportSessions: [],
   estimates: [],
   estimateItems: [],
@@ -3059,6 +3071,7 @@ function restoreState(snapshot: TestState): void {
   state.assets.splice(0, state.assets.length, ...snapshot.assets);
   state.jobs.splice(0, state.jobs.length, ...snapshot.jobs);
   state.importSessions.splice(0, state.importSessions.length, ...snapshot.importSessions);
+  state.importBundles.splice(0, state.importBundles.length, ...snapshot.importBundles);
   state.dataExportSessions.splice(0, state.dataExportSessions.length, ...snapshot.dataExportSessions);
   state.estimates.splice(0, state.estimates.length, ...snapshot.estimates);
   state.estimateItems.splice(0, state.estimateItems.length, ...snapshot.estimateItems);
@@ -3127,6 +3140,8 @@ function getRows(tableName: TableName): AnyTestRecord[] {
       return state.jobs;
     case "importSessions":
       return state.importSessions;
+    case "importBundles":
+      return state.importBundles;
     case "dataExportSessions":
       return state.dataExportSessions;
     case "estimates":
@@ -3439,6 +3454,27 @@ function createJobRecord(
   };
 }
 
+function createImportBundleRecord(
+  values: Partial<TestImportBundleRecord> & Pick<TestImportBundleRecord, "companyId">
+): TestImportBundleRecord {
+  const now = new Date();
+
+  return {
+    id: values.id ?? nextId(),
+    companyId: values.companyId,
+    createdById: values.createdById ?? null,
+    status: values.status ?? "active",
+    wizardStep: values.wizardStep ?? 1,
+    stepState: values.stepState ?? {},
+    dedupeDecisions: values.dedupeDecisions ?? {},
+    completedAt: values.completedAt ?? null,
+    abandonedAt: values.abandonedAt ?? null,
+    createdAt: values.createdAt ?? now,
+    updatedAt: values.updatedAt ?? now,
+    deletedAt: values.deletedAt ?? null
+  };
+}
+
 function createDataExportSessionRecord(
   values: Partial<TestDataExportSessionRecord> & Pick<TestDataExportSessionRecord, "companyId">
 ): TestDataExportSessionRecord {
@@ -3474,6 +3510,7 @@ function createImportSessionRecord(
     id: values.id ?? nextId(),
     companyId: values.companyId,
     createdById: values.createdById ?? null,
+    importBundleId: values.importBundleId ?? null,
     entityType: values.entityType ?? "customers",
     status: values.status ?? "uploaded",
     fileName: values.fileName,
@@ -4527,6 +4564,8 @@ function createRow(tableName: TableName, values: Record<string, unknown>): AnyTe
         values as Partial<TestImportSessionRecord> &
           Pick<TestImportSessionRecord, "companyId" | "fileName" | "fileUrl">
       );
+    case "importBundles":
+      return createImportBundleRecord(values as Partial<TestImportBundleRecord> & Pick<TestImportBundleRecord, "companyId">);
     case "dataExportSessions":
       return createDataExportSessionRecord(
         values as Partial<TestDataExportSessionRecord> & Pick<TestDataExportSessionRecord, "companyId">
@@ -4997,6 +5036,7 @@ export const properties = propertiesTable;
 export const assets = assetsTable;
 export const jobs = jobsTable;
 export const importSessions = importSessionsTable;
+export const importBundles = importBundlesTable;
 export const dataExportSessions = dataExportSessionsTable;
 export const estimates = estimatesTable;
 export const estimateItems = estimateItemsTable;
@@ -5353,6 +5393,7 @@ export function createDbModuleMock() {
     assets,
     jobs,
     importSessions,
+    importBundles,
     dataExportSessions,
     estimates,
     estimateItems,
@@ -5408,6 +5449,7 @@ export function resetTestState(): void {
   state.assets.length = 0;
   state.jobs.length = 0;
   state.importSessions.length = 0;
+  state.importBundles.length = 0;
   state.dataExportSessions.length = 0;
   state.estimates.length = 0;
   state.estimateItems.length = 0;
@@ -5515,6 +5557,14 @@ export function seedImportSession(
 ): TestImportSessionRecord {
   const record = createImportSessionRecord(values);
   state.importSessions.push(record);
+  return record;
+}
+
+export function seedImportBundle(
+  values: Partial<TestImportBundleRecord> & Pick<TestImportBundleRecord, "companyId">
+): TestImportBundleRecord {
+  const record = createImportBundleRecord(values);
+  state.importBundles.push(record);
   return record;
 }
 

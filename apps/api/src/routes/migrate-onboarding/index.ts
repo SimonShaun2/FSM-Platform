@@ -1,0 +1,105 @@
+import type { FastifyPluginAsync } from "fastify";
+
+import { requireRole } from "../../lib/authorize.js";
+import {
+  acknowledgeMigrateOnboardingPreviewHandler,
+  applyMigrateDedupeDecisionsHandler,
+  commitMigrateOnboardingBundleHandler,
+  confirmMigrateOnboardingMappingsHandler,
+  createMigrateOnboardingSessionHandler,
+  getActiveMigrateOnboardingSessionHandler,
+  getMigrateDedupePreviewHandler,
+  getMigrateOnboardingBundleHandler,
+  linkMigrateOnboardingFilesHandler,
+  listMigrateOnboardingSourcesHandler,
+  setMigrateOnboardingSourceHandler
+} from "./handlers.js";
+import {
+  acknowledgePreviewRouteSchema,
+  applyMigrateDedupeDecisionsValidation,
+  commitBundleRouteSchema,
+  confirmMappingsRouteSchema,
+  createMigrateOnboardingSessionValidation,
+  createSessionRouteSchema,
+  dedupeDecisionsRouteSchema,
+  dedupePreviewRouteSchema,
+  getActiveSessionRouteSchema,
+  getBundleRouteSchema,
+  linkFilesRouteSchema,
+  linkMigrateOnboardingFilesValidation,
+  listSourcesRouteSchema,
+  migrateOnboardingBundleIdValidation,
+  setMigrateOnboardingSourceValidation,
+  setSourceRouteSchema
+} from "./schemas.js";
+
+const migrateOnboardingRoutes: FastifyPluginAsync = async (fastify) => {
+  const authenticate = fastify.authenticate;
+  const requireOwnerOrAdmin = requireRole(["owner", "admin"]);
+
+  fastify.get("/migrate/onboarding/sources", {
+    preHandler: [authenticate, requireOwnerOrAdmin],
+    schema: listSourcesRouteSchema
+  }, listMigrateOnboardingSourcesHandler);
+
+  fastify.post("/migrate/onboarding/sessions", {
+    preHandler: [authenticate, requireOwnerOrAdmin],
+    preValidation: createMigrateOnboardingSessionValidation,
+    schema: createSessionRouteSchema
+  }, createMigrateOnboardingSessionHandler);
+
+  fastify.get("/migrate/onboarding/sessions/active", {
+    preHandler: [authenticate, requireOwnerOrAdmin],
+    schema: getActiveSessionRouteSchema
+  }, getActiveMigrateOnboardingSessionHandler);
+
+  fastify.get("/migrate/onboarding/sessions/:bundleId", {
+    preHandler: [authenticate, requireOwnerOrAdmin],
+    preValidation: migrateOnboardingBundleIdValidation,
+    schema: getBundleRouteSchema
+  }, getMigrateOnboardingBundleHandler);
+
+  fastify.patch("/migrate/onboarding/sessions/:bundleId/source", {
+    preHandler: [authenticate, requireOwnerOrAdmin],
+    preValidation: setMigrateOnboardingSourceValidation,
+    schema: setSourceRouteSchema
+  }, setMigrateOnboardingSourceHandler);
+
+  fastify.patch("/migrate/onboarding/sessions/:bundleId/files", {
+    preHandler: [authenticate, requireOwnerOrAdmin],
+    preValidation: linkMigrateOnboardingFilesValidation,
+    schema: linkFilesRouteSchema
+  }, linkMigrateOnboardingFilesHandler);
+
+  fastify.post("/migrate/onboarding/sessions/:bundleId/confirm-mappings", {
+    preHandler: [authenticate, requireOwnerOrAdmin],
+    preValidation: migrateOnboardingBundleIdValidation,
+    schema: confirmMappingsRouteSchema
+  }, confirmMigrateOnboardingMappingsHandler);
+
+  fastify.post("/migrate/onboarding/sessions/:bundleId/acknowledge-preview", {
+    preHandler: [authenticate, requireOwnerOrAdmin],
+    preValidation: migrateOnboardingBundleIdValidation,
+    schema: acknowledgePreviewRouteSchema
+  }, acknowledgeMigrateOnboardingPreviewHandler);
+
+  fastify.get("/migrate/onboarding/sessions/:bundleId/dedupe-preview", {
+    preHandler: [authenticate, requireOwnerOrAdmin],
+    preValidation: migrateOnboardingBundleIdValidation,
+    schema: dedupePreviewRouteSchema
+  }, getMigrateDedupePreviewHandler);
+
+  fastify.patch("/migrate/onboarding/sessions/:bundleId/dedupe-decisions", {
+    preHandler: [authenticate, requireOwnerOrAdmin],
+    preValidation: applyMigrateDedupeDecisionsValidation,
+    schema: dedupeDecisionsRouteSchema
+  }, applyMigrateDedupeDecisionsHandler);
+
+  fastify.post("/migrate/onboarding/sessions/:bundleId/commit", {
+    preHandler: [authenticate, requireOwnerOrAdmin],
+    preValidation: migrateOnboardingBundleIdValidation,
+    schema: commitBundleRouteSchema
+  }, commitMigrateOnboardingBundleHandler);
+};
+
+export default migrateOnboardingRoutes;

@@ -108,6 +108,9 @@ importers:
       '@types/node':
         specifier: ^24.3.0
         version: 24.12.2
+      '@types/papaparse':
+        specifier: ^5.5.0
+        version: 5.5.2
       '@types/supertest':
         specifier: ^6.0.3
         version: 6.0.3

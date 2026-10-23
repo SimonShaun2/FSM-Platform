@@ -29,6 +29,7 @@
 | 25 | `0025_agent_action_reversed_state` | Agent action enum `reversed` (#81) |
 
 | 26 | `0026_fs_migrate_import_lineage` | **Reserved** — FS-MIGRATE lineage + chunk runs (ADR-FS-MIGRATE); implementation PR only |
+| 27 | `0027_fs_migrate_onboarding_wizard` | FS-MIGRATE onboarding wizard + `import_bundles` (M3/M4 API) |
 
 **FS-94 platform billing:** **⏸** per `BATCH-PLAN-5-9.md` §0 — do not allocate idx until founder/CoS budget gate.
 
