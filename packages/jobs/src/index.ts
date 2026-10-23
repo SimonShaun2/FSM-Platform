@@ -39,6 +39,11 @@ export {
 } from "./import-invoice-balance-commit.js";
 export type { ImportInvoiceBalanceCommitPayload } from "./import-invoice-balance-commit.js";
 export {
+  IMPORT_COMMUNICATIONS_COMMIT_JOB_NAME,
+  ImportCommunicationsCommitPayloadSchema,
+} from "./import-communications-commit.js";
+export type { ImportCommunicationsCommitPayload } from "./import-communications-commit.js";
+export {
   IMPORT_EQUIPMENT_COMMIT_JOB_NAME,
   ImportEquipmentCommitPayloadSchema,
   buildImportEquipmentCommitJobId,
