@@ -17,6 +17,7 @@ import {
   forwardStripePaymentFailed,
   forwardStripePaymentSuccess
 } from "../lib/invoice-service-bridge.js";
+import { provisionVipMembershipFromSubscription } from "../lib/vip-membership-provision.js";
 import { stripe } from "../lib/stripe-client.js";
 import {
   handlePlatformSubscriptionDeleted,
@@ -175,11 +176,18 @@ export async function handleSubscriptionUpdated(
     return;
   }
 
-  const plan = await getMaintenancePlanBySubscription(companyId, subscription.id, db);
+  let plan = await getMaintenancePlanBySubscription(companyId, subscription.id, db);
 
   if (!plan) {
-    logContext.warn({ eventId: event.id, eventType: event.type, companyId }, "Maintenance plan not found for Stripe subscription");
-    return;
+    if (getMetadataString(subscription.metadata, "billingKind") === "vip_membership") {
+      await provisionVipMembershipFromSubscription(subscription, companyId);
+      plan = await getMaintenancePlanBySubscription(companyId, subscription.id, db);
+    }
+
+    if (!plan) {
+      logContext.warn({ eventId: event.id, eventType: event.type, companyId }, "Maintenance plan not found for Stripe subscription");
+      return;
+    }
   }
 
   const periodStart = subscription.current_period_start
