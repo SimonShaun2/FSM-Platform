@@ -10,7 +10,6 @@ import {
   getActiveMigrateOnboardingSessionHandler,
   getMigrateDedupePreviewHandler,
   getMigrateRelationalPreviewHandler,
-  getMigrateOnboardingIngestStatusHandler,
   getMigrateOnboardingBundleHandler,
   getMigrateOnboardingIngestStatusHandler,
   linkMigrateOnboardingFilesHandler,
@@ -30,7 +29,6 @@ import {
   dedupeDecisionsRouteSchema,
   dedupePreviewRouteSchema,
   relationalPreviewRouteSchema,
-  ingestStatusRouteSchema,
   getActiveSessionRouteSchema,
   getBundleRouteSchema,
   ingestStatusRouteSchema,
@@ -43,8 +41,7 @@ import {
   confirmImportFileLinkDecisionsValidation,
   fileLinkPreviewRouteSchema,
   runFileLinkRouteSchema,
-  confirmFileLinkRouteSchema,
-  ingestStatusRouteSchema
+  confirmFileLinkRouteSchema
 } from "./schemas.js";
 
 const migrateOnboardingRoutes: FastifyPluginAsync = async (fastify) => {

@@ -14,7 +14,6 @@ import {
   getMigrateImportFileLinkPreview,
   runMigrateImportFileLink
 } from "../../services/migrate-import-file-link.service.js";
-import { getMigrateOnboardingIngestStatus } from "../../services/migrate-onboarding-ingest-status.service.js";
 import {
   acknowledgeMigrateOnboardingPreview,
   applyMigrateDedupeDecisions,
@@ -176,15 +175,6 @@ export async function confirmMigrateImportFileLinkHandler(
     body
   );
   return reply.send(preview);
-}
-
-export async function getMigrateOnboardingIngestStatusHandler(
-  request: FastifyRequest,
-  reply: FastifyReply
-): Promise<FastifyReply> {
-  const { bundleId } = request.params as { bundleId: string };
-  const status = await getMigrateOnboardingIngestStatus(request.company.id, bundleId);
-  return reply.send(status);
 }
 
 export async function commitMigrateOnboardingBundleHandler(
