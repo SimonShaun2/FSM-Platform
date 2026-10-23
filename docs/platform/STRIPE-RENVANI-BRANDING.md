@@ -20,15 +20,27 @@ Customers should experience **Renvani** (and the shop name), not Stripe marketin
 - `STRIPE_BRANDING_LOGO_URL` / `STRIPE_BRANDING_ICON_URL` — hosted assets for Connect + Checkout branding
 - `NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY` — required for embedded Connect / Checkout on web
 
-## Founder / live-mode checklist (not automated)
+## API automation (uses `STRIPE_SECRET_KEY` — test or live)
 
-- [ ] Stripe Dashboard → **Settings → Branding** (logo, colors, icon) for platform account
-- [ ] Connect → **Custom domain** for any remaining hosted pages (invoice/payment links)
-- [ ] **Customer emails** off in Stripe Billing settings; receipts/invoices/dunning via Resend as Renvani
+- API `onReady`: `syncRenvaniStripePlatformPolicies()` — platform branding colors + `RENVANI` statement descriptor
+- Connect: `applyConnectAccountBranding` on create/onboarding (logo/icon when `STRIPE_BRANDING_*` URLs set)
+- Subscriptions: `collection_method: charge_automatically` (avoids Stripe invoice email flow)
+- Portal URLs (`stripeRenvaniPortalUrls`): maintenance retry `/portal/agreements/{token}`; receipt `/pay/{token}/receipt` + `.pdf` API
+
+**Founder approval:** Shaun approved STACK-14 live follow-up on **2026-10-23 8:55 AM CT** (Notion FS-131).
+
+## Founder / live-mode checklist (Dashboard / DNS — not in API)
+
+- [ ] **Live** `STRIPE_SECRET_KEY` + `NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY` (Shaun / infra)
+- [ ] Stripe Dashboard → **Settings → Branding** if assets are not supplied via env URLs
+- [ ] Connect → **Custom domain** (**DNS** — cannot be done from this repo)
+- [ ] Dashboard → **Settings → Customer emails** — disable Stripe receipts/invoices (no platform API toggle in Stripe v17)
 - [ ] Statement descriptor prefix review for production connected accounts
-- [ ] Replace hosted subscription retry URLs with Renvani invoice portal (follow-up ticket)
+- [ ] Figma parity (file `jiGHTNUJNltWbHA4Il3hk7`, pages 03 & 05)
 
 ## Feature flags (`@fsm/config/feature-flags`)
 
 - `stripeRenvaniEmbeddedCheckout` — invoice embedded Checkout (default **true**)
 - `stripeRenvaniConnectEmbedded` — Connect Account Session in app (default **true**)
+- `stripeRenvaniPlatformSync` — sync platform branding on API boot (default **true**)
+- `stripeRenvaniPortalUrls` — Renvani portal instead of `hosted_invoice_url` (default **true**)
