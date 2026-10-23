@@ -236,8 +236,6 @@ export async function createInvoiceCheckoutSession(
     invoiceNumber: input.invoiceNumber
   };
 
-  const brandingPatch = buildStripeAccountBrandingPatch();
-
   const session = await stripe.checkout.sessions.create(
     useEmbeddedCheckout
       ? {
@@ -252,11 +250,6 @@ export async function createInvoiceCheckoutSession(
             submit: {
               message: `Secure payment processed by ${RENVANI_STRIPE_BRAND.platformName}. Receipts are sent from Renvani, not Stripe.`
             }
-          },
-          branding_settings: {
-            background_color: "#ffffff",
-            button_color: brandingPatch.primary_color,
-            font_family: "inter"
           }
         }
       : {
@@ -270,11 +263,6 @@ export async function createInvoiceCheckoutSession(
             submit: {
               message: `Secure payment processed by ${RENVANI_STRIPE_BRAND.platformName}.`
             }
-          },
-          branding_settings: {
-            background_color: "#ffffff",
-            button_color: brandingPatch.primary_color,
-            font_family: "inter"
           }
         }
   );
@@ -602,7 +590,6 @@ export async function createPlatformBillingCheckoutSession(
   input: CreatePlatformBillingCheckoutInput
 ): Promise<PlatformBillingCheckoutResult> {
   const appBaseUrl = env.APP_URL.replace(/\/$/, "");
-  const brandingPatch = buildStripeAccountBrandingPatch();
   const session = await stripe.checkout.sessions.create({
     mode: "subscription",
     customer: input.stripeCustomerId,
@@ -625,11 +612,6 @@ export async function createPlatformBillingCheckoutSession(
       submit: {
         message: `${RENVANI_STRIPE_BRAND.platformName} subscription — billing notices come from Renvani.`
       }
-    },
-    branding_settings: {
-      background_color: "#ffffff",
-      button_color: brandingPatch.primary_color,
-      font_family: "inter"
     }
   });
 
