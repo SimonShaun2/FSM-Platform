@@ -41,8 +41,7 @@ import {
   confirmImportFileLinkDecisionsValidation,
   fileLinkPreviewRouteSchema,
   runFileLinkRouteSchema,
-  confirmFileLinkRouteSchema,
-  ingestStatusRouteSchema
+  confirmFileLinkRouteSchema
 } from "./schemas.js";
 
 const migrateOnboardingRoutes: FastifyPluginAsync = async (fastify) => {
