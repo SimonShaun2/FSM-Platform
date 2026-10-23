@@ -9,6 +9,7 @@ import {
   deletePropertyHandler,
   getAssetHandler,
   getCustomerHandler,
+  getCustomerNotesHandler,
   getPropertyHandler,
   listCustomersHandler,
   listPropertiesHandler,
@@ -31,6 +32,7 @@ import {
   deletePropertyRouteSchema,
   getAssetRouteSchema,
   getCustomerRouteSchema,
+  getCustomerNotesRouteSchema,
   getPropertyRouteSchema,
   listCustomersRouteSchema,
   listCustomersValidation,
@@ -67,6 +69,11 @@ const customerRoutes: FastifyPluginAsync = async (fastify) => {
     "/:id",
     { preValidation: [customerIdValidation], preHandler: [fastify.authenticate], schema: getCustomerRouteSchema },
     getCustomerHandler
+  );
+  fastify.get(
+    "/:id/notes",
+    { preValidation: [customerIdValidation], preHandler: [fastify.authenticate], schema: getCustomerNotesRouteSchema },
+    getCustomerNotesHandler
   );
   fastify.patch(
     "/:id",

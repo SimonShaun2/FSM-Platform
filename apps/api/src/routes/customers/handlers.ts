@@ -20,6 +20,7 @@ import {
   createCustomer,
   deleteCustomer,
   getCustomer,
+  getCustomerNotes,
   listCustomers,
   searchCustomers,
   updateCustomer
@@ -303,6 +304,29 @@ export async function getCustomerHandler(
       ...toCustomerResponse(customer),
       properties: customer.properties.map((property) => toPropertyWithAssetsResponse(property))
     }
+  });
+}
+
+export async function getCustomerNotesHandler(
+  request: FastifyRequest,
+  reply: FastifyReply
+): Promise<FastifyReply> {
+  const params = request.params as CustomerIdParams;
+  const notes = await getCustomerNotes(request.company.id, params.id);
+
+  return reply.send({
+    notes: notes.map((note) => ({
+      id: note.id,
+      companyId: note.companyId,
+      customerId: note.customerId,
+      authorId: note.authorId,
+      content: note.content,
+      isInternal: note.isInternal,
+      notedAt: note.notedAt?.toISOString() ?? null,
+      createdAt: note.createdAt.toISOString(),
+      updatedAt: note.updatedAt.toISOString(),
+      deletedAt: note.deletedAt?.toISOString() ?? null
+    }))
   });
 }
 
