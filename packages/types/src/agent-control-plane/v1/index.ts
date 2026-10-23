@@ -14,3 +14,4 @@ export * from "./tools/registry.js";
 export * from "./tools/context-resolve.params.js";
 export * from "./tools/message-draft.params.js";
 export * from "./tools/message-send-proposed.params.js";
+export * from "./tools/loyalty-reminder-propose.params.js";

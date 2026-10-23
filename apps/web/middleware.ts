@@ -5,6 +5,7 @@ import { AUTH_TOKEN_COOKIE_NAME } from "@/src/lib/auth";
 import { getPublicApiBaseUrl, resolveLegacyEstimateGetRecovery } from "@/src/lib/legacy-estimate-route";
 import {
   hasPublicApiPathTraversalInRequest,
+  isAllowedPublicApiProxyMethod,
   isPublicApiProxyPath
 } from "@/src/lib/public-api-path-security";
 import { canRoleAccessPath, getDefaultRouteForRole, isPublicRoute, normalizeUserRole } from "@/src/lib/route-access";
@@ -69,6 +70,10 @@ export async function middleware(request: NextRequest) {
   }
 
   if (isPublicApiProxyPath(pathname)) {
+    if (!isAllowedPublicApiProxyMethod(request.method)) {
+      return new NextResponse(null, { status: 405 });
+    }
+
     if (hasPublicApiPathTraversalInRequest(request.url, pathname)) {
       return new NextResponse(null, { status: 400 });
     }
