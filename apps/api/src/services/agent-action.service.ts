@@ -2,7 +2,7 @@ import { createHash } from "node:crypto";
 
 import { and, eq, isNull } from "drizzle-orm";
 
-import { agentActions, db, emitEventWithExecutor } from "@fsm/db";
+import { agentActions, db } from "@fsm/db";
 import {
   AppError,
   ErrorCode,
@@ -30,6 +30,10 @@ import {
 } from "./agent-action.policy.js";
 import { authorizeAgentActionExecution } from "./outbound-policy-engine.service.js";
 import { resolveEntityRef } from "./tenant-context.service.js";
+import {
+  emitAgentActionAuditEvent,
+  mirrorAgentActionAuditToLangfuse
+} from "./agent-action-audit.js";
 
 const DEFAULT_TTL_MS = 72 * 60 * 60 * 1000;
 
@@ -204,19 +208,18 @@ async function createAgentActionProposalInTransaction(
     throw new AppError(ErrorCode.INTERNAL_ERROR, "Failed to create agent action");
   }
 
-  await emitEventWithExecutor(tx, {
+  await emitAgentActionAuditEvent(tx, {
     companyId: input.companyId,
-    eventType: "agent.proposal_created",
+    lifecycle: "proposal_created",
+    row: inserted,
     actorId: input.actorId,
     actorType: input.actorType,
-    entityType: "agent_action",
-    entityId: inserted.id,
-    payload: {
+    summary: `Agent proposal created (${input.actionType})`,
+    detail: {
       actionType: input.actionType,
       agentProduct: input.agentProduct,
       state: inserted.state
-    },
-    summary: `Agent proposal created (${input.actionType})`
+    }
   });
 
   return mapRow(inserted);
@@ -230,7 +233,27 @@ export async function createAgentActionProposal(
     return createAgentActionProposalInTransaction(existingTx, input);
   }
 
-  return db.transaction((tx) => createAgentActionProposalInTransaction(tx, input));
+  const created = await db.transaction((tx) => createAgentActionProposalInTransaction(tx, input));
+  await mirrorAgentActionAuditToLangfuse({
+    companyId: input.companyId,
+    lifecycle: "proposal_created",
+    row: {
+      id: created.id,
+      agentProduct: created.agentProduct,
+      actionType: created.actionType,
+      policyVersion: created.policyVersion,
+      requiresApproval: created.requiresApproval
+    },
+    actorId: input.actorId,
+    actorType: input.actorType,
+    summary: `Agent proposal created (${input.actionType})`,
+    detail: {
+      actionType: input.actionType,
+      agentProduct: input.agentProduct,
+      state: created.state
+    }
+  });
+  return created;
 }
 
 export async function listAgentActions(
@@ -252,7 +275,7 @@ export async function approveAgentAction(companyId: string, actionId: string, re
   let persistExpiredAfterRollback = false;
 
   try {
-    return await db.transaction(async (tx) => {
+    const mapped = await db.transaction(async (tx) => {
       const row = await getActionRow(companyId, actionId, tx);
 
       assertAgentActionApprovable(toLifecycleSlice(row));
@@ -280,18 +303,28 @@ export async function approveAgentAction(companyId: string, actionId: string, re
         throw new AppError(ErrorCode.INTERNAL_ERROR, "Failed to approve agent action");
       }
 
-      await emitEventWithExecutor(tx, {
+      await emitAgentActionAuditEvent(tx, {
         companyId,
-        eventType: "agent.proposal_approved",
+        lifecycle: "proposal_approved",
+        row: updated,
         actorId: reviewerId,
         actorType: "user",
-        entityType: "agent_action",
-        entityId: actionId,
         summary: "Agent proposal approved"
       });
 
-      return mapRow(updated);
+      return { mapped: mapRow(updated), row: updated };
     });
+
+    await mirrorAgentActionAuditToLangfuse({
+      companyId,
+      lifecycle: "proposal_approved",
+      row: mapped.row,
+      actorId: reviewerId,
+      actorType: "user",
+      summary: "Agent proposal approved"
+    });
+
+    return mapped.mapped;
   } catch (error) {
     if (persistExpiredAfterRollback) {
       await persistTerminalExpiredState(companyId, actionId);
@@ -301,7 +334,7 @@ export async function approveAgentAction(companyId: string, actionId: string, re
 }
 
 export async function rejectAgentAction(companyId: string, actionId: string, reviewerId: string) {
-  return db.transaction(async (tx) => {
+  const result = await db.transaction(async (tx) => {
     const row = await getActionRow(companyId, actionId, tx);
 
     assertAgentActionRejectable(toLifecycleSlice(row));
@@ -317,18 +350,28 @@ export async function rejectAgentAction(companyId: string, actionId: string, rev
       throw new AppError(ErrorCode.INTERNAL_ERROR, "Failed to reject agent action");
     }
 
-    await emitEventWithExecutor(tx, {
+    await emitAgentActionAuditEvent(tx, {
       companyId,
-      eventType: "agent.proposal_rejected",
+      lifecycle: "proposal_rejected",
+      row: updated,
       actorId: reviewerId,
       actorType: "user",
-      entityType: "agent_action",
-      entityId: actionId,
       summary: "Agent proposal rejected"
     });
 
-    return mapRow(updated);
+    return { mapped: mapRow(updated), row: updated };
   });
+
+  await mirrorAgentActionAuditToLangfuse({
+    companyId,
+    lifecycle: "proposal_rejected",
+    row: result.row,
+    actorId: reviewerId,
+    actorType: "user",
+    summary: "Agent proposal rejected"
+  });
+
+  return result.mapped;
 }
 
 export function resolveExecutableParameters(row: typeof agentActions.$inferSelect): Record<string, unknown> {
@@ -350,7 +393,7 @@ export async function editAgentActionParameters(
   editorId: string,
   patch: { channel?: "sms" | "email"; subject?: string | null; body: string }
 ) {
-  return db.transaction(async (tx) => {
+  const result = await db.transaction(async (tx) => {
     const row = await getActionRow(companyId, actionId, tx);
 
     if (row.state !== "awaiting_approval") {
@@ -391,29 +434,42 @@ export async function editAgentActionParameters(
       throw new AppError(ErrorCode.INTERNAL_ERROR, "Failed to edit agent action");
     }
 
-    await emitEventWithExecutor(tx, {
+    const detail = {
+      actionType: row.actionType,
+      channel: patch.channel ?? current.channel
+    };
+
+    await emitAgentActionAuditEvent(tx, {
       companyId,
-      eventType: "agent.proposal_edited",
+      lifecycle: "proposal_edited",
+      row: updated,
       actorId: editorId,
       actorType: "user",
-      entityType: "agent_action",
-      entityId: actionId,
-      payload: {
-        actionType: row.actionType,
-        channel: patch.channel ?? current.channel
-      },
-      summary: "Agent proposal edited by operator"
+      summary: "Agent proposal edited by operator",
+      detail
     });
 
-    return mapRow(updated);
+    return { mapped: mapRow(updated), row: updated, detail };
   });
+
+  await mirrorAgentActionAuditToLangfuse({
+    companyId,
+    lifecycle: "proposal_edited",
+    row: result.row,
+    actorId: editorId,
+    actorType: "user",
+    summary: "Agent proposal edited by operator",
+    detail: result.detail
+  });
+
+  return result.mapped;
 }
 
 export async function executeAgentAction(companyId: string, actionId: string, actorId: string) {
   let persistExpiredAfterRollback = false;
 
   try {
-    return await db.transaction(async (tx) => {
+    const result = await db.transaction(async (tx) => {
       const row = await getActionRow(companyId, actionId, tx);
 
       if (isAgentActionExpired(row.expiresAt)) {
@@ -494,22 +550,35 @@ export async function executeAgentAction(companyId: string, actionId: string, ac
         throw new AppError(ErrorCode.INTERNAL_ERROR, "Failed to execute agent action");
       }
 
-      await emitEventWithExecutor(tx, {
+      const detail = {
+        actionType: row.actionType,
+        receipt
+      };
+
+      await emitAgentActionAuditEvent(tx, {
         companyId,
-        eventType: "agent.execution_succeeded",
+        lifecycle: "execution_succeeded",
+        row: updated,
         actorId,
         actorType: "user",
-        entityType: "agent_action",
-        entityId: actionId,
-        payload: {
-          actionType: row.actionType,
-          receipt
-        },
-        summary: `Agent action executed (${row.actionType})`
+        summary: `Agent action executed (${row.actionType})`,
+        detail
       });
 
-      return mapRow(updated);
+      return { mapped: mapRow(updated), row: updated, detail };
     });
+
+    await mirrorAgentActionAuditToLangfuse({
+      companyId,
+      lifecycle: "execution_succeeded",
+      row: result.row,
+      actorId,
+      actorType: "user",
+      summary: `Agent action executed (${result.row.actionType})`,
+      detail: result.detail
+    });
+
+    return result.mapped;
   } catch (error) {
     if (persistExpiredAfterRollback) {
       await persistTerminalExpiredState(companyId, actionId);

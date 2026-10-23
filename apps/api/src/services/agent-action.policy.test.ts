@@ -19,6 +19,13 @@ describe("agent-action.policy", () => {
     ).not.toThrow();
   });
 
+  it("allows AI retention loyalty reminder proposals (FS-72)", () => {
+    expect(() =>
+      assertActionAllowedForProduct("retention", "loyalty.reminder.propose", "ai")
+    ).not.toThrow();
+    expect(requiresHumanApproval("loyalty.reminder.propose")).toBe(true);
+  });
+
   it("denies unknown revenue tools", () => {
     try {
       assertActionAllowedForProduct("revenue", "invoice.charge", "user");

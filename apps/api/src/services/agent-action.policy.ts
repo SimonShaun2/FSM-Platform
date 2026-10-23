@@ -9,10 +9,16 @@ const REVENUE_ALLOWED_ACTION_TYPES = new Set([
   "revenue.inquiry.qualify"
 ]);
 
+const RETENTION_ALLOWED_ACTION_TYPES = new Set(["loyalty.reminder.propose"]);
+
 const AUTO_APPROVED_ACTION_TYPES = new Set(["context.resolve", "message.draft"]);
 
 /** AI may create these proposals; execution still requires owner approval where applicable. */
-const AI_PROPOSAL_ACTION_TYPES = new Set(["message.send_proposed", "revenue.inquiry.qualify"]);
+const AI_PROPOSAL_ACTION_TYPES = new Set([
+  "message.send_proposed",
+  "revenue.inquiry.qualify",
+  "loyalty.reminder.propose"
+]);
 
 export function assertPolicyVersion(policyVersion: string): void {
   if (policyVersion !== AGENT_POLICY_V1) {
@@ -41,11 +47,26 @@ export function assertActionAllowedForProduct(
     return;
   }
 
+  if (agentProduct === "retention") {
+    if (!RETENTION_ALLOWED_ACTION_TYPES.has(actionType)) {
+      throw new AppError(ErrorCode.POLICY_DENIED, "Action type is not allowed for retention agent");
+    }
+
+    if (actorType === "ai") {
+      return;
+    }
+
+    throw new AppError(
+      ErrorCode.POLICY_DENIED,
+      "Only AI may propose loyalty reminder actions in v1"
+    );
+  }
+
   throw new AppError(ErrorCode.POLICY_DENIED, "Agent product is not enabled");
 }
 
 export function requiresHumanApproval(actionType: string): boolean {
-  if (actionType === "message.send_proposed") {
+  if (actionType === "message.send_proposed" || actionType === "loyalty.reminder.propose") {
     return true;
   }
   return !AUTO_APPROVED_ACTION_TYPES.has(actionType);
