@@ -2,7 +2,7 @@ import { and, eq, isNull } from "drizzle-orm";
 
 import { env } from "@fsm/config";
 import { readQboRuntimeConfig } from "@fsm/config/qbo-env";
-import { QUICKBOOKS_ONLINE_OAUTH_ENABLED } from "@fsm/config/quickbooks-oauth-gate";
+import { QUICKBOOKS_ONGOING_SYNC_OAUTH_ENABLED } from "@fsm/config/quickbooks-oauth-gate";
 import {
   buildQboAuthorizeUrl,
   buildQboOAuthState,
@@ -52,8 +52,8 @@ export async function getQboConnectionStatus(companyId: string): Promise<QboConn
 }
 
 export function startQboOAuthConnect(companyId: string): { authorizeUrl: string } {
-  if (!QUICKBOOKS_ONLINE_OAUTH_ENABLED) {
-    throw new AppError(ErrorCode.FORBIDDEN, "QuickBooks Online OAuth is disabled");
+  if (!QUICKBOOKS_ONGOING_SYNC_OAUTH_ENABLED) {
+    throw new AppError(ErrorCode.FORBIDDEN, "QuickBooks Online ongoing sync OAuth is disabled");
   }
   const config = readQboRuntimeConfig();
   if (!config) {

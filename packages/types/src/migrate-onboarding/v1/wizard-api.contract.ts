@@ -69,6 +69,21 @@ export const MIGRATE_ONBOARDING_WIZARD_API_ROUTES: readonly MigrateOnboardingWiz
   },
   {
     method: "POST",
+    path: "/api/v1/migrate/onboarding/sessions/:bundleId/file-link/run",
+    responseSchemaId: "migrateOnboardingBundle"
+  },
+  {
+    method: "GET",
+    path: "/api/v1/migrate/onboarding/sessions/:bundleId/file-link/preview",
+    responseSchemaId: "migrateOnboardingBundle"
+  },
+  {
+    method: "PATCH",
+    path: "/api/v1/migrate/onboarding/sessions/:bundleId/file-link/decisions",
+    responseSchemaId: "migrateOnboardingBundle"
+  },
+  {
+    method: "POST",
     path: "/api/v1/migrate/onboarding/sessions/:bundleId/acknowledge-preview",
     responseSchemaId: "migrateOnboardingBundle"
   },
