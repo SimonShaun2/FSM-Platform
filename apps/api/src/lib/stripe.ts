@@ -410,7 +410,7 @@ export async function createPlatformBillingCheckoutSession(
   const session = await stripe.checkout.sessions.create({
     mode: "subscription",
     customer: input.stripeCustomerId,
-    customer_email: input.customerEmail ?? undefined,
+    ...(input.customerEmail ? { customer_email: input.customerEmail } : {}),
     line_items: [{ price: input.priceId, quantity: 1 }],
     success_url: `${appBaseUrl}/settings/billing?checkout=success`,
     cancel_url: `${appBaseUrl}/settings/billing?checkout=cancel`,
@@ -442,7 +442,7 @@ export async function createStripePlatformCustomer(input: {
   name: string;
 }): Promise<StripeCustomerResult> {
   const customer = await stripe.customers.create({
-    email: input.email ?? undefined,
+    ...(input.email ? { email: input.email } : {}),
     name: input.name,
     metadata: {
       companyId: input.companyId,
