@@ -26,6 +26,7 @@ export type MigrateOnboardingWizardRouteContract = {
 
 /**
  * Authoritative wizard HTTP surface (must match `apps/api/src/routes/migrate-onboarding/index.ts`).
+ * File-link routes return `migrateOnboardingBundle` (same as #155/#160).
  * Paths include the `/api/v1` prefix registered in `app.ts`.
  */
 export const MIGRATE_ONBOARDING_WIZARD_API_ROUTES: readonly MigrateOnboardingWizardRouteContract[] = [
