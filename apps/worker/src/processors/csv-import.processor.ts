@@ -4,7 +4,7 @@ import { and, eq, isNull } from "drizzle-orm";
 import type { Job, Processor } from "bullmq";
 import pino from "pino";
 
-import { mapCsvColumns } from "@fsm/ai";
+import { mapCsvColumns, recordImportAiObservation } from "@fsm/ai";
 import {
   buildCommunicationsColumnMapping,
   inferCommunicationsPresetFromHeaders
@@ -38,7 +38,15 @@ import {
 } from "@fsm/import-engine";
 import { normalizeImportPhone } from "@fsm/import-normalize";
 import { aiQueue } from "@fsm/jobs";
+import {
+  IMPORT_QUEUE_JOB_NAMES,
+  assertMapCsvColumnsIdempotencyKey,
+  buildMapCsvColumnsIdempotencyKey,
+  buildMapCsvColumnsJobId,
+  type ImportSessionStatus,
+} from "@fsm/types";
 
+import { emitImportWorkflowStepReceipt } from "../lib/import-workflow-step-receipt.js";
 import { handleImportChunkCommit, IMPORT_CHUNK_COMMIT_JOB_NAME } from "./import-chunk-commit.processor.js";
 import {
   handleImportCommunicationsCommit,
@@ -215,6 +223,31 @@ function normalizeDuplicateActions(value: unknown): Record<string, DuplicateActi
 
 function buildEmptyMapping(headers: string[]): ColumnMapping {
   return Object.fromEntries(headers.map((header) => [header, null]));
+}
+
+function countMappedColumns(mapping: ColumnMapping): number {
+  return Object.values(mapping).filter((value) => typeof value === "string" && value.length > 0).length;
+}
+
+async function mirrorImportAiMappingToLangfuse(input: {
+  companyId: string;
+  importSessionId: string;
+  entityType: string;
+  outcome: "succeeded" | "failed" | "fallback";
+  headerCount: number;
+  columnMapping: ColumnMapping;
+  errorMessage?: string;
+}): Promise<void> {
+  await recordImportAiObservation({
+    companyId: input.companyId,
+    importSessionId: input.importSessionId,
+    entityType: input.entityType,
+    outcome: input.outcome,
+    headerCount: input.headerCount,
+    mappedColumnCount: countMappedColumns(input.columnMapping),
+    occurredAt: new Date().toISOString(),
+    ...(input.errorMessage ? { errorMessage: input.errorMessage } : {})
+  });
 }
 
 function normalizeTextValue(value: string | null | undefined): string | null {
@@ -501,6 +534,20 @@ async function markImportFailed(importSession: ImportSessionRow, error: unknown)
   });
 }
 
+const MAP_CSV_TERMINAL_STATUSES: ReadonlySet<ImportSessionStatus> = new Set([
+  "mapping",
+  "preview",
+  "importing",
+  "completed",
+]);
+
+function resolveMapCsvIdempotencyKey(importSessionId: string, job: Job<Record<string, unknown>>): string {
+  const fromJob = typeof job.data.idempotencyKey === "string" ? job.data.idempotencyKey : null;
+  const key = fromJob ?? buildMapCsvColumnsIdempotencyKey(importSessionId);
+  assertMapCsvColumnsIdempotencyKey(importSessionId, key);
+  return key;
+}
+
 export async function handleMapCsvColumns(job: Job<Record<string, unknown>>): Promise<void> {
   const companyId = typeof job.data.companyId === "string" ? job.data.companyId : null;
   const importSessionId = typeof job.data.importSessionId === "string" ? job.data.importSessionId : null;
@@ -514,6 +561,22 @@ export async function handleMapCsvColumns(job: Job<Record<string, unknown>>): Pr
 
   if (!importSession) {
     logger.warn({ companyId, importSessionId }, "CSV mapping job skipped because import session was not found");
+    return;
+  }
+
+  const idempotencyKey = resolveMapCsvIdempotencyKey(importSessionId, job);
+  const mapJobId = typeof job.id === "string" ? job.id : buildMapCsvColumnsJobId(importSessionId);
+
+  if (MAP_CSV_TERMINAL_STATUSES.has(importSession.status)) {
+    await emitImportWorkflowStepReceipt({
+      companyId,
+      importSessionId,
+      stepKind: IMPORT_QUEUE_JOB_NAMES.mapCsvColumns,
+      idempotencyKey,
+      state: "deduped_completed",
+      jobId: mapJobId,
+      summary: `CSV column mapping deduped (session already ${importSession.status})`,
+    });
     return;
   }
 
@@ -531,6 +594,7 @@ export async function handleMapCsvColumns(job: Job<Record<string, unknown>>): Pr
           ? buildPresetColumnMapping(parsedCsv.headers, sourcePresetId)
           : {};
     let columnMapping: ColumnMapping = { ...presetMapping };
+    const headerCount = parsedCsv.headers.length;
 
     try {
       const aiMapping = await mapCsvColumns(
@@ -539,6 +603,14 @@ export async function handleMapCsvColumns(job: Job<Record<string, unknown>>): Pr
         importSession.entityType
       );
       columnMapping = { ...aiMapping, ...presetMapping };
+      await mirrorImportAiMappingToLangfuse({
+        companyId,
+        importSessionId,
+        entityType: importSession.entityType,
+        outcome: "succeeded",
+        headerCount,
+        columnMapping
+      });
     } catch (error: unknown) {
       logger.error(
         {
@@ -551,6 +623,16 @@ export async function handleMapCsvColumns(job: Job<Record<string, unknown>>): Pr
       );
       columnMapping =
         Object.keys(presetMapping).length > 0 ? presetMapping : buildEmptyMapping(parsedCsv.headers);
+      const errorMessage = error instanceof Error ? error.message : "AI column mapping failed";
+      await mirrorImportAiMappingToLangfuse({
+        companyId,
+        importSessionId,
+        entityType: importSession.entityType,
+        outcome: Object.keys(presetMapping).length > 0 ? "fallback" : "failed",
+        headerCount,
+        columnMapping,
+        errorMessage
+      });
     }
 
     const priorInferences = normalizeAiInferences(importSession.aiInferences);
@@ -573,6 +655,16 @@ export async function handleMapCsvColumns(job: Job<Record<string, unknown>>): Pr
       })
       .where(and(eq(importSessions.companyId, companyId), eq(importSessions.id, importSessionId), isNull(importSessions.deletedAt)))
       .returning();
+
+    await emitImportWorkflowStepReceipt({
+      companyId,
+      importSessionId,
+      stepKind: IMPORT_QUEUE_JOB_NAMES.mapCsvColumns,
+      idempotencyKey,
+      state: "completed",
+      jobId: mapJobId,
+      summary: `CSV column mapping completed for ${importSession.fileName}`,
+    });
   } catch (error: unknown) {
     logger.error(
       {
@@ -582,6 +674,15 @@ export async function handleMapCsvColumns(job: Job<Record<string, unknown>>): Pr
       },
       "CSV mapping job failed"
     );
+    await emitImportWorkflowStepReceipt({
+      companyId,
+      importSessionId,
+      stepKind: IMPORT_QUEUE_JOB_NAMES.mapCsvColumns,
+      idempotencyKey,
+      state: "failed",
+      jobId: mapJobId,
+      summary: `CSV column mapping failed for ${importSession.fileName}`,
+    });
     await markImportFailed(importSession, error);
     throw error;
   }

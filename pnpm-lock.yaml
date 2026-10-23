@@ -62,6 +62,9 @@ importers:
       '@fsm/import-engine':
         specifier: workspace:*
         version: link:../../packages/import-engine
+      '@fsm/import-normalize':
+        specifier: workspace:*
+        version: link:../../packages/import-normalize
       '@fsm/jobs':
         specifier: workspace:*
         version: link:../../packages/jobs
@@ -274,6 +277,9 @@ importers:
       '@fsm/jobs':
         specifier: workspace:*
         version: link:../../packages/jobs
+      '@fsm/types':
+        specifier: workspace:*
+        version: link:../../packages/types
       decimal.js:
         specifier: ^10.5.0
         version: 10.6.0

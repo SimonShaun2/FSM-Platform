@@ -10,7 +10,10 @@ export const EMAIL_TEMPLATE_IDS = {
   serviceAgreementPaymentFailed: "service_agreement.payment_failed",
   campaignMessage: "campaign.message",
   bookingConfirmation: "booking.confirmation",
-  bookingDecline: "booking.decline"
+  bookingDecline: "booking.decline",
+  vipMembershipWelcome: "vip_membership.welcome",
+  vipMembershipRenewal: "vip_membership.renewal_receipt",
+  vipMembershipPaymentFailed: "vip_membership.payment_failed_dunning"
 } as const;
 
 export type EmailTemplateId = (typeof EMAIL_TEMPLATE_IDS)[keyof typeof EMAIL_TEMPLATE_IDS];
@@ -205,6 +208,72 @@ export function renderTransactionalEmail(
           <p>Hi ${name},</p>
           <p>${variables.companyName ?? ""} was unable to confirm booking <strong>${variables.referenceNumber ?? ""}</strong>.</p>
           ${reasonBlock}
+        `)
+      };
+    }
+    case EMAIL_TEMPLATE_IDS.vipMembershipWelcome: {
+      const name = greetingName(variables.firstName ?? "");
+      const portalBlock = variables.portalUrl
+        ? button(variables.portalUrl, "View your VIP benefits")
+        : "";
+      return {
+        templateId,
+        subject: `Welcome to ${variables.planName ?? "VIP Plus"}`,
+        html: emailShell(`
+          <p>Hi ${name},</p>
+          <p>Welcome to <strong>${variables.planName ?? "VIP Plus"}</strong> with ${variables.companyName ?? ""}.</p>
+          <p>Your membership is active — enjoy priority scheduling and member-only perks.</p>
+          ${portalBlock}
+        `)
+      };
+    }
+    case EMAIL_TEMPLATE_IDS.vipMembershipRenewal: {
+      const name = greetingName(variables.firstName ?? "");
+      const renewalDateBlock = variables.renewalDateLabel
+        ? `<p><strong>Renewal date:</strong> ${variables.renewalDateLabel}</p>`
+        : "";
+      const amountBlock = variables.amount ? `<p><strong>Amount paid:</strong> $${variables.amount}</p>` : "";
+      return {
+        templateId,
+        subject: `Your ${variables.planName ?? "VIP Plus"} membership renewed`,
+        html: emailShell(`
+          <p>Hi ${name},</p>
+          <p>Thanks — your <strong>${variables.planName ?? "VIP Plus"}</strong> membership with ${variables.companyName ?? ""} renewed successfully.</p>
+          ${renewalDateBlock}
+          ${amountBlock}
+          <p>Your benefits stay active. We're glad to have you as a member.</p>
+        `)
+      };
+    }
+    case EMAIL_TEMPLATE_IDS.vipMembershipPaymentFailed: {
+      const name = greetingName(variables.firstName ?? "");
+      const graceBlock = variables.graceEndsAtLabel
+        ? `<p><strong>Benefits stay active until:</strong> ${variables.graceEndsAtLabel}</p>`
+        : "";
+      const retryBlock = variables.nextRetryAtLabel
+        ? `<p><strong>Next payment retry:</strong> ${variables.nextRetryAtLabel}</p>`
+        : "";
+      const amountBlock = variables.amount ? `<p><strong>Amount due:</strong> $${variables.amount}</p>` : "";
+      const paymentBlock = variables.paymentUrl ? button(variables.paymentUrl, "Update payment method") : "";
+      const step = variables.dunningStepIndex ?? "0";
+      const reminderCopy =
+        step === "0"
+          ? "We couldn't process your latest VIP membership payment."
+          : step === "1"
+            ? "Friendly reminder — your VIP membership payment is still past due."
+            : "Final reminder during your grace period — update your payment to keep member benefits.";
+      return {
+        templateId,
+        subject: "Action needed: your VIP payment didn't go through",
+        html: emailShell(`
+          <p>Hi ${name},</p>
+          <p>${reminderCopy}</p>
+          <p><strong>Plan:</strong> ${variables.planName ?? "VIP Plus"}</p>
+          ${amountBlock}
+          ${graceBlock}
+          ${retryBlock}
+          ${paymentBlock}
+          <p>Questions? Contact ${variables.companyName ?? "us"} and we'll help.</p>
         `)
       };
     }

@@ -3,6 +3,7 @@ import {
   BriefcaseBusiness,
   CalendarDays,
   CreditCard,
+  Crown,
   FileText,
   Gauge,
   MessageSquareText,
@@ -74,8 +75,10 @@ export const mobileNavigation: NavItem[] = [
 
 export const settingsNavigation: NavItem[] = [
   { label: "Data import", href: "/settings/import", icon: Upload },
+  { label: "Migration wizard", href: "/settings/migrate", icon: Upload },
   { label: "General", href: "/settings/general", icon: Settings },
   { label: "Payments", href: "/settings/payments", icon: CreditCard },
+  { label: "VIP memberships", href: "/settings/vip", icon: Crown },
   { label: "Automation Rules", href: "/settings/automation", icon: Sparkles },
   { label: "Notifications", href: "/settings/notifications", icon: MessageSquareText },
   { label: "Booking", href: "/settings/booking/general", icon: CalendarDays },

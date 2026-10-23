@@ -10,7 +10,9 @@ import {
   getImportErrorsHandler,
   getImportHandler,
   getImportIngestProgressHandler,
+  getMigrateFileBatchStatusHandler,
   listImportsHandler,
+  retryMigrateFileBatchHandler,
   rollbackImportHandler,
   startImportHandler
 } from "./handlers.js";
@@ -20,10 +22,13 @@ import {
   createImportRouteSchema,
   getImportRouteSchema,
   importErrorsRouteSchema,
+  importFileBatchValidation,
   importIngestProgressRouteSchema,
   importSessionIdValidation,
   listImportsRouteSchema,
   listImportsValidation,
+  migrateFileBatchRetryRouteSchema,
+  migrateFileBatchStatusRouteSchema,
   rollbackImportRouteSchema,
   startImportValidation,
   startImportRouteSchema
@@ -84,6 +89,18 @@ const importRoutes: FastifyPluginAsync = async (fastify) => {
     preValidation: importSessionIdValidation,
     schema: importIngestProgressRouteSchema
   }, getImportIngestProgressHandler);
+
+  fastify.get("/imports/:id/file-batches/:batchIndex", {
+    preHandler: [authenticate, requireOwnerOrAdmin],
+    preValidation: importFileBatchValidation,
+    schema: migrateFileBatchStatusRouteSchema
+  }, getMigrateFileBatchStatusHandler);
+
+  fastify.post("/imports/:id/file-batches/:batchIndex/retry-failed", {
+    preHandler: [authenticate, requireOwnerOrAdmin],
+    preValidation: importFileBatchValidation,
+    schema: migrateFileBatchRetryRouteSchema
+  }, retryMigrateFileBatchHandler);
 };
 
 export default importRoutes;

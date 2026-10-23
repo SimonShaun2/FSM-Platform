@@ -104,6 +104,13 @@ export const ImportSessionIdParamsSchema = z
   })
   .strict();
 
+export const ImportFileBatchParamsSchema = z
+  .object({
+    id: uuidSchema,
+    batchIndex: z.coerce.number().int().nonnegative()
+  })
+  .strict();
+
 export const ConfirmMappingSchema = z
   .object({
     mappingOverrides: z.record(z.string(), z.string().trim().min(1).nullable()).optional().default({})
@@ -141,6 +148,9 @@ export const confirmMappingValidation = withZodValidation({
 });
 export const importSessionIdValidation = withZodValidation({
   params: ImportSessionIdParamsSchema
+});
+export const importFileBatchValidation = withZodValidation({
+  params: ImportFileBatchParamsSchema
 });
 export const startImportValidation = withZodValidation({
   params: ImportSessionIdParamsSchema,
@@ -213,6 +223,35 @@ export const getImportRouteSchema = {
 export const confirmMappingRouteSchema = getImportRouteSchema;
 export const startImportRouteSchema = getImportRouteSchema;
 export const rollbackImportRouteSchema = getImportRouteSchema;
+
+export const migrateFileBatchStatusRouteSchema = {
+  tags: ["imports"],
+  response: {
+    200: {
+      type: "object",
+      additionalProperties: true
+    },
+    400: errorResponseSchema,
+    401: errorResponseSchema,
+    403: errorResponseSchema,
+    404: errorResponseSchema
+  }
+} as const;
+
+export const migrateFileBatchRetryRouteSchema = {
+  tags: ["imports"],
+  response: {
+    200: {
+      type: "object",
+      additionalProperties: true
+    },
+    400: errorResponseSchema,
+    401: errorResponseSchema,
+    403: errorResponseSchema,
+    404: errorResponseSchema,
+    409: errorResponseSchema
+  }
+} as const;
 
 export const importErrorsRouteSchema = {
   tags: ["imports"],
