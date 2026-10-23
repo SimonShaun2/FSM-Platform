@@ -1,27 +1,14 @@
 import { and, eq, isNull } from "drizzle-orm";
 
-import { db, importBundles, importSessions } from "@fsm/db";
-import {
-  buildImportBundleFileDescriptors,
-  computeImportBundleProgress,
-  parseImportChunkSessionProgress
-} from "@fsm/import-engine";
+import { db, importSessions } from "@fsm/db";
+import { parseImportChunkSessionProgress } from "@fsm/import-engine";
 import {
   AppError,
   ErrorCode,
   ImportSessionChunkProgressSchema,
-  migrateOnboardingStepStateSchema,
   type ImportSessionChunkProgress,
-  type ImportSessionIngestProgressResponse,
-  type MigrateOnboardingIngestProgressResponse,
-  type MigrateOnboardingStepState
+  type ImportSessionIngestProgressResponse
 } from "@fsm/types";
-
-function inferImportFileMimeType(fileName: string): string {
-  return /\.xlsx?$/iu.test(fileName)
-    ? "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
-    : "text/csv";
-}
 
 function toChunkProgress(progress: unknown): ImportSessionChunkProgress | null {
   const parsed = parseImportChunkSessionProgress(progress);
@@ -83,85 +70,5 @@ export async function getImportSessionIngestProgress(
     entityType: session.entityType,
     fileName: session.fileName,
     chunk: toChunkProgress(session.progress)
-  };
-}
-
-function parseStepState(value: unknown): MigrateOnboardingStepState {
-  const parsed = migrateOnboardingStepStateSchema.safeParse(value);
-  if (parsed.success) {
-    return parsed.data;
-  }
-
-  return { files: [] };
-}
-
-export async function getMigrateOnboardingIngestProgress(
-  companyId: string,
-  bundleId: string
-): Promise<MigrateOnboardingIngestProgressResponse> {
-  const [bundle] = await db
-    .select()
-    .from(importBundles)
-    .where(
-      and(eq(importBundles.id, bundleId), eq(importBundles.companyId, companyId), isNull(importBundles.deletedAt))
-    )
-    .limit(1);
-
-  if (!bundle) {
-    throw new AppError(ErrorCode.NOT_FOUND, "Onboarding bundle not found");
-  }
-
-  const sessions = await db
-    .select()
-    .from(importSessions)
-    .where(
-      and(
-        eq(importSessions.companyId, companyId),
-        eq(importSessions.importBundleId, bundleId),
-        isNull(importSessions.deletedAt)
-      )
-    );
-
-  const stepState = parseStepState(bundle.stepState);
-  const files = buildImportBundleFileDescriptors(
-    stepState.files.map((file) => ({
-      fileName: file.fileName,
-      mimeType: inferImportFileMimeType(file.fileName),
-      byteSize: 0,
-      importSessionId: file.importSessionId
-    }))
-  );
-
-  let chunksCommitted = 0;
-  let chunksTotal = 0;
-  let hasChunkTotals = false;
-
-  const sessionProgress = sessions.map((session) => {
-    const chunk = toChunkProgress(session.progress);
-    if (chunk) {
-      hasChunkTotals = true;
-      chunksTotal += chunk.chunksTotal;
-      chunksCommitted += chunk.chunksDone;
-    }
-
-    return {
-      importSessionId: session.id,
-      entityType: session.entityType,
-      status: session.status,
-      fileName: session.fileName,
-      chunk
-    };
-  });
-
-  const progress = computeImportBundleProgress({
-    files,
-    chunksCommitted,
-    chunksTotal: hasChunkTotals ? chunksTotal : null
-  });
-
-  return {
-    bundleId,
-    progress,
-    sessions: sessionProgress
   };
 }

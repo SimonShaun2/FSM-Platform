@@ -1,4 +1,3 @@
-import { MigrateOnboardingIngestProgressResponseSchema } from "../../import-bundle.schemas.js";
 import {
   applyMigrateDedupeDecisionsBodySchema,
   createMigrateOnboardingSessionBodySchema,
@@ -11,6 +10,7 @@ import {
   MIGRATE_ONBOARDING_CONTRACT_ID,
   setMigrateOnboardingSourceBodySchema
 } from "./schemas.js";
+import { migrateOnboardingIngestStatusResponseSchema } from "./ingest-status.schemas.js";
 
 export { MIGRATE_ONBOARDING_CONTRACT_ID };
 
@@ -100,8 +100,8 @@ export const MIGRATE_ONBOARDING_WIZARD_API_ROUTES: readonly MigrateOnboardingWiz
   },
   {
     method: "GET",
-    path: "/api/v1/migrate/onboarding/sessions/:bundleId/ingest-progress",
-    responseSchemaId: "migrateOnboardingIngestProgressResponse"
+    path: "/api/v1/migrate/onboarding/sessions/:bundleId/ingest-status",
+    responseSchemaId: "migrateOnboardingIngestStatusResponse"
   },
   {
     method: "PATCH",
@@ -129,5 +129,5 @@ export const migrateOnboardingWizardResponseSchemas = {
   migrateDedupePreviewResponse: migrateDedupePreviewResponseSchema,
   migrateRelationalPreviewResponse: migrateRelationalPreviewResponseSchema,
   migrateOnboardingCommitResponse: migrateOnboardingCommitResponseSchema,
-  migrateOnboardingIngestProgressResponse: MigrateOnboardingIngestProgressResponseSchema
+  migrateOnboardingIngestStatusResponse: migrateOnboardingIngestStatusResponseSchema
 } as const;

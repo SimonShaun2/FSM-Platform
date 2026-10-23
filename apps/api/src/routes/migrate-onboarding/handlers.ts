@@ -28,7 +28,7 @@ import {
   listMigrateOnboardingSources,
   setMigrateOnboardingSource
 } from "../../services/migrate-onboarding.service.js";
-import { getMigrateOnboardingIngestProgress } from "../../services/import-ingest-progress.service.js";
+import { getMigrateOnboardingIngestStatus } from "../../services/migrate-onboarding-ingest-status.service.js";
 
 export async function listMigrateOnboardingSourcesHandler(
   _request: FastifyRequest,
@@ -186,11 +186,11 @@ export async function commitMigrateOnboardingBundleHandler(
   return reply.send(result);
 }
 
-export async function getMigrateOnboardingIngestProgressHandler(
+export async function getMigrateOnboardingIngestStatusHandler(
   request: FastifyRequest,
   reply: FastifyReply
 ): Promise<FastifyReply> {
   const { bundleId } = request.params as { bundleId: string };
-  const progress = await getMigrateOnboardingIngestProgress(request.company.id, bundleId);
-  return reply.send(progress);
+  const status = await getMigrateOnboardingIngestStatus(request.company.id, bundleId);
+  return reply.send(status);
 }
