@@ -287,7 +287,7 @@ async function loadChunkRows(
   importSession: ImportSessionRow,
 ): Promise<ParsedCsvRow[]> {
   const fileBuffer = await downloadFile(getFileKeyFromUrl(importSession.fileUrl));
-  const parsedRows = parseCsv(fileBuffer);
+  const parsedRows = parseTabularRows(fileBuffer, importSession.fileName);
   const { start, end } = resolveRowWindow(payload, parsedRows.length);
   return parsedRows.slice(start, end);
 }
