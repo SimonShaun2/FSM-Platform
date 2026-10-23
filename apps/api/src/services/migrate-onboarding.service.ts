@@ -21,6 +21,7 @@ import {
   buildDuplicateActionsBySession,
   mergeDedupeDecisions
 } from "./import-dedupe-preview.service.js";
+import { buildRelationalPreviewForBundle } from "./import-relational-preview-bundle.service.js";
 import { startImport } from "./import.service.js";
 
 type ImportBundleRow = typeof importBundles.$inferSelect;
@@ -382,6 +383,17 @@ export async function getMigrateDedupePreview(companyId: string, bundleId: strin
   const decisions = normalizeDedupeDecisions(bundle.dedupeDecisions);
 
   return buildDedupePreviewForBundle(companyId, bundleId, sessionIds, decisions);
+}
+
+export async function getMigrateRelationalPreview(companyId: string, bundleId: string) {
+  const bundle = await getScopedBundle(companyId, bundleId);
+  const stepState = parseStepState(bundle.stepState);
+
+  if (bundle.wizardStep < 4) {
+    throw new AppError(ErrorCode.CONFLICT, "Relational preview is available on wizard step 4 or later");
+  }
+
+  return buildRelationalPreviewForBundle(companyId, bundleId, stepState.files);
 }
 
 export async function applyMigrateDedupeDecisions(

@@ -28,6 +28,7 @@
     "db:check-migrations": "pnpm run build && node ./scripts/check-migrations.mjs"
   },
   "dependencies": {
+    "@fsm/import-normalize": "workspace:*",
     "@fsm/config": "workspace:*",
     "@fsm/types": "workspace:*",
     "decimal.js": "^10.5.0",

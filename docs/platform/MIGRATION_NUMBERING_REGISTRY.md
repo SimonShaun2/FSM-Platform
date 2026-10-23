@@ -76,4 +76,5 @@ Candidates: **#96**, **#107**, **#117**, **#102**, **#114**, **#113**, **#115**,
 | 2026-10-22 | Synced tip to **0025** after #81; next free **0026**; FS-94 deferred |
 | 2026-10-23 | **0026** reserved for FS-MIGRATE import lineage per ADR-FS-MIGRATE |
 | 2026-10-23 | **Central assign 0026–0030** for #96, #102, #114, #113, #115; #110 migration stripped; lineage-only-in-0026 rule |
+| 2026-10-23 | **0031** — FS-MIGRATE communications history (`message_logs` lineage + `communications` import entity) |
 | 2026-10-23 | Founder batch policy: 8–10 PRs per merge batch; auto CI at PR head |

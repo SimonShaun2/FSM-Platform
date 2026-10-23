@@ -123,6 +123,72 @@ export const migrateDedupePreviewResponseSchema = z.object({
 
 export type MigrateDedupePreviewResponse = z.infer<typeof migrateDedupePreviewResponseSchema>;
 
+const relationalPreviewNodeSchema = z.object({
+  id: z.string(),
+  kind: z.enum(["customer", "property", "job"]),
+  label: z.string(),
+  sourceRow: z.number().int().positive()
+});
+
+const relationalJoinIssueSchema = z.object({
+  code: z.enum([
+    "duplicate_customer_key",
+    "duplicate_property_key",
+    "duplicate_job_key",
+    "missing_join_key",
+    "orphan_property",
+    "orphan_job"
+  ]),
+  message: z.string(),
+  sourceRow: z.number().int().positive().optional(),
+  field: z.string().optional(),
+  joinKey: z.string().optional()
+});
+
+export const migrateRelationalPreviewResponseSchema = z.object({
+  bundleId: z.string().uuid(),
+  files: z.array(
+    z.object({
+      importSessionId: z.string().uuid(),
+      kind: z.enum(["customers", "properties", "jobs"]),
+      fileName: z.string()
+    })
+  ),
+  graph: z.object({
+    customers: z.array(relationalPreviewNodeSchema),
+    properties: z.array(relationalPreviewNodeSchema),
+    jobs: z.array(relationalPreviewNodeSchema),
+    edges: z.array(
+      z.object({
+        fromCustomerId: z.string(),
+        toPropertyId: z.string(),
+        joinKey: z.string()
+      })
+    ),
+    propertyJobEdges: z.array(
+      z.object({
+        fromPropertyId: z.string(),
+        toJobId: z.string(),
+        joinKey: z.string()
+      })
+    ),
+    orphanPropertyCount: z.number().int().nonnegative(),
+    orphanJobCount: z.number().int().nonnegative(),
+    unmatchedCustomerKeys: z.array(z.string()),
+    unmatchedPropertyKeys: z.array(z.string()),
+    joinIssues: z.array(relationalJoinIssueSchema),
+    stats: z.object({
+      customerCount: z.number().int().nonnegative(),
+      propertyCount: z.number().int().nonnegative(),
+      jobCount: z.number().int().nonnegative(),
+      linkedPropertyCount: z.number().int().nonnegative(),
+      linkedJobCount: z.number().int().nonnegative()
+    })
+  })
+});
+
+export type MigrateRelationalPreviewResponse = z.infer<typeof migrateRelationalPreviewResponseSchema>;
+
 export const applyMigrateDedupeDecisionsBodySchema = z.object({
   decisions: z
     .array(

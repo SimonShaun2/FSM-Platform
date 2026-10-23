@@ -10,12 +10,16 @@ export {
   fsmRetainFailedJobsForDlq
 } from "./queue-policy.js";
 export { enqueueMigrateFileBatchJob } from "./enqueue-migrate-file-batch.js";
+<<<<<<< HEAD
 export { enqueueMigrateFileBatchFailedObjectsRetry } from "./enqueue-migrate-file-batch-retry.js";
 export {
   buildMigrateFileBatchFailedObjectsRetryPayload,
   buildMigrateFileBatchRetryJobId
 } from "./migrate-file-batch-retry.js";
 export { listDeadLetterJobs } from "./dead-letter-visibility.js";
+=======
+export { enqueueImportChunkCommitJob } from "./enqueue-import-chunk-commit.js";
+>>>>>>> origin/dev
 export { logMigrateFileBatchTrace } from "./migrate-file-batch-trace-log.js";
 export type { LogMigrateFileBatchTraceInput } from "./migrate-file-batch-trace-log.js";
 export { redisConnection } from "./connection.js";
@@ -44,6 +48,11 @@ export {
   ImportInvoiceBalanceCommitPayloadSchema,
 } from "./import-invoice-balance-commit.js";
 export type { ImportInvoiceBalanceCommitPayload } from "./import-invoice-balance-commit.js";
+export {
+  IMPORT_COMMUNICATIONS_COMMIT_JOB_NAME,
+  ImportCommunicationsCommitPayloadSchema,
+} from "./import-communications-commit.js";
+export type { ImportCommunicationsCommitPayload } from "./import-communications-commit.js";
 export {
   IMPORT_EQUIPMENT_COMMIT_JOB_NAME,
   ImportEquipmentCommitPayloadSchema,
