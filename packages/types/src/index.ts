@@ -15,9 +15,16 @@ export * from "./estimate.types.js";
 export * from "./file-attachment.types.js";
 export * from "./import.types.js";
 export * from "./import-invoice-balance.types.js";
+export * from "./import-equipment.types.js";
+export * from "./import-equipment-normalize.js";
 export * from "./import-price-book.js";
 export * from "./fs-migrate/index.js";
+<<<<<<< HEAD
 export * from "./import-relational-preview.types.js";
+=======
+export * from "./import-bundle.types.js";
+export * from "./import-bundle.schemas.js";
+>>>>>>> origin/dev
 export * from "./loyalty/index.js";
 export * from "./data-import.contract.js";
 export * from "./data-export/v1/index.js";
