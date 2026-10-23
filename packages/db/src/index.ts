@@ -62,3 +62,14 @@ export {
   commitImportedPaymentRows,
   type ImportInvoiceBalanceEntityResolver,
 } from "./import-invoice-balance-commit.service.js";
+export {
+  normalizeImportedAssetType,
+  normalizeImportedIsoDate,
+  parseImportedBoolean,
+  pickLastServiceDate,
+} from "./import-equipment-commit.logic.js";
+export {
+  buildLineageEquipmentResolver,
+  commitImportedEquipmentRows,
+  type ImportEquipmentEntityResolver,
+} from "./import-equipment-commit.service.js";
