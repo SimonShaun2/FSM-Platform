@@ -27,6 +27,7 @@ describe(`${MIGRATE_ONBOARDING_WIZARD_API_CONTRACT_ID}`, () => {
     expect(fileLinkRoutes).toHaveLength(3);
     for (const route of fileLinkRoutes) {
       expect(route.responseSchemaId).toBe("migrateOnboardingBundle");
+      expect(route.requestBodySchemaId).toBeUndefined();
     }
   });
 
