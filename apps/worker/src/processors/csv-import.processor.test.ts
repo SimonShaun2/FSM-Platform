@@ -9,12 +9,14 @@ const {
   addAiQueueJob,
   downloadFileMock,
   getFileKeyFromUrlMock,
-  mapCsvColumnsMock
+  mapCsvColumnsMock,
+  recordImportAiObservationMock
 } = vi.hoisted(() => ({
   addAiQueueJob: vi.fn(),
   downloadFileMock: vi.fn(),
   getFileKeyFromUrlMock: vi.fn(),
-  mapCsvColumnsMock: vi.fn()
+  mapCsvColumnsMock: vi.fn(),
+  recordImportAiObservationMock: vi.fn(async () => undefined)
 }));
 
 vi.mock("drizzle-orm", async () => {
@@ -42,7 +44,8 @@ vi.mock("@fsm/config/storage", () => ({
 }));
 
 vi.mock("@fsm/ai", () => ({
-  mapCsvColumns: mapCsvColumnsMock
+  mapCsvColumns: mapCsvColumnsMock,
+  recordImportAiObservation: recordImportAiObservationMock
 }));
 
 type CsvImportProcessorModule = typeof import("./csv-import.processor.js");
