@@ -9,6 +9,7 @@ const {
   addAiQueueJob,
   addInvoiceQueueJob,
   addNotificationQueueJob,
+  applyConnectAccountBrandingMock,
   createConnectOnboardingLinkMock,
   createExpressConnectedAccountMock,
   createExpressDashboardLinkMock,
@@ -19,6 +20,7 @@ const {
   addAiQueueJob: vi.fn(),
   addInvoiceQueueJob: vi.fn(),
   addNotificationQueueJob: vi.fn(),
+  applyConnectAccountBrandingMock: vi.fn(),
   createConnectOnboardingLinkMock: vi.fn(),
   createExpressConnectedAccountMock: vi.fn(),
   createExpressDashboardLinkMock: vi.fn(),
@@ -52,6 +54,7 @@ vi.mock("@fsm/jobs", () => ({
 vi.mock("../../lib/stripe.js", () => ({
   createInvoiceCheckoutSession: createInvoiceCheckoutSessionMock,
   expireInvoiceCheckoutSession: expireInvoiceCheckoutSessionMock,
+  applyConnectAccountBranding: applyConnectAccountBrandingMock,
   createConnectOnboardingLink: createConnectOnboardingLinkMock,
   createExpressConnectedAccount: createExpressConnectedAccountMock,
   createExpressDashboardLink: createExpressDashboardLinkMock,
