@@ -16,6 +16,7 @@ import {
   webhooksQueue
 } from "./queues.js";
 import { listDeadLetterJobs } from "./dead-letter-visibility.js";
+import { listFailedJobsWithReplayMetadata } from "./failed-job-replay-visibility.js";
 import type { PlatformQueueMonitoringDeps, QueueMonitoringProbe } from "./queue-monitoring.js";
 import { collectPlatformQueueMonitoringSnapshot } from "./queue-monitoring.js";
 
@@ -44,8 +45,16 @@ export async function getPlatformQueueMonitoringSnapshot(collectedAt?: Date) {
 
 export async function listPlatformDeadLetterJobs(
   sourceQueue: PlatformQueueNameV1,
-  options: { start?: number; limit?: number } = {}
+  options: { start?: number; limit?: number; companyId?: string } = {}
 ) {
   const deadLetterQueue = getDeadLetterQueue(sourceQueue);
   return listDeadLetterJobs(sourceQueue, deadLetterQueue, options);
+}
+
+export async function listPlatformFailedJobsWithReplayMetadata(
+  sourceQueue: PlatformQueueNameV1,
+  options: { companyId: string; start?: number; limit?: number }
+) {
+  const queue = platformQueuesByName[sourceQueue];
+  return listFailedJobsWithReplayMetadata(sourceQueue, queue, options);
 }
