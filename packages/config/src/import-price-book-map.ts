@@ -76,6 +76,7 @@ export function importSourceSystemFromPreset(presetId: ImportVendorPresetId): Im
     case "quickbooks_desktop_customers":
     case "quickbooks_desktop_items":
     case "quickbooks_desktop_invoices":
+    case "quickbooks_desktop_payments":
       return "qbd";
     case "service_fusion_price_book":
       return "service_fusion";
