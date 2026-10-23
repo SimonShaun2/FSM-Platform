@@ -18,7 +18,7 @@
 | FS-72 | Repeat dry-run | [#91](https://github.com/SimonShaun2/Renvani/pull/91) |
 | Dispatch SSE | Serve | **#86 merged** → `9313130` on `dev` |
 | Planning | Shortest path + epic | **#93 merged** → `c5fb3de` |
-| **STACK** | Official operational stack | [#97](https://github.com/SimonShaun2/Renvani/pull/97) |
+| **STACK** | Official operational stack | **#97 merged** → `ad0f862` |
 
 ---
 
