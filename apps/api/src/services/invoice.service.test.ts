@@ -76,7 +76,8 @@ beforeEach(() => {
   expireInvoiceCheckoutSessionMock.mockReset();
   createInvoiceCheckoutSessionMock.mockResolvedValue({
     id: "cs_test_123",
-    url: "https://checkout.stripe.com/pay/cs_test_123"
+    url: null,
+    clientSecret: "cs_test_client_secret"
   });
 });
 
@@ -397,7 +398,7 @@ describe("invoice.service", () => {
 
     expect(sent.status).toBe("sent");
     expect(sent.stripePaymentLinkId).toBe("cs_test_123");
-    expect(sent.stripePaymentLinkUrl).toBe("https://checkout.stripe.com/pay/cs_test_123");
+    expect(sent.stripePaymentLinkUrl).toContain("/pay/");
     expect(createInvoiceCheckoutSessionMock).toHaveBeenCalledTimes(1);
     expect(addNotificationQueueJob).toHaveBeenCalledWith(
       "send-invoice-email",

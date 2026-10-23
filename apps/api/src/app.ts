@@ -44,6 +44,7 @@ import revenueInquiryRoutes from "./routes/revenue-inquiries/index.js";
 import schedulingAgentRoutes from "./routes/scheduling-agent/index.js";
 import tenantContextRoutes from "./routes/tenant-context/index.js";
 import serviceAgreementRoutes from "./routes/service-agreements/index.js";
+import stripePlatformSyncPlugin from "./plugins/stripe-platform-sync.js";
 import stripeRoutes from "./routes/stripe/index.js";
 import technicianExtensionRoutes from "./routes/technician-extensions/index.js";
 import technicianRoutes from "./routes/technicians/index.js";
@@ -75,6 +76,7 @@ export async function buildApp() {
   });
   await app.register(requestLoggerPlugin);
   await app.register(errorHandlerPlugin);
+  await app.register(stripePlatformSyncPlugin);
   await app.register(healthRoutes);
   await app.register(authenticatePlugin);
   await app.register(companyScopedWritePlugin);

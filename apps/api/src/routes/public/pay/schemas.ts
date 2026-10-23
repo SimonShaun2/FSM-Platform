@@ -31,10 +31,26 @@ export const getPublicPaymentLinkSchema = {
     200: {
       type: "object",
       additionalProperties: false,
-      required: ["invoiceNumber", "paymentLinkUrl"],
+      required: [
+        "invoiceNumber",
+        "paymentLinkUrl",
+        "checkoutClientSecret",
+        "invoiceAmount",
+        "platformFeeAmount",
+        "totalDue",
+        "platformFeePaidByCustomer",
+        "platformFeeDisclosure"
+      ],
       properties: {
         invoiceNumber: { type: "string" },
-        paymentLinkUrl: { type: "string" }
+        paymentLinkUrl: { type: "string" },
+        checkoutClientSecret: { type: ["string", "null"] },
+        invoiceAmount: { type: "string" },
+        platformFeeAmount: { type: "string" },
+        totalDue: { type: "string" },
+        platformFeePercent: { type: ["number", "null"] },
+        platformFeePaidByCustomer: { type: "boolean" },
+        platformFeeDisclosure: { type: ["string", "null"] }
       }
     },
     400: errorResponseSchema,

@@ -73,7 +73,8 @@ beforeEach(async () => {
   expireInvoiceCheckoutSessionMock.mockReset();
   createInvoiceCheckoutSessionMock.mockResolvedValue({
     id: "cs_test_123",
-    url: "https://checkout.stripe.com/pay/cs_test_123"
+    url: null,
+    clientSecret: "cs_test_client_secret"
   });
   app = await buildAppModule.buildApp();
   await app.ready();
@@ -354,7 +355,7 @@ describe("invoice routes", () => {
       .send();
 
     expect(response.status).toBe(200);
-    expect(response.body.invoice.stripePaymentLinkUrl).toBe("https://checkout.stripe.com/pay/cs_test_123");
+    expect(response.body.invoice.stripePaymentLinkUrl).toContain("/pay/");
     expect(createInvoiceCheckoutSessionMock).toHaveBeenCalledTimes(1);
     expect(addNotificationQueueJob).toHaveBeenCalledTimes(1);
     expect(addInvoiceQueueJob).toHaveBeenCalledTimes(1);

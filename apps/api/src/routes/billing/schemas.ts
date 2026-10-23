@@ -11,6 +11,7 @@ export const platformBillingStatusSchema: FastifySchema = {
         stripeCustomerId: { type: ["string", "null"] },
         stripeSubscriptionId: { type: ["string", "null"] },
         currentPeriodEnd: { type: ["string", "null"] },
+        planTier: { type: ["string", "null"], enum: ["flex", "flat", null] },
         checkoutAvailable: { type: "boolean" }
       },
       required: ["enabled", "subscribed", "checkoutAvailable"]
@@ -19,6 +20,12 @@ export const platformBillingStatusSchema: FastifySchema = {
 };
 
 export const platformBillingCheckoutSchema: FastifySchema = {
+  body: {
+    type: "object",
+    properties: {
+      plan: { type: "string", enum: ["flex", "flat"] }
+    }
+  },
   response: {
     200: {
       type: "object",
