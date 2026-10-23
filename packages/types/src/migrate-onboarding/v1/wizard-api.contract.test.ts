@@ -20,7 +20,7 @@ describe(`${MIGRATE_ONBOARDING_WIZARD_API_CONTRACT_ID}`, () => {
     expect(new Set(keys).size).toBe(keys.length);
   });
 
-  it("declares file-link wizard routes with migrateOnboardingBundle responses", () => {
+  it("uses migrateOnboardingBundle for file-link wizard routes", () => {
     const fileLinkRoutes = MIGRATE_ONBOARDING_WIZARD_API_ROUTES.filter((route) =>
       route.path.includes("/file-link/")
     );
