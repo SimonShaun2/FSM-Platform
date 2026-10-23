@@ -12,7 +12,11 @@ export const featureFlags = {
   // FEATURE FLAG: loyalty-reminders-enabled — FS-72 candidate evaluation (proposal path separate)
   loyaltyRemindersEnabled: false,
   // FEATURE FLAG: loyalty-reminders-dry-run — FS-72 blocks customer send until founder gate
-  loyaltyRemindersDryRun: true
+  loyaltyRemindersDryRun: true,
+  // FEATURE FLAG: clerk-auth-parallel-jwt — STACK-02: accept Clerk session JWT alongside in-repo JWT
+  clerkAuthParallelJwt: false,
+  // FEATURE FLAG: tenant-session-scoped-writes — STACK-02/10: SET LOCAL app.current_company_id on API writes
+  tenantSessionScopedWrites: false
 } as const;
 
 export type FeatureFlags = typeof featureFlags;

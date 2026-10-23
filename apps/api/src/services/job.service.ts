@@ -40,6 +40,7 @@ import {
 } from "@fsm/types";
 
 import { generateJobNumber } from "../lib/job-number.js";
+import { runTenantAwareTransaction } from "../lib/company-scoped-transaction.js";
 import {
   canTransition,
   getAvailableTransitions,
@@ -825,7 +826,7 @@ export async function createJob(
 ): Promise<Job> {
   const normalizedInput = normalizeCreateJobInput(input);
 
-  const createdJob = await db.transaction(async (tx) => {
+  const createdJob = await runTenantAwareTransaction(companyId, async (tx) => {
     const actor = await getActor(companyId, actorId, tx);
     const customer = await getCustomerRecord(companyId, normalizedInput.customerId, tx);
     const property =
