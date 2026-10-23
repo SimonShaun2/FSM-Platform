@@ -17,7 +17,31 @@
 | FS-38 / FS-21 / FS-58 | Discover/Book hardening | [#88](https://github.com/SimonShaun2/Renvani/pull/88)–[#90](https://github.com/SimonShaun2/Renvani/pull/90) |
 | FS-72 | Repeat dry-run | [#91](https://github.com/SimonShaun2/Renvani/pull/91) |
 | Dispatch SSE | Serve | **#86 merged** → `9313130` on `dev` |
-| Planning | Shortest path + epic | [#93](https://github.com/SimonShaun2/Renvani/pull/93) |
+| Planning | Shortest path + epic | **#93 merged** → `c5fb3de` |
+| **STACK** | Official platform (Neon, Clerk, observability) | ADR PR (this cycle) |
+
+---
+
+## Official stack — implementation gaps (ADR-FS-STACK)
+
+**Authority:** Shaun post–#93/#94 · **Docs:** `docs/adr/ADR-FS-STACK-renvani-official-platform.md`  
+**Accounts:** Shaun only (see ADR table); devs wire env **names** after credentials exist.
+
+| ID | Dev | Workstream | Deliverable | Branch |
+| --- | --- | --- | --- | --- |
+| **STACK-00** | **Ezra** | Docs | Reconcile `PRODUCTION-DEPLOYMENT.md`, `docs/env/README.md`, FS-93 runbook pointers after ADR **Accepted** | `cursor/stack-doc-reconcile-1f27` |
+| **STACK-01** | **Iris** | Neon | Dev/staging `DATABASE_URL` contract; pool notes (FS-80); no Render Postgres assumptions in new code | `cursor/stack-neon-env-1f27` |
+| **STACK-02** | **Noah** | Clerk | Staff auth integration; `companyId` mapping; feature-flag parallel with JWT | `cursor/stack-clerk-auth-1f27` |
+| **STACK-03** | **Sofia** | Security | Automated tenant/authz tests for Clerk + Neon staging (extends FS-92) | with STACK-02 |
+| **STACK-04** | **Ezra** | Ops | Sentry + PostHog SDK wiring (api, web, worker) | `cursor/stack-observability-1f27` |
+| **STACK-05** | **Hana** | Ops | Queue monitoring dashboards/alerts; DLQ visibility (FS-MIGRATE platform P0) | extends `cursor/fs-migrate-queue-hardening-1f27` |
+| **STACK-06** | **Diego** | R2 | Env-scoped bucket policy doc + attachment path tests (Shaun creates buckets) | with file batch PR |
+| **STACK-07** | **Marcus** | AI ops | Langfuse traces for `@fsm/ai` + import/agent eval hooks | `cursor/stack-langfuse-eval-1f27` |
+| **STACK-08** | **Leo** | Revenue | Resend adapter (replace SendGrid); Twilio sandbox env validation | `cursor/stack-resend-adapter-1f27` |
+| **STACK-09** | **Shaun** | Stripe | **Live** Connect + platform keys in prod only; test keys for dev/staging | Founder gate — no agent |
+| — | **Elena** | PO | Accept stack ADR; sequencing vs FS-MIGRATE M1 | ADR sign-off |
+
+*Grace:* stack **M0** merges with ADR PR; **M1–M4** parallel to FS-MIGRATE after Shaun provisions Neon dev + Clerk dev.
 
 ---
 
@@ -87,7 +111,8 @@
 | --- | --- |
 | [#88](https://github.com/SimonShaun2/Renvani/pull/88)–[#91](https://github.com/SimonShaun2/Renvani/pull/91) | Triple sign → `batch-ci` |
 | [#92](https://github.com/SimonShaun2/Renvani/pull/92) | Preset **catalog** for generic engine @ **`6268e44`** (re-sign after dev merge) |
-| [#93](https://github.com/SimonShaun2/Renvani/pull/93) | Epic + assignments |
+| [#95](https://github.com/SimonShaun2/Renvani/pull/95)–[#96](https://github.com/SimonShaun2/Renvani/pull/96) | ADR Accepted + 0026 lineage |
+| Stack ADR | Open PR this cycle | Neon / Clerk / observability |
 
 ---
 
