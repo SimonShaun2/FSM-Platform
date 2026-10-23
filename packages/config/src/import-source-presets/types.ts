@@ -10,6 +10,7 @@ export type ImportSourcePresetId =
   | "service_titan"
   | "service_titan_locations"
   | "service_titan_jobs"
+  | "service_titan_invoices"
   | "service_fusion"
   | "service_fusion_price_book"
   | "quickbooks_customers"

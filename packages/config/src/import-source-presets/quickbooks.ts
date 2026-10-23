@@ -85,6 +85,7 @@ export const QUICKBOOKS_PRESETS: ImportSourcePreset[] = [
     entity: "invoices",
     label: "QuickBooks Online (invoices)",
     headerAliases: {
+      "invoice id": "sourceId",
       "invoice no": "invoiceNumber",
       "invoice number": "invoiceNumber",
       "customer name": "customerName",

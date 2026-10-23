@@ -204,6 +204,38 @@ function assertPresetForFile(
   }
 }
 
+/** ServiceTitan: location-aware multi-export bundle must infer ST preset ids (generic importer path). */
+function validateServiceTitanPresetInference(
+  manifest: GoldenImportBundleManifest,
+  issues: GoldenBundleValidationIssue[]
+): void {
+  if (manifest.sourceSystem !== "servicetitan") {
+    return;
+  }
+
+  const byPath = new Map(manifest.files.map((file) => [file.relativePath, file]));
+
+  const customers = byPath.get("customers.csv");
+  if (customers) {
+    assertPresetForFile(manifest, customers, "service_titan", "customers", issues);
+  }
+
+  const locations = byPath.get("locations.csv");
+  if (locations) {
+    assertPresetForFile(manifest, locations, "service_titan_locations", "customers", issues);
+  }
+
+  const jobs = byPath.get("jobs.csv");
+  if (jobs) {
+    assertPresetForFile(manifest, jobs, "service_titan_jobs", "customers", issues);
+  }
+
+  const invoices = byPath.get("invoices.csv");
+  if (invoices) {
+    assertPresetForFile(manifest, invoices, "service_titan_invoices", "invoices", issues);
+  }
+}
+
 /** QuickBooks Online + Desktop: source-specific preset assertions only. */
 function validateQuickBooksPresetInference(
   manifest: GoldenImportBundleManifest,
@@ -417,6 +449,7 @@ export function validateGoldenImportBundleManifest(
   }
   validateGenericImportColumnMapping(parsed.data, issues);
   validateQuickBooksPresetInference(parsed.data, issues);
+  validateServiceTitanPresetInference(parsed.data, issues);
   validateHistorySpan(parsed.data, issues);
 
   return {

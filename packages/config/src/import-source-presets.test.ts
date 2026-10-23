@@ -63,6 +63,15 @@ describe("import-source-presets", () => {
     ).toBe("service_titan");
   });
 
+  it("infers ServiceTitan invoices from invoice export headers", () => {
+    expect(
+      inferImportSourcePresetFromHeaders(
+        ["Invoice Number", "Customer ID", "Invoice Date", "Total", "Balance"],
+        "invoices"
+      )
+    ).toBe("service_titan_invoices");
+  });
+
   it("infers ServiceTitan jobs from job tags and business unit columns", () => {
     expect(
       inferImportSourcePresetForSession(
