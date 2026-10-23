@@ -191,6 +191,13 @@ export const importSessionStatusEnum = pgEnum("import_session_status", [
   "rolled_back",
 ]);
 
+export const importChunkRunStatusEnum = pgEnum("import_chunk_run_status", [
+  "pending",
+  "running",
+  "completed",
+  "failed",
+]);
+
 export const dataExportStatusEnum = pgEnum("data_export_status", [
   "pending",
   "processing",
@@ -557,12 +564,19 @@ export const customers = pgTable("customers", {
   doNotContact: boolean("do_not_contact").default(false),
   // Stripe
   stripeCustomerId: varchar("stripe_customer_id", { length: 100 }),
+  sourceSystem: varchar("source_system", { length: 64 }),
+  sourceId: varchar("source_id", { length: 256 }),
   importSessionId: uuid("import_session_id").references(() => importSessions.id),
   ...timestamps,
 }, (t) => ({
   companyIdx: index("customers_company_idx").on(t.companyId),
   emailIdx: index("customers_email_idx").on(t.email),
   lastServiceIdx: index("customers_last_service_idx").on(t.lastServiceDate),
+  importLineageIdx: uniqueIndex("customers_import_lineage_idx").on(
+    t.companyId,
+    t.sourceSystem,
+    t.sourceId,
+  ),
 }));
 
 export const properties = pgTable("properties", {
@@ -587,12 +601,19 @@ export const properties = pgTable("properties", {
   notes: text("notes"),
   isPrimary: boolean("is_primary").notNull().default(false),
   isActive: boolean("is_active").notNull().default(true),
+  sourceSystem: varchar("source_system", { length: 64 }),
+  sourceId: varchar("source_id", { length: 256 }),
   importSessionId: uuid("import_session_id").references(() => importSessions.id),
   ...timestamps,
 }, (t) => ({
   customerIdx: index("properties_customer_idx").on(t.customerId),
   companyIdx: index("properties_company_idx").on(t.companyId),
   zipIdx: index("properties_zip_idx").on(t.zip),
+  importLineageIdx: uniqueIndex("properties_import_lineage_idx").on(
+    t.companyId,
+    t.sourceSystem,
+    t.sourceId,
+  ),
 }));
 
 export const assets = pgTable("assets", {
@@ -621,6 +642,8 @@ export const assets = pgTable("assets", {
   photoUrls: text("photo_urls").array().default([]),
   notes: text("notes"),
   isActive: boolean("is_active").notNull().default(true),
+  sourceSystem: varchar("source_system", { length: 64 }),
+  sourceId: varchar("source_id", { length: 256 }),
   importSessionId: uuid("import_session_id").references(() => importSessions.id),
   ...timestamps,
 }, (t) => ({
@@ -630,6 +653,11 @@ export const assets = pgTable("assets", {
   typeIdx: index("assets_type_idx").on(t.assetType),
   warrantyIdx: index("assets_warranty_idx").on(t.warrantyExpiration),
   installIdx: index("assets_install_idx").on(t.installDate),
+  importLineageIdx: uniqueIndex("assets_import_lineage_idx").on(
+    t.companyId,
+    t.sourceSystem,
+    t.sourceId,
+  ),
 }));
 
 // ─────────────────────────────────────────────
@@ -712,6 +740,8 @@ export const jobs = pgTable("jobs", {
   parentJobId: uuid("parent_job_id"), // for return visits / follow-up jobs
   // Tags
   tags: text("tags").array().default([]),
+  sourceSystem: varchar("source_system", { length: 64 }),
+  sourceId: varchar("source_id", { length: 256 }),
   importSessionId: uuid("import_session_id").references(() => importSessions.id),
   ...timestamps,
 }, (t) => ({
@@ -721,6 +751,11 @@ export const jobs = pgTable("jobs", {
   statusIdx: index("jobs_status_idx").on(t.status),
   scheduledStartIdx: index("jobs_scheduled_start_idx").on(t.scheduledStart),
   jobNumberIdx: uniqueIndex("jobs_job_number_company_idx").on(t.jobNumber, t.companyId),
+  importLineageIdx: uniqueIndex("jobs_import_lineage_idx").on(
+    t.companyId,
+    t.sourceSystem,
+    t.sourceId,
+  ),
 }));
 
 export const jobNotes = pgTable("job_notes", {
@@ -790,6 +825,9 @@ export const estimates = pgTable("estimates", {
   followUpSentAt: timestamp("follow_up_sent_at"),
   // Financing
   financingOffered: boolean("financing_offered").default(false),
+  sourceSystem: varchar("source_system", { length: 64 }),
+  sourceId: varchar("source_id", { length: 256 }),
+  importSessionId: uuid("import_session_id").references(() => importSessions.id),
   ...timestamps,
 }, (t) => ({
   companyIdx: index("estimates_company_idx").on(t.companyId),
@@ -797,6 +835,11 @@ export const estimates = pgTable("estimates", {
   statusIdx: index("estimates_status_idx").on(t.status),
   tokenIdx: uniqueIndex("estimates_approval_token_idx").on(t.approvalToken),
   numberIdx: uniqueIndex("estimates_number_company_idx").on(t.estimateNumber, t.companyId),
+  importLineageIdx: uniqueIndex("estimates_import_lineage_idx").on(
+    t.companyId,
+    t.sourceSystem,
+    t.sourceId,
+  ),
 }));
 
 export const estimateItems = pgTable("estimate_items", {
@@ -854,6 +897,9 @@ export const invoices = pgTable("invoices", {
   title: varchar("title", { length: 255 }),
   messageToCustomer: text("message_to_customer"),
   internalNotes: text("internal_notes"),
+  sourceSystem: varchar("source_system", { length: 64 }),
+  sourceId: varchar("source_id", { length: 256 }),
+  importSessionId: uuid("import_session_id").references(() => importSessions.id),
   ...timestamps,
 }, (t) => ({
   companyIdx: index("invoices_company_idx").on(t.companyId),
@@ -861,6 +907,11 @@ export const invoices = pgTable("invoices", {
   statusIdx: index("invoices_status_idx").on(t.status),
   dueIdx: index("invoices_due_idx").on(t.dueAt),
   numberIdx: uniqueIndex("invoices_number_company_idx").on(t.invoiceNumber, t.companyId),
+  importLineageIdx: uniqueIndex("invoices_import_lineage_idx").on(
+    t.companyId,
+    t.sourceSystem,
+    t.sourceId,
+  ),
 }));
 
 export const invoiceItems = pgTable("invoice_items", {
@@ -896,11 +947,19 @@ export const payments = pgTable("payments", {
   referenceNumber: varchar("reference_number", { length: 100 }),
   notes: text("notes"),
   paidAt: timestamp("paid_at"),
+  sourceSystem: varchar("source_system", { length: 64 }),
+  sourceId: varchar("source_id", { length: 256 }),
+  importSessionId: uuid("import_session_id").references(() => importSessions.id),
   ...timestamps,
 }, (t) => ({
   companyIdx: index("payments_company_idx").on(t.companyId),
   invoiceIdx: index("payments_invoice_idx").on(t.invoiceId),
   stripeIntentIdx: index("payments_stripe_intent_idx").on(t.stripePaymentIntentId),
+  importLineageIdx: uniqueIndex("payments_import_lineage_idx").on(
+    t.companyId,
+    t.sourceSystem,
+    t.sourceId,
+  ),
 }));
 
 // ─────────────────────────────────────────────
@@ -1233,12 +1292,26 @@ export const formSubmissions = pgTable("form_submissions", {
 // 13. ONBOARDING / IMPORT
 // ─────────────────────────────────────────────
 
+// Multi-file onboarding bundle (FS-MIGRATE); many import_sessions may share one bundle.
+export const importBundles = pgTable("import_bundles", {
+  id: id(),
+  companyId: companyId(),
+  createdById: uuid("created_by_id").references(() => users.id),
+  sourceSystem: varchar("source_system", { length: 64 }).notNull(),
+  label: varchar("label", { length: 255 }),
+  ...timestamps,
+}, (t) => ({
+  companyIdx: index("import_bundles_company_idx").on(t.companyId),
+}));
+
 // Tracks a single CSV import session from upload through completion
 // Supports rollback: all records created by an import are tagged with import_session_id
 export const importSessions = pgTable("import_sessions", {
   id: id(),
   companyId: companyId(),
   createdById: uuid("created_by_id").references(() => users.id),
+  importBundleId: uuid("import_bundle_id").references(() => importBundles.id),
+  sourceSystem: varchar("source_system", { length: 64 }),
   entityType: importEntityTypeEnum("entity_type").notNull(), // what is being imported
   status: importSessionStatusEnum("status").notNull().default("uploaded"),
   // Source file
@@ -1258,6 +1331,8 @@ export const importSessions = pgTable("import_sessions", {
   validationErrors: jsonb("validation_errors").default([]),
   // AI-inferred values (e.g. asset types inferred from job description text)
   aiInferences: jsonb("ai_inferences").default({}),
+  // Chunked ingest progress (FS-MIGRATE ADR): chunksTotal, chunksDone, rowsOk, lastCursor, …
+  progress: jsonb("progress").default({}),
   // Rollback
   rolledBackAt: timestamp("rolled_back_at"),
   rolledBackById: uuid("rolled_back_by_id").references(() => users.id),
@@ -1269,6 +1344,31 @@ export const importSessions = pgTable("import_sessions", {
   companyIdx: index("import_sessions_company_idx").on(t.companyId),
   statusIdx: index("import_sessions_status_idx").on(t.status),
   entityTypeIdx: index("import_sessions_entity_type_idx").on(t.entityType),
+  bundleIdx: index("import_sessions_bundle_idx").on(t.importBundleId),
+}));
+
+// Idempotent chunk commits for large imports (ADR-FS-MIGRATE §3).
+export const importChunkRuns = pgTable("import_chunk_runs", {
+  id: id(),
+  companyId: companyId(),
+  importSessionId: uuid("import_session_id")
+    .notNull()
+    .references(() => importSessions.id),
+  entityType: importEntityTypeEnum("entity_type").notNull(),
+  chunkIndex: integer("chunk_index").notNull(),
+  chunksTotal: integer("chunks_total").notNull(),
+  idempotencyKey: varchar("idempotency_key", { length: 255 }).notNull(),
+  status: importChunkRunStatusEnum("status").notNull().default("pending"),
+  cursor: jsonb("cursor").default({}),
+  rowsOk: integer("rows_ok").default(0),
+  rowsFailed: integer("rows_failed").default(0),
+  errorMessage: text("error_message"),
+  completedAt: timestamp("completed_at"),
+  ...timestamps,
+}, (t) => ({
+  companyIdx: index("import_chunk_runs_company_idx").on(t.companyId),
+  sessionIdx: index("import_chunk_runs_session_idx").on(t.importSessionId),
+  idempotencyUnique: uniqueIndex("import_chunk_runs_idempotency_key_idx").on(t.idempotencyKey),
 }));
 
 export const dataExportSessions = pgTable("data_export_sessions", {
@@ -2020,9 +2120,28 @@ export const formSubmissionsRelations = relations(formSubmissions, ({ one }) => 
   asset: one(assets, { fields: [formSubmissions.assetId], references: [assets.id] }),
 }));
 
-export const importSessionsRelations = relations(importSessions, ({ one }) => ({
+export const importBundlesRelations = relations(importBundles, ({ one, many }) => ({
+  company: one(companies, { fields: [importBundles.companyId], references: [companies.id] }),
+  createdBy: one(users, { fields: [importBundles.createdById], references: [users.id] }),
+  sessions: many(importSessions),
+}));
+
+export const importSessionsRelations = relations(importSessions, ({ one, many }) => ({
   company: one(companies, { fields: [importSessions.companyId], references: [companies.id] }),
   createdBy: one(users, { fields: [importSessions.createdById], references: [users.id] }),
+  bundle: one(importBundles, {
+    fields: [importSessions.importBundleId],
+    references: [importBundles.id],
+  }),
+  chunkRuns: many(importChunkRuns),
+}));
+
+export const importChunkRunsRelations = relations(importChunkRuns, ({ one }) => ({
+  company: one(companies, { fields: [importChunkRuns.companyId], references: [companies.id] }),
+  importSession: one(importSessions, {
+    fields: [importChunkRuns.importSessionId],
+    references: [importSessions.id],
+  }),
 }));
 
 export const automationRulesRelations = relations(automationRules, ({ one }) => ({
