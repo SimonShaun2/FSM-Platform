@@ -251,7 +251,21 @@
       "idx": 35,
       "version": "7",
       "when": 1777707000000,
-      "tag": "0035_fs138_saved_card_migration",
+      "tag": "0035_fs133_qbo_ongoing_sync",
+      "breakpoints": true
+    },
+    {
+      "idx": 36,
+      "version": "7",
+      "when": 1777710000000,
+      "tag": "0036_fs133_qbo_entity_mappings",
+      "breakpoints": true
+    },
+    {
+      "idx": 37,
+      "version": "7",
+      "when": 1777709000000,
+      "tag": "0037_fs138_saved_card_migration",
       "breakpoints": true
     }
   ]
