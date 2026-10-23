@@ -1,4 +1,3 @@
-import { confirmImportFileLinkDecisionsBodySchema } from "../../fs-migrate/import-file-link.js";
 import {
   applyMigrateDedupeDecisionsBodySchema,
   createMigrateOnboardingSessionBodySchema,
@@ -87,7 +86,6 @@ export const MIGRATE_ONBOARDING_WIZARD_API_ROUTES: readonly MigrateOnboardingWiz
   {
     method: "PATCH",
     path: "/api/v1/migrate/onboarding/sessions/:bundleId/file-link/decisions",
-    requestBodySchemaId: "confirmImportFileLinkDecisionsBody",
     responseSchemaId: "migrateOnboardingBundle"
   },
   {
@@ -122,8 +120,7 @@ export const migrateOnboardingWizardRequestSchemas = {
   createMigrateOnboardingSessionBody: createMigrateOnboardingSessionBodySchema,
   setMigrateOnboardingSourceBody: setMigrateOnboardingSourceBodySchema,
   linkMigrateOnboardingFilesBody: linkMigrateOnboardingFilesBodySchema,
-  applyMigrateDedupeDecisionsBody: applyMigrateDedupeDecisionsBodySchema,
-  confirmImportFileLinkDecisionsBody: confirmImportFileLinkDecisionsBodySchema
+  applyMigrateDedupeDecisionsBody: applyMigrateDedupeDecisionsBodySchema
 } as const;
 
 export const migrateOnboardingWizardResponseSchemas = {
