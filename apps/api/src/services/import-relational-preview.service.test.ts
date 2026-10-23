@@ -46,8 +46,8 @@ describe("import-relational-preview.service", () => {
         { row: 3, propertyKey: "P-2", customerKey: "C-1", label: "Second site" }
       ],
       jobRows: [
-        { row: 2, jobKey: "J-1", propertyKey: "P-1", label: "Tune-up" },
-        { row: 3, jobKey: "J-2", propertyKey: "P-99", label: "Orphan job" }
+        { row: 2, jobKey: "J-1", propertyKey: "P-1", label: "Tune-up", businessDate: null },
+        { row: 3, jobKey: "J-2", propertyKey: "P-99", label: "Orphan job", businessDate: null }
       ]
     });
 
@@ -125,6 +125,33 @@ describe("import-relational-preview.service", () => {
         field: "customerSourceId"
       }
     ]);
+  });
+
+  it("computes multi-year job and estimate history depth with join warnings", () => {
+    const graph = buildRelationalPreviewGraph({
+      customerRows: [{ row: 2, customerKey: "C-1", displayName: "Acme" }],
+      propertyRows: [{ row: 2, propertyKey: "P-1", customerKey: "C-1", label: "Main" }],
+      jobRows: [
+        { row: 2, jobKey: "J-1", propertyKey: "P-1", label: "2022 job", businessDate: "2022-03-01" },
+        { row: 3, jobKey: "J-2", propertyKey: "P-1", label: "2024 job", businessDate: "2024-08-15" }
+      ],
+      estimateRows: [
+        { row: 2, estimateKey: "E-1", jobKey: "J-1", label: "2022 est", businessDate: "2022-01-01" },
+        { row: 3, estimateKey: "E-2", jobKey: "J-99", label: "orphan", businessDate: "2024-06-01" }
+      ]
+    });
+
+    const jobDepth = graph.historyDepth.find((entry) => entry.entity === "jobs");
+    const estimateDepth = graph.historyDepth.find((entry) => entry.entity === "estimates");
+
+    expect(jobDepth?.meetsMultiYearThreshold).toBe(true);
+    expect(jobDepth?.earliestBusinessDate).toBe("2022-03-01");
+    expect(jobDepth?.latestBusinessDate).toBe("2024-08-15");
+    expect(estimateDepth?.meetsMultiYearThreshold).toBe(true);
+    expect(graph.jobEstimateEdges).toHaveLength(1);
+    expect(graph.orphanEstimateCount).toBe(1);
+    expect(graph.joinIssues.some((issue) => issue.code === "orphan_estimate")).toBe(true);
+    expect(graph.stats.estimateCount).toBe(2);
   });
 
   it("detects duplicate job keys", () => {
