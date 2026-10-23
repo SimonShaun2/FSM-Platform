@@ -10,6 +10,7 @@ export {
   fsmRetainFailedJobsForDlq
 } from "./queue-policy.js";
 export { enqueueMigrateFileBatchJob } from "./enqueue-migrate-file-batch.js";
+export { enqueueImportFileLinkJob } from "./enqueue-import-file-link.js";
 export { enqueueMigrateFileBatchFailedObjectsRetry } from "./enqueue-migrate-file-batch-retry.js";
 export {
   buildMigrateFileBatchFailedObjectsRetryPayload,
