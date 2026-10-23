@@ -337,4 +337,11 @@ CREATE INDEX "import_sessions_bundle_idx" ON "import_sessions" USING btree ("imp
 CREATE UNIQUE INDEX "invoices_import_lineage_idx" ON "invoices" USING btree ("company_id","source_system","source_id");--> statement-breakpoint
 CREATE UNIQUE INDEX "jobs_import_lineage_idx" ON "jobs" USING btree ("company_id","source_system","source_id");--> statement-breakpoint
 CREATE UNIQUE INDEX "payments_import_lineage_idx" ON "payments" USING btree ("company_id","source_system","source_id");--> statement-breakpoint
-CREATE UNIQUE INDEX "properties_import_lineage_idx" ON "properties" USING btree ("company_id","source_system","source_id");
+CREATE UNIQUE INDEX "properties_import_lineage_idx" ON "properties" USING btree ("company_id","source_system","source_id");--> statement-breakpoint
+ALTER TABLE "product_catalog" ADD COLUMN "source_system" varchar(64);--> statement-breakpoint
+ALTER TABLE "product_catalog" ADD COLUMN "source_id" varchar(256);--> statement-breakpoint
+ALTER TABLE "product_catalog" ADD COLUMN "import_session_id" uuid;--> statement-breakpoint
+ALTER TABLE "invoice_items" ADD COLUMN "product_catalog_id" uuid;--> statement-breakpoint
+ALTER TABLE "product_catalog" ADD CONSTRAINT "product_catalog_import_session_id_import_sessions_id_fk" FOREIGN KEY ("import_session_id") REFERENCES "public"."import_sessions"("id") ON DELETE no action ON UPDATE no action;--> statement-breakpoint
+ALTER TABLE "invoice_items" ADD CONSTRAINT "invoice_items_product_catalog_id_product_catalog_id_fk" FOREIGN KEY ("product_catalog_id") REFERENCES "public"."product_catalog"("id") ON DELETE no action ON UPDATE no action;--> statement-breakpoint
+CREATE UNIQUE INDEX IF NOT EXISTS "product_catalog_lineage_company_idx" ON "product_catalog" USING btree ("company_id","source_system","source_id");
