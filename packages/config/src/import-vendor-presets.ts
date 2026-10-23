@@ -7,4 +7,4 @@ export {
   type ImportSourcePreset as ImportVendorPreset,
   type ImportSourcePresetId as ImportVendorPresetId,
   type ImportPresetEntityHint
-} from "./import-source-presets.js";
+} from "./import-source-presets/index.js";
