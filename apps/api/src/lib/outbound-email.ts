@@ -58,12 +58,18 @@ export async function deliverTransactionalEmail(
   }
 }
 
+export type TransactionalEmailSendResult = {
+  templateId: EmailTemplateId;
+  subject: string;
+  providerMessageId: string | null;
+};
+
 export async function sendRenderedTemplateEmail(
   to: string,
   templateId: EmailTemplateId,
   variables: Record<string, string>,
   tags?: string[]
-): Promise<void> {
+): Promise<TransactionalEmailSendResult> {
   const rendered = renderTransactionalEmail(templateId, variables);
   const payload: OutboundEmailPayload = {
     to,
@@ -75,5 +81,11 @@ export async function sendRenderedTemplateEmail(
     payload.tags = tags;
   }
 
-  await deliverTransactionalEmail(payload);
+  const { providerMessageId } = await deliverTransactionalEmail(payload);
+
+  return {
+    templateId: rendered.templateId,
+    subject: rendered.subject,
+    providerMessageId
+  };
 }
