@@ -570,12 +570,29 @@ export interface TestServiceAgreementTemplateRecord {
   deletedAt: Date | null;
 }
 
+export interface TestVipMembershipTierRecord {
+  id: string;
+  companyId: string;
+  name: string;
+  description: string | null;
+  monthlyPrice: string;
+  discountPercent: string;
+  includedVisitsPerMonth: number | null;
+  stripeMonthlyPriceId: string | null;
+  sortOrder: number | null;
+  isActive: boolean;
+  createdAt: Date;
+  updatedAt: Date;
+  deletedAt: Date | null;
+}
+
 export interface TestMaintenancePlanRecord {
   id: string;
   companyId: string;
   customerId: string;
   propertyId: string | null;
   serviceAgreementTemplateId: string | null;
+  vipTierId: string | null;
   name: string;
   description: string | null;
   includedServices: string[] | null;
@@ -1461,12 +1478,29 @@ export interface TestServiceAgreementTemplateRecord {
   deletedAt: Date | null;
 }
 
+export interface TestVipMembershipTierRecord {
+  id: string;
+  companyId: string;
+  name: string;
+  description: string | null;
+  monthlyPrice: string;
+  discountPercent: string;
+  includedVisitsPerMonth: number | null;
+  stripeMonthlyPriceId: string | null;
+  sortOrder: number | null;
+  isActive: boolean;
+  createdAt: Date;
+  updatedAt: Date;
+  deletedAt: Date | null;
+}
+
 export interface TestMaintenancePlanRecord {
   id: string;
   companyId: string;
   customerId: string;
   propertyId: string | null;
   serviceAgreementTemplateId: string | null;
+  vipTierId: string | null;
   name: string;
   description: string | null;
   includedServices: string[] | null;
@@ -1963,6 +1997,7 @@ type AnyTestRecord =
   | TestJobPhotoRecord
   | TestServiceAgreementTemplateRecord
   | TestMaintenancePlanRecord
+  | TestVipMembershipTierRecord
   | TestMaintenanceVisitRecord
   | TestAutomationRuleRecord
   | TestAiRecommendationRecord
@@ -2059,14 +2094,7 @@ interface TestState {
   jobPhotos: TestJobPhotoRecord[];
   serviceAgreementTemplates: TestServiceAgreementTemplateRecord[];
   maintenancePlans: TestMaintenancePlanRecord[];
-  vipMembershipTiers: Array<
-    Record<string, unknown> & {
-      id: string;
-      companyId: string;
-      discountPercent: string;
-      deletedAt: Date | null;
-    }
-  >;
+  vipMembershipTiers: TestVipMembershipTierRecord[];
   maintenanceVisits: TestMaintenanceVisitRecord[];
   automationRules: TestAutomationRuleRecord[];
   aiRecommendations: TestAiRecommendationRecord[];
@@ -3942,6 +3970,7 @@ function createMaintenancePlanRecord(
     customerId: values.customerId,
     propertyId: values.propertyId ?? null,
     serviceAgreementTemplateId: values.serviceAgreementTemplateId ?? null,
+    vipTierId: values.vipTierId ?? null,
     name: values.name ?? "Maintenance Plan",
     description: values.description ?? null,
     includedServices: values.includedServices ?? [],
@@ -4794,11 +4823,21 @@ function createRow(tableName: TableName, values: Record<string, unknown>): AnyTe
         values as Partial<TestMaintenancePlanRecord> & Pick<TestMaintenancePlanRecord, "companyId" | "customerId">
       );
     case "vipMembershipTiers": {
-      const record = {
+      const record: TestVipMembershipTierRecord = {
         id: randomUUID(),
-        deletedAt: null,
-        ...values
-      } as FakeDbState["vipMembershipTiers"][number];
+        companyId: String(values.companyId),
+        name: String(values.name ?? "VIP"),
+        description: (values.description as string | null | undefined) ?? null,
+        monthlyPrice: String(values.monthlyPrice ?? "0.00"),
+        discountPercent: String(values.discountPercent ?? "0"),
+        includedVisitsPerMonth: (values.includedVisitsPerMonth as number | null | undefined) ?? null,
+        stripeMonthlyPriceId: (values.stripeMonthlyPriceId as string | null | undefined) ?? null,
+        sortOrder: (values.sortOrder as number | null | undefined) ?? 0,
+        isActive: (values.isActive as boolean | undefined) ?? true,
+        createdAt: new Date(),
+        updatedAt: new Date(),
+        deletedAt: null
+      };
       state.vipMembershipTiers.push(record);
       return record;
     }
