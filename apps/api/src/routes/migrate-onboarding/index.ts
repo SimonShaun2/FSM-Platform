@@ -10,6 +10,7 @@ import {
   getActiveMigrateOnboardingSessionHandler,
   getMigrateDedupePreviewHandler,
   getMigrateRelationalPreviewHandler,
+  getMigrateOnboardingIngestStatusHandler,
   getMigrateOnboardingBundleHandler,
   linkMigrateOnboardingFilesHandler,
   listMigrateOnboardingSourcesHandler,
@@ -39,7 +40,8 @@ import {
   confirmImportFileLinkDecisionsValidation,
   fileLinkPreviewRouteSchema,
   runFileLinkRouteSchema,
-  confirmFileLinkRouteSchema
+  confirmFileLinkRouteSchema,
+  ingestStatusRouteSchema
 } from "./schemas.js";
 
 const migrateOnboardingRoutes: FastifyPluginAsync = async (fastify) => {
@@ -121,6 +123,12 @@ const migrateOnboardingRoutes: FastifyPluginAsync = async (fastify) => {
     preValidation: migrateOnboardingBundleIdValidation,
     schema: relationalPreviewRouteSchema
   }, getMigrateRelationalPreviewHandler);
+
+  fastify.get("/migrate/onboarding/sessions/:bundleId/ingest-status", {
+    preHandler: [authenticate, requireOwnerOrAdmin],
+    preValidation: migrateOnboardingBundleIdValidation,
+    schema: ingestStatusRouteSchema
+  }, getMigrateOnboardingIngestStatusHandler);
 
   fastify.patch("/migrate/onboarding/sessions/:bundleId/dedupe-decisions", {
     preHandler: [authenticate, requireOwnerOrAdmin],

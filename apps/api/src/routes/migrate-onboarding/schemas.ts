@@ -64,3 +64,4 @@ export const confirmImportFileLinkDecisionsValidation = withZodValidation({
 export const fileLinkPreviewRouteSchema: FastifySchema = {};
 export const runFileLinkRouteSchema: FastifySchema = {};
 export const confirmFileLinkRouteSchema: FastifySchema = {};
+export const ingestStatusRouteSchema: FastifySchema = {};
