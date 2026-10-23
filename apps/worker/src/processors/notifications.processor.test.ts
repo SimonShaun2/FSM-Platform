@@ -58,7 +58,10 @@ function createDependencies(): notificationsProcessor.NotificationsDependencies 
       sendServiceAgreementRenewalReminderEmail: vi.fn(async () => undefined),
       sendServiceAgreementPaymentFailedEmail: vi.fn(async () => undefined),
       sendBookingConfirmationEmail: vi.fn(async () => undefined),
-      sendBookingDeclineEmail: vi.fn(async () => undefined)
+      sendBookingDeclineEmail: vi.fn(async () => undefined),
+      sendVipMembershipWelcomeEmail: vi.fn(async () => undefined),
+      sendVipMembershipRenewalEmail: vi.fn(async () => undefined),
+      sendVipMembershipPaymentFailedEmail: vi.fn(async () => undefined)
     },
     sms: {
       sendSms: vi.fn(async () => "SM123")

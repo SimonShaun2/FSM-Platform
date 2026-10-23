@@ -24,6 +24,12 @@ import {
   isPlatformMvpBillingMetadata,
   shouldIgnoreMaintenancePlanSubscriptionInvoice
 } from "./stripe-platform-billing.handler.js";
+import { isVipMembershipBillingMetadata } from "@fsm/types";
+import {
+  handleVipInvoicePaymentFailed,
+  handleVipInvoicePaymentSucceeded,
+  handleVipSubscriptionCreated
+} from "./stripe-vip-membership.handler.js";
 import {
   claimEventProcessing,
   clearEventProcessingClaim,
@@ -169,6 +175,17 @@ export async function handleSubscriptionUpdated(
     return;
   }
 
+  if (isVipMembershipBillingMetadata(subscription.metadata)) {
+    if (event.type === "customer.subscription.created") {
+      await handleVipSubscriptionCreated(
+        event as Stripe.CustomerSubscriptionCreatedEvent,
+        logContext
+      );
+    }
+
+    return;
+  }
+
   const companyId = extractStripeCompanyId(subscription.metadata, logContext, event.type);
 
   if (!companyId) {
@@ -238,6 +255,10 @@ export async function handleSubscriptionDeleted(
 
   if (isPlatformMvpBillingMetadata(subscription.metadata)) {
     await handlePlatformSubscriptionDeleted(event, logContext);
+    return;
+  }
+
+  if (isVipMembershipBillingMetadata(subscription.metadata)) {
     return;
   }
 
@@ -371,6 +392,10 @@ export async function handleInvoicePaymentSucceeded(
     return;
   }
 
+  if (await handleVipInvoicePaymentSucceeded(event, logContext)) {
+    return;
+  }
+
   const companyId = extractStripeCompanyId(stripeInvoice.metadata, logContext, event.type);
 
   if (!companyId) {
@@ -436,6 +461,10 @@ export async function handleInvoicePaymentFailed(
   const stripeInvoice = event.data.object;
 
   if (!stripeInvoice.subscription) {
+    return;
+  }
+
+  if (await handleVipInvoicePaymentFailed(event, logContext)) {
     return;
   }
 

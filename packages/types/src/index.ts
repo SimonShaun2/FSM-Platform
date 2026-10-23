@@ -53,3 +53,4 @@ export * from "./pair4/operator-queue-jobs.js";
 export * from "./pair4/retention-gates.js";
 export * from "./pair4/retention-gates-eval.js";
 export * from "./operator-inbox.js";
+export * from "./vip-membership/index.js";
