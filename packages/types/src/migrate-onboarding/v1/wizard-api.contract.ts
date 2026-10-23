@@ -12,6 +12,7 @@ import {
   MIGRATE_ONBOARDING_CONTRACT_ID,
   setMigrateOnboardingSourceBodySchema
 } from "./schemas.js";
+import { migrateOnboardingIngestStatusResponseSchema } from "./ingest-status.schemas.js";
 import {
   applySavedCardMigrationMappingsBodySchema,
   confirmStripeImportBodySchema,
@@ -34,7 +35,8 @@ export type MigrateOnboardingWizardRouteContract = {
 };
 
 /**
- * Authoritative wizard HTTP surface (must match `apps/api/src/routes/migrate-onboarding/index.ts`).
+ * Authoritative wizard HTTP surface (must match `apps/api/src/routes/migrate-onboarding/index.ts`
+ * and saved-card routes under the same bundle prefix).
  * Paths include the `/api/v1` prefix registered in `app.ts`.
  */
 export const MIGRATE_ONBOARDING_WIZARD_API_ROUTES: readonly MigrateOnboardingWizardRouteContract[] = [
@@ -78,6 +80,11 @@ export const MIGRATE_ONBOARDING_WIZARD_API_ROUTES: readonly MigrateOnboardingWiz
   },
   {
     method: "POST",
+    path: "/api/v1/migrate/onboarding/sessions/:bundleId/acknowledge-preview",
+    responseSchemaId: "migrateOnboardingBundle"
+  },
+  {
+    method: "POST",
     path: "/api/v1/migrate/onboarding/sessions/:bundleId/file-link/run",
     responseSchemaId: "migrateOnboardingBundle"
   },
@@ -92,11 +99,6 @@ export const MIGRATE_ONBOARDING_WIZARD_API_ROUTES: readonly MigrateOnboardingWiz
     responseSchemaId: "migrateOnboardingBundle"
   },
   {
-    method: "POST",
-    path: "/api/v1/migrate/onboarding/sessions/:bundleId/acknowledge-preview",
-    responseSchemaId: "migrateOnboardingBundle"
-  },
-  {
     method: "GET",
     path: "/api/v1/migrate/onboarding/sessions/:bundleId/dedupe-preview",
     responseSchemaId: "migrateDedupePreviewResponse"
@@ -105,6 +107,11 @@ export const MIGRATE_ONBOARDING_WIZARD_API_ROUTES: readonly MigrateOnboardingWiz
     method: "GET",
     path: "/api/v1/migrate/onboarding/sessions/:bundleId/relational-preview",
     responseSchemaId: "migrateRelationalPreviewResponse"
+  },
+  {
+    method: "GET",
+    path: "/api/v1/migrate/onboarding/sessions/:bundleId/ingest-status",
+    responseSchemaId: "migrateOnboardingIngestStatusResponse"
   },
   {
     method: "PATCH",
@@ -165,6 +172,7 @@ export const migrateOnboardingWizardResponseSchemas = {
   migrateDedupePreviewResponse: migrateDedupePreviewResponseSchema,
   migrateRelationalPreviewResponse: migrateRelationalPreviewResponseSchema,
   migrateOnboardingCommitResponse: migrateOnboardingCommitResponseSchema,
+  migrateOnboardingIngestStatusResponse: migrateOnboardingIngestStatusResponseSchema,
   savedCardMigration: savedCardMigrationSchema,
   savedCardMigrationStatus: z.object({
     migration: savedCardMigrationSchema.nullable()

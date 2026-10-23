@@ -28,6 +28,7 @@ import {
   listMigrateOnboardingSources,
   setMigrateOnboardingSource
 } from "../../services/migrate-onboarding.service.js";
+import { getMigrateOnboardingIngestStatus } from "../../services/migrate-onboarding-ingest-status.service.js";
 
 export async function listMigrateOnboardingSourcesHandler(
   _request: FastifyRequest,
@@ -174,6 +175,15 @@ export async function confirmMigrateImportFileLinkHandler(
     body
   );
   return reply.send(preview);
+}
+
+export async function getMigrateOnboardingIngestStatusHandler(
+  request: FastifyRequest,
+  reply: FastifyReply
+): Promise<FastifyReply> {
+  const { bundleId } = request.params as { bundleId: string };
+  const status = await getMigrateOnboardingIngestStatus(request.company.id, bundleId);
+  return reply.send(status);
 }
 
 export async function commitMigrateOnboardingBundleHandler(
