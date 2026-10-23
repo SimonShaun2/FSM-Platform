@@ -3,5 +3,4 @@
 set -euo pipefail
 ROOT="$(cd "$(dirname "$0")/.." && pwd)"
 cd "$ROOT"
-bash "$ROOT/scripts/vercel-web-build-deps.sh"
-corepack pnpm --filter @fsm/web exec next build
+corepack pnpm --filter @fsm/web build
