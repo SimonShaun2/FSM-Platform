@@ -6,6 +6,7 @@ import { env } from "@fsm/config";
 
 import { redactAccessTokenInUrl } from "./lib/request-log-path.js";
 import authenticatePlugin from "./plugins/authenticate.js";
+import companyScopedWritePlugin from "./plugins/company-scoped-write.js";
 import errorHandlerPlugin from "./plugins/error-handler.js";
 import requestLoggerPlugin from "./plugins/request-logger.js";
 import activityEventRoutes from "./routes/activity-events/index.js";
@@ -14,6 +15,7 @@ import aiRoutes from "./routes/ai/index.js";
 import automationRuleRoutes from "./routes/automation-rules/index.js";
 import attachmentRoutes from "./routes/attachments/index.js";
 import authRoutes from "./routes/auth/index.js";
+import billingRoutes from "./routes/billing/index.js";
 import bookingRoutes from "./routes/booking/index.js";
 import companyRoutes from "./routes/company/index.js";
 import campaignRoutes from "./routes/campaigns/index.js";
@@ -74,6 +76,7 @@ export async function buildApp() {
   await app.register(errorHandlerPlugin);
   await app.register(healthRoutes);
   await app.register(authenticatePlugin);
+  await app.register(companyScopedWritePlugin);
 
   await app.register(activityEventRoutes, { prefix: "/api/v1" });
   await app.register(agentActionRoutes, { prefix: "/api/v1" });
@@ -103,6 +106,7 @@ export async function buildApp() {
   await app.register(technicianExtensionRoutes, { prefix: "/api/v1/technicians" });
   await app.register(timeRoutes, { prefix: "/api/v1/time" });
   await app.register(stripeRoutes, { prefix: "/api/v1/stripe" });
+  await app.register(billingRoutes, { prefix: "/api/v1/billing" });
   await app.register(estimateRoutes, { prefix: "/api/v1/estimates" });
   await app.register(invoiceRoutes, { prefix: "/api/v1" });
   await app.register(importRoutes, { prefix: "/api/v1" });

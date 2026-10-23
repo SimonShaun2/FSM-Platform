@@ -36,27 +36,34 @@ Apply after **`git merge origin/dev`**. Contiguous chain **0026 → 0030**.
 
 | idx | SQL tag | Owner | PR | Scope (migration file only) |
 | --- | --- | --- | --- | --- |
-| **26** | `0026_fs_migrate_import_lineage` | **Noah** | [#96](https://github.com/SimonShaun2/Renvani/pull/96) | **All import lineage DDL** |
-| **27** | `0027_stack10_tenant_rls_policies` | **Sofia** | [#102](https://github.com/SimonShaun2/Renvani/pull/102) | RLS policies |
-| **28** | `0028_fs_migrate_onboarding_wizard` | **Ben** | [#114](https://github.com/SimonShaun2/Renvani/pull/114) | Wizard columns — **no lineage columns** |
-| **29** | `0029_fs_migrate_price_book_catalog` | **Omar** | [#113](https://github.com/SimonShaun2/Renvani/pull/113) | Price book catalog |
-| **30** | `0030_fs_migrate_invoice_payment_import` | **Hana** | [#115](https://github.com/SimonShaun2/Renvani/pull/115) | Invoice/payment import |
+| **26** | `0026_fs_migrate_import_lineage` | **Noah** | [#96](https://github.com/SimonShaun2/Renvani/pull/96) | **All import lineage DDL** — bundles, chunk runs, session progress, `source_system` / `source_id` / `import_session_id` on customers, jobs, invoices, payments, catalog, etc. |
+| **27** | `0027_stack10_tenant_rls_policies` | **Sofia** | [#102](https://github.com/SimonShaun2/Renvani/pull/102) | RLS ENABLE/FORCE + policies (`customers`, `import_sessions`, `jobs`) from catalog |
+| **28** | `0028_fs_migrate_onboarding_wizard` | **Ben** | [#114](https://github.com/SimonShaun2/Renvani/pull/114) | Wizard columns on `import_bundles`, bundle↔session links, `import.bundle.*` events — **no new lineage columns** |
+| **29** | `0029_fs_migrate_price_book_catalog` | **Omar** | [#113](https://github.com/SimonShaun2/Renvani/pull/113) | `product_catalog`, line seeds, `price_book` entity — **do not edit `0026` SQL**; no duplicate lineage columns |
+| **30** | `0030_fs_migrate_invoice_payment_import` | **Hana** | [#115](https://github.com/SimonShaun2/Renvani/pull/115) | `payments` import entity, commit indexes/constraints — **no duplicate lineage columns** (lineage in **0026** only) |
 
-**No migration file:** **Ezra** [#110](https://github.com/SimonShaun2/Renvani/pull/110) — drop `0027_stack10_*` SQL from branch.
+**No migration file**
 
-**Merge batch 1 (8–10 PRs):** #96, #107, #117, #102, #114, #113, #115, #110, #112, #103, #101, #104 — one batched triple sign-off when all green; merge preserving SQL order **0026→0030**.
+| Owner | PR | Action on merge `dev` |
+| --- | --- | --- |
+| **Ezra** | [#110](https://github.com/SimonShaun2/Renvani/pull/110) | Drop `0027_stack10_*` SQL + journal from branch if present; keep Neon CI / `neon-per-pr-branch.mjs` only |
 
-**FS-94 platform billing:** **⏸** per `BATCH-PLAN-5-9.md` §0.
+**Merge batch 1 (8–10 PRs, migration-aware merge order on `dev`)**
+
+Candidates: **#96**, **#107**, **#117**, **#102**, **#114**, **#113**, **#115**, **#110**, **#112**, **#103**, **#101**, **#104** — single batched triple sign-off when all green at heads; merge as one batch (SQL order **0026 → 0030** preserved).
+
+**FS-94 platform billing:** **⏸** per `BATCH-PLAN-5-9.md` §0 — do not allocate idx until founder/CoS budget gate.
 
 ---
 
 ## Owner sync procedure (2026-10-23)
 
 1. `git fetch origin dev`  
-2. `git merge origin/dev` (**no rebase, no force-push**).  
-3. Rename migration to assigned idx/tag; fix `_journal.json`.  
-4. `pnpm --filter @fsm/db db:check-migrations` + `pnpm --filter @fsm/db test`.  
-5. PR comment: `old_tag → new_tag` for E.. CoS.
+2. `git merge origin/dev` on your feature branch (**no rebase, no force-push**).  
+3. Rename your migration to **your assigned idx/tag**; fix `_journal.json` to stay contiguous with `dev`.  
+4. Remove any lineage `ADD COLUMN` not in **0026** (coordinate with Noah if **0026** must gain a table you need).  
+5. `pnpm --filter @fsm/db db:check-migrations` + `pnpm --filter @fsm/db test`.  
+6. PR comment: `old_tag → new_tag` for E.. CoS.
 
 ---
 
@@ -64,4 +71,9 @@ Apply after **`git merge origin/dev`**. Contiguous chain **0026 → 0030**.
 
 | Date | Change |
 | --- | --- |
-| 2026-10-23 | Central assign **0026–0030**; batch-1 merge policy (8–10 PRs) |
+| 2026-10-22 | Initial registry; mapped #52–#56 migration collision risk post-0017 |
+| 2026-10-22 | Assigned **0023** to #75 (FS-87); #75 must renumber off `0018_field_work_sync` |
+| 2026-10-22 | Synced tip to **0025** after #81; next free **0026**; FS-94 deferred |
+| 2026-10-23 | **0026** reserved for FS-MIGRATE import lineage per ADR-FS-MIGRATE |
+| 2026-10-23 | **Central assign 0026–0030** for #96, #102, #114, #113, #115; #110 migration stripped; lineage-only-in-0026 rule |
+| 2026-10-23 | Founder batch policy: 8–10 PRs per merge batch; auto CI at PR head |

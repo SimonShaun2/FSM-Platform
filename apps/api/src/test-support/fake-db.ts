@@ -12,7 +12,7 @@ type TableName =
   | "assets"
   | "jobs"
   | "importSessions"
-  | "importBundles"
+  | "importChunkRuns"
   | "dataExportSessions"
   | "estimates"
   | "estimateItems"
@@ -87,6 +87,7 @@ type MaintenancePlanStatus = "active" | "paused" | "expired" | "cancelled";
 type MaintenancePlanFrequency = "monthly" | "bi_monthly" | "quarterly" | "bi_annual" | "annual";
 type ServiceAgreementBillingCycle = "monthly" | "annual";
 type ImportSessionStatus = "uploaded" | "mapping" | "preview" | "importing" | "completed" | "failed" | "rolled_back";
+type ImportChunkRunStatus = "pending" | "running" | "completed" | "failed";
 type DataExportStatus = "pending" | "processing" | "completed" | "failed" | "expired";
 type DataExportFormat = "json" | "csv_bundle";
 type ImportEntityType = "customers" | "properties" | "assets" | "jobs" | "estimates" | "invoices";
@@ -212,6 +213,8 @@ export interface TestCustomerRecord {
   prefersEmail: boolean | null;
   doNotContact: boolean | null;
   stripeCustomerId: string | null;
+  sourceSystem: string | null;
+  sourceId: string | null;
   importSessionId: string | null;
   createdAt: Date;
   updatedAt: Date;
@@ -314,26 +317,12 @@ export interface TestImportValidationError {
   value: string;
 }
 
-export interface TestImportBundleRecord {
-  id: string;
-  companyId: string;
-  createdById: string | null;
-  status: "active" | "committing" | "completed" | "abandoned";
-  wizardStep: number;
-  stepState: Record<string, unknown>;
-  dedupeDecisions: Record<string, string>;
-  completedAt: Date | null;
-  abandonedAt: Date | null;
-  createdAt: Date;
-  updatedAt: Date;
-  deletedAt: Date | null;
-}
-
 export interface TestImportSessionRecord {
   id: string;
   companyId: string;
   createdById: string | null;
   importBundleId: string | null;
+  sourceSystem: string | null;
   entityType: ImportEntityType;
   status: ImportSessionStatus;
   fileName: string;
@@ -347,10 +336,30 @@ export interface TestImportSessionRecord {
   columnMappings: Record<string, string | null>;
   validationErrors: TestImportValidationError[];
   aiInferences: Record<string, unknown>;
+  progress: Record<string, unknown>;
   rolledBackAt: Date | null;
   rolledBackById: string | null;
   completedAt: Date | null;
   errorMessage: string | null;
+  createdAt: Date;
+  updatedAt: Date;
+  deletedAt: Date | null;
+}
+
+export interface TestImportChunkRunRecord {
+  id: string;
+  companyId: string;
+  importSessionId: string;
+  entityType: ImportEntityType;
+  chunkIndex: number;
+  chunksTotal: number;
+  idempotencyKey: string;
+  status: ImportChunkRunStatus;
+  cursor: Record<string, unknown>;
+  rowsOk: number | null;
+  rowsFailed: number | null;
+  errorMessage: string | null;
+  completedAt: Date | null;
   createdAt: Date;
   updatedAt: Date;
   deletedAt: Date | null;
@@ -1089,6 +1098,8 @@ export interface TestCustomerRecord {
   prefersEmail: boolean | null;
   doNotContact: boolean | null;
   stripeCustomerId: string | null;
+  sourceSystem: string | null;
+  sourceId: string | null;
   importSessionId: string | null;
   createdAt: Date;
   updatedAt: Date;
@@ -1203,6 +1214,35 @@ export interface TestDataExportSessionRecord {
   fileUrl: string | null;
   recordCounts: Record<string, number>;
   expiresAt: Date | null;
+  completedAt: Date | null;
+  errorMessage: string | null;
+  createdAt: Date;
+  updatedAt: Date;
+  deletedAt: Date | null;
+}
+
+export interface TestImportSessionRecord {
+  id: string;
+  companyId: string;
+  createdById: string | null;
+  importBundleId: string | null;
+  sourceSystem: string | null;
+  entityType: ImportEntityType;
+  status: ImportSessionStatus;
+  fileName: string;
+  fileUrl: string;
+  totalRows: number | null;
+  validRows: number | null;
+  errorRows: number | null;
+  importedRows: number | null;
+  skippedRows: number | null;
+  duplicateRows: number | null;
+  columnMappings: Record<string, string | null>;
+  validationErrors: TestImportValidationError[];
+  aiInferences: Record<string, unknown>;
+  progress: Record<string, unknown>;
+  rolledBackAt: Date | null;
+  rolledBackById: string | null;
   completedAt: Date | null;
   errorMessage: string | null;
   createdAt: Date;
@@ -1874,7 +1914,7 @@ type AnyTestRecord =
   | TestAssetRecord
   | TestJobRecord
   | TestImportSessionRecord
-  | TestImportBundleRecord
+  | TestImportChunkRunRecord
   | TestDataExportSessionRecord
   | TestEstimateRecord
   | TestEstimateItemRecord
@@ -1921,7 +1961,6 @@ type MockTable =
   | typeof assetsTable
   | typeof jobsTable
   | typeof importSessionsTable
-  | typeof importBundlesTable
   | typeof dataExportSessionsTable
   | typeof estimatesTable
   | typeof estimateItemsTable
@@ -1968,7 +2007,7 @@ interface TestState {
   assets: TestAssetRecord[];
   jobs: TestJobRecord[];
   importSessions: TestImportSessionRecord[];
-  importBundles: TestImportBundleRecord[];
+  importChunkRuns: TestImportChunkRunRecord[];
   dataExportSessions: TestDataExportSessionRecord[];
   estimates: TestEstimateRecord[];
   estimateItems: TestEstimateItemRecord[];
@@ -2089,6 +2128,8 @@ const customersTable = {
   prefersEmail: "prefersEmail",
   doNotContact: "doNotContact",
   stripeCustomerId: "stripeCustomerId",
+  sourceSystem: "sourceSystem",
+  sourceId: "sourceId",
   importSessionId: "importSessionId",
   createdAt: "createdAt",
   updatedAt: "updatedAt",
@@ -2187,17 +2228,21 @@ const jobsTable = {
   deletedAt: "deletedAt"
 } as const;
 
-const importBundlesTable = {
-  __name: "importBundles",
+const importChunkRunsTable = {
+  __name: "importChunkRuns",
   id: "id",
   companyId: "companyId",
-  createdById: "createdById",
+  importSessionId: "importSessionId",
+  entityType: "entityType",
+  chunkIndex: "chunkIndex",
+  chunksTotal: "chunksTotal",
+  idempotencyKey: "idempotencyKey",
   status: "status",
-  wizardStep: "wizardStep",
-  stepState: "stepState",
-  dedupeDecisions: "dedupeDecisions",
+  cursor: "cursor",
+  rowsOk: "rowsOk",
+  rowsFailed: "rowsFailed",
+  errorMessage: "errorMessage",
   completedAt: "completedAt",
-  abandonedAt: "abandonedAt",
   createdAt: "createdAt",
   updatedAt: "updatedAt",
   deletedAt: "deletedAt"
@@ -2209,6 +2254,7 @@ const importSessionsTable = {
   companyId: "companyId",
   createdById: "createdById",
   importBundleId: "importBundleId",
+  sourceSystem: "sourceSystem",
   entityType: "entityType",
   status: "status",
   fileName: "fileName",
@@ -2222,6 +2268,7 @@ const importSessionsTable = {
   columnMappings: "columnMappings",
   validationErrors: "validationErrors",
   aiInferences: "aiInferences",
+  progress: "progress",
   rolledBackAt: "rolledBackAt",
   rolledBackById: "rolledBackById",
   completedAt: "completedAt",
@@ -3015,7 +3062,7 @@ const state: TestState = {
   assets: [],
   jobs: [],
   importSessions: [],
-  importBundles: [],
+  importChunkRuns: [],
   dataExportSessions: [],
   estimates: [],
   estimateItems: [],
@@ -3071,7 +3118,7 @@ function restoreState(snapshot: TestState): void {
   state.assets.splice(0, state.assets.length, ...snapshot.assets);
   state.jobs.splice(0, state.jobs.length, ...snapshot.jobs);
   state.importSessions.splice(0, state.importSessions.length, ...snapshot.importSessions);
-  state.importBundles.splice(0, state.importBundles.length, ...snapshot.importBundles);
+  state.importChunkRuns.splice(0, state.importChunkRuns.length, ...snapshot.importChunkRuns);
   state.dataExportSessions.splice(0, state.dataExportSessions.length, ...snapshot.dataExportSessions);
   state.estimates.splice(0, state.estimates.length, ...snapshot.estimates);
   state.estimateItems.splice(0, state.estimateItems.length, ...snapshot.estimateItems);
@@ -3140,8 +3187,8 @@ function getRows(tableName: TableName): AnyTestRecord[] {
       return state.jobs;
     case "importSessions":
       return state.importSessions;
-    case "importBundles":
-      return state.importBundles;
+    case "importChunkRuns":
+      return state.importChunkRuns;
     case "dataExportSessions":
       return state.dataExportSessions;
     case "estimates":
@@ -3337,6 +3384,8 @@ function createCustomerRecord(
     prefersEmail: values.prefersEmail ?? true,
     doNotContact: values.doNotContact ?? false,
     stripeCustomerId: values.stripeCustomerId ?? null,
+    sourceSystem: values.sourceSystem ?? null,
+    sourceId: values.sourceId ?? null,
     importSessionId: values.importSessionId ?? null,
     createdAt: values.createdAt ?? now,
     updatedAt: values.updatedAt ?? now,
@@ -3454,27 +3503,6 @@ function createJobRecord(
   };
 }
 
-function createImportBundleRecord(
-  values: Partial<TestImportBundleRecord> & Pick<TestImportBundleRecord, "companyId">
-): TestImportBundleRecord {
-  const now = new Date();
-
-  return {
-    id: values.id ?? nextId(),
-    companyId: values.companyId,
-    createdById: values.createdById ?? null,
-    status: values.status ?? "active",
-    wizardStep: values.wizardStep ?? 1,
-    stepState: values.stepState ?? {},
-    dedupeDecisions: values.dedupeDecisions ?? {},
-    completedAt: values.completedAt ?? null,
-    abandonedAt: values.abandonedAt ?? null,
-    createdAt: values.createdAt ?? now,
-    updatedAt: values.updatedAt ?? now,
-    deletedAt: values.deletedAt ?? null
-  };
-}
-
 function createDataExportSessionRecord(
   values: Partial<TestDataExportSessionRecord> & Pick<TestDataExportSessionRecord, "companyId">
 ): TestDataExportSessionRecord {
@@ -3511,6 +3539,7 @@ function createImportSessionRecord(
     companyId: values.companyId,
     createdById: values.createdById ?? null,
     importBundleId: values.importBundleId ?? null,
+    sourceSystem: values.sourceSystem ?? null,
     entityType: values.entityType ?? "customers",
     status: values.status ?? "uploaded",
     fileName: values.fileName,
@@ -3524,10 +3553,45 @@ function createImportSessionRecord(
     columnMappings: values.columnMappings ?? {},
     validationErrors: values.validationErrors ?? [],
     aiInferences: values.aiInferences ?? {},
+    progress: values.progress ?? {},
     rolledBackAt: values.rolledBackAt ?? null,
     rolledBackById: values.rolledBackById ?? null,
     completedAt: values.completedAt ?? null,
     errorMessage: values.errorMessage ?? null,
+    createdAt: values.createdAt ?? now,
+    updatedAt: values.updatedAt ?? now,
+    deletedAt: values.deletedAt ?? null
+  };
+}
+
+function createImportChunkRunRecord(
+  values: Partial<TestImportChunkRunRecord> &
+    Pick<
+      TestImportChunkRunRecord,
+      | "companyId"
+      | "importSessionId"
+      | "entityType"
+      | "chunkIndex"
+      | "chunksTotal"
+      | "idempotencyKey"
+    >
+): TestImportChunkRunRecord {
+  const now = new Date();
+
+  return {
+    id: values.id ?? nextId(),
+    companyId: values.companyId,
+    importSessionId: values.importSessionId,
+    entityType: values.entityType,
+    chunkIndex: values.chunkIndex,
+    chunksTotal: values.chunksTotal,
+    idempotencyKey: values.idempotencyKey,
+    status: values.status ?? "pending",
+    cursor: values.cursor ?? {},
+    rowsOk: values.rowsOk ?? 0,
+    rowsFailed: values.rowsFailed ?? 0,
+    errorMessage: values.errorMessage ?? null,
+    completedAt: values.completedAt ?? null,
     createdAt: values.createdAt ?? now,
     updatedAt: values.updatedAt ?? now,
     deletedAt: values.deletedAt ?? null
@@ -4564,8 +4628,19 @@ function createRow(tableName: TableName, values: Record<string, unknown>): AnyTe
         values as Partial<TestImportSessionRecord> &
           Pick<TestImportSessionRecord, "companyId" | "fileName" | "fileUrl">
       );
-    case "importBundles":
-      return createImportBundleRecord(values as Partial<TestImportBundleRecord> & Pick<TestImportBundleRecord, "companyId">);
+    case "importChunkRuns":
+      return createImportChunkRunRecord(
+        values as Partial<TestImportChunkRunRecord> &
+          Pick<
+            TestImportChunkRunRecord,
+            | "companyId"
+            | "importSessionId"
+            | "entityType"
+            | "chunkIndex"
+            | "chunksTotal"
+            | "idempotencyKey"
+          >
+      );
     case "dataExportSessions":
       return createDataExportSessionRecord(
         values as Partial<TestDataExportSessionRecord> & Pick<TestDataExportSessionRecord, "companyId">
@@ -5036,7 +5111,7 @@ export const properties = propertiesTable;
 export const assets = assetsTable;
 export const jobs = jobsTable;
 export const importSessions = importSessionsTable;
-export const importBundles = importBundlesTable;
+export const importChunkRuns = importChunkRunsTable;
 export const dataExportSessions = dataExportSessionsTable;
 export const estimates = estimatesTable;
 export const estimateItems = estimateItemsTable;
@@ -5321,12 +5396,32 @@ function resolveFieldKey(field: unknown): string {
   return typeof field === "string" ? field : String(field);
 }
 
+function readClerkOrganizationIdFromCompanySettings(settings: Record<string, unknown>): string | null {
+  const clerk = settings.clerk;
+  if (!clerk || typeof clerk !== "object" || Array.isArray(clerk)) {
+    return null;
+  }
+  const orgId = (clerk as { organizationId?: unknown }).organizationId;
+  return typeof orgId === "string" && orgId.length > 0 ? orgId : null;
+}
+
 export function createDrizzleModuleMock() {
-  const sqlTag = (strings: TemplateStringsArray, ..._values: unknown[]) => {
+  const sqlTag = (strings: TemplateStringsArray, ...values: unknown[]) => {
     const template = strings.join("");
 
     if (template.includes("COALESCE")) {
       return JOB_ACTIVITY_AT_MARKER;
+    }
+
+    if (template.includes("clerk") && template.includes("organizationId")) {
+      const clerkOrganizationId = values.at(-1);
+      if (typeof clerkOrganizationId !== "string") {
+        return {};
+      }
+      return <T extends { settings?: Record<string, unknown> }>(row: T) => {
+        const settings = row.settings ?? {};
+        return readClerkOrganizationIdFromCompanySettings(settings) === clerkOrganizationId;
+      };
     }
 
     return {};
@@ -5382,9 +5477,22 @@ export function createDrizzleModuleMock() {
   };
 }
 
+async function runTransactionWithRetry<T>(callback: (tx: TestDb) => Promise<T>): Promise<T> {
+  return db.transaction(callback);
+}
+
+async function runTransactionWithTenantSession<T>(
+  _companyId: string,
+  callback: (tx: TestDb) => Promise<T>
+): Promise<T> {
+  return db.transaction(callback);
+}
+
 export function createDbModuleMock() {
   return {
     db,
+    runTransactionWithRetry,
+    runTransactionWithTenantSession,
     companies,
     users,
     refreshTokens,
@@ -5393,7 +5501,7 @@ export function createDbModuleMock() {
     assets,
     jobs,
     importSessions,
-    importBundles,
+    importChunkRuns,
     dataExportSessions,
     estimates,
     estimateItems,
@@ -5449,7 +5557,7 @@ export function resetTestState(): void {
   state.assets.length = 0;
   state.jobs.length = 0;
   state.importSessions.length = 0;
-  state.importBundles.length = 0;
+  state.importChunkRuns.length = 0;
   state.dataExportSessions.length = 0;
   state.estimates.length = 0;
   state.estimateItems.length = 0;
@@ -5557,14 +5665,6 @@ export function seedImportSession(
 ): TestImportSessionRecord {
   const record = createImportSessionRecord(values);
   state.importSessions.push(record);
-  return record;
-}
-
-export function seedImportBundle(
-  values: Partial<TestImportBundleRecord> & Pick<TestImportBundleRecord, "companyId">
-): TestImportBundleRecord {
-  const record = createImportBundleRecord(values);
-  state.importBundles.push(record);
   return record;
 }
 

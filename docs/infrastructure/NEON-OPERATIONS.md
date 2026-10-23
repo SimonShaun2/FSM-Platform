@@ -21,6 +21,7 @@
 
 - Use Neon branch-per-PR for schema migration review when migration PRs run extended CI (coordinate with Tech Lead — no collision on `0026+`).
 - Local and default `batch-ci` may continue disposable Postgres until Neon CI connection is founder-provided.
+- **Per-PR CI wiring:** see [NEON-PER-PR-CI.md](./NEON-PER-PR-CI.md) (`NEON_CI_STAGING_DATABASE_URL`, staging-only).
 
 ## Pooling (FS-80)
 
