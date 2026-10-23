@@ -45,6 +45,10 @@
     "./neon-ci": {
       "types": "./dist/neon-ci.d.ts",
       "import": "./dist/neon-ci.js"
+    },
+    "./langfuse-env": {
+      "types": "./dist/langfuse-env.d.ts",
+      "import": "./dist/langfuse-env.js"
     }
   },
   "scripts": {

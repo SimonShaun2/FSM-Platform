@@ -348,6 +348,9 @@ importers:
       '@fsm/config':
         specifier: workspace:*
         version: link:../config
+      '@fsm/types':
+        specifier: workspace:*
+        version: link:../types
       pino:
         specifier: ^9.4.0
         version: 9.14.0
