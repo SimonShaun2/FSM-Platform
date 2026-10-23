@@ -49,7 +49,7 @@ export async function processEvaluateLoyaltyReminderCandidates(
   const candidates = await dependencies.evaluateCandidates(companyId, {
     horizonDays,
     importSessionId,
-    lapsedDays: job.data.lapsedDays,
+    ...(job.data.lapsedDays !== undefined ? { lapsedDays: job.data.lapsedDays } : {}),
     dryRun
   });
 

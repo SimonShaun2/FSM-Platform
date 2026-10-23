@@ -364,7 +364,9 @@ export function createAgreementsProcessor(
   return async (job) => {
     if (job.name === LOYALTY_AGREEMENTS_JOB_NAMES.evaluateReminderCandidates) {
       await processEvaluateLoyaltyReminderCandidates(
-        job as import("bullmq").Job<import("@fsm/types").EvaluateLoyaltyReminderCandidatesJobData>
+        job as unknown as import("bullmq").Job<
+          import("@fsm/types").EvaluateLoyaltyReminderCandidatesJobData
+        >
       );
       return;
     }
