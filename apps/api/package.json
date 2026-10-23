@@ -23,6 +23,7 @@
     "@fsm/comms": "workspace:*",
     "@fsm/config": "workspace:*",
     "@fsm/db": "workspace:*",
+    "@fsm/import-engine": "workspace:*",
     "@fsm/jobs": "workspace:*",
     "@fsm/types": "workspace:*",
     "@sendgrid/mail": "^8.1.5",

@@ -22,6 +22,7 @@ import {
   listMigrateOnboardingSources,
   setMigrateOnboardingSource
 } from "../../services/migrate-onboarding.service.js";
+import { getMigrateOnboardingIngestProgress } from "../../services/import-ingest-progress.service.js";
 
 export async function listMigrateOnboardingSourcesHandler(
   _request: FastifyRequest,
@@ -144,4 +145,13 @@ export async function commitMigrateOnboardingBundleHandler(
   const { bundleId } = request.params as { bundleId: string };
   const result = await commitMigrateOnboardingBundle(request.company.id, request.user.id, bundleId);
   return reply.send(result);
+}
+
+export async function getMigrateOnboardingIngestProgressHandler(
+  request: FastifyRequest,
+  reply: FastifyReply
+): Promise<FastifyReply> {
+  const { bundleId } = request.params as { bundleId: string };
+  const progress = await getMigrateOnboardingIngestProgress(request.company.id, bundleId);
+  return reply.send(progress);
 }

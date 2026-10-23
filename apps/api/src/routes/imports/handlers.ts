@@ -12,6 +12,7 @@ import {
   rollbackImport,
   startImport
 } from "../../services/import.service.js";
+import { getImportSessionIngestProgress } from "../../services/import-ingest-progress.service.js";
 import { abortImportUploadRequest } from "./upload-guards.js";
 import {
   CSV_IMPORT_MAX_FILES,
@@ -192,4 +193,13 @@ export async function getImportErrorsHandler(
   return reply.send({
     errors
   });
+}
+
+export async function getImportIngestProgressHandler(
+  request: FastifyRequest,
+  reply: FastifyReply
+): Promise<FastifyReply> {
+  const params = request.params as ImportSessionIdParams;
+  const progress = await getImportSessionIngestProgress(request.company.id, params.id);
+  return reply.send(progress);
 }

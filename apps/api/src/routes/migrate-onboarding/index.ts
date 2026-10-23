@@ -11,6 +11,7 @@ import {
   getMigrateDedupePreviewHandler,
   getMigrateRelationalPreviewHandler,
   getMigrateOnboardingBundleHandler,
+  getMigrateOnboardingIngestProgressHandler,
   linkMigrateOnboardingFilesHandler,
   listMigrateOnboardingSourcesHandler,
   setMigrateOnboardingSourceHandler
@@ -27,6 +28,7 @@ import {
   relationalPreviewRouteSchema,
   getActiveSessionRouteSchema,
   getBundleRouteSchema,
+  ingestProgressRouteSchema,
   linkFilesRouteSchema,
   linkMigrateOnboardingFilesValidation,
   listSourcesRouteSchema,
@@ -60,6 +62,12 @@ const migrateOnboardingRoutes: FastifyPluginAsync = async (fastify) => {
     preValidation: migrateOnboardingBundleIdValidation,
     schema: getBundleRouteSchema
   }, getMigrateOnboardingBundleHandler);
+
+  fastify.get("/migrate/onboarding/sessions/:bundleId/ingest-progress", {
+    preHandler: [authenticate, requireOwnerOrAdmin],
+    preValidation: migrateOnboardingBundleIdValidation,
+    schema: ingestProgressRouteSchema
+  }, getMigrateOnboardingIngestProgressHandler);
 
   fastify.patch("/migrate/onboarding/sessions/:bundleId/source", {
     preHandler: [authenticate, requireOwnerOrAdmin],

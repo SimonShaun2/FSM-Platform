@@ -54,3 +54,4 @@ export const dedupePreviewRouteSchema: FastifySchema = {};
 export const relationalPreviewRouteSchema: FastifySchema = {};
 export const dedupeDecisionsRouteSchema: FastifySchema = {};
 export const commitBundleRouteSchema: FastifySchema = {};
+export const ingestProgressRouteSchema: FastifySchema = {};

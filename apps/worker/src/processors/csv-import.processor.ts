@@ -2,7 +2,6 @@ import { randomUUID } from "node:crypto";
 
 import { and, eq, isNull } from "drizzle-orm";
 import type { Job, Processor } from "bullmq";
-import Papa from "papaparse";
 import pino from "pino";
 
 import { mapCsvColumns } from "@fsm/ai";
@@ -31,6 +30,12 @@ import {
   validateNoteImportRows,
   validatePriceBookRows
 } from "@fsm/db";
+import {
+  buildImportChunkCommitManifest,
+  initialImportSessionChunkProgress,
+  isChunkCommitEligibleEntity,
+  parseTabularImportFile
+} from "@fsm/import-engine";
 import { normalizeImportPhone } from "@fsm/import-normalize";
 import { aiQueue } from "@fsm/jobs";
 
@@ -350,34 +355,11 @@ function buildCustomerUpdateValues(
   };
 }
 
-function parseCsv(buffer: Buffer): { headers: string[]; rows: ParsedCsvRow[] } {
-  const csvText = buffer.toString("utf8").replace(/^\uFEFF/u, "");
-  const result = Papa.parse<Record<string, string>>(csvText, {
-    header: true,
-    skipEmptyLines: true
-  });
-  const headers = (result.meta.fields ?? []).map((header) => header.trim());
-  const rows: ParsedCsvRow[] = [];
-
-  for (let index = 0; index < result.data.length; index += 1) {
-    const sourceRow = result.data[index];
-    const normalizedRow: Record<string, string> = {};
-
-    for (const header of headers) {
-      const rawValue = sourceRow?.[header];
-      normalizedRow[header] =
-        typeof rawValue === "string" ? sanitizeSpreadsheetCell(rawValue.trim()) : "";
-    }
-
-    rows.push({
-      rowNumber: index + 2,
-      values: normalizedRow
-    });
-  }
-
+function parseImportFile(buffer: Buffer, fileName: string): { headers: string[]; rows: ParsedCsvRow[] } {
+  const parsed = parseTabularImportFile(buffer, fileName);
   return {
-    headers,
-    rows
+    headers: parsed.headers,
+    rows: parsed.rows
   };
 }
 
@@ -537,7 +519,7 @@ export async function handleMapCsvColumns(job: Job<Record<string, unknown>>): Pr
 
   try {
     const fileBuffer = await downloadFile(getFileKeyFromUrl(importSession.fileUrl));
-    const parsedCsv = parseCsv(fileBuffer);
+    const parsedCsv = parseImportFile(fileBuffer, importSession.fileName);
     const sourcePresetId =
       importSession.entityType === "communications"
         ? inferCommunicationsPresetFromHeaders(parsedCsv.headers)
@@ -623,7 +605,7 @@ export async function handleValidateCsvRows(job: Job<Record<string, unknown>>): 
 
   try {
     const fileBuffer = await downloadFile(getFileKeyFromUrl(importSession.fileUrl));
-    const parsedCsv = parseCsv(fileBuffer);
+    const parsedCsv = parseImportFile(fileBuffer, importSession.fileName);
     const columnMapping = normalizeColumnMappings(importSession.columnMappings);
 
     const validationResult =
@@ -639,6 +621,31 @@ export async function handleValidateCsvRows(job: Job<Record<string, unknown>>): 
             ? validateCommunicationsRows(parsedCsv.rows, columnMapping)
           : validateCustomerRows(parsedCsv.rows, columnMapping, await getCompanyCustomers(companyId));
 
+    const priorInferences = normalizeAiInferences(importSession.aiInferences);
+    const sourceSystem =
+      typeof priorInferences.sourceSystem === "string"
+        ? priorInferences.sourceSystem
+        : importSession.sourceSystem ?? "manual_csv";
+
+    const chunkManifest =
+      isChunkCommitEligibleEntity(importSession.entityType, columnMapping)
+        ? buildImportChunkCommitManifest({
+            totalDataRows: validationResult.totalRows,
+            entityType: importSession.entityType,
+            sourceSystem,
+            importBundleId: importSession.importBundleId ?? undefined
+          })
+        : null;
+
+    const nextAiInferences = chunkManifest
+      ? {
+          ...priorInferences,
+          importChunkCommitManifest: chunkManifest
+        }
+      : priorInferences;
+
+    const nextProgress = chunkManifest ? initialImportSessionChunkProgress(chunkManifest) : undefined;
+
     await db
       .update(importSessions)
       .set({
@@ -648,6 +655,8 @@ export async function handleValidateCsvRows(job: Job<Record<string, unknown>>): 
         duplicateRows: validationResult.duplicateRows,
         validationErrors: validationResult.validationErrors,
         status: "preview",
+        aiInferences: nextAiInferences,
+        ...(nextProgress ? { progress: nextProgress } : {}),
         updatedAt: new Date()
       })
       .where(and(eq(importSessions.companyId, companyId), eq(importSessions.id, importSessionId), isNull(importSessions.deletedAt)))
@@ -675,7 +684,7 @@ async function executeNotesImport(
   importSession: ImportSessionRow
 ): Promise<void> {
   const fileBuffer = await downloadFile(getFileKeyFromUrl(importSession.fileUrl));
-  const parsedCsv = parseCsv(fileBuffer);
+  const parsedCsv = parseImportFile(fileBuffer, importSession.fileName);
   const columnMapping = normalizeColumnMappings(importSession.columnMappings);
   const validationErrors = normalizeValidationErrors(importSession.validationErrors);
   const invalidRowNumbers = new Set(validationErrors.map((validationError) => validationError.row));
@@ -748,7 +757,7 @@ async function executeCommunicationsImport(
   importSession: ImportSessionRow
 ): Promise<void> {
   const fileBuffer = await downloadFile(getFileKeyFromUrl(importSession.fileUrl));
-  const parsedCsv = parseCsv(fileBuffer);
+  const parsedCsv = parseImportFile(fileBuffer, importSession.fileName);
   const columnMapping = normalizeColumnMappings(importSession.columnMappings);
   const validationErrors = normalizeValidationErrors(importSession.validationErrors);
   const invalidRowNumbers = new Set(validationErrors.map((validationError) => validationError.row));
@@ -812,7 +821,7 @@ async function executePriceBookImport(
   importSession: ImportSessionRow
 ): Promise<void> {
   const fileBuffer = await downloadFile(getFileKeyFromUrl(importSession.fileUrl));
-  const parsedCsv = parseCsv(fileBuffer);
+  const parsedCsv = parseImportFile(fileBuffer, importSession.fileName);
   const columnMapping = normalizeColumnMappings(importSession.columnMappings);
   const validationErrors = normalizeValidationErrors(importSession.validationErrors);
   const invalidRowNumbers = new Set(validationErrors.map((validationError) => validationError.row));
@@ -906,7 +915,7 @@ export async function handleExecuteImport(job: Job<Record<string, unknown>>): Pr
     }
 
     const fileBuffer = await downloadFile(getFileKeyFromUrl(importSession.fileUrl));
-    const parsedCsv = parseCsv(fileBuffer);
+    const parsedCsv = parseImportFile(fileBuffer, importSession.fileName);
     const columnMapping = normalizeColumnMappings(importSession.columnMappings);
     const validationErrors = normalizeValidationErrors(importSession.validationErrors);
     const duplicateActions = normalizeDuplicateActions(
