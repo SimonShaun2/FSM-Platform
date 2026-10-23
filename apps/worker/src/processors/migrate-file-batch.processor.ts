@@ -17,8 +17,14 @@ import {
   IMPORT_QUEUE_JOB_NAMES,
   MigrateFileBatchJobDataSchema,
   buildMigrateFileBatchJobId,
+  buildMigrateFileBatchJobProgress,
   buildMigrateFileBatchTraceObjects,
+<<<<<<< Updated upstream
 >>>>>>> origin/dev
+=======
+  parseMigrateFileBatchJobProgress,
+  type MigrateFileBatchFailedObject,
+>>>>>>> Stashed changes
   type MigrateFileBatchJobData
 } from "@fsm/types";
 
@@ -118,12 +124,53 @@ export async function handleMigrateFileBatch(job: Job<MigrateFileBatchJobData>):
 <<<<<<< HEAD
 =======
 
-  await job.updateProgress({
-    batchIndex: payload.batchIndex,
-    batchesTotal: payload.batchesTotal,
-    objectsAcknowledged: payload.objects.length,
-    status: "stub_complete"
-  });
+  const previousProgress = parseMigrateFileBatchJobProgress(job.progress);
+  const succeeded = new Set(previousProgress?.objectsSucceeded ?? []);
+  const failuresByVendorId = new Map<string, MigrateFileBatchFailedObject>();
+
+  for (const failure of previousProgress?.objectsFailed ?? []) {
+    if (!succeeded.has(failure.vendorFileId)) {
+      failuresByVendorId.set(failure.vendorFileId, failure);
+    }
+  }
+
+  for (const object of payload.objects) {
+    if (succeeded.has(object.vendorFileId)) {
+      continue;
+    }
+
+    try {
+      await processMigrateFileBatchObject(object, payload);
+      succeeded.add(object.vendorFileId);
+      failuresByVendorId.delete(object.vendorFileId);
+    } catch (error) {
+      const errorMessage = error instanceof Error ? error.message : "migrate-file-batch object failed";
+      failuresByVendorId.set(object.vendorFileId, {
+        vendorFileId: object.vendorFileId,
+        errorMessage
+      });
+    }
+
+    const objectsFailed = [...failuresByVendorId.values()];
+    const status = objectsFailed.length > 0 ? "partial_failure" : "in_progress";
+
+    await job.updateProgress(
+      buildMigrateFileBatchJobProgress(payload, [...succeeded], objectsFailed, status)
+    );
+  }
+
+  const objectsFailed = [...failuresByVendorId.values()];
+
+  if (objectsFailed.length > 0) {
+    await job.updateProgress(
+      buildMigrateFileBatchJobProgress(payload, [...succeeded], objectsFailed, "partial_failure")
+    );
+    throw new MigrateFileBatchPartialFailureError(objectsFailed);
+  }
+
+  await job.updateProgress(
+    buildMigrateFileBatchJobProgress(payload, [...succeeded], [], "stub_complete")
+  );
 
   logMigrateFileBatchTrace(
     {
@@ -139,7 +186,20 @@ export async function handleMigrateFileBatch(job: Job<MigrateFileBatchJobData>):
     },
     "FS-MIGRATE migrate-file-batch worker completed (checkpoint reserved for Diego ingest)"
   );
+<<<<<<< Updated upstream
 >>>>>>> origin/dev
+=======
+
+  logger.info(
+    {
+      companyId: payload.companyId,
+      importSessionId: payload.importSessionId,
+      batchIndex: payload.batchIndex,
+      objectCount: payload.objects.length
+    },
+    "migrate-file-batch completed"
+  );
+>>>>>>> Stashed changes
 }
 
 export function createMigrateFileBatchProcessor(): Processor<MigrateFileBatchJobData, void, string> {
