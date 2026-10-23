@@ -1,3 +1,4 @@
+/** FS-43 API request tagging for Sentry (batch 5 / #142). */
 import fp from "fastify-plugin";
 
 import { applyNodeObservabilityTags } from "@fsm/observability";
