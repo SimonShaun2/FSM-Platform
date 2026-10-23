@@ -1712,6 +1712,7 @@ export const agentProductEnum = pgEnum("agent_product", [
   "service",
   "retention",
   "owner",
+  "loyalty",
 ]);
 
 export const fieldSyncBatchStatusEnum = pgEnum("field_sync_batch_status", ["open", "completed"]);

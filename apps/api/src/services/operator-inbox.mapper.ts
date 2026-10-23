@@ -41,7 +41,11 @@ export function resolveRiskLevel(actionType: string): OperatorInboxRiskLevel {
     return "high";
   }
 
-  if (actionType === "message.draft" || actionType === "revenue.inquiry.qualify") {
+  if (
+    actionType === "message.draft" ||
+    actionType === "revenue.inquiry.qualify" ||
+    actionType === "loyalty.reminder.propose"
+  ) {
     return "medium";
   }
 
