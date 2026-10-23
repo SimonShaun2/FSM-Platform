@@ -16,6 +16,7 @@ export type ImportSourcePresetId =
   | "quickbooks_desktop_customers"
   | "quickbooks_desktop_items"
   | "quickbooks_desktop_invoices"
+  | "quickbooks_desktop_payments"
   | "quickbooks_items"
   | "quickbooks_invoices"
   | "quickbooks_payments"
