@@ -3,7 +3,7 @@ import { normalizeHeader } from "./normalize.js";
 import type { ImportPresetEntityHint, ImportSourcePresetId } from "./types.js";
 
 function entityHintFromImportEntityType(entityType: string): ImportPresetEntityHint {
-  if (entityType === "invoices") {
+  if (entityType === "invoices" || entityType === "payments") {
     return "invoices";
   }
 

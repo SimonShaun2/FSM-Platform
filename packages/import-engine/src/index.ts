@@ -10,6 +10,13 @@ export {
   isChunkCommitEligibleEntity
 } from "./chunk-manifest.js";
 export {
+  buildImportSessionIngestStatus,
+  isChunkedHistoryEntity,
+  parseImportSessionChunkProgress,
+  readPriceBookLineSeedCount,
+  type ImportSessionIngestStatus
+} from "./session-ingest-status.js";
+export {
   buildImportChunkIdempotencyKey,
   DEFAULT_IMPORT_ROW_CHUNK_SIZE,
   planImportRowChunks,
@@ -24,6 +31,14 @@ export {
 export { sheetRowsToRecordRows } from "./sheet-rows-to-records.js";
 export { iterateSheetRowChunks, type ChunkedSheetRowBatch } from "./stream-chunk-ingest.js";
 export {
+  isQuickBooksIifContent,
+  isQuickBooksIifFileName,
+  parseQuickBooksIifToTable,
+  QUICKBOOKS_IIF_RECORD_TYPE_BY_IMPORT_ENTITY,
+  type QuickBooksIifTable
+} from "./quickbooks-iif.js";
+export { parseXlsxBufferToSheetRows, type XlsxSheetRowsResult } from "./xlsx-to-rows.js";
+export {
   buildFileLinkTargetsFromPreviewRows,
   proposeImportFileLinksFromPaths,
   type FileLinkMatchTarget,
@@ -31,4 +46,3 @@ export {
 } from "./file-link-heuristics.js";
 export { parseTabularImportFile, type TabularImportRow } from "./tabular-rows.js";
 export { isXlsxImportFileName, parseXlsxImportFile } from "./tabular-file.js";
-export { parseXlsxBufferToSheetRows, type XlsxSheetRowsResult } from "./xlsx-to-rows.js";

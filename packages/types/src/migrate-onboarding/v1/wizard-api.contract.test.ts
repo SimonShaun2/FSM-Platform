@@ -14,7 +14,7 @@ const userId = "cccccccc-cccc-4ccc-8ccc-cccccccccccc";
 const importSessionId = "dddddddd-dddd-4ddd-8ddd-dddddddddddd";
 
 describe(`${MIGRATE_ONBOARDING_WIZARD_API_CONTRACT_ID}`, () => {
-  it("declares sixteen wizard routes with unique method+path pairs", () => {
+  it("declares wizard routes with unique method+path pairs", () => {
     expect(MIGRATE_ONBOARDING_WIZARD_API_ROUTES).toHaveLength(16);
     const keys = MIGRATE_ONBOARDING_WIZARD_API_ROUTES.map((route) => `${route.method} ${route.path}`);
     expect(new Set(keys).size).toBe(keys.length);
