@@ -74,6 +74,9 @@ export const IMPORT_SOURCE_PRESETS: ImportSourcePreset[] = [
     }
   },
   {
+    // Quirks: customer list export uses "Customer Name" or split first/last; service site is
+    // "Service Address" (not billing). Multi-file bundles also ship jobs/invoices separately —
+    // this preset only seeds the customers.csv column map (M1).
     id: "service_fusion",
     entity: "customers",
     label: "Service Fusion",
@@ -116,6 +119,8 @@ export const IMPORT_SOURCE_PRESETS: ImportSourcePreset[] = [
     }
   },
   {
+    // Quirks: Desktop customer exports use "Customer" / "Bill To *" columns (not QBO "Billing *").
+    // "E-mail" and "Main Phone" are common; IIF exports may differ — extend aliases when golden fixtures land.
     id: "quickbooks_desktop_customers",
     entity: "customers",
     label: "QuickBooks Desktop (customers)",
