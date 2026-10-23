@@ -3,15 +3,17 @@ import pino from "pino";
 
 import { buildImportBundleObjectKey } from "@fsm/config/import-bundle-storage";
 import { db, importSessions } from "@fsm/db";
-import { buildDefaultEnqueueJobOptions, importsQueue } from "@fsm/jobs";
+import { enqueueMigrateFileBatchJob } from "@fsm/jobs";
 import {
   AppError,
   ErrorCode,
-  IMPORT_QUEUE_JOB_NAMES,
   MigrateFileBatchJobDataSchema,
   MigrateFileBatchManifestSchema,
   buildMigrateFileBatchIdempotencyKey,
   buildMigrateFileBatchJobId,
+  buildMigrateFileBatchSessionTraceSummary,
+  buildMigrateFileBatchTraceObjects,
+  type FsMigrateFileBatchBatchTrace,
   type MigrateFileBatchManifest
 } from "@fsm/types";
 
@@ -71,18 +73,19 @@ export async function scheduleMigrateFileBatchesFromSessionAiInferences(
     return 0;
   }
 
-  let enqueued = 0;
+  const batchTraces: FsMigrateFileBatchBatchTrace[] = [];
 
   for (const batch of manifest.batches) {
     if (batch.batchIndex >= batch.batchesTotal) {
       throw new AppError(ErrorCode.VALIDATION_ERROR, "migrateFileBatchManifest batch index is out of range");
     }
 
+    const resolveR2Key = (relativePath: string) =>
+      buildImportBundleObjectKey(companyId, manifest.importBundleId, relativePath);
+
     const objects = batch.objects.map((object) => ({
       ...object,
-      r2Key:
-        object.r2Key ??
-        buildImportBundleObjectKey(companyId, manifest.importBundleId, object.relativePath)
+      r2Key: object.r2Key ?? resolveR2Key(object.relativePath)
     }));
 
     const payload = MigrateFileBatchJobDataSchema.parse({
@@ -97,26 +100,30 @@ export async function scheduleMigrateFileBatchesFromSessionAiInferences(
       objects
     });
 
-    await importsQueue.add(
-      IMPORT_QUEUE_JOB_NAMES.migrateFileBatch,
-      payload,
-      buildDefaultEnqueueJobOptions({
-        jobId: buildMigrateFileBatchJobId(importSessionId, batch.batchIndex)
-      })
-    );
+    const bullJobId = buildMigrateFileBatchJobId(importSessionId, batch.batchIndex);
+    const traceObjects = buildMigrateFileBatchTraceObjects(payload.objects, resolveR2Key);
 
-    enqueued += 1;
+    await enqueueMigrateFileBatchJob(payload);
+
+    batchTraces.push({
+      bullJobId,
+      batchIndex: batch.batchIndex,
+      batchesTotal: batch.batchesTotal,
+      idempotencyKey: payload.idempotencyKey,
+      r2Keys: traceObjects.map((object) => object.r2Key),
+      objects: traceObjects
+    });
   }
 
   logger.info(
-    {
+    buildMigrateFileBatchSessionTraceSummary({
       companyId,
       importSessionId,
       importBundleId: manifest.importBundleId,
-      enqueuedBatches: enqueued
-    },
-    "Enqueued migrate-file-batch jobs from import session manifest"
+      batches: batchTraces
+    }),
+    "FS-MIGRATE import session file-batch enqueue summary"
   );
 
-  return enqueued;
+  return batchTraces.length;
 }

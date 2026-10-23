@@ -16,4 +16,9 @@ test("batch-ci workflow includes neon per-PR matrix job", () => {
   const workflow = readFileSync(join(repoRoot, ".github/workflows/batch-ci.yml"), "utf8");
   assert.match(workflow, /neon-per-pr-branch\.mjs/);
   assert.match(workflow, /NEON_CI_STAGING_DATABASE_URL/);
+  assert.match(
+    workflow,
+    /@fsm\/db\.\.\./,
+    "Neon job must build @fsm/db workspace dependencies (e.g. @fsm/types) before tsc"
+  );
 });
