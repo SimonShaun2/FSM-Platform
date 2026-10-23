@@ -104,3 +104,5 @@ export {
   commitImportedEquipmentRows,
   type ImportEquipmentEntityResolver,
 } from "./import-equipment-commit.service.js";
+export { assembleJobServiceBriefDraft, buildServiceJobBriefProposalParameters } from "./service-job-brief-assembler.js";
+export { createServiceJobBriefAgentProposal } from "./service-job-brief-proposal.js";

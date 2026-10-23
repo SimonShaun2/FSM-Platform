@@ -20,6 +20,7 @@ export { findLatestMigrateFileBatchJob } from "./migrate-file-batch-job-resoluti
 export { listDeadLetterJobs } from "./dead-letter-visibility.js";
 export { enqueueImportChunkCommitJob } from "./enqueue-import-chunk-commit.js";
 export { enqueueEvaluateLoyaltyReminderCandidatesJob } from "./enqueue-evaluate-loyalty-reminder-candidates.js";
+export { enqueueBuildJobServiceBriefJob } from "./enqueue-build-job-service-brief.js";
 export { logMigrateFileBatchTrace } from "./migrate-file-batch-trace-log.js";
 export type { LogMigrateFileBatchTraceInput } from "./migrate-file-batch-trace-log.js";
 export { redisConnection } from "./connection.js";
