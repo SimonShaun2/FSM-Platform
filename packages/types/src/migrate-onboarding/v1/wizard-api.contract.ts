@@ -1,7 +1,3 @@
-import {
-  confirmImportFileLinkDecisionsBodySchema,
-  importFileLinkPreviewResponseSchema
-} from "../../fs-migrate/import-file-link.js";
 import { MigrateOnboardingIngestProgressResponseSchema } from "../../import-bundle.schemas.js";
 import {
   applyMigrateDedupeDecisionsBodySchema,
@@ -56,11 +52,6 @@ export const MIGRATE_ONBOARDING_WIZARD_API_ROUTES: readonly MigrateOnboardingWiz
     responseSchemaId: "migrateOnboardingBundle"
   },
   {
-    method: "GET",
-    path: "/api/v1/migrate/onboarding/sessions/:bundleId/ingest-progress",
-    responseSchemaId: "migrateOnboardingIngestProgressResponse"
-  },
-  {
     method: "PATCH",
     path: "/api/v1/migrate/onboarding/sessions/:bundleId/source",
     requestBodySchemaId: "setMigrateOnboardingSourceBody",
@@ -70,22 +61,6 @@ export const MIGRATE_ONBOARDING_WIZARD_API_ROUTES: readonly MigrateOnboardingWiz
     method: "PATCH",
     path: "/api/v1/migrate/onboarding/sessions/:bundleId/files",
     requestBodySchemaId: "linkMigrateOnboardingFilesBody",
-    responseSchemaId: "migrateOnboardingBundle"
-  },
-  {
-    method: "PATCH",
-    path: "/api/v1/migrate/onboarding/sessions/:bundleId/file-link/decisions",
-    requestBodySchemaId: "confirmImportFileLinkDecisionsBody",
-    responseSchemaId: "migrateOnboardingBundle"
-  },
-  {
-    method: "GET",
-    path: "/api/v1/migrate/onboarding/sessions/:bundleId/file-link/preview",
-    responseSchemaId: "importFileLinkPreviewResponse"
-  },
-  {
-    method: "POST",
-    path: "/api/v1/migrate/onboarding/sessions/:bundleId/file-link/run",
     responseSchemaId: "migrateOnboardingBundle"
   },
   {
@@ -99,6 +74,21 @@ export const MIGRATE_ONBOARDING_WIZARD_API_ROUTES: readonly MigrateOnboardingWiz
     responseSchemaId: "migrateOnboardingBundle"
   },
   {
+    method: "POST",
+    path: "/api/v1/migrate/onboarding/sessions/:bundleId/file-link/run",
+    responseSchemaId: "migrateOnboardingBundle"
+  },
+  {
+    method: "GET",
+    path: "/api/v1/migrate/onboarding/sessions/:bundleId/file-link/preview",
+    responseSchemaId: "migrateOnboardingBundle"
+  },
+  {
+    method: "PATCH",
+    path: "/api/v1/migrate/onboarding/sessions/:bundleId/file-link/decisions",
+    responseSchemaId: "migrateOnboardingBundle"
+  },
+  {
     method: "GET",
     path: "/api/v1/migrate/onboarding/sessions/:bundleId/dedupe-preview",
     responseSchemaId: "migrateDedupePreviewResponse"
@@ -107,6 +97,11 @@ export const MIGRATE_ONBOARDING_WIZARD_API_ROUTES: readonly MigrateOnboardingWiz
     method: "GET",
     path: "/api/v1/migrate/onboarding/sessions/:bundleId/relational-preview",
     responseSchemaId: "migrateRelationalPreviewResponse"
+  },
+  {
+    method: "GET",
+    path: "/api/v1/migrate/onboarding/sessions/:bundleId/ingest-progress",
+    responseSchemaId: "migrateOnboardingIngestProgressResponse"
   },
   {
     method: "PATCH",
@@ -125,8 +120,7 @@ export const migrateOnboardingWizardRequestSchemas = {
   createMigrateOnboardingSessionBody: createMigrateOnboardingSessionBodySchema,
   setMigrateOnboardingSourceBody: setMigrateOnboardingSourceBodySchema,
   linkMigrateOnboardingFilesBody: linkMigrateOnboardingFilesBodySchema,
-  applyMigrateDedupeDecisionsBody: applyMigrateDedupeDecisionsBodySchema,
-  confirmImportFileLinkDecisionsBody: confirmImportFileLinkDecisionsBodySchema
+  applyMigrateDedupeDecisionsBody: applyMigrateDedupeDecisionsBodySchema
 } as const;
 
 export const migrateOnboardingWizardResponseSchemas = {
@@ -135,6 +129,5 @@ export const migrateOnboardingWizardResponseSchemas = {
   migrateDedupePreviewResponse: migrateDedupePreviewResponseSchema,
   migrateRelationalPreviewResponse: migrateRelationalPreviewResponseSchema,
   migrateOnboardingCommitResponse: migrateOnboardingCommitResponseSchema,
-  migrateOnboardingIngestProgressResponse: MigrateOnboardingIngestProgressResponseSchema,
-  importFileLinkPreviewResponse: importFileLinkPreviewResponseSchema
+  migrateOnboardingIngestProgressResponse: MigrateOnboardingIngestProgressResponseSchema
 } as const;

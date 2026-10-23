@@ -70,12 +70,6 @@ const migrateOnboardingRoutes: FastifyPluginAsync = async (fastify) => {
     schema: getBundleRouteSchema
   }, getMigrateOnboardingBundleHandler);
 
-  fastify.get("/migrate/onboarding/sessions/:bundleId/ingest-progress", {
-    preHandler: [authenticate, requireOwnerOrAdmin],
-    preValidation: migrateOnboardingBundleIdValidation,
-    schema: ingestProgressRouteSchema
-  }, getMigrateOnboardingIngestProgressHandler);
-
   fastify.patch("/migrate/onboarding/sessions/:bundleId/source", {
     preHandler: [authenticate, requireOwnerOrAdmin],
     preValidation: setMigrateOnboardingSourceValidation,
@@ -93,6 +87,12 @@ const migrateOnboardingRoutes: FastifyPluginAsync = async (fastify) => {
     preValidation: migrateOnboardingBundleIdValidation,
     schema: confirmMappingsRouteSchema
   }, confirmMigrateOnboardingMappingsHandler);
+
+  fastify.post("/migrate/onboarding/sessions/:bundleId/acknowledge-preview", {
+    preHandler: [authenticate, requireOwnerOrAdmin],
+    preValidation: migrateOnboardingBundleIdValidation,
+    schema: acknowledgePreviewRouteSchema
+  }, acknowledgeMigrateOnboardingPreviewHandler);
 
   fastify.post("/migrate/onboarding/sessions/:bundleId/file-link/run", {
     preHandler: [authenticate, requireOwnerOrAdmin],
@@ -112,12 +112,6 @@ const migrateOnboardingRoutes: FastifyPluginAsync = async (fastify) => {
     schema: confirmFileLinkRouteSchema
   }, confirmMigrateImportFileLinkHandler);
 
-  fastify.post("/migrate/onboarding/sessions/:bundleId/acknowledge-preview", {
-    preHandler: [authenticate, requireOwnerOrAdmin],
-    preValidation: migrateOnboardingBundleIdValidation,
-    schema: acknowledgePreviewRouteSchema
-  }, acknowledgeMigrateOnboardingPreviewHandler);
-
   fastify.get("/migrate/onboarding/sessions/:bundleId/dedupe-preview", {
     preHandler: [authenticate, requireOwnerOrAdmin],
     preValidation: migrateOnboardingBundleIdValidation,
@@ -129,6 +123,12 @@ const migrateOnboardingRoutes: FastifyPluginAsync = async (fastify) => {
     preValidation: migrateOnboardingBundleIdValidation,
     schema: relationalPreviewRouteSchema
   }, getMigrateRelationalPreviewHandler);
+
+  fastify.get("/migrate/onboarding/sessions/:bundleId/ingest-progress", {
+    preHandler: [authenticate, requireOwnerOrAdmin],
+    preValidation: migrateOnboardingBundleIdValidation,
+    schema: ingestProgressRouteSchema
+  }, getMigrateOnboardingIngestProgressHandler);
 
   fastify.patch("/migrate/onboarding/sessions/:bundleId/dedupe-decisions", {
     preHandler: [authenticate, requireOwnerOrAdmin],
