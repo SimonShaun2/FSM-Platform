@@ -84,6 +84,11 @@ export const api = {
       method: "PATCH",
       body: JSON.stringify(body)
     }),
+  put: <TResponse>(path: string, body: unknown) =>
+    apiFetch<TResponse>(path, {
+      method: "PUT",
+      body: JSON.stringify(body)
+    }),
   delete: <TResponse>(path: string) =>
     apiFetch<TResponse>(path, {
       method: "DELETE"
