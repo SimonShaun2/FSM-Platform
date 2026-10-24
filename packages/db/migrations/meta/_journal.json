@@ -253,6 +253,13 @@
       "when": 1777707000000,
       "tag": "0035_fs133_qbo_ongoing_sync",
       "breakpoints": true
+    },
+    {
+      "idx": 36,
+      "version": "7",
+      "when": 1777710000000,
+      "tag": "0036_fs133_qbo_entity_mappings",
+      "breakpoints": true
     }
   ]
 }
