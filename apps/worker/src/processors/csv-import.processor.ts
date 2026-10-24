@@ -43,6 +43,11 @@ import {
   validatePriceBookRows,
   validateServiceAgreementImportRows,
 } from "@fsm/db";
+import {
+  buildImportChunkCommitManifest,
+  initialImportSessionChunkProgress,
+  isChunkCommitEligibleEntity
+} from "@fsm/import-engine";
 import { normalizeImportPhone } from "@fsm/import-normalize";
 import { aiQueue } from "@fsm/jobs";
 import {
@@ -817,6 +822,33 @@ export async function handleValidateCsvRows(job: Job<Record<string, unknown>>): 
             ? validateCommunicationsRows(parsedCsv.rows, columnMapping)
           : validateCustomerRows(parsedCsv.rows, columnMapping, await getCompanyCustomers(companyId));
 
+    const priorInferences = normalizeAiInferences(importSession.aiInferences);
+    const sourceSystem =
+      typeof priorInferences.sourceSystem === "string"
+        ? priorInferences.sourceSystem
+        : importSession.sourceSystem ?? "manual_csv";
+
+    const chunkManifest =
+      isChunkCommitEligibleEntity(importSession.entityType, columnMapping)
+        ? buildImportChunkCommitManifest({
+            totalDataRows: validationResult.totalRows,
+            entityType: importSession.entityType,
+            sourceSystem,
+            ...(importSession.importBundleId
+              ? { importBundleId: importSession.importBundleId }
+              : {})
+          })
+        : null;
+
+    const nextAiInferences = chunkManifest
+      ? {
+          ...priorInferences,
+          importChunkCommitManifest: chunkManifest
+        }
+      : priorInferences;
+
+    const nextProgress = chunkManifest ? initialImportSessionChunkProgress(chunkManifest) : undefined;
+
     await db
       .update(importSessions)
       .set({
@@ -826,6 +858,8 @@ export async function handleValidateCsvRows(job: Job<Record<string, unknown>>): 
         duplicateRows: validationResult.duplicateRows,
         validationErrors: validationResult.validationErrors,
         status: "preview",
+        aiInferences: nextAiInferences,
+        ...(nextProgress ? { progress: nextProgress } : {}),
         updatedAt: new Date()
       })
       .where(and(eq(importSessions.companyId, companyId), eq(importSessions.id, importSessionId), isNull(importSessions.deletedAt)))

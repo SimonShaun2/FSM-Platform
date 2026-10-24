@@ -45,7 +45,21 @@ export function inferImportSourcePresetFromHeaders(
     const aliasKeys = Object.keys(preset.headerAliases).map(normalizeHeader);
     const score = aliasKeys.filter((key) => normalizedHeaders.has(key)).length;
 
-    if (score >= 3 && (!best || score > best.score)) {
+    if (score < 3) {
+      continue;
+    }
+
+    if (!best || score > best.score) {
+      best = { id: preset.id, score };
+      continue;
+    }
+
+    if (
+      score === best.score &&
+      entityHint === "invoices" &&
+      normalizedHeaders.has(normalizeHeader("invoice number")) &&
+      preset.id === "service_titan_invoices"
+    ) {
       best = { id: preset.id, score };
     }
   }
