@@ -69,7 +69,15 @@ const envSchema = z.object({
     .uuid("RENAVANI_INTERNAL_COMPANY_ID must be a valid UUID")
     .default("00000000-0000-4000-8000-000000000053"),
   /** STACK-02 — Clerk secret; empty disables Clerk verify path */
-  CLERK_SECRET_KEY: z.string().default("")
+  CLERK_SECRET_KEY: z.string().default(""),
+  /** STACK-04 / FS-133 — optional Sentry DSN for QBO sync issue alerts */
+  SENTRY_DSN: z.string().default(""),
+  /** FS-133 — Intuit sandbox OAuth (optional until QBO sync is configured). */
+  QUICKBOOKS_CLIENT_ID: z.string().default(""),
+  QUICKBOOKS_CLIENT_SECRET: z.string().default(""),
+  QUICKBOOKS_REDIRECT_URI: z.string().default(""),
+  QUICKBOOKS_ENVIRONMENT: z.enum(["sandbox"]).default("sandbox"),
+  QUICKBOOKS_TOKEN_ENCRYPTION_KEY: z.string().default("")
 });
 
 export type Env = z.infer<typeof envSchema>;
