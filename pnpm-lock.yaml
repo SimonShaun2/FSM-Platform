@@ -59,6 +59,9 @@ importers:
       '@fsm/db':
         specifier: workspace:*
         version: link:../../packages/db
+      '@fsm/import-engine':
+        specifier: workspace:*
+        version: link:../../packages/import-engine
       '@fsm/import-normalize':
         specifier: workspace:*
         version: link:../../packages/import-normalize
@@ -474,6 +477,9 @@ importers:
       '@fsm/types':
         specifier: workspace:*
         version: link:../types
+      papaparse:
+        specifier: ^5.5.3
+        version: 5.5.3
       xlsx:
         specifier: ^0.18.5
         version: 0.18.5
@@ -481,6 +487,9 @@ importers:
       '@types/node':
         specifier: ^24.3.0
         version: 24.12.2
+      '@types/papaparse':
+        specifier: ^5.3.16
+        version: 5.5.2
       typescript:
         specifier: ^5.9.2
         version: 5.9.3
