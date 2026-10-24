@@ -59,7 +59,8 @@ function lineItemsMatch(left: RevenueLineItemDraft, right: RevenueLineItemDraft)
     formatMoneyInput(left.quantity) === formatMoneyInput(right.quantity) &&
     formatMoneyInput(left.unitPrice) === formatMoneyInput(right.unitPrice) &&
     left.isTaxable === right.isTaxable &&
-    left.sortOrder === right.sortOrder
+    left.sortOrder === right.sortOrder &&
+    (left.priceBookItemId ?? null) === (right.priceBookItemId ?? null)
   );
 }
 
@@ -137,7 +138,8 @@ export function InvoiceDetailClient({ invoiceId }: InvoiceDetailClientProps) {
             quantity: parseMoneyValue(item.quantity),
             unitPrice: parseMoneyValue(item.unitPrice),
             isTaxable: item.isTaxable,
-            sortOrder: item.sortOrder
+            sortOrder: item.sortOrder,
+            ...(item.priceBookItemId ? { priceBookItemId: item.priceBookItemId } : {})
           });
           continue;
         }
@@ -161,7 +163,8 @@ export function InvoiceDetailClient({ invoiceId }: InvoiceDetailClientProps) {
             quantity: parseMoneyValue(item.quantity),
             unitPrice: parseMoneyValue(item.unitPrice),
             isTaxable: item.isTaxable,
-            sortOrder: item.sortOrder
+            sortOrder: item.sortOrder,
+            ...(item.priceBookItemId !== undefined ? { priceBookItemId: item.priceBookItemId } : {})
           }
         });
       }

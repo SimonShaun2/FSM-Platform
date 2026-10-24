@@ -103,6 +103,7 @@ function toEstimate(row: EstimateRow): Estimate {
 function toEstimateItem(row: EstimateItemRow): EstimateItem {
   return {
     ...row,
+    priceBookItemId: row.productCatalogId,
     itemType: normalizeEstimateItemType(row.itemType)
   };
 }
@@ -714,7 +715,8 @@ export async function createEstimate(
             unitPrice: formatMoney(new Decimal(item.unitPrice)),
             total: formatMoney(new Decimal(item.quantity).mul(item.unitPrice)),
             isTaxable: item.isTaxable ?? true,
-            sortOrder: item.sortOrder ?? index
+            sortOrder: item.sortOrder ?? index,
+            ...(item.priceBookItemId ? { productCatalogId: item.priceBookItemId } : {})
           }))
         )
         .returning();
