@@ -595,7 +595,8 @@ export const CompleteJobSchema = z
 export const AddNoteSchema = z
   .object({
     content: z.string().trim().min(1),
-    isInternal: z.boolean().optional().default(true)
+    isInternal: z.boolean().optional().default(true),
+    noteKind: z.enum(["internal", "field"]).optional()
   })
   .strict();
 
@@ -885,6 +886,30 @@ export const addNoteRouteSchema = {
     404: errorResponseSchema
   }
 } as const;
+
+export const getJobServiceBriefRouteSchema = {
+  params: JobIdParamsSchema,
+  response: {
+    200: {
+      type: "object",
+      properties: {
+        brief: { type: ["object", "null"], additionalProperties: true }
+      }
+    }
+  }
+};
+
+export const getJobPreparationStatusRouteSchema = {
+  params: JobIdParamsSchema,
+  response: {
+    200: {
+      type: "object",
+      properties: {
+        preparation: { type: "object", additionalProperties: true }
+      }
+    }
+  }
+};
 
 export const getNotesSchema = {
   tags: ["jobs"],
