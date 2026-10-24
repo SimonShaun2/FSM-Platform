@@ -208,6 +208,31 @@ function assertPresetForFile(
   }
 }
 
+/** Housecall Pro: assert golden fixture headers infer HCP presets (not QB/ST). */
+function validateHousecallProPresetInference(
+  manifest: GoldenImportBundleManifest,
+  issues: GoldenBundleValidationIssue[]
+): void {
+  if (manifest.sourceSystem !== "housecall_pro") {
+    return;
+  }
+
+  const customerFile = manifest.files.find((entry: GoldenBundleFile) => entry.entityType === "customers");
+  if (customerFile) {
+    assertPresetForFile(manifest, customerFile, "housecall_pro", "customers", issues);
+  }
+
+  const jobFile = manifest.files.find((entry: GoldenBundleFile) => entry.entityType === "jobs");
+  if (jobFile) {
+    assertPresetForFile(manifest, jobFile, "housecall_pro_jobs", "customers", issues);
+  }
+
+  const invoiceFile = manifest.files.find((entry: GoldenBundleFile) => entry.entityType === "invoices");
+  if (invoiceFile) {
+    assertPresetForFile(manifest, invoiceFile, "housecall_pro_invoices", "invoices", issues);
+  }
+}
+
 /** ServiceTitan: location-aware multi-export bundle must infer ST preset ids (generic importer path). */
 function validateServiceTitanPresetInference(
   manifest: GoldenImportBundleManifest,
@@ -464,6 +489,7 @@ export function validateGoldenImportBundleManifest(
     validateChunkedJobHistory(parsed.data, parsed.data.chunkedJobHistory, issues);
   }
   validateGenericImportColumnMapping(parsed.data, issues);
+  validateHousecallProPresetInference(parsed.data, issues);
   validateQuickBooksPresetInference(parsed.data, issues);
   validateServiceTitanPresetInference(parsed.data, issues);
   validateHistorySpan(parsed.data, issues);
