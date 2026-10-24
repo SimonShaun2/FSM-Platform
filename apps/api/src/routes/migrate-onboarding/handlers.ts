@@ -185,12 +185,3 @@ export async function commitMigrateOnboardingBundleHandler(
   const result = await commitMigrateOnboardingBundle(request.company.id, request.user.id, bundleId);
   return reply.send(result);
 }
-
-export async function getMigrateOnboardingIngestStatusHandler(
-  request: FastifyRequest,
-  reply: FastifyReply
-): Promise<FastifyReply> {
-  const { bundleId } = request.params as { bundleId: string };
-  const status = await getMigrateOnboardingIngestStatus(request.company.id, bundleId);
-  return reply.send(status);
-}

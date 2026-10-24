@@ -5,6 +5,11 @@ export {
   countMappedImportBundleFiles
 } from "./bundle-progress.js";
 export {
+  buildImportChunkCommitManifest,
+  initialImportSessionChunkProgress,
+  isChunkCommitEligibleEntity
+} from "./chunk-manifest.js";
+export {
   buildImportSessionIngestStatus,
   isChunkedHistoryEntity,
   parseImportSessionChunkProgress,
@@ -29,6 +34,11 @@ export {
   sliceSheetRowsForWindow,
   type ImportRowChunkPlan
 } from "./chunk-ingest.js";
+export {
+  mergeImportChunkSessionProgress,
+  parseImportChunkSessionProgress,
+  type ImportChunkSessionProgress
+} from "./session-chunk-progress.js";
 export { sheetRowsToRecordRows } from "./sheet-rows-to-records.js";
 export { iterateSheetRowChunks, type ChunkedSheetRowBatch } from "./stream-chunk-ingest.js";
 export {
@@ -45,4 +55,5 @@ export {
   type FileLinkMatchTarget,
   type FileLinkObjectInput
 } from "./file-link-heuristics.js";
+export { parseTabularImportFile, type TabularImportRow } from "./tabular-rows.js";
 export { isXlsxImportFileName, parseXlsxImportFile } from "./tabular-file.js";
