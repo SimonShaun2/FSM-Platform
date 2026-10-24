@@ -32,6 +32,10 @@ import {
 } from "@fsm/types";
 
 import { emitImportWorkflowStepReceipt } from "../lib/import-workflow-step-receipt.js";
+import {
+  normalizeImportValidationErrors,
+  persistImportSessionReconciliationReport
+} from "../lib/persist-import-session-reconciliation.js";
 
 import {
   mergeImportChunkSessionProgress,
@@ -621,6 +625,17 @@ export async function handleImportChunkCommit(job: Job<Record<string, unknown>>)
 
     const chunkResult = await commitChunkForEntity(payload, importSession);
     await finalizeChunkRun(payload, importSession, chunkResult, true);
+
+    if (payload.chunkIndex + 1 >= payload.chunksTotal) {
+      const refreshedSession = await getImportSessionOrNull(payload.companyId, payload.importSessionId);
+      if (refreshedSession) {
+        await persistImportSessionReconciliationReport(
+          payload.companyId,
+          refreshedSession,
+          normalizeImportValidationErrors(refreshedSession.validationErrors)
+        );
+      }
+    }
 
     await emitImportWorkflowStepReceipt({
       companyId: payload.companyId,

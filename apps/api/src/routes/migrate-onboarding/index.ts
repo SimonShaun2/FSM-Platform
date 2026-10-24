@@ -30,7 +30,6 @@ import {
   relationalPreviewRouteSchema,
   getActiveSessionRouteSchema,
   getBundleRouteSchema,
-  ingestStatusRouteSchema,
   linkFilesRouteSchema,
   linkMigrateOnboardingFilesValidation,
   listSourcesRouteSchema,
@@ -122,12 +121,6 @@ const migrateOnboardingRoutes: FastifyPluginAsync = async (fastify) => {
     preValidation: migrateOnboardingBundleIdValidation,
     schema: relationalPreviewRouteSchema
   }, getMigrateRelationalPreviewHandler);
-
-  fastify.get("/migrate/onboarding/sessions/:bundleId/ingest-status", {
-    preHandler: [authenticate, requireOwnerOrAdmin],
-    preValidation: migrateOnboardingBundleIdValidation,
-    schema: ingestStatusRouteSchema
-  }, getMigrateOnboardingIngestStatusHandler);
 
   fastify.patch("/migrate/onboarding/sessions/:bundleId/dedupe-decisions", {
     preHandler: [authenticate, requireOwnerOrAdmin],
