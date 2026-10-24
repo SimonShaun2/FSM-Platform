@@ -36,7 +36,11 @@ const TEST_ENV_VALUES = {
   NEXT_PUBLIC_API_URL: "http://localhost:3001",
   RENVANI_INTERNAL_COMPANY_ID: "00000000-0000-4000-8000-000000000053",
   STRIPE_PLATFORM_BILLING_PRICE_ID: "",
-  CLERK_SECRET_KEY: ""
+  CLERK_SECRET_KEY: "",
+  QUICKBOOKS_CLIENT_ID: "qbo_test_client",
+  QUICKBOOKS_CLIENT_SECRET: "qbo_test_secret",
+  QUICKBOOKS_REDIRECT_URI: "http://localhost:3001/api/v1/quickbooks-online/connect/callback",
+  QUICKBOOKS_ENVIRONMENT: "sandbox"
 } as const;
 
 export function setupTestEnv(): void {
