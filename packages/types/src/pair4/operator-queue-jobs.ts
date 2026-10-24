@@ -4,6 +4,8 @@ export const OPERATOR_QUEUE_JOB_NAMES = {
   proposalCreateCustomerMessage: "proposal.create.customer_message",
   retentionGatesAfterCompletionConfirm: "retention-gates.after-completion-confirm",
   retentionGatesWinBackEvaluate: "retention-gates.win-back-evaluate",
+  qboSyncPush: "qbo.sync.push",
+  qboSyncPull: "qbo.sync.pull",
   serviceBuildJobBrief: "service.build-job-brief"
 } as const;
 

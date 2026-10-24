@@ -32,7 +32,9 @@ export const featureFlags = {
   // FEATURE FLAG: stripe-renvani-platform-sync — STACK-14: sync platform account branding via API (test/live key from env)
   stripeRenvaniPlatformSync: true,
   // FEATURE FLAG: stripe-renvani-portal-urls — replace hosted_invoice_url with Renvani portal links
-  stripeRenvaniPortalUrls: true
+  stripeRenvaniPortalUrls: true,
+  // FEATURE FLAG: qbo-ongoing-sync-sandbox — FS-133 ongoing QBO sync (sandbox only until founder gate)
+  qboOngoingSyncSandbox: true
 } as const;
 
 export type FeatureFlags = typeof featureFlags;
