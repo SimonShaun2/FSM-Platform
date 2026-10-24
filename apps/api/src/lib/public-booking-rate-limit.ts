@@ -5,9 +5,11 @@ const RATE_LIMIT_WINDOW_SECONDS = Math.ceil(RATE_LIMIT_WINDOW_MS / 1000);
 
 const bookingRequestTimesByIp = new Map<string, number[]>();
 const slotHoldTimesByReference = new Map<string, number[]>();
+const manageTokenTimesByIp = new Map<string, number[]>();
 
 export const PUBLIC_BOOKING_IP_RATE_LIMIT = 10;
 export const PUBLIC_SLOT_HOLD_REF_RATE_LIMIT = 15;
+export const PUBLIC_BOOKING_MANAGE_TOKEN_RATE_LIMIT = 30;
 
 function useInMemoryRateLimitStore(): boolean {
   return env.NODE_ENV === "test";
@@ -85,9 +87,20 @@ export async function checkPublicSlotHoldReferenceRateLimit(slug: string, refere
   );
 }
 
+export async function checkPublicBookingManageTokenRateLimit(ipAddress: string): Promise<boolean> {
+  const normalizedIp = ipAddress.trim().length > 0 ? ipAddress.trim() : "unknown";
+  return recordAttempt(
+    manageTokenTimesByIp,
+    "fsm:public-booking:rate:manage",
+    normalizedIp,
+    PUBLIC_BOOKING_MANAGE_TOKEN_RATE_LIMIT
+  );
+}
+
 export function resetPublicBookingRateLimitStateForTests(): void {
   bookingRequestTimesByIp.clear();
   slotHoldTimesByReference.clear();
+  manageTokenTimesByIp.clear();
 }
 
 export function getRateLimitWindowMs(): number {
